@@ -1,6 +1,8 @@
 use std::path::PathBuf;
 
-use super::{sourcechar::SourceCharIter, Offset, Span};
+use super::{source::LineNumber, sourcechar::SourceCharIter, Offset, Source, SourceError, Span};
+
+const MAX_SOURCE_SIZE: u32 = u32::MAX;
 
 /// The SourceMap keeps a table of input source files and the range of teh Global
 /// Offset which maps to that source file.
@@ -41,18 +43,12 @@ impl SourceMap {
         }
     }
 
-    /// Add a source unit which is a file to the [`SourceMap`]. If the source unit
-    /// is successfully added to the [`SourceMap`] then this will return a reference
-    /// to the [`SourceMapEntry`] for the given source code unit.  
-    ///
-    /// The entry provides
-    /// an interface for interacting with (e.g. reading) the file that also provides
-    /// global offset data about each character read from the file.
+    /// Add a file as unit of source code to the [`SourceMap`].
     pub fn add_file(&mut self, path: PathBuf) -> Result<(), SourceMapError> {
         let file = std::fs::File::open(&path)?;
 
         let file_len = file.metadata()?.len();
-        if file_len >= u32::MAX as u64 {
+        if file_len >= MAX_SOURCE_SIZE as u64 {
             return Err(SourceMapError::FileTooBig);
         }
 
@@ -64,8 +60,33 @@ impl SourceMap {
         self.offset_high += file_len as u32;
         let high = self.offset_high;
 
+        let src = SourceType::File(path.clone());
+
         // Add source file to the offset map
-        let entry = SourceMapEntry::new(low, high, path);
+        let entry = SourceMapEntry::new(low, high, src, path);
+        self.map.push(entry);
+
+        Ok(())
+    }
+
+    /// Adds a string as a unit of source code to the [`SourceMap`].
+    pub fn add_string(&mut self, text: &str, path: PathBuf) -> Result<(), SourceMapError> {
+        if text.len() >= MAX_SOURCE_SIZE as usize {
+            return Err(SourceMapError::FileTooBig);
+        }
+
+        /*** Create a Source Char Iterator ***/
+        // Get the low offset for the file
+        let low = self.offset_high;
+
+        // Increment the offset high so that the file fits within the new range
+        self.offset_high += text.len() as u32;
+        let high = self.offset_high;
+
+        let src = SourceType::Text(text.into());
+
+        // Add source file to the offset map
+        let entry = SourceMapEntry::new(low, high, src, path);
         self.map.push(entry);
 
         Ok(())
@@ -96,19 +117,45 @@ impl SourceMap {
             None
         }
     }
+
+    /// Returns the file(s) a span covers
+    pub fn files(&self, span: Span) -> Vec<&PathBuf> {
+        self.map
+            .iter()
+            .filter(|e| span.intersects(e.span))
+            .map(|e| &e.path)
+            .collect()
+    }
+
+    /// Returns the source code lines that a [`Span`] covers
+    pub fn lines_in_span(&self, span: Span) -> Vec<(&PathBuf, Vec<LineNumber>)> {
+        // Get the list of files that the span covers
+        self.map
+            .iter()
+            .filter(|e| span.intersects(e.span))
+            .map(|file| {
+                let lines = file.lines_in_span(span);
+                (&file.path, lines)
+            })
+            .collect()
+    }
 }
 
 /// Tracks the assignment of a range within the global offset space
 #[derive(Debug)]
 pub struct SourceMapEntry {
-    low: Offset,
-    high: Offset,
+    span: Span,
+    source: SourceType,
     path: PathBuf,
 }
 
 impl SourceMapEntry {
-    fn new(low: Offset, high: Offset, path: PathBuf) -> SourceMapEntry {
-        SourceMapEntry { low, high, path }
+    fn new(low: Offset, high: Offset, source: SourceType, path: PathBuf) -> SourceMapEntry {
+        SourceMapEntry {
+            span: Span::new(low, high),
+            source: source,
+            path: path,
+        }
     }
 
     /// Get the file path for the source code that this entry in the [`SourceMap`]
@@ -120,10 +167,64 @@ impl SourceMapEntry {
     /// Creates a iterator over the unicode characters in the source code that
     /// this entry represents. Each entry in the iterator will include the
     /// unicode character and it's offset within the global offset space.
-    pub fn read(&self) -> Result<SourceCharIter, std::io::Error> {
-        let file = std::fs::File::open(&self.path)?;
-        Ok(SourceCharIter::new(file, self.low, self.high))
+    pub fn read(&self) -> Result<Source, SourceError> {
+        let text = match &self.source {
+            SourceType::File(f) => {
+                let file = std::fs::File::open(f)?;
+                let iter = SourceCharIter::new(file, self.span.low(), self.span.high());
+                let text: Result<Vec<_>, _> = iter.collect();
+                text
+            }
+            SourceType::Text(s) => {
+                let iter = SourceCharIter::new(s.as_bytes(), self.span.low(), self.span.high());
+                let text: Result<Vec<_>, _> = iter.collect();
+                text
+            }
+        };
+        Ok(Source::new(text?, self.span))
     }
+
+    /// Returns the lines that a span covers in the given file.
+    /// Will return an empty vector if `span` does not intersect the file
+    /// at all.
+    fn lines_in_span(&self, span: Span) -> Vec<LineNumber> {
+        let mut lines = vec![];
+        // Check that span intersects with the file's span in the global offset space
+        match self.span.intersection(span) {
+            Some(intersection) => {
+                // Then search through the file from the beginning until it reaches the
+                // start of the span, counting the number of new lines
+                // Then from the start of the span until the end of the span or the file
+                // Count each new line and add it to the vector
+                let text = self.read().unwrap();
+                let mut stream = text.iter();
+
+                let mut line = 1;
+                let mut prev_line = 0;
+                while let Some(c) = stream.next() {
+                    if c.offset() >= intersection.low() && c.offset() < intersection.high() {
+                        // if line number has changed then push onto the vector
+                        if line != prev_line {
+                            lines.push(LineNumber::new(line));
+                            prev_line = line;
+                        }
+                    }
+
+                    if *c == '\n' {
+                        line += 1;
+                    }
+                }
+            }
+            None => (),
+        }
+        lines
+    }
+}
+
+#[derive(Debug)]
+enum SourceType {
+    File(PathBuf),
+    Text(String),
 }
 
 #[derive(Debug)]

@@ -453,7 +453,7 @@ mod tests {
     use crate::{
         compiler::{
             lexer::tokens::Token, lexer::LexerError, parser::parser,
-            semantics::semanticnode::SemanticAst, CompilerError, Lexer,
+            semantics::semanticnode::SemanticAst, CompilerError, Lexer, SourceMap,
         },
         StringTable,
     };
@@ -468,7 +468,12 @@ mod tests {
         let mut table = StringTable::new();
         let test = table.insert("test".into());
 
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -498,7 +503,12 @@ mod tests {
         let annotation = table.insert("annotation".into());
         let m = table.insert("m".into());
 
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -548,7 +558,12 @@ mod tests {
         let m = table.insert("m".into());
         let my_struct = table.insert("MyStruct".into());
 
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<LResult>()

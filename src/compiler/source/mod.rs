@@ -7,10 +7,12 @@ use std::{
     ops::AddAssign,
 };
 
+mod source;
 mod sourcechar;
 mod sourcemap;
 mod span;
 
+pub use source::{LineNumber, Source};
 pub use sourcechar::{SourceCharIter, SourceError};
 pub use sourcemap::{SourceMap, SourceMapEntry, SourceMapError};
 pub use span::Span;
@@ -84,6 +86,11 @@ pub struct Offset(u32);
 impl Offset {
     pub fn new(o: u32) -> Offset {
         Offset(o)
+    }
+
+    /// Converts a global offset into the local offset of a source file
+    pub fn to_local(&self, base: Offset) -> u64 {
+        (self.0 - base.0) as u64
     }
 }
 

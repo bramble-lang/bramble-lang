@@ -5,7 +5,7 @@ use crate::{
         ast::{Element, Item, Module, Node, Path, RoutineDef, RoutineDefType, StructDef, Type},
         import::{Import, ImportRoutineDef, ImportStructDef},
         semantics::semanticnode::SemanticContext,
-        CompilerDisplay, CompilerDisplayError,
+        CompilerDisplay, CompilerDisplayError, SourceMap,
     },
     StringTable,
 };
@@ -22,25 +22,27 @@ pub struct Manifest {
 
 impl Manifest {
     pub fn new(
+        sm: &SourceMap,
         st: &StringTable,
         routines: &[RoutineDef<SemanticContext>],
         structs: &[StructDef<SemanticContext>],
     ) -> Result<Self, ManifestError> {
         let routines = routines
             .iter()
-            .map(|r| ManifestRoutineDef::from_rd(r, st))
+            .map(|r| ManifestRoutineDef::from_rd(r, sm, st))
             .collect::<Result<Vec<_>, ManifestError>>()?;
         let structs = structs
             .iter()
-            .map(|s| ManifestStructDef::from_sd(s, st))
+            .map(|s| ManifestStructDef::from_sd(s, sm, st))
             .collect::<Result<Vec<_>, ManifestError>>()?;
 
         Ok(Manifest { routines, structs })
     }
 
     pub fn extract(
-        st: &StringTable,
         module: &Module<SemanticContext>,
+        sm: &SourceMap,
+        st: &StringTable,
     ) -> Result<Self, ManifestError> {
         // Get list of all functions contained within a module and their paths
         let routines: Vec<_> = module
@@ -60,7 +62,7 @@ impl Manifest {
             .collect();
 
         // Create the manifest
-        Self::new(st, &routines, &structs)
+        Self::new(sm, st, &routines, &structs)
     }
 
     /// Convert a Manifest of a Braid artifact to set of definitions which can be used
@@ -105,16 +107,20 @@ struct ManifestRoutineDef {
 }
 
 impl ManifestRoutineDef {
-    fn from_rd(rd: &RoutineDef<SemanticContext>, st: &StringTable) -> Result<Self, ManifestError> {
+    fn from_rd(
+        rd: &RoutineDef<SemanticContext>,
+        sm: &SourceMap,
+        st: &StringTable,
+    ) -> Result<Self, ManifestError> {
         let name = st.get(rd.name)?.into();
         let params = rd
             .params
             .iter()
-            .map(|p| ManifestType::from_ty(st, &p.ty))
+            .map(|p| ManifestType::from_ty(sm, st, &p.ty))
             .collect::<Result<_, ManifestError>>()?;
         let def = ManifestRoutineDefType::from_def(rd.def);
-        let ret_ty = ManifestType::from_ty(st, &rd.ret_ty)?;
-        let canon_path = path_to_string(st, rd.context().canonical_path())?;
+        let ret_ty = ManifestType::from_ty(sm, st, &rd.ret_ty)?;
+        let canon_path = path_to_string(sm, st, rd.context().canonical_path())?;
 
         Ok(ManifestRoutineDef {
             name,
@@ -148,15 +154,19 @@ struct ManifestStructDef {
 }
 
 impl ManifestStructDef {
-    fn from_sd(sd: &StructDef<SemanticContext>, st: &StringTable) -> Result<Self, ManifestError> {
+    fn from_sd(
+        sd: &StructDef<SemanticContext>,
+        sm: &SourceMap,
+        st: &StringTable,
+    ) -> Result<Self, ManifestError> {
         let name = st.get(sd.get_name())?.into();
-        let canon_path = path_to_string(st, sd.context().canonical_path())?;
+        let canon_path = path_to_string(sm, st, sd.context().canonical_path())?;
         let fields = sd
             .get_fields()
             .iter()
             .map(|f| {
                 let name = st.get(f.name).map_err(|e| e.into());
-                let fty = ManifestType::from_ty(st, &f.ty);
+                let fty = ManifestType::from_ty(sm, st, &f.ty);
                 name.and_then(|name| fty.and_then(|fty| Ok((name.into(), fty))))
             })
             .collect::<Result<Vec<_>, ManifestError>>()?;
@@ -199,7 +209,7 @@ enum ManifestType {
 }
 
 impl ManifestType {
-    fn from_ty(st: &StringTable, ty: &Type) -> Result<Self, ManifestError> {
+    fn from_ty(sm: &SourceMap, st: &StringTable, ty: &Type) -> Result<Self, ManifestError> {
         let man_ty = match ty {
             Type::U8 => Self::U8,
             Type::U16 => Self::U16,
@@ -211,9 +221,9 @@ impl ManifestType {
             Type::I64 => Self::I64,
             Type::Bool => Self::Bool,
             Type::StringLiteral => Self::StringLiteral,
-            Type::Array(box el_ty, sz) => Self::Array(box Self::from_ty(st, el_ty)?, *sz),
+            Type::Array(box el_ty, sz) => Self::Array(box Self::from_ty(sm, st, el_ty)?, *sz),
             Type::Unit => Self::Unit,
-            Type::Custom(p) => Self::Custom(path_to_string(st, p)?),
+            Type::Custom(p) => Self::Custom(path_to_string(sm, st, p)?),
             _ => return Err(ManifestError::CannotConvertType(ty.clone())),
         };
 
@@ -266,8 +276,12 @@ impl ManifestRoutineDefType {
 }
 
 /// Convert a Compiler Path value into the Manifest file string format.
-fn path_to_string(st: &StringTable, p: &Path) -> Result<String, CompilerDisplayError> {
-    p.fmt(st)
+fn path_to_string(
+    sm: &SourceMap,
+    st: &StringTable,
+    p: &Path,
+) -> Result<String, CompilerDisplayError> {
+    p.fmt(sm, st)
 }
 
 /// Convert a Manifest file Path string to a Compiler Path value.

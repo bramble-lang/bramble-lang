@@ -2,7 +2,7 @@ use crate::{
     compiler::{
         ast::AstError,
         lexer::tokens::{Lex, Token},
-        CompilerDisplay, CompilerDisplayError, CompilerError,
+        CompilerDisplay, CompilerDisplayError, CompilerError, SourceMap,
     },
     StringId, StringTable,
 };
@@ -55,15 +55,15 @@ pub enum ParserError {
 impl CompilerDisplay for ParserError {
     /// Format a ParserError into a human readable message and replace any [`StringId`]s
     /// with their respective string values.
-    fn fmt(&self, st: &crate::StringTable) -> Result<String, CompilerDisplayError> {
+    fn fmt(&self, sm: &SourceMap, st: &crate::StringTable) -> Result<String, CompilerDisplayError> {
         let msg = match self {
             ParserError::Locked(token) => {
-                let ts = token_to_string(st, token)?;
+                let ts = token_to_string(sm, st, token)?;
                 format!("Parser cannot advance past {}", ts)
             }
             ParserError::ModExpectedName => format!("Identifier expected after mod keyword"),
             ParserError::ModAlreadyContains(sid) => {
-                format!("Module already contains {}", sid.fmt(st)?)
+                format!("Module already contains {}", sid.fmt(sm, st)?)
             }
             ParserError::ExternInvalidVarArgs => format!(
                 "An extern declaration must have at least one \
@@ -85,7 +85,7 @@ impl CompilerDisplay for ParserError {
             ParserError::FnExpectedReturn(token) => {
                 format!(
                     "Routines must end with a return statement, but found {}",
-                    token_to_string(st, token)?
+                    token_to_string(sm, st, token)?
                 )
             }
             ParserError::FnCallExpectedParams => {
@@ -109,8 +109,8 @@ impl CompilerDisplay for ParserError {
             ParserError::ExpectedButFound(expected, actual) => {
                 format!(
                     "Expected {}, but found {}",
-                    lex_set_to_string(st, expected)?,
-                    lex_to_string(st, actual)?
+                    lex_set_to_string(sm, st, expected)?,
+                    lex_to_string(sm, st, actual)?
                 )
             }
             ParserError::ExpectedIdDeclAfterLet => {
@@ -142,16 +142,19 @@ impl CompilerDisplay for ParserError {
             ParserError::YieldExpectedIdentifier => format!("Expected identifier after yield"),
             ParserError::StructExpectedFieldExpr(sid) => format!(
                 "Expected an expression to be assigned to field {}",
-                sid.fmt(st)?
+                sid.fmt(sm, st)?
             ),
             ParserError::ExpectedExprAfter(lex) => {
                 format!(
                     "Expected expression after {}",
-                    lex_to_string(st, &Some(*lex))?
+                    lex_to_string(sm, st, &Some(*lex))?
                 )
             }
             ParserError::ExpectedTermAfter(lex) => {
-                format!("Expected term after {}", lex_to_string(st, &Some(*lex))?)
+                format!(
+                    "Expected term after {}",
+                    lex_to_string(sm, st, &Some(*lex))?
+                )
             }
             ParserError::MemberAccessExpectedField => {
                 format!("Expected member name after . operator.")
@@ -166,33 +169,44 @@ impl CompilerDisplay for ParserError {
 }
 
 fn token_to_string(
+    sm: &SourceMap,
     st: &StringTable,
     token: &Option<Token>,
 ) -> Result<String, CompilerDisplayError> {
     token
         .as_ref()
-        .map(|t| t.fmt(st))
+        .map(|t| t.fmt(sm, st))
         .unwrap_or(Ok("EOF".into()))
 }
 
-fn lex_to_string(st: &StringTable, lex: &Option<Lex>) -> Result<String, CompilerDisplayError> {
-    lex.as_ref().map(|t| t.fmt(st)).unwrap_or(Ok("EOF".into()))
+fn lex_to_string(
+    sm: &SourceMap,
+    st: &StringTable,
+    lex: &Option<Lex>,
+) -> Result<String, CompilerDisplayError> {
+    lex.as_ref()
+        .map(|t| t.fmt(sm, st))
+        .unwrap_or(Ok("EOF".into()))
 }
 
-fn lex_set_to_string(st: &StringTable, set: &[Lex]) -> Result<String, CompilerDisplayError> {
+fn lex_set_to_string(
+    sm: &SourceMap,
+    st: &StringTable,
+    set: &[Lex],
+) -> Result<String, CompilerDisplayError> {
     Ok(set
         .iter()
-        .map(|l| l.fmt(st))
+        .map(|l| l.fmt(sm, st))
         .collect::<Result<Vec<_>, _>>()?
         .join(" or "))
 }
 
 impl From<CompilerError<AstError>> for CompilerError<ParserError> {
     fn from(ce: CompilerError<AstError>) -> Self {
-        let (line, ae) = ce.take();
+        let (span, ae) = ce.take();
         match ae {
             AstError::ModuleAlreadyContains(sid) => {
-                CompilerError::new(line, ParserError::ModAlreadyContains(sid))
+                CompilerError::new(span, ParserError::ModAlreadyContains(sid))
             }
         }
     }

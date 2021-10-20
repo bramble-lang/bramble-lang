@@ -1,12 +1,11 @@
-use std::fs::File;
-use std::io::{Bytes, Read, Seek};
+use std::io::{Bytes, Read};
 
 use super::{Offset, SourceChar};
 
 /// Iterates over each character in a Source File.
-pub struct SourceCharIter {
+pub struct SourceCharIter<R: Read> {
     /// The source code file that is being read.
-    chars: UnicodeCharIterator,
+    chars: UnicodeCharIterator<R>,
 
     /// Marks the beginning of the global offset range that is assigned to this
     /// Source Unit
@@ -24,13 +23,13 @@ pub struct SourceCharIter {
     file_offset: u64,
 }
 
-impl SourceCharIter {
+impl<R: Read> SourceCharIter<R> {
     /// Create a new SourceCharIter from the given Reader with the base
     /// [`Offset`]. The maximum [`Offset`] is also given and will be validated
     /// against as characters are read from the Read, if the [`Offset`] of the
     /// source exceeds the maximum offset (meaning that the source cannot fit
     /// within the range assigned to it by [`SourceMap`] then a panic will happen.)
-    pub(super) fn new(reader: File, low: Offset, high: Offset) -> SourceCharIter {
+    pub(super) fn new(reader: R, low: Offset, high: Offset) -> SourceCharIter<R> {
         SourceCharIter {
             chars: UnicodeCharIterator::new(reader),
             low,
@@ -80,7 +79,7 @@ impl SourceCharIter {
     }
 }
 
-impl Iterator for SourceCharIter {
+impl<R: Read> Iterator for SourceCharIter<R> {
     type Item = Result<SourceChar, SourceError>;
 
     /// Gets the next character from the source file.
@@ -103,11 +102,11 @@ impl Iterator for SourceCharIter {
 }
 
 /// Convert a stream of bytes into a stream of unicode characters.
-struct UnicodeCharIterator {
-    bytes: OffsetBytes,
+struct UnicodeCharIterator<R: Read> {
+    bytes: OffsetBytes<R>,
 }
 
-impl Iterator for UnicodeCharIterator {
+impl<R: Read> Iterator for UnicodeCharIterator<R> {
     type Item = Result<char, UnicodeParsingError>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -119,8 +118,8 @@ impl Iterator for UnicodeCharIterator {
 }
 
 /// Based on code from https://rosettacode.org/wiki/Read_a_file_character_by_character/UTF8#Rust
-impl UnicodeCharIterator {
-    pub fn new(file: File) -> UnicodeCharIterator {
+impl<R: Read> UnicodeCharIterator<R> {
+    pub fn new(file: R) -> UnicodeCharIterator<R> {
         UnicodeCharIterator {
             bytes: OffsetBytes::new(file),
         }
@@ -179,28 +178,28 @@ impl UnicodeCharIterator {
 }
 
 /// Iterates over each byte in a file while keeping track of the current offset in the file
-struct OffsetBytes {
-    nread: u64,
-    bytes: std::iter::Peekable<Bytes<File>>,
+struct OffsetBytes<R: Read> {
+    byte_offset: u64,
+    bytes: std::iter::Peekable<Bytes<R>>,
 }
 
-impl OffsetBytes {
+impl<R: Read> OffsetBytes<R> {
     /// Takes a file and creates a CountingBytes iterator which iterates over
     /// the each byte in the file (starting at the given position) and keeps
     /// tracke of the current offset in the file as the bytes are read.
-    pub fn new(mut file: File) -> OffsetBytes {
-        let nread = file.stream_position().unwrap();
-        let bytes = file.bytes();
+    pub fn new(reader: R) -> OffsetBytes<R> {
+        let bytes_read = 0;
+        let bytes = reader.bytes();
 
         OffsetBytes {
-            nread,
+            byte_offset: bytes_read,
             bytes: bytes.peekable(),
         }
     }
 
     /// Returns the offset of the iterators current position in the source
     pub fn offset(&self) -> u64 {
-        self.nread
+        self.byte_offset
     }
 
     /// Attempts to peek at the character the iterator is currently point
@@ -212,13 +211,13 @@ impl OffsetBytes {
     }
 }
 
-impl Iterator for OffsetBytes {
+impl<R: Read> Iterator for OffsetBytes<R> {
     type Item = Result<u8, std::io::Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.bytes.next().map(|r| {
             r.map(|b| {
-                self.nread += 1;
+                self.byte_offset += 1;
                 b
             })
         })
@@ -248,10 +247,17 @@ pub enum SourceError {
     OffsetExceededMaxSize,
     UnexpectedEof,
     UnicodeError(UnicodeParsingError),
+    Io(std::io::Error),
 }
 
 impl From<UnicodeParsingError> for SourceError {
     fn from(ce: UnicodeParsingError) -> Self {
         SourceError::UnicodeError(ce)
+    }
+}
+
+impl From<std::io::Error> for SourceError {
+    fn from(io: std::io::Error) -> Self {
+        Self::Io(io)
     }
 }

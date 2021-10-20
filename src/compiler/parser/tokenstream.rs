@@ -1,4 +1,5 @@
-use super::ParserError;
+use super::{ctx_over_tokens, ParserError};
+use crate::compiler::ast::Context;
 use crate::compiler::lexer::tokens::{Lex, Token};
 use crate::compiler::{CompilerError, Span};
 use crate::StringId;
@@ -7,11 +8,16 @@ use crate::StringId;
 pub struct TokenStream<'a> {
     tokens: &'a Vec<Token>,
     index: usize,
+    span: Span,
 }
 
 impl<'a> TokenStream<'a> {
-    pub fn new(tokens: &'a Vec<Token>) -> TokenStream {
-        TokenStream { tokens, index: 0 }
+    pub fn new(tokens: &'a Vec<Token>) -> Option<TokenStream> {
+        ctx_over_tokens(tokens).map(|ctx| TokenStream {
+            tokens,
+            index: 0,
+            span: ctx.span(),
+        })
     }
 
     pub fn index(&self) -> usize {
@@ -54,15 +60,20 @@ impl<'a> TokenStream<'a> {
     }
 
     pub fn next_must_be(&mut self, test: &Lex) -> Result<Token, CompilerError<ParserError>> {
-        let (line, found) = match self.peek() {
-            Some(t) => (t.line, t.sym.clone()),
-            None => return err!(0, ParserError::ExpectedButFound(vec![test.clone()], None)),
+        let (span, found) = match self.peek() {
+            Some(t) => (t.span, t.sym.clone()),
+            None => {
+                return err!(
+                    Span::new(self.span.high(), self.span.high()),
+                    ParserError::ExpectedButFound(vec![test.clone()], None)
+                )
+            }
         };
         match self.next_if(test) {
             Some(t) => Ok(t),
             None => {
                 err!(
-                    line,
+                    span,
                     ParserError::ExpectedButFound(vec![test.clone()], Some(found))
                 )
             }
@@ -139,7 +150,7 @@ mod test_tokenstream {
     use super::TokenStream;
     use crate::compiler::lexer::tokens::{Lex, Token};
     use crate::compiler::source::Offset;
-    use crate::compiler::{Lexer, Span};
+    use crate::compiler::{Lexer, SourceMap, Span};
     use crate::StringTable;
 
     fn new_span(l: u32, h: u32) -> Span {
@@ -149,14 +160,20 @@ mod test_tokenstream {
     #[test]
     fn test_peek() {
         let text = "(2 + 4) * 3";
+
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
         let mut table = StringTable::new();
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
             .unwrap();
 
-        let ts = TokenStream::new(&tokens);
+        let ts = TokenStream::new(&tokens).unwrap();
         let p = ts.peek().unwrap();
         assert_eq!(
             *p,
@@ -169,24 +186,29 @@ mod test_tokenstream {
     }
 
     #[test]
-    fn test_peek_empty() {
+    fn test_empty_stream() {
         let tokens = vec![];
         let ts = TokenStream::new(&tokens);
-        let p = ts.peek();
-        assert_eq!(p, None);
+        assert!(ts.is_none());
     }
 
     #[test]
     fn test_peek_at() {
         let text = "(2 + 4) * 3";
+
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
         let mut table = StringTable::new();
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
             .unwrap();
 
-        let ts = TokenStream::new(&tokens);
+        let ts = TokenStream::new(&tokens).unwrap();
         let p = ts.peek_at(0).unwrap();
         assert_eq!(
             *p,
@@ -214,14 +236,20 @@ mod test_tokenstream {
     #[test]
     fn test_next() {
         let text = "(2 + 4) * 3";
+
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
         let mut table = StringTable::new();
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
             .unwrap();
 
-        let mut ts = TokenStream::new(&tokens);
+        let mut ts = TokenStream::new(&tokens).unwrap();
         let p = ts.next().unwrap();
         assert_eq!(
             p,
@@ -299,14 +327,20 @@ mod test_tokenstream {
     #[test]
     fn test_next_if() {
         let text = "(2 + 4) * 3";
+
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
         let mut table = StringTable::new();
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
             .unwrap();
 
-        let mut ts = TokenStream::new(&tokens);
+        let mut ts = TokenStream::new(&tokens).unwrap();
         let p = ts.next_if(&Lex::LParen).unwrap(); // should I really use a borrow for this?  If not then gotta do clones and BS i think.
         assert_eq!(
             p,
@@ -344,14 +378,20 @@ mod test_tokenstream {
     #[test]
     fn test_next_ifn() {
         let text = "(2 + 4) * 3";
+
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
         let mut table = StringTable::new();
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
             .unwrap();
 
-        let mut ts = TokenStream::new(&tokens);
+        let mut ts = TokenStream::new(&tokens).unwrap();
         let p = ts.next_ifn(vec![Lex::LParen, Lex::I64(0)]).unwrap();
         assert_eq!(
             *p,
@@ -383,14 +423,20 @@ mod test_tokenstream {
     #[test]
     fn test_if_one_of() {
         let text = "(2 + 4) * 3";
+
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
         let mut table = StringTable::new();
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
             .unwrap();
 
-        let ts = TokenStream::new(&tokens);
+        let ts = TokenStream::new(&tokens).unwrap();
         let p = ts.test_if_one_of(vec![Lex::LParen, Lex::I64(0)]);
         assert_eq!(p, true);
 
@@ -401,14 +447,20 @@ mod test_tokenstream {
     #[test]
     fn test_next_if_one_of() {
         let text = "(2 + 4) * 3";
+
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
         let mut table = StringTable::new();
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<Result<_, _>>()
             .unwrap();
 
-        let mut ts = TokenStream::new(&tokens);
+        let mut ts = TokenStream::new(&tokens).unwrap();
         let p = ts.next_if_one_of(vec![Lex::LParen, Lex::I64(0)]).unwrap();
         assert_eq!(
             p,

@@ -24,8 +24,18 @@ impl Span {
         Span { low, high }
     }
 
+    /// Returns the lower [`Offset`] of this Span
+    pub fn low(&self) -> Offset {
+        self.low
+    }
+
+    /// Returns the upper bound [`Offset`] of this span
+    pub fn high(&self) -> Offset {
+        self.high
+    }
+
     pub fn zero() -> Span {
-        Span::new(Offset(0), Offset(1))
+        Span::new(Offset(0), Offset(0))
     }
 
     /// Creates the smallest span that covers the two given spans.
@@ -34,5 +44,28 @@ impl Span {
         let high = a.high.max(b.high);
 
         Span::new(low, high)
+    }
+
+    /// Returns true if this [`Span`] and the Span `b` intersect
+    pub fn intersects(&self, b: Span) -> bool {
+        self.intersection(b).is_some()
+    }
+
+    /// If this and `a` intersect, then this will return the [`Span`] that
+    /// covers that intersection.
+    pub fn intersection(&self, b: Span) -> Option<Span> {
+        // Test for the intersection of self and b
+        let low = if self.low < b.low { b.low } else { self.low };
+        let high = if self.high < b.high {
+            self.high
+        } else {
+            b.high
+        };
+
+        if low < high {
+            Some(Span::new(low, high))
+        } else {
+            None
+        }
     }
 }

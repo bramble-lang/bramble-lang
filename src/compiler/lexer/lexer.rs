@@ -3,8 +3,8 @@
 // by tokenize
 use stdext::function_name;
 
-use crate::compiler::source::Offset;
-use crate::compiler::{SourceChar, SourceCharIter, Span};
+use crate::compiler::source::{Offset, Source};
+use crate::compiler::{SourceChar, Span};
 use crate::diagnostics::config::TracingConfig;
 use crate::{StringId, StringTable};
 
@@ -186,7 +186,7 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
 }
 
 pub struct Lexer<'a> {
-    chars: Vec<SourceChar>,
+    chars: Source,
     end_offset: Offset,
     index: usize,
     line: u32,
@@ -195,30 +195,10 @@ pub struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
-    pub fn from_str(string_table: &'a mut StringTable, text: &str) -> Lexer<'a> {
-        let end_offset = Offset::new(text.len() as u32);
-        Lexer {
-            chars: text
-                .chars()
-                .enumerate()
-                .map(|(i, c)| SourceChar::new(c, Offset::new(i as u32)))
-                .collect(),
-            index: 0,
-            end_offset,
-            line: 1,
-            tracing: TracingConfig::Off,
-            string_table,
-        }
-    }
-
-    pub fn new(
-        string_table: &'a mut StringTable,
-        text: SourceCharIter,
-    ) -> Result<Lexer<'a>, LexerError> {
+    pub fn new(string_table: &'a mut StringTable, text: Source) -> Result<Lexer<'a>, LexerError> {
         let end_offset = text.high();
-        let chars: Result<Vec<_>, _> = text.collect();
         Ok(Lexer {
-            chars: chars?,
+            chars: text,
             index: 0,
             end_offset,
             line: 1,
@@ -255,21 +235,15 @@ impl<'a> Lexer<'a> {
 
             // Can no longer consume the input text
             if prev_index == self.index {
-                tokens.push(err!(self.line(), LexerError::Locked(self.current_char())));
+                tokens.push(err!(
+                    self.current_char_span().unwrap(), // If there is no Span then something very bad has happened
+                    LexerError::Locked(self.current_char())
+                ));
                 break;
             }
         }
 
         tokens
-    }
-
-    /// Returns the character that the lexer cursor is currently pointing to.
-    fn current_char(&self) -> Option<SourceChar> {
-        if self.index < self.chars.len() {
-            Some(self.chars[self.index])
-        } else {
-            None
-        }
     }
 
     /// Attempt to parse the token which immediately follows from where the lexer
@@ -352,9 +326,19 @@ impl<'a> Lexer<'a> {
                 if c == '\\' {
                     match branch.next() {
                         Some(c) if Self::is_escape_code(c) => (),
-                        Some(c) => return err!(self.line(), LexerError::InvalidEscapeSequence(c)),
+                        Some(c) => {
+                            return err!(
+                                self.span_from_index_to_char(c).unwrap(),
+                                LexerError::InvalidEscapeSequence(c)
+                            )
+                        }
 
-                        None => return err!(self.line(), LexerError::ExpectedEscapeCharacter),
+                        None => {
+                            return err!(
+                                self.current_char_span().unwrap(), // Need to add a span to the branch
+                                LexerError::ExpectedEscapeCharacter
+                            );
+                        }
                     }
                 }
             }
@@ -402,7 +386,10 @@ impl<'a> Lexer<'a> {
             .map(|c| !Self::is_delimiter(c))
             .unwrap_or(false)
         {
-            return err!(self.line(), LexerError::InvalidInteger);
+            return err!(
+                self.current_char_span().unwrap(), // Need to add a span to the branch
+                LexerError::InvalidInteger
+            );
         }
 
         let (_, span) = branch.merge().unwrap();
@@ -458,7 +445,7 @@ impl<'a> Lexer<'a> {
                 span,
             ))),
             Primitive::Bool | Primitive::StringLiteral => {
-                err!(line, LexerError::UnexpectedSuffixType(prim))
+                err!(span, LexerError::UnexpectedSuffixType(prim))
             }
         }
     }
@@ -632,10 +619,51 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// Returns the character that the lexer cursor is currently pointing to.
+    fn current_char(&self) -> Option<SourceChar> {
+        if self.index < self.chars.len() {
+            Some(self.chars[self.index])
+        } else {
+            None
+        }
+    }
+
+    /// Returns the span covered by the character the lexer cursor is currently
+    /// pointing at.  If the cursor is at the end of the input text, then this
+    /// will return `None`.
+    fn current_char_span(&self) -> Option<Span> {
+        if self.index < self.chars.len() {
+            let char_offset = self.chars[self.index].offset();
+            let next_char_offset = if self.index + 1 < self.chars.len() {
+                self.chars[self.index + 1].offset()
+            } else {
+                self.end_offset
+            };
+
+            Some(Span::new(char_offset, next_char_offset))
+        } else {
+            None
+        }
+    }
+
+    /// Returns the span from the Lexer cursor to the given character.
+    fn span_from_index_to_char(&self, c: SourceChar) -> Option<Span> {
+        if self.index < self.chars.len() {
+            let start = self.chars[self.index].offset();
+            let end = c.offset(); // This will actually result in an off by one error for the span.
+            Some(Span::new(start, end))
+        } else {
+            None
+        }
+    }
+
+    /// Returns true if the given character is a Braid delimiter.  Which is
+    /// punctuation or whitespace.
     fn is_delimiter(c: SourceChar) -> bool {
         c.is_ascii_punctuation() || c.is_whitespace()
     }
 
+    /// Returns true if the character is a valid code for an escape sequence
     fn is_escape_code(c: SourceChar) -> bool {
         c == 'n' || c == 'r' || c == 't' || c == '"' || c == '0' || c == '\\'
     }

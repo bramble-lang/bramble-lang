@@ -15,7 +15,7 @@ pub mod stringtable;
 // of the interface between the compiler and modules which use the compiler.
 pub use error::CompilerError;
 pub use lexer::lexer::Lexer;
-pub use source::{SourceCharIter, SourceError, SourceMap, SourceMapError, Span};
+pub use source::{Source, SourceCharIter, SourceError, SourceMap, SourceMapError, Span};
 
 // Import items for use within the compiler submodule which are not needed outside
 use source::SourceChar;
@@ -30,7 +30,7 @@ string value.
 pub trait CompilerDisplay {
     /// Uses the given [`StringTable`] to render the associated Compiler type into a
     /// human readable format.
-    fn fmt(&self, st: &StringTable) -> Result<String, CompilerDisplayError>;
+    fn fmt(&self, sm: &SourceMap, st: &StringTable) -> Result<String, CompilerDisplayError>;
 }
 
 /// Error that gets thrown if formatting a Compiler value for human readability

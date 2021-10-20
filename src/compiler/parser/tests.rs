@@ -11,7 +11,7 @@ pub mod tests {
                 expression::*, statement::*, tokenstream::TokenStream, ParserContext, ParserError,
             },
             source::Offset,
-            CompilerDisplay, CompilerError, Lexer, Span,
+            CompilerDisplay, CompilerError, Lexer, SourceMap, Span,
         },
         StringTable,
     };
@@ -33,12 +33,18 @@ pub mod tests {
         {
             let mut table = StringTable::new();
             let a = table.insert("a".into());
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens);
+            let mut stream = TokenStream::new(&tokens).unwrap();
             let exp = expression(&mut stream).unwrap();
             if let Some(Expression::UnaryOp(ctx, op, operand)) = exp {
                 assert_eq!(op, *expected);
@@ -58,12 +64,17 @@ pub mod tests {
             let mut table = StringTable::new();
             let a = table.insert("a".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens);
+            let mut stream = TokenStream::new(&tokens).unwrap();
             let exp = expression(&mut stream).unwrap();
             if let Some(Expression::UnaryOp(ctx, op, operand)) = exp {
                 assert_eq!(op, *expected);
@@ -94,12 +105,17 @@ pub mod tests {
             ("2>=2", BinaryOperator::GrEq, 0, 4),
         ] {
             let mut table = StringTable::new();
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens);
+            let mut stream = TokenStream::new(&tokens).unwrap();
             if let Some(Expression::BinaryOp(ctx, op, left, right)) =
                 expression(&mut stream).unwrap()
             {
@@ -125,12 +141,17 @@ pub mod tests {
         .iter()
         {
             let mut table = StringTable::new();
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens);
+            let mut stream = TokenStream::new(&tokens).unwrap();
             if let Some(Expression::BinaryOp(ctx, op, left, right)) =
                 expression(&mut stream).unwrap()
             {
@@ -148,12 +169,17 @@ pub mod tests {
     fn parse_nested_arithmetic_expression() {
         let text = "(2 + 4) * 3";
         let mut table = StringTable::new();
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens);
+        let mut stream = TokenStream::new(&tokens).unwrap();
         if let Some(Expression::BinaryOp(ctx, BinaryOperator::Mul, left, right)) =
             expression(&mut stream).unwrap()
         {
@@ -176,12 +202,17 @@ pub mod tests {
     fn parse_boolean_expression() {
         let text = "true || false";
         let mut table = StringTable::new();
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens);
+        let mut stream = TokenStream::new(&tokens).unwrap();
         if let Some(Expression::BinaryOp(ctx, BinaryOperator::BOr, left, right)) =
             expression(&mut stream).unwrap()
         {
@@ -218,27 +249,39 @@ pub mod tests {
             ),
             (
                 "thing::",
-                Err(CompilerError::new(1, ParserError::PathExpectedIdentifier)),
+                Err(CompilerError::new(
+                    Span::new(Offset::new(5), Offset::new(7)),
+                    ParserError::PathExpectedIdentifier,
+                )),
             ),
             (
                 "thing::first::",
-                Err(CompilerError::new(1, ParserError::PathExpectedIdentifier)),
+                Err(CompilerError::new(
+                    Span::new(Offset::new(12), Offset::new(14)),
+                    ParserError::PathExpectedIdentifier,
+                )),
             ),
         ] {
             test += 1;
             println!("Test #{}", test);
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens);
+            let mut stream = TokenStream::new(&tokens).unwrap();
+            let sm = SourceMap::new();
             match expression(&mut stream) {
                 Ok(Some(Expression::Path(ctx, path))) => {
                     assert_eq!(ctx.line(), 1);
                     match expected {
                         Ok(expected) => assert_eq!(path, expected.into()),
-                        Err(msg) => assert!(false, "{:?}", msg.fmt(&table)),
+                        Err(msg) => assert!(false, "{:?}", msg.fmt(&sm, &table)),
                     }
                 }
                 Ok(Some(Expression::Identifier(ctx, id))) => {
@@ -254,7 +297,7 @@ pub mod tests {
                 Ok(Some(n)) => panic!("{} resulted in {:?}, expected {:?}", text, n, expected),
                 Ok(None) => panic!("No node returned for {}, expected {:?}", text, expected),
                 Err(msg) => match expected {
-                    Ok(_) => assert!(false, "{}", msg.fmt(&table).unwrap()),
+                    Ok(_) => assert!(false, "{}", msg.fmt(&sm, &table).unwrap()),
                     Err(expected) => assert_eq!(expected, msg),
                 },
             }
@@ -275,12 +318,17 @@ pub mod tests {
             ("((thing .first).second)", 1, 15, 2, 7),
             ("( thing .first.second)", 2, 14, 2, 7),
         ] {
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens);
+            let mut stream = TokenStream::new(&tokens).unwrap();
             match expression(&mut stream) {
                 Ok(Some(Expression::MemberAccess(ctx, left, right))) => {
                     assert_eq!(ctx.line(), 1); // TODO: This should test the span
@@ -308,12 +356,17 @@ pub mod tests {
         let text = "let x:i64 := 5;";
         let mut table = StringTable::new();
         let x = table.insert("x".into());
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens);
+        let mut stream = TokenStream::new(&tokens).unwrap();
         let stm = statement(&mut stream).unwrap().unwrap();
         assert_eq!(*stm.context(), new_ctx(0, 15));
         match stm {
@@ -333,12 +386,17 @@ pub mod tests {
         let text = "let mut x:i64 := 5;";
         let mut table = StringTable::new();
         let x = table.insert("x".into());
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens);
+        let mut stream = TokenStream::new(&tokens).unwrap();
         let stm = statement(&mut stream).unwrap().unwrap();
         assert_eq!(*stm.context(), new_ctx(0, 19));
         match stm {
@@ -378,12 +436,17 @@ pub mod tests {
             let mut table = StringTable::new();
             let x = table.insert("x".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens);
+            let mut stream = TokenStream::new(&tokens).unwrap();
 
             let stm = statement(&mut stream).unwrap().unwrap();
 
@@ -406,12 +469,17 @@ pub mod tests {
         let mut table = StringTable::new();
         let x = table.insert("x".into());
 
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens);
+        let mut stream = TokenStream::new(&tokens).unwrap();
         let stm = statement(&mut stream).unwrap().unwrap();
         assert_eq!(*stm.context(), new_ctx(0, text.len() as u32));
         match stm {
@@ -430,7 +498,12 @@ pub mod tests {
         let test = table.insert("test".into());
         let test_mod = table.insert("test_mod".into());
 
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -451,7 +524,12 @@ pub mod tests {
         let test_fn_mod = table.insert("test_fn_mod".into());
         let x = table.insert("x".into());
 
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -512,7 +590,12 @@ pub mod tests {
         let test = table.insert("test".into());
         let x = table.insert("x".into());
 
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -569,7 +652,12 @@ pub mod tests {
         let my_struct = table.insert("my_struct".into());
         let x = table.insert("x".into());
 
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -609,7 +697,12 @@ pub mod tests {
         let my_fn = table.insert("my_fn".into());
         let x = table.insert("x".into());
 
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -651,7 +744,12 @@ pub mod tests {
         let my_fn = table.insert("my_fn".into());
         let x = table.insert("x".into());
 
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -692,7 +790,12 @@ pub mod tests {
         let x = table.insert("x".into());
         let test = table.insert("test".into());
 
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -728,7 +831,12 @@ pub mod tests {
         let x = table.insert("x".into());
         let test = table.insert("test".into());
 
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -777,7 +885,12 @@ pub mod tests {
         let mut table = StringTable::new();
         let test = table.insert("test".into());
 
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -793,12 +906,17 @@ pub mod tests {
         let y = table.insert("y".into());
         let test = table.insert("test".into());
 
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut iter = TokenStream::new(&tokens);
+        let mut iter = TokenStream::new(&tokens).unwrap();
         if let Some(Expression::RoutineCall(l, RoutineCall::Function, name, params)) =
             expression(&mut iter).unwrap()
         {
@@ -824,13 +942,18 @@ pub mod tests {
         let y = table.insert("y".into());
         let test = table.insert("test".into());
 
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<LResult>()
             .unwrap();
         println!("{:?}", table);
-        let mut iter = TokenStream::new(&tokens);
+        let mut iter = TokenStream::new(&tokens).unwrap();
         if let Some(Expression::RoutineCall(l, RoutineCall::Function, name, params)) =
             expression(&mut iter).unwrap()
         {
@@ -856,7 +979,12 @@ pub mod tests {
         let test = table.insert("test".into());
         let test_mod = table.insert("test_mod".into());
 
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -899,12 +1027,17 @@ pub mod tests {
         let x = table.insert("x".into());
         let c = table.insert("c".into());
 
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens);
+        let mut stream = TokenStream::new(&tokens).unwrap();
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
             Statement::Bind(box b) => {
@@ -937,12 +1070,17 @@ pub mod tests {
         let b = table.insert("b".into());
         let c = table.insert("c".into());
 
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens);
+        let mut stream = TokenStream::new(&tokens).unwrap();
         let stm = statement(&mut stream).unwrap().unwrap();
         match stm {
             Statement::Bind(box bind) => {
@@ -974,7 +1112,12 @@ pub mod tests {
         let x = table.insert("x".into());
         let cor = table.insert("cor".into());
 
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<LResult>()
@@ -1017,12 +1160,17 @@ pub mod tests {
         let mut table = StringTable::new();
         let x = table.insert("x".into());
 
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens);
+        let mut stream = TokenStream::new(&tokens).unwrap();
         let exp = expression(&mut stream).unwrap();
         if let Some(Expression::If {
             context: l,
@@ -1057,12 +1205,17 @@ pub mod tests {
         let y = table.insert("y".into());
         let z = table.insert("z".into());
 
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens);
+        let mut stream = TokenStream::new(&tokens).unwrap();
         let exp = expression(&mut stream).unwrap();
         if let Some(Expression::If {
             context,
@@ -1123,12 +1276,17 @@ pub mod tests {
         let mut table = StringTable::new();
         let x = table.insert("x".into());
 
-        let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
+        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            .unwrap()
             .tokenize()
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens);
+        let mut stream = TokenStream::new(&tokens).unwrap();
         let exp = expression(&mut stream).unwrap();
         if let Some(Expression::While {
             context: l,
@@ -1184,7 +1342,12 @@ pub mod tests {
                 ),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -1251,12 +1414,17 @@ pub mod tests {
                 ),
             ),
         ] {
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens);
+            let mut stream = TokenStream::new(&tokens).unwrap();
             let result = expression(&mut stream);
             assert_eq!(result, Ok(Some(expected)), "{:?}", text);
         }
@@ -1273,7 +1441,12 @@ pub mod tests {
             ("fn test() -> String {return \"test\";}", test, 6),
             ("fn test() -> String {return \"test 2\";}", test2, 8),
         ] {
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()

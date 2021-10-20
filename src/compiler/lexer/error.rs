@@ -1,4 +1,6 @@
-use crate::compiler::{source::SourceChar, CompilerDisplay, CompilerDisplayError, SourceError};
+use crate::compiler::{
+    source::SourceChar, CompilerDisplay, CompilerDisplayError, SourceError, SourceMap,
+};
 
 use super::tokens::Primitive;
 
@@ -14,7 +16,7 @@ pub enum LexerError {
 }
 
 impl CompilerDisplay for LexerError {
-    fn fmt(&self, st: &crate::StringTable) -> Result<String, CompilerDisplayError> {
+    fn fmt(&self, sm: &SourceMap, st: &crate::StringTable) -> Result<String, CompilerDisplayError> {
         use LexerError::*;
         let msg = match self {
             Locked(None) => format!("Lexer locked on EOF"),
@@ -22,7 +24,7 @@ impl CompilerDisplay for LexerError {
             InvalidEscapeSequence(c) => format!("Invalid escape sequence \\{}", c),
             ExpectedEscapeCharacter => format!("Expected an escape character after \\"),
             InvalidInteger => format!("Invalid integer"),
-            UnexpectedSuffixType(ref prim) => format!("Invalid type suffix: {}", prim.fmt(st)?),
+            UnexpectedSuffixType(ref prim) => format!("Invalid type suffix: {}", prim.fmt(sm, st)?),
             SourceError => format!("Error reading characters from source code"),
         };
 

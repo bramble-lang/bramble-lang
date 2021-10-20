@@ -3,6 +3,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use stdext::function_name;
 
+use crate::compiler::Span;
 use crate::StringId;
 use crate::{
     compiler::{
@@ -13,7 +14,7 @@ use crate::{
     diagnostics::config::TracingConfig,
 };
 
-use super::ParserContext;
+use super::{ctx_over_tokens, ParserContext};
 // AST - a type(s) which is used to construct an AST representing the logic of the
 // program
 // Each type of node represents an expression and the only requirement is that at the
@@ -140,17 +141,25 @@ impl Parser {
 }
 
 pub fn parse(name: StringId, tokens: &Vec<Token>) -> ParserResult<Module<ParserContext>> {
-    let module_ctx =
-        ctx_for_tokens(&tokens).ok_or(CompilerError::new(0, ParserError::EmptyProject))?;
+    // Create the module that represents the source code unit as a whole (usually the file)
+    // give it span that covers the entire set of tokens
+    let module_ctx = ctx_over_tokens(&tokens)
+        .ok_or(CompilerError::new(Span::zero(), ParserError::EmptyProject))?;
     let mut module = Module::new(name, module_ctx);
 
-    let mut stream = TokenStream::new(&tokens);
+    // Create the token stream.
+    let mut stream = TokenStream::new(&tokens)
+        .ok_or(CompilerError::new(Span::zero(), ParserError::EmptyProject))?;
+
     while stream.peek().is_some() {
         let start_index = stream.index();
         parse_items_into(&mut stream, &mut module)?;
 
         if stream.index() == start_index {
-            return err!(0, ParserError::Locked(stream.peek().map(|t| t.clone())));
+            return err!(
+                stream.peek().unwrap().span,
+                ParserError::Locked(stream.peek().map(|t| t.clone()))
+            );
         }
     }
 
@@ -174,7 +183,7 @@ fn module(stream: &mut TokenStream) -> ParserResult<Module<ParserContext>> {
                 Some(module)
             }
             _ => {
-                return err!(module.line, ParserError::ModExpectedName);
+                return err!(module.span, ParserError::ModExpectedName);
             }
         },
         None => None,
@@ -240,22 +249,22 @@ fn parse_items(
 
 fn extern_def(stream: &mut TokenStream) -> ParserResult<Extern<ParserContext>> {
     match stream.next_if(&Lex::Extern) {
-        Some(token) => match function_decl(stream, true)? {
+        Some(extern_tok) => match function_decl(stream, true)? {
             Some((fn_ctx, fn_name, params, has_varargs, fn_type)) => {
                 if has_varargs && params.len() == 0 {
-                    return err!(fn_ctx.line(), ParserError::ExternInvalidVarArgs);
+                    return err!(fn_ctx.span(), ParserError::ExternInvalidVarArgs);
                 }
                 stream.next_must_be(&Lex::Semicolon)?;
                 Ok(Some(Extern::new(
                     fn_name,
-                    token.to_ctx(),
+                    extern_tok.to_ctx(),
                     params,
                     has_varargs,
                     fn_type,
                 )))
             }
             None => {
-                err!(token.line, ParserError::ExternExpectedFnDecl)
+                err!(extern_tok.span, ParserError::ExternExpectedFnDecl)
             }
         },
         None => Ok(None),
@@ -275,7 +284,7 @@ fn struct_def(stream: &mut TokenStream) -> ParserResult<StructDef<ParserContext>
                 Ok(Some(StructDef::new(id, ctx, fields)))
             }
             None => {
-                err!(st_def.line, ParserError::StructExpectedIdentifier)
+                err!(st_def.span, ParserError::StructExpectedIdentifier)
             }
         },
         None => Ok(None),
@@ -283,11 +292,11 @@ fn struct_def(stream: &mut TokenStream) -> ParserResult<StructDef<ParserContext>
 }
 fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserContext>> {
     let (fn_ctx, fn_name, params, fn_type) = match function_decl(stream, false)? {
-        Some((l, n, p, v, t)) => {
-            if v {
-                return err!(l.line(), ParserError::FnVarArgsNotAllowed);
+        Some((ctx, name, params, is_variadic, ret_ty)) => {
+            if is_variadic {
+                return err!(ctx.span(), ParserError::FnVarArgsNotAllowed);
             }
-            (l, n, p, t)
+            (ctx, name, params, ret_ty)
         }
         None => return Ok(None),
     };
@@ -299,7 +308,7 @@ fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserConte
         Some(ret) => stmts.push(Statement::Return(Box::new(ret))),
         None => {
             return err!(
-                fn_ctx.line(),
+                fn_ctx.span(),
                 ParserError::FnExpectedReturn(stream.peek().map(|t| t.clone()))
             );
         }
@@ -332,7 +341,7 @@ fn function_decl(
     };
 
     let (fn_name, _, fn_def_span) = stream.next_if_id().ok_or(CompilerError::new(
-        fn_ctx.line(),
+        fn_ctx.span(),
         ParserError::FnExpectedIdentifierAfterFn,
     ))?;
     fn_ctx = fn_ctx.extend(fn_def_span);
@@ -341,7 +350,7 @@ fn function_decl(
     let fn_type = if stream.next_if(&Lex::LArrow).is_some() {
         consume_type(stream)?
             .ok_or(CompilerError::new(
-                fn_ctx.line(),
+                fn_ctx.span(),
                 ParserError::FnExpectedTypeAfterArrow,
             ))?
             .0
@@ -359,20 +368,20 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserCont
     };
 
     let (co_name, _, _) = stream.next_if_id().ok_or(CompilerError::new(
-        ctx.line(),
+        ctx.span(),
         ParserError::CoExpectedIdentifierAfterCo,
     ))?;
     let (params, has_varargs) = fn_def_params(stream, false)?;
 
     if has_varargs {
-        return err!(ctx.line(), ParserError::FnVarArgsNotAllowed);
+        return err!(ctx.span(), ParserError::FnVarArgsNotAllowed);
     }
 
     let co_type = match stream.next_if(&Lex::LArrow) {
         Some(t) => {
             consume_type(stream)?
                 .ok_or(CompilerError::new(
-                    t.line,
+                    t.span,
                     ParserError::FnExpectedTypeAfterArrow,
                 ))?
                 .0
@@ -386,8 +395,9 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserCont
     match return_stmt(stream)? {
         Some(ret) => stmts.push(Statement::Return(Box::new(ret))),
         None => {
+            let span = stmts.last().map_or(ctx.span(), |s| s.context().span());
             return err!(
-                stmts.last().map_or(ctx.line(), |s| s.context().line()),
+                span,
                 ParserError::FnExpectedReturn(stream.peek().map(|t| t.clone()))
             );
         }
@@ -469,8 +479,8 @@ pub(super) fn id_declaration_list(
     trace!(stream);
     let mut decls = vec![];
 
-    while let Some(token) = id_declaration(stream)? {
-        match token {
+    while let Some(id_decl) = id_declaration(stream)? {
+        match id_decl {
             Expression::IdentifierDeclare(ctx, id, ty) => {
                 decls.push((id, ty, ctx));
                 stream.next_if(&Lex::Comma);
@@ -533,7 +543,7 @@ pub(super) fn path(stream: &mut TokenStream) -> ParserResult<(Path, ParserContex
         return Ok(None);
     }
 
-    while let Some(token) = stream.next_if(&Lex::PathSeparator) {
+    while let Some(path_sep) = stream.next_if(&Lex::PathSeparator) {
         let span =
             match stream.next_if_one_of(vec![Lex::Identifier(StringId::new()), Lex::PathSuper]) {
                 Some(Token {
@@ -553,7 +563,7 @@ pub(super) fn path(stream: &mut TokenStream) -> ParserResult<(Path, ParserContex
                     span
                 }
                 _ => {
-                    return err!(token.line, ParserError::PathExpectedIdentifier);
+                    return err!(path_sep.span, ParserError::PathExpectedIdentifier);
                 }
             };
         ctx = ctx.extend(span);
@@ -621,13 +631,13 @@ fn array_type(stream: &mut TokenStream) -> ParserResult<(Type, ParserContext)> {
         Some(lbracket) => {
             let ctx = lbracket.to_ctx();
             let (element_ty, _) = consume_type(stream)?.ok_or(CompilerError::new(
-                ctx.line(),
+                ctx.span(),
                 ParserError::ArrayDeclExpectedType,
             ))?;
             stream.next_must_be(&Lex::Semicolon)?;
 
             let len = expression(stream)?.ok_or(CompilerError::new(
-                ctx.line(),
+                ctx.span(),
                 ParserError::ArrayDeclExpectedSize,
             ))?;
             let len = match len {
@@ -639,7 +649,7 @@ fn array_type(stream: &mut TokenStream) -> ParserResult<(Type, ParserContext)> {
                 Expression::I16(_, l) => l as usize,
                 Expression::I32(_, l) => l as usize,
                 Expression::I64(_, l) => l as usize,
-                _ => return err!(0, ParserError::ArrayExpectedIntLiteral),
+                _ => return err!(len.context().span(), ParserError::ArrayExpectedIntLiteral),
             };
 
             let ctx = stream.next_must_be(&Lex::RBracket)?.to_ctx().join(ctx);
@@ -654,24 +664,16 @@ pub(super) fn id_declaration(stream: &mut TokenStream) -> ParserResult<Expressio
     match stream.next_ifn(vec![Lex::Identifier(StringId::new()), Lex::Colon]) {
         Some(decl_tok) => {
             let ctx = decl_tok[0].to_ctx().join(decl_tok[1].to_ctx());
-            let line = decl_tok[1].line;
             let id = decl_tok[0].sym.get_str().expect(
                 "CRITICAL: first token is an identifier but cannot be converted to a string",
             );
-            let (ty, ty_ctx) = consume_type(stream)?
-                .ok_or(CompilerError::new(line, ParserError::IdDeclExpectedType))?;
+            let (ty, ty_ctx) = consume_type(stream)?.ok_or(CompilerError::new(
+                decl_tok[0].span,
+                ParserError::IdDeclExpectedType,
+            ))?;
             let ctx = ctx.join(ty_ctx);
             Ok(Some(Expression::IdentifierDeclare(ctx, id, ty)))
         }
         None => Ok(None),
     }
-}
-
-/// Compute the minimum span that covers all the tokens in the slice.
-fn ctx_for_tokens(tokens: &[Token]) -> Option<ParserContext> {
-    // The vector of tokens is assumed to be ordered by their Offsets and that no
-    // two tokens have intersecting spans.
-    tokens
-        .first()
-        .and_then(|f| tokens.last().map(|l| f.to_ctx().join(l.to_ctx())))
 }

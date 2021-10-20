@@ -7,7 +7,7 @@ mod type_resolver_tests {
             lexer::LexerError,
             parser::{parser, ParserContext},
             semantics::semanticnode::SemanticContext,
-            CompilerDisplay, CompilerError, Lexer, Span,
+            CompilerDisplay, CompilerError, Lexer, SourceMap, Span,
         },
         diagnostics::config::TracingConfig,
         project::manifest::Manifest,
@@ -138,12 +138,17 @@ mod type_resolver_tests {
                 Err("L3: Return expected bool but got i64"),
             ),
         ] {
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let test = table.insert("test".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -172,7 +177,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&sm, &table).unwrap(), msg);
                 }
             }
         }
@@ -235,12 +240,16 @@ mod type_resolver_tests {
             ),
         ] {
             println!("Test: {}", ln);
+            let mut sm = SourceMap::new();
+sm.add_string(&text, "/test".into()).unwrap();
+let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let test = table.insert("test".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -255,7 +264,7 @@ mod type_resolver_tests {
             );
             match expected {
                 Ok(_) => assert!(result.is_ok(), "{:?} got {:?}", expected, result),
-                Err(msg) => assert_eq!(result.err().unwrap().fmt(&table).unwrap(), msg),
+                Err(msg) => assert_eq!(result.err().unwrap().fmt(&sm, &table).unwrap(), msg),
             }
         }
     }
@@ -302,7 +311,12 @@ mod type_resolver_tests {
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -347,12 +361,16 @@ mod type_resolver_tests {
                 Err("L4: Could not find item with the given path: $test::my_mod::my_mod::test ($test::my_mod::my_mod::test)"),
             ),
         ] {
+            let mut sm = SourceMap::new();
+sm.add_string(&text, "/test".into()).unwrap();
+let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let test = table.insert("test".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -368,7 +386,7 @@ mod type_resolver_tests {
             );
             match expected {
                 Ok(_) => assert!(result.is_ok(), "Expected Ok got {:?}", result),
-                Err(msg) => assert_eq!(result.unwrap_err().fmt(&table).unwrap(), msg),
+                Err(msg) => assert_eq!(result.unwrap_err().fmt(&sm, &table).unwrap(), msg),
             }
         }
     }
@@ -410,7 +428,12 @@ mod type_resolver_tests {
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -459,29 +482,34 @@ mod type_resolver_tests {
                 "fn my_main() -> i32 {
                     return 0i32;
                 }",
-                Err("L1: my_main must be a function of type () -> i64"),
+                Err("L1-3: my_main must be a function of type () -> i64"),
             ),
             (
                 line!(),
                 "fn my_main(i: i32) -> i64 {
                     return 0;
                 }",
-                Err("L1: my_main must take no parameters. It must be of type () -> i64"),
+                Err("L1-3: my_main must take no parameters. It must be of type () -> i64"),
             ),
             (
                 line!(),
                 "co my_main() -> i64 {
                     return 0;
                 }",
-                Err("L1: my_main must be a function of type () -> i64"),
+                Err("L1-3: my_main must be a function of type () -> i64"),
             ),
         ] {
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -511,14 +539,19 @@ mod type_resolver_tests {
                         false,
                         "L{}: Expected OK, got Err({})",
                         line,
-                        actual.fmt(&table).unwrap()
+                        actual.fmt(&sm, &table).unwrap()
                     );
                 }
                 (Err(expected), Ok(_)) => {
                     assert!(false, "L{}: Expected Err({}), but got Ok", line, expected);
                 }
                 (Err(msg), Err(actual)) => {
-                    assert_eq!(actual.fmt(&table).unwrap(), msg, "Test Case at L:{}", line);
+                    assert_eq!(
+                        actual.fmt(&sm, &table).unwrap(),
+                        msg,
+                        "Test Case at L:{}",
+                        line
+                    );
                 }
             }
         }
@@ -541,7 +574,12 @@ mod type_resolver_tests {
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -591,7 +629,12 @@ mod type_resolver_tests {
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -635,7 +678,12 @@ mod type_resolver_tests {
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -829,12 +877,17 @@ mod type_resolver_tests {
                 Err("L2: + expected i16 but found i16 and i64"),
             ),
         ] {
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -889,7 +942,7 @@ mod type_resolver_tests {
                 }
                 Err(msg) => {
                     assert_eq!(
-                        module.unwrap_err().fmt(&table).unwrap(),
+                        module.unwrap_err().fmt(&sm, &table).unwrap(),
                         msg,
                         "Test Case at L:{}",
                         line
@@ -959,12 +1012,17 @@ mod type_resolver_tests {
                 Err("L3: ! expected bool but found i64"),
             ),
         ] {
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -991,7 +1049,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&sm, &table).unwrap(), msg);
                 }
             }
         }
@@ -1029,12 +1087,17 @@ mod type_resolver_tests {
                 Err("L3: + expected i64 but found bool and i64"),
             ),
         ] {
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -1072,7 +1135,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&sm, &table).unwrap(), msg);
                 }
             }
         }
@@ -1110,12 +1173,17 @@ mod type_resolver_tests {
                 Err("L3: * expected i64 but found bool and i64"),
             ),
         ] {
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -1154,7 +1222,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&sm, &table).unwrap(), msg);
                 }
             }
         }
@@ -1192,12 +1260,17 @@ mod type_resolver_tests {
                 Err("L3: && expected bool but found i64 and bool"),
             ),
         ] {
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -1236,7 +1309,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&sm, &table).unwrap(), msg);
                 }
             }
         }
@@ -1274,12 +1347,17 @@ mod type_resolver_tests {
                 Err("L3: || expected bool but found i64 and bool"),
             ),
         ] {
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -1318,7 +1396,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&sm, &table).unwrap(), msg);
                 }
             }
         }
@@ -1359,12 +1437,17 @@ mod type_resolver_tests {
                     Err(format!("L2: {} expected bool but found bool and i64", op)),
                 ),
             ] {
+                let mut sm = SourceMap::new();
+                sm.add_string(&text, "/test".into()).unwrap();
+                let src = sm.get(0).unwrap().read().unwrap();
+
                 let mut table = StringTable::new();
                 let main = table.insert("main".into());
                 let main_mod = table.insert(MAIN_MODULE.into());
                 let main_fn = table.insert("my_main".into());
 
-                let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+                let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                    .unwrap()
                     .tokenize()
                     .into_iter()
                     .collect::<LResult>()
@@ -1403,7 +1486,7 @@ mod type_resolver_tests {
                         }
                     }
                     Err(msg) => {
-                        assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
+                        assert_eq!(module.unwrap_err().fmt(&sm, &table).unwrap(), msg);
                     }
                 }
             }
@@ -1425,7 +1508,12 @@ mod type_resolver_tests {
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -1499,12 +1587,18 @@ mod type_resolver_tests {
                 Err("L2: Bind expected [i16; 2] but got [i64; 2]"),
             ),
         ] {
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
+
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -1543,7 +1637,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&sm, &table).unwrap(), msg);
                 }
             }
         }
@@ -1617,12 +1711,17 @@ mod type_resolver_tests {
             ),
         ] {
             println!("Test L{}", line);
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -1661,7 +1760,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&sm, &table).unwrap(), msg);
                 }
             }
         }
@@ -1732,7 +1831,7 @@ mod type_resolver_tests {
                     let k: [i64;1] := [];
                     return k;
                 }",
-                Err("L1: Expected length > 0 for array, but found 0"),
+                Err("L1-4: Expected length > 0 for array, but found 0"),
             ),
             (
                 line!(),
@@ -1818,12 +1917,17 @@ mod type_resolver_tests {
             ),
         ] {
             println!("Test L{}", ln);
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -1861,7 +1965,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&sm, &table).unwrap(), msg);
                 }
             }
         }
@@ -1911,12 +2015,17 @@ mod type_resolver_tests {
                 Err("L3: Could not find definition for x in this scope"),
             ),
         ] {
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -1955,7 +2064,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&sm, &table).unwrap(), msg);
                 }
             }
         }
@@ -2001,12 +2110,17 @@ mod type_resolver_tests {
                 Err("L2: Return expected unit but got i64"),
             ),
         ] {
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -2040,7 +2154,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&sm, &table).unwrap(), msg);
                 }
             }
         }
@@ -2112,12 +2226,16 @@ mod type_resolver_tests {
                 Err("L2: Return expected bool but got i64"),
             ),
         ] {
+            let mut sm = SourceMap::new();
+sm.add_string(&text, "/test".into()).unwrap();
+let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -2151,7 +2269,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&sm, &table).unwrap(), msg);
                 }
             }
         }
@@ -2282,12 +2400,16 @@ mod type_resolver_tests {
                 Err("L2: Could not find item with the given path: $main::bad_fun ($main::bad_fun)"),
             ),
         ] {
+            let mut sm = SourceMap::new();
+sm.add_string(&text, "/test".into()).unwrap();
+let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -2316,7 +2438,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&sm, &table).unwrap(), msg);
                 }
             }
         }
@@ -2398,12 +2520,16 @@ mod type_resolver_tests {
                 Err("L2: One or more parameters have mismatching types for function $main::number: parameter 1 expected i32 but got i64"),
             ),
         ] {
+            let mut sm = SourceMap::new();
+sm.add_string(&text, "/test".into()).unwrap();
+let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -2432,7 +2558,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&sm, &table).unwrap(), msg);
                 }
             }
         }
@@ -2497,12 +2623,17 @@ mod type_resolver_tests {
             ),*/
         ] {
             println!("Test L{}", line);
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -2535,7 +2666,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&sm, &table).unwrap(), msg);
                 }
             }
         }
@@ -2584,12 +2715,17 @@ mod type_resolver_tests {
                 Err("L3: Bind expected bool but got i64"),
             ),
         ] {
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -2619,7 +2755,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&sm, &table).unwrap(), msg);
                 }
             }
         }
@@ -2657,12 +2793,17 @@ mod type_resolver_tests {
                 Err("L2: Return expected unit but got bool"),
             ),
         ] {
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -2696,7 +2837,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&sm, &table).unwrap(), msg);
                 }
             }
         }
@@ -2734,12 +2875,17 @@ mod type_resolver_tests {
                 Err("L2: Return expected unit but got bool"),
             ),
         ] {
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -2773,7 +2919,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&sm, &table).unwrap(), msg);
                 }
             }
         }
@@ -2839,12 +2985,17 @@ mod type_resolver_tests {
                 Err("L2: If expression has mismatching arms: expected i64 got unit"),
             ),
         ] {
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -2877,7 +3028,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&sm, &table).unwrap(), msg);
                 }
             }
         }
@@ -2918,12 +3069,16 @@ mod type_resolver_tests {
                 Err("L2: The condition of a while expression must resolve to the bool type, but got: i64"),
             ),
         ] {
+            let mut sm = SourceMap::new();
+sm.add_string(&text, "/test".into()).unwrap();
+let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -2955,7 +3110,7 @@ mod type_resolver_tests {
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().fmt(&table).unwrap(), msg);
+                    assert_eq!(module.unwrap_err().fmt(&sm, &table).unwrap(), msg);
                 }
             }
         }
@@ -3149,12 +3304,16 @@ mod type_resolver_tests {
             ),
         ] {
             println!("L{}", line);
+            let mut sm = SourceMap::new();
+sm.add_string(&text, "/test".into()).unwrap();
+let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -3168,8 +3327,8 @@ mod type_resolver_tests {
                 TracingConfig::Off,
             );
             match expected {
-                Ok(_) => {assert!(result.is_ok(), "\nL{}: {} => {:?}\n\nST: {:?}", line, text, result.map_err(|e| e.fmt(&table)), table)},
-                Err(msg) => assert_eq!(result.unwrap_err().fmt(&table).unwrap(), msg),
+                Ok(_) => {assert!(result.is_ok(), "\nL{}: {} => {:?}\n\nST: {:?}", line, text, result.map_err(|e| e.fmt(&sm, &table)), table)},
+                Err(msg) => assert_eq!(result.unwrap_err().fmt(&sm, &table).unwrap(), msg),
             }
         }
     }
@@ -3194,12 +3353,16 @@ mod type_resolver_tests {
                 ("struct MyStruct{x:i64} struct MS2{ms:MyStruct} fn test(ms:MS2) -> bool {return ms.ms.x;}",
                 Err("L1: Return expected bool but got i64")),
             ] {
+            let mut sm = SourceMap::new();
+sm.add_string(&text, "/test".into()).unwrap();
+let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
                     .tokenize()
                     .into_iter()
                     .collect::<LResult>()
@@ -3214,7 +3377,7 @@ mod type_resolver_tests {
                 );
                 match expected {
                     Ok(_) => assert!(result.is_ok(), "{} -> {:?}", text, result),
-                    Err(msg) => assert_eq!(result.unwrap_err().fmt(&table).unwrap(), msg),
+                    Err(msg) => assert_eq!(result.unwrap_err().fmt(&sm, &table).unwrap(), msg),
                 }
             }
     }
@@ -3299,6 +3462,10 @@ mod type_resolver_tests {
                 Err("L3: One or more parameters have mismatching types for function $std::test: parameter 2 expected bool but got i64"),
             ),
         ] {
+            let mut sm = SourceMap::new();
+sm.add_string(&text, "/test".into()).unwrap();
+let src = sm.get(0).unwrap().read().unwrap();
+
             let mut table = StringTable::new();
             let std = table.insert("std".into());
             let test = table.insert("test".into());
@@ -3306,7 +3473,7 @@ mod type_resolver_tests {
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::from_str(&mut table, &text)
+            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -3315,7 +3482,7 @@ mod type_resolver_tests {
 
             let mut import_context = SemanticContext::new_local(0, new_ctx(0), Type::Unit);
             import_context.set_canonical_path(vec![Element::CanonicalRoot, Element::Id(std), Element::Id(test)].into());
-            let manifest = Manifest::new(&table, &vec![RoutineDef{
+            let manifest = Manifest::new(&sm, &table, &vec![RoutineDef{
                 context: import_context,
                 def: RoutineDefType::Function,
                 name: test,
@@ -3333,8 +3500,8 @@ mod type_resolver_tests {
                 TracingConfig::Off,
             );
             match expected {
-                Ok(_) => assert!(result.is_ok(), "TL{}: {:?} got {:?}", line, expected, result.map_err(|e| e.fmt(&table))),
-                Err(msg) => assert_eq!(result.unwrap_err().fmt(&table).unwrap(), msg),
+                Ok(_) => assert!(result.is_ok(), "TL{}: {:?} got {:?}", line, expected, result.map_err(|e| e.fmt(&sm, &table))),
+                Err(msg) => assert_eq!(result.unwrap_err().fmt(&sm, &table).unwrap(), msg),
             }
         }
     }

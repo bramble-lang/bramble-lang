@@ -67,17 +67,23 @@ impl<M: Context> Node<M> for Module<M> {
     }
 }
 
-impl<M> std::fmt::Display for Module<M> {
+impl<M> std::fmt::Display for Module<M>
+where
+    M: Context,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         f.write_fmt(format_args!("{}", self.get_name()))
     }
 }
 
-impl<M> Module<M> {
+impl<M> Module<M>
+where
+    M: Context,
+{
     pub fn new(name: StringId, context: M) -> Module<M> {
         Module {
             context,
-            name: name,
+            name,
             modules: Vec::new(),
             functions: Vec::new(),
             coroutines: Vec::new(),
@@ -96,7 +102,7 @@ impl<M> Module<M> {
             self.functions.push(Item::Routine(f));
             Ok(())
         } else {
-            err!(0, AstError::ModuleAlreadyContains(fname))
+            err!(f.context().span(), AstError::ModuleAlreadyContains(fname))
         }
     }
 
@@ -106,7 +112,7 @@ impl<M> Module<M> {
             self.coroutines.push(Item::Routine(c));
             Ok(())
         } else {
-            err!(0, AstError::ModuleAlreadyContains(cname))
+            err!(c.context().span(), AstError::ModuleAlreadyContains(cname))
         }
     }
 
@@ -116,7 +122,7 @@ impl<M> Module<M> {
             self.structs.push(Item::Struct(s));
             Ok(())
         } else {
-            err!(0, AstError::ModuleAlreadyContains(name))
+            err!(s.context().span(), AstError::ModuleAlreadyContains(name))
         }
     }
 
@@ -126,7 +132,7 @@ impl<M> Module<M> {
             self.externs.push(Item::Extern(e));
             Ok(())
         } else {
-            err!(0, AstError::ModuleAlreadyContains(name))
+            err!(e.context().span(), AstError::ModuleAlreadyContains(name))
         }
     }
 
@@ -443,7 +449,13 @@ mod test {
         };
         module.add_function(fdef.clone()).unwrap();
         let result = module.add_function(fdef.clone());
-        assert_eq!(result, err!(0, AstError::ModuleAlreadyContains(func)));
+        assert_eq!(
+            result,
+            err!(
+                module.context().span(),
+                AstError::ModuleAlreadyContains(func)
+            )
+        );
     }
 
     #[test]
@@ -485,7 +497,13 @@ mod test {
         };
         module.add_coroutine(cdef.clone()).unwrap();
         let result = module.add_coroutine(cdef.clone());
-        assert_eq!(result, err!(0, AstError::ModuleAlreadyContains(cor)));
+        assert_eq!(
+            result,
+            err!(
+                module.context().span(),
+                AstError::ModuleAlreadyContains(cor)
+            )
+        );
     }
 
     #[test]
@@ -515,7 +533,13 @@ mod test {
             body: vec![],
         };
         let result = module.add_coroutine(cdef.clone());
-        assert_eq!(result, err!(0, AstError::ModuleAlreadyContains(dupe)));
+        assert_eq!(
+            result,
+            err!(
+                module.context().span(),
+                AstError::ModuleAlreadyContains(dupe)
+            )
+        );
     }
 
     #[test]
@@ -545,7 +569,13 @@ mod test {
             body: vec![],
         };
         let result = module.add_function(fdef.clone());
-        assert_eq!(result, err!(0, AstError::ModuleAlreadyContains(dupe)));
+        assert_eq!(
+            result,
+            err!(
+                module.context().span(),
+                AstError::ModuleAlreadyContains(dupe)
+            )
+        );
     }
 
     #[test]
@@ -664,7 +694,13 @@ mod test {
         let edef = Extern::new(puts, 1, vec![], false, Type::Unit);
         module.add_extern(edef.clone()).unwrap();
         let result = module.add_extern(edef.clone());
-        assert_eq!(result, err!(0, AstError::ModuleAlreadyContains(puts)));
+        assert_eq!(
+            result,
+            err!(
+                module.context().span(),
+                AstError::ModuleAlreadyContains(puts)
+            )
+        );
     }
 
     #[test]
@@ -687,7 +723,13 @@ mod test {
 
         let edef = Extern::new(dupe, 1, vec![], false, Type::Unit);
         let result = module.add_extern(edef.clone());
-        assert_eq!(result, err!(0, AstError::ModuleAlreadyContains(dupe)));
+        assert_eq!(
+            result,
+            err!(
+                module.context().span(),
+                AstError::ModuleAlreadyContains(dupe)
+            )
+        );
     }
 
     #[test]
@@ -710,6 +752,12 @@ mod test {
             body: vec![],
         };
         let result = module.add_function(fdef.clone());
-        assert_eq!(result, err!(0, AstError::ModuleAlreadyContains(dupe)));
+        assert_eq!(
+            result,
+            err!(
+                module.context().span(),
+                AstError::ModuleAlreadyContains(dupe)
+            )
+        );
     }
 }
