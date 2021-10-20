@@ -16,7 +16,7 @@
 #![macro_use]
 use crate::StringTable;
 
-use super::{CompilerDisplay, CompilerDisplayError, SourceMap, Span};
+use super::{source::LineNumber, CompilerDisplay, CompilerDisplayError, SourceMap, Span};
 
 /// Represents all errors that are generated from within the Compiler
 /// module and its submodules.
@@ -91,7 +91,7 @@ where
 ///
 /// If there is 1 line, then format as `L<line number>`
 /// If there are multiple lines, then format sa `L<min line>-<max line`
-fn format_line_set(lines: &[u32]) -> Option<String> {
+fn format_line_set(lines: &[LineNumber]) -> Option<String> {
     if lines.len() > 0 {
         let min = lines.iter().min().unwrap(); // unwrap b/c if the len > 1 and we cannot find min/max something serious is wrong
         let max = lines.iter().max().unwrap();

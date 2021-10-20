@@ -40,3 +40,19 @@ impl Index<usize> for Source {
         &self.text[index]
     }
 }
+
+/// A line number in a file
+#[derive(PartialEq, PartialOrd, Ord, Eq)]
+pub struct LineNumber(u32);
+
+impl LineNumber {
+    pub fn new(ln: u32) -> LineNumber {
+        LineNumber(ln)
+    }
+}
+
+impl std::fmt::Display for LineNumber {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{}", self.0))
+    }
+}

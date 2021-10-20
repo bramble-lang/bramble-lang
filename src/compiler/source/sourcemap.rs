@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use super::{sourcechar::SourceCharIter, Offset, Source, SourceError, Span};
+use super::{source::LineNumber, sourcechar::SourceCharIter, Offset, Source, SourceError, Span};
 
 const MAX_SOURCE_SIZE: u32 = u32::MAX;
 
@@ -128,7 +128,7 @@ impl SourceMap {
     }
 
     /// Returns the source code lines that a [`Span`] covers
-    pub fn lines_in_span(&self, span: Span) -> Vec<(&PathBuf, Vec<u32>)> {
+    pub fn lines_in_span(&self, span: Span) -> Vec<(&PathBuf, Vec<LineNumber>)> {
         // Get the list of files that the span covers
         self.map
             .iter()
@@ -187,7 +187,7 @@ impl SourceMapEntry {
     /// Returns the lines that a span covers in the given file.
     /// Will return an empty vector if `span` does not intersect the file
     /// at all.
-    fn lines_in_span(&self, span: Span) -> Vec<u32> {
+    fn lines_in_span(&self, span: Span) -> Vec<LineNumber> {
         let mut lines = vec![];
         // Check that span intersects with the file's span in the global offset space
         match self.span.intersection(span) {
@@ -205,7 +205,7 @@ impl SourceMapEntry {
                     if c.offset() >= intersection.low() && c.offset() < intersection.high() {
                         // if line number has changed then push onto the vector
                         if line != prev_line {
-                            lines.push(line);
+                            lines.push(LineNumber::new(line));
                             prev_line = line;
                         }
                     }
