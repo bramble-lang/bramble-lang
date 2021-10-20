@@ -118,7 +118,7 @@ impl SourceMap {
         }
     }
 
-    // Function returns the file(s) a span covers
+    /// Returns the file(s) a span covers
     pub fn files(&self, span: Span) -> Vec<&PathBuf> {
         self.map
             .iter()
@@ -127,7 +127,7 @@ impl SourceMap {
             .collect()
     }
 
-    // Function returns the Line number of a span
+    /// Returns the Line number of a span
     pub fn lines(&self, span: Span) -> Vec<(&PathBuf, Vec<u32>)> {
         // Get the list of files that the span covers
         self.map
@@ -175,8 +175,6 @@ impl SourceMap {
         }
         lines
     }
-
-    // Function returns a snippet of code from a span
 }
 
 /// Tracks the assignment of a range within the global offset space

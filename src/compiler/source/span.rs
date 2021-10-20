@@ -24,16 +24,18 @@ impl Span {
         Span { low, high }
     }
 
+    /// Returns the lower [`Offset`] of this Span
     pub fn low(&self) -> Offset {
         self.low
     }
 
+    /// Returns the upper bound [`Offset`] of this span
     pub fn high(&self) -> Offset {
         self.high
     }
 
     pub fn zero() -> Span {
-        Span::new(Offset(0), Offset(1))
+        Span::new(Offset(0), Offset(0))
     }
 
     /// Creates the smallest span that covers the two given spans.
