@@ -134,7 +134,7 @@ fn main() {
     llvm.emit_object_code(Path::new(output_target)).unwrap();
 
     if config.is_present("manifest") {
-        let manifest = Manifest::extract(&sourcemap, &string_table, &semantic_ast).unwrap();
+        let manifest = Manifest::extract(&semantic_ast, &sourcemap, &string_table).unwrap();
         match std::fs::File::create(format!("./target/{}.manifest", project_name))
             .map_err(|e| format!("{}", e))
             .and_then(|mut f| manifest.write(&mut f).map_err(|e| format!("{}", e)))

@@ -40,9 +40,9 @@ impl Manifest {
     }
 
     pub fn extract(
+        module: &Module<SemanticContext>,
         sm: &SourceMap,
         st: &StringTable,
-        module: &Module<SemanticContext>,
     ) -> Result<Self, ManifestError> {
         // Get list of all functions contained within a module and their paths
         let routines: Vec<_> = module
