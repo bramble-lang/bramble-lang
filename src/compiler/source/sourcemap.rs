@@ -127,7 +127,7 @@ impl SourceMap {
             .collect()
     }
 
-    /// Returns the Line number of a span
+    /// Returns the source code lines that a [`Span`] covers
     pub fn lines_in_span(&self, span: Span) -> Vec<(&PathBuf, Vec<u32>)> {
         // Get the list of files that the span covers
         self.map
