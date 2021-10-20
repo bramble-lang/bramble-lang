@@ -134,46 +134,10 @@ impl SourceMap {
             .iter()
             .filter(|e| span.intersects(e.span))
             .map(|file| {
-                let lines = self.file_lines(file, span);
+                let lines = file.lines_in_span(span);
                 (&file.path, lines)
             })
             .collect()
-    }
-
-    /// Returns the lines that a span covers in the given file.
-    /// Will return an empty vector if `span` does not intersect the file
-    /// at all.
-    fn file_lines(&self, file: &SourceMapEntry, span: Span) -> Vec<u32> {
-        let mut lines = vec![];
-        // Check that span intersects with the file's span in the global offset space
-        match file.span.intersection(span) {
-            Some(intersection) => {
-                // Then search through the file from the beginning until it reaches the
-                // start of the span, counting the number of new lines
-                // Then from the start of the span until the end of the span or the file
-                // Count each new line and add it to the vector
-                let text = file.read().unwrap();
-                let mut stream = text.iter();
-
-                let mut line = 1;
-                let mut prev_line = 0;
-                while let Some(c) = stream.next() {
-                    if c.offset() >= intersection.low() && c.offset() < intersection.high() {
-                        // if line number has changed then push onto the vector
-                        if line != prev_line {
-                            lines.push(line);
-                            prev_line = line;
-                        }
-                    }
-
-                    if *c == '\n' {
-                        line += 1;
-                    }
-                }
-            }
-            None => (),
-        }
-        lines
     }
 }
 
@@ -218,6 +182,42 @@ impl SourceMapEntry {
             }
         };
         Ok(Source::new(text?, self.span))
+    }
+
+    /// Returns the lines that a span covers in the given file.
+    /// Will return an empty vector if `span` does not intersect the file
+    /// at all.
+    fn lines_in_span(&self, span: Span) -> Vec<u32> {
+        let mut lines = vec![];
+        // Check that span intersects with the file's span in the global offset space
+        match self.span.intersection(span) {
+            Some(intersection) => {
+                // Then search through the file from the beginning until it reaches the
+                // start of the span, counting the number of new lines
+                // Then from the start of the span until the end of the span or the file
+                // Count each new line and add it to the vector
+                let text = self.read().unwrap();
+                let mut stream = text.iter();
+
+                let mut line = 1;
+                let mut prev_line = 0;
+                while let Some(c) = stream.next() {
+                    if c.offset() >= intersection.low() && c.offset() < intersection.high() {
+                        // if line number has changed then push onto the vector
+                        if line != prev_line {
+                            lines.push(line);
+                            prev_line = line;
+                        }
+                    }
+
+                    if *c == '\n' {
+                        line += 1;
+                    }
+                }
+            }
+            None => (),
+        }
+        lines
     }
 }
 
