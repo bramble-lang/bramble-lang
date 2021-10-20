@@ -246,40 +246,6 @@ impl<'a> Lexer<'a> {
         tokens
     }
 
-    /// Returns the character that the lexer cursor is currently pointing to.
-    fn current_char(&self) -> Option<SourceChar> {
-        if self.index < self.chars.len() {
-            Some(self.chars[self.index])
-        } else {
-            None
-        }
-    }
-
-    fn current_char_span(&self) -> Option<Span> {
-        if self.index < self.chars.len() {
-            let char_offset = self.chars[self.index].offset();
-            let next_char_offset = if self.index + 1 < self.chars.len() {
-                self.chars[self.index + 1].offset()
-            } else {
-                self.end_offset
-            };
-
-            Some(Span::new(char_offset, next_char_offset))
-        } else {
-            None
-        }
-    }
-
-    fn span_to_char(&self, c: SourceChar) -> Option<Span> {
-        if self.index < self.chars.len() {
-            let start = self.chars[self.index].offset();
-            let end = c.offset(); // This will actually result in an off by one error for the span.
-            Some(Span::new(start, end))
-        } else {
-            None
-        }
-    }
-
     /// Attempt to parse the token which immediately follows from where the lexer
     /// cursor is currently pointing.
     fn next_token(&mut self) -> LexerResult<Option<Token>> {
@@ -362,7 +328,7 @@ impl<'a> Lexer<'a> {
                         Some(c) if Self::is_escape_code(c) => (),
                         Some(c) => {
                             return err!(
-                                self.span_to_char(c).unwrap(),
+                                self.span_from_index_to_char(c).unwrap(),
                                 LexerError::InvalidEscapeSequence(c)
                             )
                         }
@@ -653,10 +619,51 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// Returns the character that the lexer cursor is currently pointing to.
+    fn current_char(&self) -> Option<SourceChar> {
+        if self.index < self.chars.len() {
+            Some(self.chars[self.index])
+        } else {
+            None
+        }
+    }
+
+    /// Returns the span covered by the character the lexer cursor is currently
+    /// pointing at.  If the cursor is at the end of the input text, then this
+    /// will return `None`.
+    fn current_char_span(&self) -> Option<Span> {
+        if self.index < self.chars.len() {
+            let char_offset = self.chars[self.index].offset();
+            let next_char_offset = if self.index + 1 < self.chars.len() {
+                self.chars[self.index + 1].offset()
+            } else {
+                self.end_offset
+            };
+
+            Some(Span::new(char_offset, next_char_offset))
+        } else {
+            None
+        }
+    }
+
+    /// Returns the span from the Lexer cursor to the given character.
+    fn span_from_index_to_char(&self, c: SourceChar) -> Option<Span> {
+        if self.index < self.chars.len() {
+            let start = self.chars[self.index].offset();
+            let end = c.offset(); // This will actually result in an off by one error for the span.
+            Some(Span::new(start, end))
+        } else {
+            None
+        }
+    }
+
+    /// Returns true if the given character is a Braid delimiter.  Which is
+    /// punctuation or whitespace.
     fn is_delimiter(c: SourceChar) -> bool {
         c.is_ascii_punctuation() || c.is_whitespace()
     }
 
+    /// Returns true if the character is a valid code for an escape sequence
     fn is_escape_code(c: SourceChar) -> bool {
         c == 'n' || c == 'r' || c == 't' || c == '"' || c == '0' || c == '\\'
     }
