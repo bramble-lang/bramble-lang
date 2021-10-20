@@ -60,7 +60,7 @@ fn create_module_path<'a>(
     match path.split_first() {
         Some((head, rest)) => {
             if module.get_module(*head).is_none() {
-                let sub = Module::new(*head, ParserContext::new(0, Span::zero()));
+                let sub = Module::new(*head, ParserContext::new(Span::zero()));
                 module.add_module(sub);
             }
 
@@ -124,7 +124,7 @@ pub fn parse_project(
         ProjectError::EmptyProject,
     )])?;
 
-    let mut root = Module::new(root_module, ParserContext::new(0, root_span));
+    let mut root = Module::new(root_module, ParserContext::new(root_span));
     let mut errors = vec![];
     for src_tokens in token_sets {
         match parse_src_tokens(string_table, src_tokens) {

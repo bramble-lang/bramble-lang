@@ -277,7 +277,7 @@ fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
                 ma = match token.sym {
                     Lex::MemberAccess => stream
                         .next_if_id()
-                        .map(|(member, _, member_span)| {
+                        .map(|(member, member_span)| {
                             Expression::MemberAccess(
                                 ma.context().extend(member_span),
                                 Box::new(ma),
@@ -489,7 +489,7 @@ fn struct_expression_params(
     match stream.next_if(&Lex::LBrace) {
         Some(lbrace) => {
             let mut params = vec![];
-            while let Some((field_name, _ln, span)) = stream.next_if_id() {
+            while let Some((field_name, span)) = stream.next_if_id() {
                 stream.next_must_be(&Lex::Colon)?;
                 let field_value = expression(stream)?.ok_or(CompilerError::new(
                     span,
@@ -557,53 +557,45 @@ fn number(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
         Lex::I64(0),
     ]) {
         Some(Token {
-            line: l,
             span,
             sym: Lex::U8(i),
             ..
-        }) => Ok(Some(Expression::U8(ParserContext::new(l, span), i))),
+        }) => Ok(Some(Expression::U8(ParserContext::new(span), i))),
         Some(Token {
-            line: l,
             span,
             sym: Lex::U16(i),
             ..
-        }) => Ok(Some(Expression::U16(ParserContext::new(l, span), i))),
+        }) => Ok(Some(Expression::U16(ParserContext::new(span), i))),
         Some(Token {
-            line: l,
             span,
             sym: Lex::U32(i),
             ..
-        }) => Ok(Some(Expression::U32(ParserContext::new(l, span), i))),
+        }) => Ok(Some(Expression::U32(ParserContext::new(span), i))),
         Some(Token {
-            line: l,
             span,
             sym: Lex::U64(i),
             ..
-        }) => Ok(Some(Expression::U64(ParserContext::new(l, span), i))),
+        }) => Ok(Some(Expression::U64(ParserContext::new(span), i))),
         Some(Token {
-            line: l,
             span,
             sym: Lex::I8(i),
             ..
-        }) => Ok(Some(Expression::I8(ParserContext::new(l, span), i))),
+        }) => Ok(Some(Expression::I8(ParserContext::new(span), i))),
         Some(Token {
-            line: l,
             span,
             sym: Lex::I16(i),
             ..
-        }) => Ok(Some(Expression::I16(ParserContext::new(l, span), i))),
+        }) => Ok(Some(Expression::I16(ParserContext::new(span), i))),
         Some(Token {
-            line: l,
             span,
             sym: Lex::I32(i),
             ..
-        }) => Ok(Some(Expression::I32(ParserContext::new(l, span), i))),
+        }) => Ok(Some(Expression::I32(ParserContext::new(span), i))),
         Some(Token {
-            line: l,
             span,
             sym: Lex::I64(i),
             ..
-        }) => Ok(Some(Expression::I64(ParserContext::new(l, span), i))),
+        }) => Ok(Some(Expression::I64(ParserContext::new(span), i))),
         Some(t) => panic!("Unexpected token: {:?}", t),
         None => Ok(None),
     }
@@ -613,11 +605,10 @@ fn boolean(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> 
     trace!(stream);
     match stream.next_if(&Lex::Bool(true)) {
         Some(Token {
-            line: l,
             span,
             sym: Lex::Bool(b),
             ..
-        }) => Ok(Some(Expression::Boolean(ParserContext::new(l, span), b))),
+        }) => Ok(Some(Expression::Boolean(ParserContext::new(span), b))),
         _ => Ok(None),
     }
 }
@@ -626,14 +617,10 @@ fn string_literal(stream: &mut TokenStream) -> ParserResult<Expression<ParserCon
     trace!(stream);
     match stream.next_if(&Lex::StringLiteral(StringId::new())) {
         Some(Token {
-            line: l,
             span,
             sym: Lex::StringLiteral(s),
             ..
-        }) => Ok(Some(Expression::StringLiteral(
-            ParserContext::new(l, span),
-            s,
-        ))),
+        }) => Ok(Some(Expression::StringLiteral(ParserContext::new(span), s))),
         _ => Ok(None),
     }
 }
@@ -657,7 +644,7 @@ mod test {
     }
 
     fn new_ctx(low: u32, high: u32) -> ParserContext {
-        ParserContext::new(1, new_span(low, high))
+        ParserContext::new(new_span(low, high))
     }
 
     #[test]

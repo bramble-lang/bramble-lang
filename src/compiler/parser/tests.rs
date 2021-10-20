@@ -23,7 +23,7 @@ pub mod tests {
     }
 
     fn new_ctx(low: u32, high: u32) -> ParserContext {
-        ParserContext::new(1, new_span(low, high))
+        ParserContext::new(new_span(low, high))
     }
 
     #[test]
