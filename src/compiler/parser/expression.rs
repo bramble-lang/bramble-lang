@@ -6,7 +6,7 @@ use std::sync::atomic::Ordering;
 use stdext::function_name;
 
 use super::{
-    parser::{block, path, routine_call_params},
+    parser::{path, routine_call_params},
     tokenstream::TokenStream,
     ParserContext, ParserError,
 };
@@ -14,6 +14,7 @@ use crate::{
     compiler::{
         ast::*,
         lexer::tokens::{Lex, Token},
+        parser::statement::statement,
         CompilerError,
     },
     trace, StringId,
@@ -185,10 +186,16 @@ fn expression_block(stream: &mut TokenStream) -> ParserResult<Expression<ParserC
     trace!(stream);
     match stream.next_if(&Lex::LBrace) {
         Some(lbrace) => {
-            let stmts = block(stream)?;
+            // Read the statements composing the expression block
+            let mut stmts = vec![];
+            while let Some(s) = statement(stream)? {
+                stmts.push(s);
+            }
 
+            // Check if the block ends in an expression rather than a statement (no semicolon post fix)
             let final_exp = expression(stream)?.map(|e| Box::new(e));
 
+            // Compute the span that goes from the `{` to the `}`
             let ctx = stream
                 .next_must_be(&Lex::RBrace)?
                 .to_ctx()

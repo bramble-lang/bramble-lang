@@ -302,7 +302,7 @@ fn function_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserConte
     };
 
     stream.next_must_be(&Lex::LBrace)?;
-    let mut stmts = block(stream)?;
+    let mut stmts = fn_body(stream)?;
 
     match return_stmt(stream)? {
         Some(ret) => stmts.push(Statement::Return(Box::new(ret))),
@@ -414,7 +414,7 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserCont
     }))
 }
 
-pub(super) fn block(
+pub(super) fn fn_body(
     stream: &mut TokenStream,
 ) -> Result<Vec<Statement<ParserContext>>, CompilerError<ParserError>> {
     trace!(stream);
