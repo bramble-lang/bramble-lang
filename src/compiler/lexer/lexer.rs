@@ -1,4 +1,3 @@
-//use crate::result::Result;
 // Token - a type which captures the different types of tokens and which is output
 // by tokenize
 use stdext::function_name;
