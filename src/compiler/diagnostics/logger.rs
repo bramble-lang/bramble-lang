@@ -1,4 +1,4 @@
-use super::Writer;
+use super::{Writable, Writer};
 
 pub struct Logger<'a> {
     /// Whether this [`Logger`] will pass events it receives to the writers
@@ -12,28 +12,33 @@ pub struct Logger<'a> {
 impl<'a> Logger<'a> {
     /// Creates a new Logger with not writers and that is enabled.
     pub fn new() -> Logger<'a> {
-        todo!()
+        Logger {
+            enabled: true,
+            writers: vec![],
+        }
     }
 
     /// Write an event to ever [`Writer`] in this [`Logger`]
-    pub fn write(&self) {
-        todo!()
+    pub fn write<E: Writable>(&self, evt: E) {
+        for w in &self.writers {
+            evt.write(*w)
+        }
     }
 
     /// Add a [`Writer`] to this [`Logger`]
-    pub fn add_writer(&mut self, _w: &'a dyn Writer) {
-        todo!()
+    pub fn add_writer(&mut self, w: &'a dyn Writer) {
+        self.writers.push(w);
     }
 
     /// This [`Logger`] will send any event received through `write` to its
     /// [`Writer`]s.
     pub fn enable(&mut self) {
-        todo!()
+        self.enabled = true;
     }
 
     /// This [`Logger`] will NOT send events received through `write` to its
     /// [`Writer`]s.
     pub fn disable(&mut self) {
-        todo!()
+        self.enabled = false;
     }
 }
