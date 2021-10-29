@@ -10,6 +10,8 @@
 //! provide deep but friendly insight into how the code they write becomes what
 //! the CPU executes.
 
+use super::Span;
+
 mod logger;
 
 /// Defines a way for the [`Logger`] to write events that are emitted by the
@@ -21,4 +23,9 @@ pub trait Writable {
     /// Uses the given [`Writer`] to write the data in an instance of this type
     /// to an output target.
     fn write(w: &dyn Writer);
+}
+
+pub struct Event {
+    span: Span,
+    msg: String,
 }
