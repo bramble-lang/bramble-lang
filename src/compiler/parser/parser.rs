@@ -126,20 +126,6 @@ macro_rules! trace {
     compile - takes an AST and converts it to assembly
 */
 
-pub struct Parser {
-    current_line: usize,
-    tracing: bool,
-}
-
-impl Parser {
-    pub fn new(tracing: bool) -> Parser {
-        Parser {
-            tracing,
-            current_line: 0,
-        }
-    }
-}
-
 pub fn parse(name: StringId, tokens: &Vec<Token>) -> ParserResult<Module<ParserContext>> {
     // Create the module that represents the source code unit as a whole (usually the file)
     // give it span that covers the entire set of tokens
