@@ -9,3 +9,16 @@
 //! code is being transformed into and why that is happening. The goal is to
 //! provide deep but friendly insight into how the code they write becomes what
 //! the CPU executes.
+
+mod logger;
+
+/// Defines a way for the [`Logger`] to write events that are emitted by the
+/// Compiler to the user.
+pub trait Writer {}
+
+/// Define how a type will be written to an Event log by a [`Writer`].
+pub trait Writable {
+    /// Uses the given [`Writer`] to write the data in an instance of this type
+    /// to an output target.
+    fn write(w: &dyn Writer);
+}
