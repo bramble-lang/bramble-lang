@@ -452,7 +452,7 @@ impl<'a> ForEachPreOrderMut {
 mod tests {
     use crate::{
         compiler::{
-            lexer::tokens::Token, lexer::LexerError, parser::parser,
+            diagnostics::Logger, lexer::tokens::Token, lexer::LexerError, parser::parser,
             semantics::semanticnode::SemanticAst, CompilerError, Lexer, SourceMap,
         },
         StringTable,
@@ -472,7 +472,8 @@ mod tests {
         sm.add_string(text, "/test".into()).unwrap();
         let src = sm.get(0).unwrap().read().unwrap();
 
-        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+        let logger = Logger::new();
+        let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
             .unwrap()
             .tokenize()
             .into_iter()
@@ -507,7 +508,8 @@ mod tests {
         sm.add_string(text, "/test".into()).unwrap();
         let src = sm.get(0).unwrap().read().unwrap();
 
-        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+        let logger = Logger::new();
+        let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
             .unwrap()
             .tokenize()
             .into_iter()
@@ -562,7 +564,8 @@ mod tests {
         sm.add_string(text, "/test".into()).unwrap();
         let src = sm.get(0).unwrap().read().unwrap();
 
-        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+        let logger = Logger::new();
+        let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
             .unwrap()
             .tokenize()
             .into_iter()
