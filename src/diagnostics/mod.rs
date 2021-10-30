@@ -2,7 +2,37 @@ use std::{collections::HashMap, marker::PhantomData};
 
 use config::TracingConfig;
 
+use crate::compiler::{diagnostics::Writer, SourceMap};
+
 pub mod config;
+
+pub struct ConsoleWriter<'a> {
+    source_map: &'a SourceMap,
+}
+
+impl<'a> ConsoleWriter<'a> {
+    pub fn new(source_map: &'a SourceMap) -> ConsoleWriter<'a> {
+        ConsoleWriter { source_map }
+    }
+}
+
+impl<'a> Writer for ConsoleWriter<'a> {
+    fn write_span(&self, span: crate::compiler::Span) {
+        print!("Span: [{}, {}], ", span.low(), span.high());
+    }
+
+    fn write_str(&self, label: &str, s: &str) {
+        print!("{}: \"{}\"", label, s);
+    }
+
+    fn start_event(&self) {
+        print!("{{");
+    }
+
+    fn stop_event(&self) {
+        print!("}}\n");
+    }
+}
 
 pub struct DiagRecorder<A, B>
 where
