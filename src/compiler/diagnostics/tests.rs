@@ -7,6 +7,59 @@ mod tests {
         Span,
     };
 
+    #[test]
+    fn test_write_event() {
+        let mut logger = Logger::new();
+        let writer = TestWriter::new();
+        logger.add_writer(&writer);
+
+        let evt = Event {
+            span: Span::zero(),
+            msg: "Hello".into(),
+        };
+
+        logger.write(evt);
+        assert_eq!("{[0,0], msg: \"Hello\", }", *writer.buf.borrow());
+    }
+
+    #[test]
+    fn test_disable() {
+        let mut logger = Logger::new();
+        let writer = TestWriter::new();
+        logger.add_writer(&writer);
+
+        logger.disable();
+        let evt = Event {
+            span: Span::zero(),
+            msg: "Hello".into(),
+        };
+        logger.write(evt);
+        assert_eq!("", *writer.buf.borrow());
+    }
+
+    #[test]
+    fn test_enable() {
+        let mut logger = Logger::new();
+        let writer = TestWriter::new();
+        logger.add_writer(&writer);
+
+        logger.disable();
+        let evt = Event {
+            span: Span::zero(),
+            msg: "Hello".into(),
+        };
+        logger.write(evt);
+        assert_eq!("", *writer.buf.borrow());
+
+        logger.enable();
+        let evt = Event {
+            span: Span::zero(),
+            msg: "Hello".into(),
+        };
+        logger.write(evt);
+        assert_eq!("{[0,0], msg: \"Hello\", }", *writer.buf.borrow());
+    }
+
     /// Writer to be used for unit testing
     struct TestWriter {
         buf: RefCell<String>,
@@ -40,20 +93,5 @@ mod tests {
         fn stop_event(&self) {
             self.buf.borrow_mut().push_str("}");
         }
-    }
-
-    #[test]
-    fn test_write_event() {
-        let mut logger = Logger::new();
-        let writer = TestWriter::new();
-        logger.add_writer(&writer);
-
-        let evt = Event {
-            span: Span::zero(),
-            msg: "Hello".into(),
-        };
-
-        logger.write(evt);
-        assert_eq!("{[0,0], msg: \"Hello\", }", writer.buf.into_inner());
     }
 }

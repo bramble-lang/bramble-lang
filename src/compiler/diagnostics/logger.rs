@@ -20,8 +20,10 @@ impl<'a> Logger<'a> {
 
     /// Write an event to ever [`Writer`] in this [`Logger`]
     pub fn write<E: Writable>(&self, evt: E) {
-        for w in &self.writers {
-            evt.write(*w)
+        if self.enabled {
+            for w in &self.writers {
+                evt.write(*w)
+            }
         }
     }
 
