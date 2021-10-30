@@ -6,6 +6,8 @@ use crate::compiler::{diagnostics::Writer, SourceMap};
 
 pub mod config;
 
+/// Writes Compiler events to the console. This Writer will use the [`SourceMap`]
+/// to convert Span information to human readable source code references.
 pub struct ConsoleWriter<'a> {
     source_map: &'a SourceMap,
 }
