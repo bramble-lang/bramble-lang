@@ -15,6 +15,8 @@ use super::Span;
 mod logger;
 mod tests;
 
+pub use logger::Logger;
+
 /// Defines a way for the [`Logger`] to write events that are emitted by the
 /// Compiler to the user.
 pub trait Writer {

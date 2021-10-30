@@ -3,6 +3,7 @@ extern crate simplelog;
 
 use std::{path::Path, process::exit};
 
+use braid_lang::compiler::diagnostics::Logger;
 use inkwell::context::Context;
 
 use braid_lang::project::*;
@@ -40,9 +41,16 @@ fn main() {
 
     let stop_stage = get_stage(&config).unwrap();
 
+    let mut tracer = Logger::new();
+
     let trace_lexer = get_lexer_tracing(&config);
-    let token_sets = match tokenize_source_map(&sourcemap, src_path, &mut string_table, trace_lexer)
-    {
+    let token_sets = match tokenize_source_map(
+        &sourcemap,
+        src_path,
+        &mut string_table,
+        &tracer,
+        trace_lexer,
+    ) {
         Ok(ts) => ts,
         Err(errs) => {
             print_errs(&errs, &sourcemap, &string_table);

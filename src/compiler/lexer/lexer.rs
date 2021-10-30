@@ -2,6 +2,7 @@
 // by tokenize
 use stdext::function_name;
 
+use crate::compiler::diagnostics::Logger;
 use crate::compiler::source::{Offset, Source};
 use crate::compiler::{SourceChar, Span};
 use crate::diagnostics::config::TracingConfig;
@@ -191,10 +192,15 @@ pub struct Lexer<'a> {
     line: u32,
     string_table: &'a mut StringTable,
     tracing: TracingConfig,
+    logger: &'a Logger<'a>,
 }
 
 impl<'a> Lexer<'a> {
-    pub fn new(string_table: &'a mut StringTable, text: Source) -> Result<Lexer<'a>, LexerError> {
+    pub fn new(
+        text: Source,
+        string_table: &'a mut StringTable,
+        logger: &'a Logger,
+    ) -> Result<Lexer<'a>, LexerError> {
         let end_offset = text.high();
         Ok(Lexer {
             chars: text,
@@ -203,6 +209,7 @@ impl<'a> Lexer<'a> {
             line: 1,
             tracing: TracingConfig::Off,
             string_table,
+            logger,
         })
     }
 
