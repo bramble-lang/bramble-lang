@@ -1,4 +1,5 @@
 // Modules that are needed only within the compiler
+mod diagnostics;
 mod error; // Contains a macro and therefore this must be imported before all other modules
 mod source;
 
