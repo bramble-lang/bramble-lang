@@ -392,14 +392,23 @@ impl<'a> Lexer<'a> {
             .map(|c| !Self::is_delimiter(c))
             .unwrap_or(false)
         {
+            let span = self.current_char_span().unwrap();
+            self.logger.write(crate::compiler::diagnostics::Event {
+                span,
+                msg: "Invalid Integer".into(),
+            });
             return err!(
-                self.current_char_span().unwrap(), // Need to add a span to the branch
+                span, // Need to add a span to the branch
                 LexerError::InvalidInteger
             );
         }
 
         let (_, span) = branch.merge().unwrap();
         let int_text = self.string_table.get(int_token).unwrap();
+        self.logger.write(crate::compiler::diagnostics::Event {
+            span,
+            msg: "Integer".into(),
+        });
         Self::create_int_literal(self.line, span, int_text, type_suffix)
     }
 
