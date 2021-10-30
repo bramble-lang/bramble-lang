@@ -6,7 +6,7 @@ pub struct Logger<'a> {
 
     /// A set of writer sinks that this [`Logger`] will used to write every Event
     /// that this receives.
-    writers: Vec<&'a dyn Writer>,
+    writers: Vec<&'a mut dyn Writer>,
 }
 
 impl<'a> Logger<'a> {
@@ -19,14 +19,14 @@ impl<'a> Logger<'a> {
     }
 
     /// Write an event to ever [`Writer`] in this [`Logger`]
-    pub fn write<E: Writable>(&self, evt: E) {
-        for w in &self.writers {
+    pub fn write<E: Writable>(&mut self, evt: E) {
+        for w in &mut self.writers {
             evt.write(*w)
         }
     }
 
     /// Add a [`Writer`] to this [`Logger`]
-    pub fn add_writer(&mut self, w: &'a dyn Writer) {
+    pub fn add_writer(&mut self, w: &'a mut dyn Writer) {
         self.writers.push(w);
     }
 

@@ -18,17 +18,17 @@ mod tests;
 /// Defines a way for the [`Logger`] to write events that are emitted by the
 /// Compiler to the user.
 pub trait Writer {
-    fn write_span(&self, span: Span);
-    fn write_str(&self, label: &str, s: &str);
-    fn start_event(&self);
-    fn stop_event(&self);
+    fn write_span(&mut self, span: Span);
+    fn write_str(&mut self, label: &str, s: &str);
+    fn start_event(&mut self);
+    fn stop_event(&mut self);
 }
 
 /// Define how a type will be written to an Event log by a [`Writer`].
 pub trait Writable {
     /// Uses the given [`Writer`] to write the data in an instance of this type
     /// to an output target.
-    fn write(&self, w: &dyn Writer);
+    fn write(&self, w: &mut dyn Writer);
 }
 
 pub struct Event {
@@ -37,7 +37,7 @@ pub struct Event {
 }
 
 impl Writable for Event {
-    fn write(&self, w: &dyn Writer) {
+    fn write(&self, w: &mut dyn Writer) {
         w.start_event();
         w.write_span(self.span);
         w.write_str("msg", &self.msg);
