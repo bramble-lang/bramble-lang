@@ -1,10 +1,10 @@
 // Modules that are needed only within the compiler
-mod diagnostics;
 mod error; // Contains a macro and therefore this must be imported before all other modules
 mod source;
 
 // Modules which should be accessible outside of  the [`compiler`] module
 pub mod ast;
+pub mod diagnostics;
 pub mod import;
 pub mod lexer;
 pub mod llvm;
