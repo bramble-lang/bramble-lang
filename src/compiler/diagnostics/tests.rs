@@ -43,6 +43,7 @@ mod tests {
         let writer = TestWriter::new();
         logger.add_writer(&writer);
 
+        // First disable the logger and test that writes are blocked
         logger.disable();
         let evt = Event {
             span: Span::zero(),
@@ -51,6 +52,7 @@ mod tests {
         logger.write(evt);
         assert_eq!("", *writer.buf.borrow());
 
+        // Then enable the logger and confirm that writes are now happening
         logger.enable();
         let evt = Event {
             span: Span::zero(),
