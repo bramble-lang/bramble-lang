@@ -18,9 +18,18 @@ mod tests;
 /// Defines a way for the [`Logger`] to write events that are emitted by the
 /// Compiler to the user.
 pub trait Writer {
+    /// Write a Span to the current event
     fn write_span(&self, span: Span);
+
+    /// Write a string field to the current event
     fn write_str(&self, label: &str, s: &str);
+
+    /// Start writing a new compiler event.  This should emit any tokens which
+    /// signal the start of an event.
     fn start_event(&self);
+
+    /// Stop writing a the current compiler event.  This should emit any tokens
+    /// which are needed to signal the end of an event.
     fn stop_event(&self);
 }
 
@@ -31,8 +40,13 @@ pub trait Writable {
     fn write(&self, w: &dyn Writer);
 }
 
+/// An event from any stage in the Compiler caused by the given span of source
+/// code.
 pub struct Event {
+    /// The [`Span`] of input source code that caused this event to occur
     span: Span,
+
+    /// A description of the event
     msg: String,
 }
 
