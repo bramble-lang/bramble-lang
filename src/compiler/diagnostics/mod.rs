@@ -46,10 +46,10 @@ pub trait Writable {
 /// code.
 pub struct Event {
     /// The [`Span`] of input source code that caused this event to occur
-    span: Span,
+    pub span: Span,
 
     /// A description of the event
-    msg: String,
+    pub msg: String,
 }
 
 impl Writable for Event {
