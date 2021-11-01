@@ -395,19 +395,19 @@ impl<'a> Lexer<'a> {
         // error should be thrown.
         if branch
             .peek()
-            .map(|c| !Self::is_delimiter(c))
+            .map(|c| Self::is_delimiter(c))
             .unwrap_or(false)
         {
+            let (_, span) = branch.merge().unwrap();
+            let int_text = self.string_table.get(int_token).unwrap();
+
+            Self::create_int_literal(self.line, span, int_text, type_suffix)
+        } else {
             let span = self.current_char_span().unwrap();
             err!(
                 span, // Need to add a span to the branch
                 LexerError::InvalidInteger
             )
-        } else {
-            let (_, span) = branch.merge().unwrap();
-            let int_text = self.string_table.get(int_token).unwrap();
-
-            Self::create_int_literal(self.line, span, int_text, type_suffix)
         }
         .map(|ok| {
             ok.as_ref().map(|token| {
