@@ -7,7 +7,7 @@ use std::sync::atomic::Ordering;
 use stdext::function_name;
 
 use crate::{
-    compiler::{ast::*, lexer::tokens::Lex, CompilerError},
+    compiler::{ast::*, lexer::tokens::Lex, source::SourceIr, CompilerError},
     trace, StringId,
 };
 
@@ -51,7 +51,7 @@ pub(super) fn statement(stream: &mut TokenStream) -> ParserResult<Statement<Pars
             _ => {
                 if must_have_semicolon {
                     err!(
-                        stm.context().span(),
+                        stm.span(),
                         ParserError::ExpectedButFound(
                             vec![Lex::Semicolon],
                             stream.peek().map(|x| x.sym.clone())
@@ -76,7 +76,7 @@ fn let_bind(stream: &mut TokenStream) -> ParserResult<Bind<ParserContext>> {
         Some(let_tok) => {
             let is_mutable = stream.next_if(&Lex::Mut).is_some();
             let id_decl = id_declaration(stream)?.ok_or(CompilerError::new(
-                let_tok.span,
+                let_tok.span(),
                 ParserError::ExpectedIdDeclAfterLet,
             ))?;
             stream.next_must_be(&Lex::Assign)?;
@@ -84,7 +84,7 @@ fn let_bind(stream: &mut TokenStream) -> ParserResult<Bind<ParserContext>> {
             let exp = match co_init(stream)? {
                 Some(co_init) => co_init,
                 None => expression(stream)?.ok_or(CompilerError::new(
-                    let_tok.span,
+                    let_tok.span(),
                     ParserError::ExpectedExpressionOnRhs,
                 ))?,
             };
@@ -95,7 +95,7 @@ fn let_bind(stream: &mut TokenStream) -> ParserResult<Bind<ParserContext>> {
                     Ok(Some(Bind::new(ctx, id, ty.clone(), is_mutable, exp)))
                 }
                 _ => Err(CompilerError::new(
-                    let_tok.span,
+                    let_tok.span(),
                     ParserError::ExpectedTypeInIdDecl,
                 )),
             }
@@ -118,7 +118,7 @@ fn mutate(stream: &mut TokenStream) -> ParserResult<Mutate<ParserContext>> {
                 .get_str()
                 .expect("CRITICAL: identifier token cannot be converted to string");
             let exp = expression(stream)?.ok_or(CompilerError::new(
-                tokens[2].span,
+                tokens[2].span(),
                 ParserError::ExpectedExpressionOnRhs,
             ))?;
             Ok(Some(Mutate::new(tokens[0].to_ctx(), id, exp)))
@@ -142,7 +142,7 @@ fn co_init(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> 
                 )))
             }
             None => Err(CompilerError::new(
-                init_tok.span,
+                init_tok.span(),
                 ParserError::ExpectedIdAfterInit,
             )),
         },

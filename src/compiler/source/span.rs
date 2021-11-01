@@ -3,6 +3,14 @@
 
 use super::Offset;
 
+/// Trait that any IR type which derives from or represents source code
+/// must implement.  This trait contains functions for getting the [`Span`]
+/// of source code that an IR value represents, covers, or models.
+pub trait SourceIr {
+    /// Get the [`Span`] of source code that this value covers
+    fn span(&self) -> Span;
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Span {
     /// The span starts at this position in the global source map

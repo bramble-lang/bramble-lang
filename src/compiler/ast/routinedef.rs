@@ -1,4 +1,7 @@
-use crate::StringId;
+use crate::{
+    compiler::{source::SourceIr, Span},
+    StringId,
+};
 
 use super::{
     node::{
@@ -17,6 +20,12 @@ pub struct RoutineDef<M> {
     pub params: Vec<Parameter<M>>,
     pub ret_ty: Type,
     pub body: Vec<Statement<M>>,
+}
+
+impl<M: Context> SourceIr for RoutineDef<M> {
+    fn span(&self) -> Span {
+        self.context.span()
+    }
 }
 
 impl<M: Context> Node<M> for RoutineDef<M> {
