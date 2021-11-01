@@ -25,7 +25,7 @@ pub struct Module<M> {
 }
 
 impl<M: Context> SourceIr for Module<M> {
-    fn span(&self) -> crate::compiler::Span {
+    fn span(&self) -> Span {
         self.context.span()
     }
 }
