@@ -3,6 +3,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use stdext::function_name;
 
+use crate::compiler::source::HasSpan;
 use crate::compiler::Span;
 use crate::StringId;
 use crate::{
@@ -143,7 +144,7 @@ pub fn parse(name: StringId, tokens: &Vec<Token>) -> ParserResult<Module<ParserC
 
         if stream.index() == start_index {
             return err!(
-                stream.peek().unwrap().span,
+                stream.peek().unwrap().span(),
                 ParserError::Locked(stream.peek().map(|t| t.clone()))
             );
         }
@@ -169,7 +170,7 @@ fn module(stream: &mut TokenStream) -> ParserResult<Module<ParserContext>> {
                 Some(module)
             }
             _ => {
-                return err!(module.span, ParserError::ModExpectedName);
+                return err!(module.span(), ParserError::ModExpectedName);
             }
         },
         None => None,
@@ -250,7 +251,7 @@ fn extern_def(stream: &mut TokenStream) -> ParserResult<Extern<ParserContext>> {
                 )))
             }
             None => {
-                err!(extern_tok.span, ParserError::ExternExpectedFnDecl)
+                err!(extern_tok.span(), ParserError::ExternExpectedFnDecl)
             }
         },
         None => Ok(None),
@@ -270,7 +271,7 @@ fn struct_def(stream: &mut TokenStream) -> ParserResult<StructDef<ParserContext>
                 Ok(Some(StructDef::new(id, ctx, fields)))
             }
             None => {
-                err!(st_def.span, ParserError::StructExpectedIdentifier)
+                err!(st_def.span(), ParserError::StructExpectedIdentifier)
             }
         },
         None => Ok(None),
@@ -367,7 +368,7 @@ fn coroutine_def(stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserCont
         Some(t) => {
             consume_type(stream)?
                 .ok_or(CompilerError::new(
-                    t.span,
+                    t.span(),
                     ParserError::FnExpectedTypeAfterArrow,
                 ))?
                 .0
@@ -549,7 +550,7 @@ pub(super) fn path(stream: &mut TokenStream) -> ParserResult<(Path, ParserContex
                     span
                 }
                 _ => {
-                    return err!(path_sep.span, ParserError::PathExpectedIdentifier);
+                    return err!(path_sep.span(), ParserError::PathExpectedIdentifier);
                 }
             };
         ctx = ctx.extend(span);
@@ -654,7 +655,7 @@ pub(super) fn id_declaration(stream: &mut TokenStream) -> ParserResult<Expressio
                 "CRITICAL: first token is an identifier but cannot be converted to a string",
             );
             let (ty, ty_ctx) = consume_type(stream)?.ok_or(CompilerError::new(
-                decl_tok[0].span,
+                decl_tok[0].span(),
                 ParserError::IdDeclExpectedType,
             ))?;
             let ctx = ctx.join(ty_ctx);

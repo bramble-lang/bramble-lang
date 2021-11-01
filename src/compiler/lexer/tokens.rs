@@ -1,5 +1,5 @@
 use crate::{
-    compiler::{CompilerDisplay, CompilerDisplayError, SourceMap, Span},
+    compiler::{source::HasSpan, CompilerDisplay, CompilerDisplayError, SourceMap, Span},
     StringId,
 };
 
@@ -194,6 +194,12 @@ pub struct Token {
     pub sym: Lex,
 
     pub span: Span,
+}
+
+impl HasSpan for Token {
+    fn span(&self) -> Span {
+        self.span
+    }
 }
 
 impl std::fmt::Display for Token {

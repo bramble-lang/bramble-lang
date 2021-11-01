@@ -15,6 +15,7 @@ use crate::{
         ast::*,
         lexer::tokens::{Lex, Token},
         parser::statement::statement,
+        source::HasSpan,
         CompilerError,
     },
     trace, StringId,
@@ -292,12 +293,12 @@ fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
                             )
                         })
                         .ok_or(CompilerError::new(
-                            token.span,
+                            token.span(),
                             ParserError::MemberAccessExpectedField,
                         ))?,
                     Lex::LBracket => expression(stream)?
                         .ok_or(CompilerError::new(
-                            token.span,
+                            token.span(),
                             ParserError::IndexOpInvalidExpr,
                         ))
                         .and_then(|index| {
@@ -311,7 +312,7 @@ fn member_access(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
                         })?,
                     _ => {
                         return err!(
-                            token.span,
+                            token.span(),
                             ParserError::ExpectedButFound(
                                 vec![Lex::LBracket, Lex::MemberAccess],
                                 Some(token.sym.clone())
@@ -361,13 +362,13 @@ fn if_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
         Some(if_tok) => {
             stream.next_must_be(&Lex::LParen)?;
             let cond = expression(stream)?.ok_or(CompilerError::new(
-                if_tok.span,
+                if_tok.span(),
                 ParserError::IfExpectedConditional,
             ))?;
             stream.next_must_be(&Lex::RParen)?;
 
             let if_arm = expression_block(stream)?.ok_or(CompilerError::new(
-                if_tok.span,
+                if_tok.span(),
                 ParserError::IfTrueArmMissingExpr,
             ))?;
 
@@ -386,7 +387,7 @@ fn if_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserCont
                         }
                         _ => {
                             let false_arm = expression_block(stream)?.ok_or(CompilerError::new(
-                                if_tok.span,
+                                if_tok.span(),
                                 ParserError::IfFalseArmMissingExpr,
                             ))?;
                             Some(false_arm)
@@ -417,7 +418,7 @@ fn while_expression(stream: &mut TokenStream) -> ParserResult<Expression<ParserC
         Some(whl) => {
             stream.next_must_be(&Lex::LParen)?;
             let cond = expression(stream)?.ok_or(CompilerError::new(
-                whl.span,
+                whl.span(),
                 ParserError::WhileExpectedConditional,
             ))?;
             stream.next_must_be(&Lex::RParen)?;

@@ -15,7 +15,7 @@ mod span;
 pub use source::{LineNumber, Source};
 pub use sourcechar::{SourceCharIter, SourceError};
 pub use sourcemap::{SourceMap, SourceMapEntry, SourceMapError};
-pub use span::Span;
+pub use span::{HasSpan, Span};
 
 /// Represents a single char from a source code file.  This includes the character
 /// and the global offset of the character (which points to the specific source
