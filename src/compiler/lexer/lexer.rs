@@ -399,12 +399,10 @@ impl<'a> Lexer<'a> {
             .unwrap_or(false)
         {
             let span = self.current_char_span().unwrap();
-            let err = err!(
+            err!(
                 span, // Need to add a span to the branch
                 LexerError::InvalidInteger
-            );
-
-            err
+            )
         } else {
             let (_, span) = branch.merge().unwrap();
             let int_text = self.string_table.get(int_token).unwrap();
