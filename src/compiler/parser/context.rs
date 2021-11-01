@@ -1,5 +1,5 @@
 use crate::{
-    compiler::{ast::Context, lexer::tokens::Token, Span},
+    compiler::{ast::Context, lexer::tokens::Token, source::SourceIr, Span},
     diagnostics::{Diag, DiagData},
 };
 
@@ -53,7 +53,7 @@ impl Token {
     pub fn to_ctx(&self) -> ParserContext {
         ParserContext {
             line: self.line,
-            span: self.span,
+            span: self.span(),
         }
     }
 }
