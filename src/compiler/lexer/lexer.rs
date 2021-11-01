@@ -228,11 +228,17 @@ impl<'a> Lexer<'a> {
         let mut tokens = vec![];
 
         while self.index < self.chars.len() {
-            let prev_index = self.index;
+            // Consume any whitespace before attempting to parse the next token
             self.consume_whitespace();
+
+            // Record the current index position, so that we can see if the parser
+            // has advanced
+            let prev_index = self.index;
             if self.index >= self.chars.len() {
                 break;
             }
+
+            // Parse the next token
             match self.next_token() {
                 Ok(Some(t)) => tokens.push(Ok(t)),
                 Ok(None) => (),
