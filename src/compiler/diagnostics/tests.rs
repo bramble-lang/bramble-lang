@@ -14,7 +14,7 @@ mod tests {
         logger.add_writer(&writer);
 
         let evt = Event {
-            span: Span::zero(),
+            input: Span::zero(),
             msg: Ok("Hello"),
         };
 
@@ -30,7 +30,7 @@ mod tests {
 
         logger.disable();
         let evt = Event {
-            span: Span::zero(),
+            input: Span::zero(),
             msg: Ok("Hello"),
         };
         logger.write(evt);
@@ -46,7 +46,7 @@ mod tests {
         // First disable the logger and test that writes are blocked
         logger.disable();
         let evt = Event {
-            span: Span::zero(),
+            input: Span::zero(),
             msg: Ok("Hello"),
         };
         logger.write(evt);
@@ -55,7 +55,7 @@ mod tests {
         // Then enable the logger and confirm that writes are now happening
         logger.enable();
         let evt = Event {
-            span: Span::zero(),
+            input: Span::zero(),
             msg: Ok("Hello"),
         };
         logger.write(evt);

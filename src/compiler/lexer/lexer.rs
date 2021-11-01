@@ -412,7 +412,7 @@ impl<'a> Lexer<'a> {
         .map(|ok| {
             ok.as_ref().map(|token| {
                 self.logger.write(Event::<LexerError> {
-                    span: token.span,
+                    input: token.span, // This should actually be the input span (tho in the case of the Lexer the input span and output span are the same)
                     msg: Ok("Integer"),
                 });
             });
@@ -420,7 +420,7 @@ impl<'a> Lexer<'a> {
         })
         .map_err(|err| {
             self.logger.write(Event {
-                span: err.span(),
+                input: err.span(),
                 msg: Err(&err),
             });
             err
