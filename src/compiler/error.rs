@@ -53,6 +53,11 @@ where
     pub fn take(self) -> (Span, IE) {
         (self.span, self.inner)
     }
+
+    /// Get the [`Span`] that caused this error
+    pub fn span(&self) -> Span {
+        self.span
+    }
 }
 
 impl<IE> CompilerDisplay for CompilerError<IE>

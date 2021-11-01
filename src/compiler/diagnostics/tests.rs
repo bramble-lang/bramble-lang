@@ -15,7 +15,7 @@ mod tests {
 
         let evt = Event {
             span: Span::zero(),
-            msg: "Hello".into(),
+            msg: Ok("Hello"),
         };
 
         logger.write(evt);
@@ -31,7 +31,7 @@ mod tests {
         logger.disable();
         let evt = Event {
             span: Span::zero(),
-            msg: "Hello".into(),
+            msg: Ok("Hello"),
         };
         logger.write(evt);
         assert_eq!("", *writer.buf.borrow());
@@ -47,7 +47,7 @@ mod tests {
         logger.disable();
         let evt = Event {
             span: Span::zero(),
-            msg: "Hello".into(),
+            msg: Ok("Hello"),
         };
         logger.write(evt);
         assert_eq!("", *writer.buf.borrow());
@@ -56,7 +56,7 @@ mod tests {
         logger.enable();
         let evt = Event {
             span: Span::zero(),
-            msg: "Hello".into(),
+            msg: Ok("Hello"),
         };
         logger.write(evt);
         assert_eq!("{[0,0], msg: \"Hello\", }", *writer.buf.borrow());

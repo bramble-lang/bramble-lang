@@ -2,7 +2,7 @@
 // by tokenize
 use stdext::function_name;
 
-use crate::compiler::diagnostics::Logger;
+use crate::compiler::diagnostics::{Event, Logger};
 use crate::compiler::source::{Offset, Source};
 use crate::compiler::{SourceChar, Span};
 use crate::diagnostics::config::TracingConfig;
@@ -399,23 +399,34 @@ impl<'a> Lexer<'a> {
             .unwrap_or(false)
         {
             let span = self.current_char_span().unwrap();
-            self.logger.write(crate::compiler::diagnostics::Event {
-                span,
-                msg: "Invalid Integer".into(),
-            });
-            return err!(
+            let err = err!(
                 span, // Need to add a span to the branch
                 LexerError::InvalidInteger
             );
-        }
 
-        let (_, span) = branch.merge().unwrap();
-        let int_text = self.string_table.get(int_token).unwrap();
-        self.logger.write(crate::compiler::diagnostics::Event {
-            span,
-            msg: "Integer".into(),
-        });
-        Self::create_int_literal(self.line, span, int_text, type_suffix)
+            err
+        } else {
+            let (_, span) = branch.merge().unwrap();
+            let int_text = self.string_table.get(int_token).unwrap();
+
+            Self::create_int_literal(self.line, span, int_text, type_suffix)
+        }
+        .map(|ok| {
+            ok.as_ref().map(|token| {
+                self.logger.write(Event::<LexerError> {
+                    span: token.span,
+                    msg: Ok("Integer"),
+                });
+            });
+            ok
+        })
+        .map_err(|err| {
+            self.logger.write(Event {
+                span: err.span(),
+                msg: Err(&err),
+            });
+            err
+        })
     }
 
     fn create_int_literal(

@@ -10,7 +10,9 @@
 //! provide deep but friendly insight into how the code they write becomes what
 //! the CPU executes.
 
-use super::Span;
+use std::fmt::Debug;
+
+use super::{CompilerDisplay, CompilerError, Span};
 
 mod logger;
 mod tests;
@@ -44,19 +46,22 @@ pub trait Writable {
 
 /// An event from any stage in the Compiler caused by the given span of source
 /// code.
-pub struct Event {
+pub struct Event<'a, E: CompilerDisplay + Debug> {
     /// The [`Span`] of input source code that caused this event to occur
     pub span: Span,
 
     /// A description of the event
-    pub msg: String,
+    pub msg: Result<&'a str, &'a CompilerError<E>>,
 }
 
-impl Writable for Event {
+impl<'a, E: CompilerDisplay + Debug> Writable for Event<'a, E> {
     fn write(&self, w: &dyn Writer) {
         w.start_event();
         w.write_span(self.span);
-        w.write_str("msg", &self.msg);
+        match self.msg {
+            Ok(msg) => w.write_str("msg", msg),
+            Err(err) => w.write_str("error", &format!("{:?}", err)),
+        }
         w.stop_event();
     }
 }
