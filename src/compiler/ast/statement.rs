@@ -1,4 +1,4 @@
-use crate::StringId;
+use crate::{compiler::source::HasSpan, StringId};
 
 use super::{
     expression::Expression,
@@ -17,6 +17,12 @@ pub enum Statement<M> {
     Expression(Box<Expression<M>>),
 
     Return(Box<Return<M>>),
+}
+
+impl<M: Context> HasSpan for Statement<M> {
+    fn span(&self) -> crate::compiler::Span {
+        self.context().span()
+    }
 }
 
 impl<M: Context> Node<M> for Statement<M> {
@@ -116,6 +122,12 @@ pub struct Bind<M> {
     rhs: Expression<M>,
 }
 
+impl<M: Context> HasSpan for Bind<M> {
+    fn span(&self) -> crate::compiler::Span {
+        self.context.span()
+    }
+}
+
 impl<M: Context> Node<M> for Bind<M> {
     fn context(&self) -> &M {
         &self.context
@@ -199,6 +211,12 @@ pub struct Mutate<M> {
     rhs: Expression<M>,
 }
 
+impl<M: Context> HasSpan for Mutate<M> {
+    fn span(&self) -> crate::compiler::Span {
+        self.context.span()
+    }
+}
+
 impl<M: Context> Node<M> for Mutate<M> {
     fn context(&self) -> &M {
         &self.context
@@ -263,6 +281,12 @@ pub struct YieldReturn<M> {
     value: Option<Expression<M>>,
 }
 
+impl<M: Context> HasSpan for YieldReturn<M> {
+    fn span(&self) -> crate::compiler::Span {
+        self.context.span()
+    }
+}
+
 impl<M: Context> Node<M> for YieldReturn<M> {
     fn context(&self) -> &M {
         &self.context
@@ -324,6 +348,12 @@ impl<M> YieldReturn<M> {
 pub struct Return<M> {
     context: M,
     value: Option<Expression<M>>,
+}
+
+impl<M: Context> HasSpan for Return<M> {
+    fn span(&self) -> crate::compiler::Span {
+        self.context.span()
+    }
 }
 
 impl<M: Context> Node<M> for Return<M> {

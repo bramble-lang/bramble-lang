@@ -1,4 +1,4 @@
-use crate::StringId;
+use crate::{compiler::source::HasSpan, StringId};
 
 use super::{
     node::{
@@ -12,6 +12,12 @@ pub struct Parameter<M> {
     pub context: M,
     pub name: StringId,
     pub ty: Type,
+}
+
+impl<M: Context> HasSpan for Parameter<M> {
+    fn span(&self) -> crate::compiler::Span {
+        self.context.span()
+    }
 }
 
 impl<M: Context> Node<M> for Parameter<M> {

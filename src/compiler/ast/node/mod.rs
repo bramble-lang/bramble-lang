@@ -3,6 +3,7 @@ use std::fmt::Display;
 mod iter;
 mod map;
 
+use crate::compiler::source::HasSpan;
 use crate::compiler::Span;
 use crate::StringId;
 
@@ -11,7 +12,7 @@ pub use self::map::MapPreOrder;
 
 use super::routinedef::RoutineDefType;
 
-pub trait Node<M: Context> {
+pub trait Node<M: Context>: HasSpan {
     fn node_type(&self) -> NodeType;
     fn context(&self) -> &M;
     fn get_context_mut(&mut self) -> &mut M;

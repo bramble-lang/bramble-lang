@@ -1,4 +1,4 @@
-use crate::StringId;
+use crate::{compiler::source::HasSpan, StringId};
 
 use super::{
     node::{
@@ -17,6 +17,12 @@ pub struct RoutineDef<M> {
     pub params: Vec<Parameter<M>>,
     pub ret_ty: Type,
     pub body: Vec<Statement<M>>,
+}
+
+impl<M: Context> HasSpan for RoutineDef<M> {
+    fn span(&self) -> crate::compiler::Span {
+        self.context.span()
+    }
 }
 
 impl<M: Context> Node<M> for RoutineDef<M> {

@@ -16,7 +16,10 @@
 #![macro_use]
 use crate::StringTable;
 
-use super::{source::LineNumber, CompilerDisplay, CompilerDisplayError, SourceMap, Span};
+use super::{
+    source::{HasSpan, LineNumber},
+    CompilerDisplay, CompilerDisplayError, SourceMap, Span,
+};
 
 /// Represents all errors that are generated from within the Compiler
 /// module and its submodules.
@@ -52,6 +55,12 @@ where
     /// wrapper.
     pub fn take(self) -> (Span, IE) {
         (self.span, self.inner)
+    }
+}
+
+impl<IE: CompilerDisplay> HasSpan for CompilerError<IE> {
+    fn span(&self) -> crate::compiler::Span {
+        self.span
     }
 }
 

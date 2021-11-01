@@ -5,13 +5,19 @@ use super::{
     parameter::Parameter,
     ty::Type,
 };
-use crate::{result::Result, StringId};
+use crate::{compiler::source::HasSpan, result::Result, StringId};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct StructDef<M> {
     context: M,
     name: StringId,
     pub(super) fields: Vec<Parameter<M>>,
+}
+
+impl<M: Context> HasSpan for StructDef<M> {
+    fn span(&self) -> crate::compiler::Span {
+        self.context.span()
+    }
 }
 
 impl<M: Context> Node<M> for StructDef<M> {
