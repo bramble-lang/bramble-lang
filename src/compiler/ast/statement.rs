@@ -1,4 +1,4 @@
-use crate::{compiler::source::HasSpan, StringId};
+use crate::{compiler::source::SourceIr, StringId};
 
 use super::{
     expression::Expression,
@@ -19,7 +19,7 @@ pub enum Statement<M> {
     Return(Box<Return<M>>),
 }
 
-impl<M: Context> HasSpan for Statement<M> {
+impl<M: Context> SourceIr for Statement<M> {
     fn span(&self) -> crate::compiler::Span {
         self.context().span()
     }
@@ -122,7 +122,7 @@ pub struct Bind<M> {
     rhs: Expression<M>,
 }
 
-impl<M: Context> HasSpan for Bind<M> {
+impl<M: Context> SourceIr for Bind<M> {
     fn span(&self) -> crate::compiler::Span {
         self.context.span()
     }
@@ -211,7 +211,7 @@ pub struct Mutate<M> {
     rhs: Expression<M>,
 }
 
-impl<M: Context> HasSpan for Mutate<M> {
+impl<M: Context> SourceIr for Mutate<M> {
     fn span(&self) -> crate::compiler::Span {
         self.context.span()
     }
@@ -281,7 +281,7 @@ pub struct YieldReturn<M> {
     value: Option<Expression<M>>,
 }
 
-impl<M: Context> HasSpan for YieldReturn<M> {
+impl<M: Context> SourceIr for YieldReturn<M> {
     fn span(&self) -> crate::compiler::Span {
         self.context.span()
     }
@@ -350,7 +350,7 @@ pub struct Return<M> {
     value: Option<Expression<M>>,
 }
 
-impl<M: Context> HasSpan for Return<M> {
+impl<M: Context> SourceIr for Return<M> {
     fn span(&self) -> crate::compiler::Span {
         self.context.span()
     }

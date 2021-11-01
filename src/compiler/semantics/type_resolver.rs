@@ -1,4 +1,4 @@
-use crate::compiler::source::HasSpan;
+use crate::compiler::source::SourceIr;
 use crate::compiler::Span;
 use crate::diagnostics::config::{Tracing, TracingConfig};
 use crate::{

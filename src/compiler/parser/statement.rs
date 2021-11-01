@@ -7,7 +7,7 @@ use std::sync::atomic::Ordering;
 use stdext::function_name;
 
 use crate::{
-    compiler::{ast::*, lexer::tokens::Lex, source::HasSpan, CompilerError},
+    compiler::{ast::*, lexer::tokens::Lex, source::SourceIr, CompilerError},
     trace, StringId,
 };
 

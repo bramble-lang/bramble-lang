@@ -15,7 +15,7 @@ use crate::{
         ast::*,
         lexer::tokens::{Lex, Token},
         parser::statement::statement,
-        source::HasSpan,
+        source::SourceIr,
         CompilerError,
     },
     trace, StringId,

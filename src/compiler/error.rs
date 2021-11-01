@@ -17,7 +17,7 @@
 use crate::StringTable;
 
 use super::{
-    source::{HasSpan, LineNumber},
+    source::{LineNumber, SourceIr},
     CompilerDisplay, CompilerDisplayError, SourceMap, Span,
 };
 
@@ -58,7 +58,7 @@ where
     }
 }
 
-impl<IE: CompilerDisplay> HasSpan for CompilerError<IE> {
+impl<IE: CompilerDisplay> SourceIr for CompilerError<IE> {
     fn span(&self) -> crate::compiler::Span {
         self.span
     }

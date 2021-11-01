@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use stdext::function_name;
 
-use crate::compiler::source::HasSpan;
+use crate::compiler::source::SourceIr;
 use crate::compiler::Span;
 use crate::StringId;
 use crate::{

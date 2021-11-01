@@ -8,7 +8,7 @@ use super::{
     structdef::StructDef,
     AstError,
 };
-use crate::compiler::{source::HasSpan, CompilerError};
+use crate::compiler::{source::SourceIr, CompilerError};
 use crate::StringId;
 
 type AstResult<T> = Result<T, CompilerError<AstError>>;
@@ -24,7 +24,7 @@ pub struct Module<M> {
     externs: Vec<Item<M>>,
 }
 
-impl<M: Context> HasSpan for Module<M> {
+impl<M: Context> SourceIr for Module<M> {
     fn span(&self) -> crate::compiler::Span {
         self.context.span()
     }
@@ -293,7 +293,7 @@ pub enum Item<M> {
     Extern(Extern<M>),
 }
 
-impl<M: Context> HasSpan for Item<M> {
+impl<M: Context> SourceIr for Item<M> {
     fn span(&self) -> crate::compiler::Span {
         self.context().span()
     }

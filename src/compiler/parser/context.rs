@@ -1,5 +1,5 @@
 use crate::{
-    compiler::{ast::Context, lexer::tokens::Token, source::HasSpan, Span},
+    compiler::{ast::Context, lexer::tokens::Token, source::SourceIr, Span},
     diagnostics::{Diag, DiagData},
 };
 

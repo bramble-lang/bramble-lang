@@ -1,4 +1,4 @@
-use crate::{compiler::source::HasSpan, StringId};
+use crate::{compiler::source::SourceIr, StringId};
 
 use super::{
     node::{
@@ -53,7 +53,7 @@ pub enum Expression<I> {
     Yield(I, Box<Expression<I>>),
 }
 
-impl<M: Context> HasSpan for Expression<M> {
+impl<M: Context> SourceIr for Expression<M> {
     fn span(&self) -> crate::compiler::Span {
         self.context().span()
     }

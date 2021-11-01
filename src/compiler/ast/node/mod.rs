@@ -3,7 +3,7 @@ use std::fmt::Display;
 mod iter;
 mod map;
 
-use crate::compiler::source::HasSpan;
+use crate::compiler::source::SourceIr;
 use crate::compiler::Span;
 use crate::StringId;
 
@@ -14,7 +14,7 @@ use super::routinedef::RoutineDefType;
 
 /// Trait that categorizes all AST IR types and through which general operations
 /// on an AST can be written.
-pub trait Node<M: Context>: HasSpan {
+pub trait Node<M: Context>: SourceIr {
     fn node_type(&self) -> NodeType;
     fn context(&self) -> &M;
     fn get_context_mut(&mut self) -> &mut M;

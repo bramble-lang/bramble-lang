@@ -1,4 +1,4 @@
-use crate::compiler::{import::Import, source::HasSpan, CompilerError};
+use crate::compiler::{import::Import, source::SourceIr, CompilerError};
 use log::debug;
 
 use crate::{

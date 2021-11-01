@@ -19,7 +19,7 @@ pub struct Extern<M> {
     pub ty: Type,
 }
 
-impl<M: Context> crate::compiler::source::HasSpan for Extern<M> {
+impl<M: Context> crate::compiler::source::SourceIr for Extern<M> {
     fn span(&self) -> crate::compiler::Span {
         self.context.span()
     }

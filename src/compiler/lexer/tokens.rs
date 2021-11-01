@@ -1,5 +1,5 @@
 use crate::{
-    compiler::{source::HasSpan, CompilerDisplay, CompilerDisplayError, SourceMap, Span},
+    compiler::{source::SourceIr, CompilerDisplay, CompilerDisplayError, SourceMap, Span},
     StringId,
 };
 
@@ -196,7 +196,7 @@ pub struct Token {
     pub span: Span,
 }
 
-impl HasSpan for Token {
+impl SourceIr for Token {
     fn span(&self) -> Span {
         self.span
     }
