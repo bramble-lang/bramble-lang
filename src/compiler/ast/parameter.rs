@@ -1,4 +1,7 @@
-use crate::{compiler::source::SourceIr, StringId};
+use crate::{
+    compiler::{source::SourceIr, Span},
+    StringId,
+};
 
 use super::{
     node::{
@@ -15,7 +18,7 @@ pub struct Parameter<M> {
 }
 
 impl<M: Context> SourceIr for Parameter<M> {
-    fn span(&self) -> crate::compiler::Span {
+    fn span(&self) -> Span {
         self.context.span()
     }
 }

@@ -8,7 +8,7 @@ use super::{
     structdef::StructDef,
     AstError,
 };
-use crate::compiler::{source::SourceIr, CompilerError};
+use crate::compiler::{source::SourceIr, CompilerError, Span};
 use crate::StringId;
 
 type AstResult<T> = Result<T, CompilerError<AstError>>;
@@ -294,7 +294,7 @@ pub enum Item<M> {
 }
 
 impl<M: Context> SourceIr for Item<M> {
-    fn span(&self) -> crate::compiler::Span {
+    fn span(&self) -> Span {
         self.context().span()
     }
 }

@@ -1,4 +1,7 @@
-use crate::{compiler::source::SourceIr, StringId};
+use crate::{
+    compiler::{source::SourceIr, Span},
+    StringId,
+};
 
 use super::{
     expression::Expression,
@@ -20,7 +23,7 @@ pub enum Statement<M> {
 }
 
 impl<M: Context> SourceIr for Statement<M> {
-    fn span(&self) -> crate::compiler::Span {
+    fn span(&self) -> Span {
         self.context().span()
     }
 }
@@ -123,7 +126,7 @@ pub struct Bind<M> {
 }
 
 impl<M: Context> SourceIr for Bind<M> {
-    fn span(&self) -> crate::compiler::Span {
+    fn span(&self) -> Span {
         self.context.span()
     }
 }
@@ -212,7 +215,7 @@ pub struct Mutate<M> {
 }
 
 impl<M: Context> SourceIr for Mutate<M> {
-    fn span(&self) -> crate::compiler::Span {
+    fn span(&self) -> Span {
         self.context.span()
     }
 }
@@ -282,7 +285,7 @@ pub struct YieldReturn<M> {
 }
 
 impl<M: Context> SourceIr for YieldReturn<M> {
-    fn span(&self) -> crate::compiler::Span {
+    fn span(&self) -> Span {
         self.context.span()
     }
 }
@@ -351,7 +354,7 @@ pub struct Return<M> {
 }
 
 impl<M: Context> SourceIr for Return<M> {
-    fn span(&self) -> crate::compiler::Span {
+    fn span(&self) -> Span {
         self.context.span()
     }
 }

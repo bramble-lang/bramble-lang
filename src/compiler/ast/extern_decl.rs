@@ -1,4 +1,4 @@
-use crate::StringId;
+use crate::{compiler::Span, StringId};
 
 use super::{
     node::{
@@ -20,7 +20,7 @@ pub struct Extern<M> {
 }
 
 impl<M: Context> crate::compiler::source::SourceIr for Extern<M> {
-    fn span(&self) -> crate::compiler::Span {
+    fn span(&self) -> Span {
         self.context.span()
     }
 }

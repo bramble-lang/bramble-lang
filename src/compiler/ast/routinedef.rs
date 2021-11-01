@@ -1,4 +1,7 @@
-use crate::{compiler::source::SourceIr, StringId};
+use crate::{
+    compiler::{source::SourceIr, Span},
+    StringId,
+};
 
 use super::{
     node::{
@@ -20,7 +23,7 @@ pub struct RoutineDef<M> {
 }
 
 impl<M: Context> SourceIr for RoutineDef<M> {
-    fn span(&self) -> crate::compiler::Span {
+    fn span(&self) -> Span {
         self.context.span()
     }
 }
