@@ -3,6 +3,7 @@ use std::fmt::Display;
 mod iter;
 mod map;
 
+use crate::compiler::source::SourceIr;
 use crate::compiler::Span;
 use crate::StringId;
 
@@ -11,7 +12,9 @@ pub use self::map::MapPreOrder;
 
 use super::routinedef::RoutineDefType;
 
-pub trait Node<M: Context> {
+/// Trait that categorizes all AST IR types and through which general operations
+/// on an AST can be written.
+pub trait Node<M: Context>: SourceIr {
     fn node_type(&self) -> NodeType;
     fn context(&self) -> &M;
     fn get_context_mut(&mut self) -> &mut M;
@@ -22,6 +25,9 @@ pub trait Node<M: Context> {
     fn iter_preorder(&self) -> PreOrderIter<M>;
 }
 
+/// Describes the specific type of an AST node.  This is used because when
+/// writing code against the [`Node`] trait, the specific node type information
+/// is lost.
 #[derive(Debug)]
 pub enum NodeType {
     Module,
@@ -52,6 +58,8 @@ impl Display for NodeType {
     }
 }
 
+/// A [`Context`] is a type which contains contextual information related to
+/// a specific stage or analysis performed by the compiler.
 pub trait Context {
     fn id(&self) -> u32;
     fn line(&self) -> u32;

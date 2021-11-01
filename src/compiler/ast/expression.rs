@@ -1,4 +1,7 @@
-use crate::StringId;
+use crate::{
+    compiler::{source::SourceIr, Span},
+    StringId,
+};
 
 use super::{
     node::{
@@ -51,6 +54,12 @@ pub enum Expression<I> {
     UnaryOp(I, UnaryOperator, Box<Expression<I>>),
 
     Yield(I, Box<Expression<I>>),
+}
+
+impl<M: Context> SourceIr for Expression<M> {
+    fn span(&self) -> Span {
+        self.context().span()
+    }
 }
 
 impl<M: Context> Node<M> for Expression<M> {
