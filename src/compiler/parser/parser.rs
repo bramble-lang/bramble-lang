@@ -636,7 +636,7 @@ fn array_type(stream: &mut TokenStream) -> ParserResult<(Type, ParserContext)> {
                 Expression::I16(_, l) => l as usize,
                 Expression::I32(_, l) => l as usize,
                 Expression::I64(_, l) => l as usize,
-                _ => return err!(len.context().span(), ParserError::ArrayExpectedIntLiteral),
+                _ => return err!(len.span(), ParserError::ArrayExpectedIntLiteral),
             };
 
             let ctx = stream.next_must_be(&Lex::RBracket)?.to_ctx().join(ctx);

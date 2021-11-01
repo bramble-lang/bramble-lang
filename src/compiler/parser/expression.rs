@@ -251,7 +251,7 @@ pub fn binary_op(
         Some(left) => match stream.next_if_one_of(test.clone()) {
             Some(op) => {
                 let right = binary_op(stream, test, left_pattern)?.ok_or(CompilerError::new(
-                    op.to_ctx().span(),
+                    op.span(),
                     ParserError::ExpectedExprAfter(op.sym.clone()),
                 ))?;
                 Expression::binary_op(&op.sym, Box::new(left), Box::new(right))
@@ -267,7 +267,7 @@ fn negate(stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
     match stream.next_if_one_of(vec![Lex::Minus, Lex::Not]) {
         Some(op) => {
             let factor = negate(stream)?.ok_or(CompilerError::new(
-                op.to_ctx().span(),
+                op.span(),
                 ParserError::ExpectedTermAfter(op.sym.clone()),
             ))?;
             Expression::unary_op(op.to_ctx(), &op.sym, Box::new(factor))

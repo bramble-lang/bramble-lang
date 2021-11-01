@@ -1,3 +1,4 @@
+use crate::compiler::source::HasSpan;
 use crate::compiler::Span;
 use crate::diagnostics::config::{Tracing, TracingConfig};
 use crate::{
@@ -171,7 +172,7 @@ impl TypeResolver {
         // Add parameters to symbol table
         for p in params.iter() {
             ctx.add_symbol(p.name, p.ty.clone(), false, false)
-                .map_err(|e| CompilerError::new(p.context().span(), e))?;
+                .map_err(|e| CompilerError::new(p.span(), e))?;
         }
 
         self.symbols.enter_scope(ctx.sym().clone());
@@ -322,7 +323,7 @@ impl TypeResolver {
             }
             Err(e) => Err(e),
         };
-        result.map_err(|e| CompilerError::new(mutate.context().span(), e))
+        result.map_err(|e| CompilerError::new(mutate.span(), e))
     }
 
     fn analyze_yieldreturn(
@@ -343,13 +344,13 @@ impl TypeResolver {
         // Get the expected yield return type of the coroutine that the yield return
         // occurs within.
         let current_func = self.symbols.get_current_fn().ok_or(CompilerError::new(
-            yr.context().span(),
+            yr.span(),
             SemanticError::YieldInvalidLocation,
         ))?;
         let (_, expected_ret_ty) = self
             .symbols
             .lookup_coroutine(current_func)
-            .map_err(|e| CompilerError::new(yr.context().span(), e))?;
+            .map_err(|e| CompilerError::new(yr.span(), e))?;
 
         if actual_ret_ty == expected_ret_ty {
             let ctx = yr.context().with_type(actual_ret_ty);
@@ -360,7 +361,7 @@ impl TypeResolver {
                 actual_ret_ty,
             ))
         }
-        .map_err(|e| CompilerError::new(yr.context().span(), e))
+        .map_err(|e| CompilerError::new(yr.span(), e))
     }
 
     fn analyze_return(
@@ -384,11 +385,11 @@ impl TypeResolver {
             .symbols
             .get_current_fn()
             .ok_or(SemanticError::ReturnInvalidLocation)
-            .map_err(|e| CompilerError::new(r.context().span(), e))?;
+            .map_err(|e| CompilerError::new(r.span(), e))?;
         let (_, expected_ret_ty) = self
             .symbols
             .lookup_func_or_cor(current_func)
-            .map_err(|e| CompilerError::new(r.context().span(), e))?;
+            .map_err(|e| CompilerError::new(r.span(), e))?;
 
         // Check that the actual expression matches the expected return type
         // of the function
@@ -401,7 +402,7 @@ impl TypeResolver {
                 actual_ret_ty,
             ))
         }
-        .map_err(|e| CompilerError::new(r.context().span(), e))
+        .map_err(|e| CompilerError::new(r.span(), e))
     }
 
     /// Recursively resolve every child of the given expression and check that every
@@ -825,7 +826,7 @@ impl TypeResolver {
                     Ok((operand.get_type().clone(), operand))
                 } else {
                     Err(CompilerError::new(
-                        operand.context().span(),
+                        operand.span(),
                         SemanticError::ExpectedSignedInteger(op, operand.get_type().clone()),
                     ))
                 }
@@ -835,7 +836,7 @@ impl TypeResolver {
                     Ok((Type::Bool, operand))
                 } else {
                     Err(CompilerError::new(
-                        operand.context().span(),
+                        operand.span(),
                         SemanticError::ExpectedBool(op, operand.get_type().clone()),
                     ))
                 }
@@ -871,7 +872,7 @@ impl TypeResolver {
                         Type::I64
                     };
                     Err(CompilerError::new(
-                        l.context().span(),
+                        l.span(),
                         SemanticError::OpExpected(
                             op,
                             expected,
@@ -886,7 +887,7 @@ impl TypeResolver {
                     Ok((Type::Bool, l, r))
                 } else {
                     Err(CompilerError::new(
-                        l.context().span(),
+                        l.span(),
                         SemanticError::OpExpected(
                             op,
                             Type::Bool,
@@ -901,7 +902,7 @@ impl TypeResolver {
                     Ok((Type::Bool, l, r))
                 } else {
                     Err(CompilerError::new(
-                        l.context().span(),
+                        l.span(),
                         SemanticError::OpExpected(
                             op,
                             l.get_type().clone(),
@@ -992,21 +993,21 @@ impl TypeResolver {
         // If routine is root::my_main it must be a function type and have type () -> i64
         if def != &RoutineDefType::Function {
             return Err(CompilerError::new(
-                routine.context().span(),
+                routine.span(),
                 SemanticError::MainFnInvalidType,
             ));
         }
 
         if params.len() > 0 {
             return Err(CompilerError::new(
-                routine.context().span(),
+                routine.span(),
                 SemanticError::MainFnInvalidParams,
             ));
         }
 
         if ret_ty != Type::I64 {
             return Err(CompilerError::new(
-                routine.context().span(),
+                routine.span(),
                 SemanticError::MainFnInvalidType,
             ));
         }
