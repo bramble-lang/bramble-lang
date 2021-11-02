@@ -284,10 +284,7 @@ impl<'a> Lexer<'a> {
                         Some(i) => Ok(Some(i)),
                         None => match self.consume_identifier()? {
                             Some(id) => Ok(Some(id)),
-                            None => match self.consume_operator()? {
-                                Some(op) => Ok(Some(op)),
-                                None => Ok(None),
-                            },
+                            None => self.consume_operator(),
                         },
                     },
                 },
