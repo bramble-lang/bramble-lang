@@ -393,11 +393,7 @@ impl<'a> Lexer<'a> {
         // Check that the current character at the lexer cursor position is a delimiter (we have
         // reached the end of the token); otherwise this is not a valid integer literal and an
         // error should be thrown.
-        if branch
-            .peek()
-            .map(|c| Self::is_delimiter(c))
-            .unwrap_or(false)
-        {
+        if branch.peek().map(|c| Self::is_delimiter(c)).unwrap_or(true) {
             let (_, span) = branch.merge().unwrap();
             let int_text = self.string_table.get(int_token).unwrap();
 
