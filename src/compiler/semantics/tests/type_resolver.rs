@@ -3351,7 +3351,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).map_err(|e| e.fmt(&sm, &table)).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
                 main_mod, main_fn,

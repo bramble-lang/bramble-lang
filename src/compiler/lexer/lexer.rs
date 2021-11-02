@@ -129,7 +129,7 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
     /// Will advance the cursor if the stream after the cursor starts with the
     /// given test string.  If the remaining stream does not start with the
     /// test string then the cursor is not advanced.
-    fn next_ifn(&mut self, t: &str) -> bool {
+    fn next_if_word(&mut self, t: &str) -> bool {
         // Check that `t` does not contain a line break, which would violate acceptable tokens
         if t.chars().any(|c| c.is_whitespace()) {
             // Panic because this indicates that there is a bug in the compiler code itself and the
@@ -143,6 +143,16 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
         } else {
             false
         }
+    }
+
+    fn next_if_one_of<'s>(&mut self, words: &[&'s str]) -> Option<&'s str> {
+        for w in words {
+            if self.next_if_word(w) {
+                return Some(w);
+            }
+        }
+
+        None
     }
 
     /// Returns the character pointed at by the cursor which is the next
@@ -264,16 +274,22 @@ impl<'a> Lexer<'a> {
         self.consume_line_comment();
         self.consume_block_comment();
 
-        match self.consume_literal()? {
-            Some(i) => Ok(Some(i)),
-            None => match self.consume_identifier()? {
-                Some(id) => {
-                    let tok = self.if_primitive_map(self.if_keyword_map(self.if_boolean_map(id)));
-                    Ok(Some(tok))
-                }
-                None => match self.consume_operator()? {
-                    Some(op) => Ok(Some(op)),
-                    None => Ok(None),
+        match self.consume_primitive()? {
+            Some(pr) => Ok(Some(pr)),
+            None => match self.consume_keyword()? {
+                Some(kw) => Ok(Some(kw)),
+                None => match self.consume_boolean()? {
+                    Some(b) => Ok(Some(b)),
+                    None => match self.consume_literal()? {
+                        Some(i) => Ok(Some(i)),
+                        None => match self.consume_identifier()? {
+                            Some(id) => Ok(Some(id)),
+                            None => match self.consume_operator()? {
+                                Some(op) => Ok(Some(op)),
+                                None => Ok(None),
+                            },
+                        },
+                    },
                 },
             },
         }
@@ -282,7 +298,7 @@ impl<'a> Lexer<'a> {
     fn consume_line_comment(&mut self) {
         trace!(self);
         let mut branch = LexerBranch::from(self);
-        if branch.next_ifn("//") {
+        if branch.next_if_word("//") {
             while let Some(c) = branch.next() {
                 if c == '\n' {
                     break;
@@ -300,8 +316,8 @@ impl<'a> Lexer<'a> {
     fn consume_block_comment(&mut self) {
         trace!(self);
         let mut branch = LexerBranch::from(self);
-        if branch.next_ifn("/*") {
-            while !branch.next_ifn("*/") {
+        if branch.next_if_word("/*") {
+            while !branch.next_if_word("*/") {
                 branch.next();
             }
 
@@ -455,21 +471,21 @@ impl<'a> Lexer<'a> {
     }
 
     fn consume_int_suffix(branch: &mut LexerBranch) -> Option<Primitive> {
-        if branch.next_ifn("i8") {
+        if branch.next_if_word("i8") {
             Some(Primitive::I8)
-        } else if branch.next_ifn("i16") {
+        } else if branch.next_if_word("i16") {
             Some(Primitive::I16)
-        } else if branch.next_ifn("i32") {
+        } else if branch.next_if_word("i32") {
             Some(Primitive::I32)
-        } else if branch.next_ifn("i64") {
+        } else if branch.next_if_word("i64") {
             Some(Primitive::I64)
-        } else if branch.next_ifn("u8") {
+        } else if branch.next_if_word("u8") {
             Some(Primitive::U8)
-        } else if branch.next_ifn("u16") {
+        } else if branch.next_if_word("u16") {
             Some(Primitive::U16)
-        } else if branch.next_ifn("u32") {
+        } else if branch.next_if_word("u32") {
             Some(Primitive::U32)
-        } else if branch.next_ifn("u64") {
+        } else if branch.next_if_word("u64") {
             Some(Primitive::U64)
         } else {
             None
@@ -513,7 +529,7 @@ impl<'a> Lexer<'a> {
 
         let mut token = None;
         for (op, t) in operators.iter() {
-            if branch.next_ifn(op) {
+            if branch.next_if_word(op) {
                 token = Some(t);
                 break;
             }
@@ -566,21 +582,104 @@ impl<'a> Lexer<'a> {
         })
     }
 
-    pub fn if_boolean_map(&self, token: Token) -> Token {
+    pub fn consume_boolean(&mut self) -> LexerResult<Option<Token>> {
         trace!(self);
-        match &token {
-            Token {
-                line: l,
-                sym: Identifier(id),
-                span,
-                ..
-            } => match self.string_table.get(*id).unwrap() {
-                "true" => Token::new(Bool(true), *l, *span),
-                "false" => Token::new(Bool(false), *l, *span),
-                _ => token,
-            },
-            _ => token,
+        let mut branch = LexerBranch::from(self);
+
+        if (branch.next_if_word("true") || branch.next_if_word("false"))
+            && branch.peek().map(|c| Self::is_delimiter(c)).unwrap_or(true)
+        {
+            match branch.merge() {
+                None => Ok(None),
+                Some((id, span)) => {
+                    let b = self.string_table.get(id).unwrap() == "true";
+                    Ok(Some(Token::new(Bool(b), self.line, span)))
+                }
+            }
+            .map(|ok| {
+                ok.as_ref().map(|token| {
+                    self.logger.write(Event::<LexerError> {
+                        input: token.span, // This should actually be the input span (tho in the case of the Lexer the input span and output span are the same)
+                        msg: Ok("Boolean"),
+                    });
+                });
+                ok
+            })
+        } else {
+            Ok(None)
         }
+    }
+
+    pub fn consume_keyword(&mut self) -> LexerResult<Option<Token>> {
+        trace!(self);
+        let mut branch = LexerBranch::from(self);
+
+        let keywords = [
+            "let", "mut", "return", "yield", "yret", "fn", "co", "mod", "struct", "extern", "init",
+            "if", "else", "while", "self", "super", "root", "project",
+        ];
+
+        Ok(match branch.next_if_one_of(&keywords) {
+            Some(w) if branch.peek().map(|c| Self::is_delimiter(c)).unwrap_or(true) => {
+                //
+                let (_, span) = branch.merge().unwrap();
+                let l = self.line();
+
+                Some(match w {
+                    "let" => Token::new(Let, l, span),
+                    "mut" => Token::new(Mut, l, span),
+                    "return" => Token::new(Return, l, span),
+                    "yield" => Token::new(Yield, l, span),
+                    "yret" => Token::new(YieldReturn, l, span),
+                    "fn" => Token::new(FunctionDef, l, span),
+                    "co" => Token::new(CoroutineDef, l, span),
+                    "mod" => Token::new(ModuleDef, l, span),
+                    "struct" => Token::new(Struct, l, span),
+                    "extern" => Token::new(Extern, l, span),
+                    "init" => Token::new(Init, l, span),
+                    "if" => Token::new(If, l, span),
+                    "else" => Token::new(Else, l, span),
+                    "while" => Token::new(While, l, span),
+                    "self" => Token::new(PathSelf, l, span),
+                    "super" => Token::new(PathSuper, l, span),
+                    "root" => Token::new(PathFileRoot, l, span),
+                    "project" => Token::new(PathProjectRoot, l, span),
+                    _ => panic!("Matched a keyword which does not exist: {}", w),
+                })
+            }
+            _ => None,
+        })
+    }
+
+    pub fn consume_primitive(&mut self) -> LexerResult<Option<Token>> {
+        trace!(self);
+        let mut branch = LexerBranch::from(self);
+
+        let primitives = [
+            "u8", "u16", "u32", "u64", "i8", "i16", "i32", "i64", "bool", "string",
+        ];
+
+        Ok(match branch.next_if_one_of(&primitives) {
+            Some(w) if branch.peek().map(|c| Self::is_delimiter(c)).unwrap_or(true) => {
+                let (_, span) = branch.merge().unwrap();
+                let l = self.line();
+
+                Some(match w {
+                    "u8" => Token::new(Primitive(Primitive::U8), l, span),
+                    "u16" => Token::new(Primitive(Primitive::U16), l, span),
+                    "u32" => Token::new(Primitive(Primitive::U32), l, span),
+                    "u64" => Token::new(Primitive(Primitive::U64), l, span),
+                    "i8" => Token::new(Primitive(Primitive::I8), l, span),
+                    "i16" => Token::new(Primitive(Primitive::I16), l, span),
+                    "i32" => Token::new(Primitive(Primitive::I32), l, span),
+                    "i64" => Token::new(Primitive(Primitive::I64), l, span),
+                    "bool" => Token::new(Primitive(Primitive::Bool), l, span),
+                    "string" => Token::new(Primitive(Primitive::StringLiteral), l, span),
+                    _ => panic!("Matched a primitive which does not exist: {}", w),
+                })
+            }
+            _ => None,
+        })
     }
 
     pub fn if_primitive_map(&self, token: Token) -> Token {
@@ -602,39 +701,6 @@ impl<'a> Lexer<'a> {
                 "i64" => Token::new(Primitive(Primitive::I64), l, span),
                 "bool" => Token::new(Primitive(Primitive::Bool), l, span),
                 "string" => Token::new(Primitive(Primitive::StringLiteral), l, span),
-                _ => Token::new(Identifier(id.clone()), l, span),
-            },
-            _ => token,
-        }
-    }
-
-    pub fn if_keyword_map(&self, token: Token) -> Token {
-        trace!(self);
-        match token {
-            Token {
-                line: l,
-                span,
-                sym: Identifier(ref id),
-                ..
-            } => match self.string_table.get(*id).unwrap() {
-                "let" => Token::new(Let, l, span),
-                "mut" => Token::new(Mut, l, span),
-                "return" => Token::new(Return, l, span),
-                "yield" => Token::new(Yield, l, span),
-                "yret" => Token::new(YieldReturn, l, span),
-                "fn" => Token::new(FunctionDef, l, span),
-                "co" => Token::new(CoroutineDef, l, span),
-                "mod" => Token::new(ModuleDef, l, span),
-                "struct" => Token::new(Struct, l, span),
-                "extern" => Token::new(Extern, l, span),
-                "init" => Token::new(Init, l, span),
-                "if" => Token::new(If, l, span),
-                "else" => Token::new(Else, l, span),
-                "while" => Token::new(While, l, span),
-                "self" => Token::new(PathSelf, l, span),
-                "super" => Token::new(PathSuper, l, span),
-                "root" => Token::new(PathFileRoot, l, span),
-                "project" => Token::new(PathProjectRoot, l, span),
                 _ => Token::new(Identifier(id.clone()), l, span),
             },
             _ => token,
@@ -682,7 +748,7 @@ impl<'a> Lexer<'a> {
     /// Returns true if the given character is a Braid delimiter.  Which is
     /// punctuation or whitespace.
     fn is_delimiter(c: SourceChar) -> bool {
-        c.is_ascii_punctuation() || c.is_whitespace()
+        (c.is_ascii_punctuation() && c != '_') || c.is_whitespace()
     }
 
     /// Returns true if the character is a valid code for an escape sequence
