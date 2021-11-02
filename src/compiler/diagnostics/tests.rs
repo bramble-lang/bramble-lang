@@ -4,6 +4,7 @@ mod tests {
 
     use crate::compiler::{
         diagnostics::{logger::Logger, Event, Writer},
+        lexer::LexerError,
         Span,
     };
 
@@ -13,7 +14,7 @@ mod tests {
         let writer = TestWriter::new();
         logger.add_writer(&writer);
 
-        let evt = Event {
+        let evt = Event::<LexerError> {
             input: Span::zero(),
             msg: Ok("Hello"),
         };
@@ -29,7 +30,7 @@ mod tests {
         logger.add_writer(&writer);
 
         logger.disable();
-        let evt = Event {
+        let evt = Event::<LexerError> {
             input: Span::zero(),
             msg: Ok("Hello"),
         };
@@ -45,7 +46,7 @@ mod tests {
 
         // First disable the logger and test that writes are blocked
         logger.disable();
-        let evt = Event {
+        let evt = Event::<LexerError> {
             input: Span::zero(),
             msg: Ok("Hello"),
         };
@@ -54,7 +55,7 @@ mod tests {
 
         // Then enable the logger and confirm that writes are now happening
         logger.enable();
-        let evt = Event {
+        let evt = Event::<LexerError> {
             input: Span::zero(),
             msg: Ok("Hello"),
         };
