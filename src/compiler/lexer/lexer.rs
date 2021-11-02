@@ -618,7 +618,6 @@ impl<'a> Lexer<'a> {
 
         Ok(match branch.next_if_one_of(&keywords) {
             Some(w) if branch.peek().map(|c| Self::is_delimiter(c)).unwrap_or(true) => {
-                //
                 let (_, span) = branch.merge().unwrap();
                 let l = self.line();
 
