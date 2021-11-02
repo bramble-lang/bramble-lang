@@ -679,31 +679,6 @@ impl<'a> Lexer<'a> {
         })
     }
 
-    pub fn if_primitive_map(&self, token: Token) -> Token {
-        trace!(self);
-        match token {
-            Token {
-                line: l,
-                span,
-                sym: Identifier(ref id),
-                ..
-            } => match self.string_table.get(*id).unwrap() {
-                "u8" => Token::new(Primitive(Primitive::U8), l, span),
-                "u16" => Token::new(Primitive(Primitive::U16), l, span),
-                "u32" => Token::new(Primitive(Primitive::U32), l, span),
-                "u64" => Token::new(Primitive(Primitive::U64), l, span),
-                "i8" => Token::new(Primitive(Primitive::I8), l, span),
-                "i16" => Token::new(Primitive(Primitive::I16), l, span),
-                "i32" => Token::new(Primitive(Primitive::I32), l, span),
-                "i64" => Token::new(Primitive(Primitive::I64), l, span),
-                "bool" => Token::new(Primitive(Primitive::Bool), l, span),
-                "string" => Token::new(Primitive(Primitive::StringLiteral), l, span),
-                _ => Token::new(Identifier(id.clone()), l, span),
-            },
-            _ => token,
-        }
-    }
-
     /// Returns the character that the lexer cursor is currently pointing to.
     fn current_char(&self) -> Option<SourceChar> {
         if self.index < self.chars.len() {
