@@ -510,7 +510,7 @@ impl<'a> Lexer<'a> {
         }
         Ok(token.map(|t| {
             let (_, span) = branch.merge().unwrap();
-            Token::new(t.clone(), line, span)
+            Token::new(*t, line, span)
         }))
     }
 
