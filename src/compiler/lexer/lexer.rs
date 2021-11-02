@@ -646,6 +646,15 @@ impl<'a> Lexer<'a> {
             }
             _ => None,
         })
+        .map(|ok| {
+            ok.as_ref().map(|token| {
+                self.logger.write(Event::<LexerError> {
+                    input: token.span, // This should actually be the input span (tho in the case of the Lexer the input span and output span are the same)
+                    msg: Ok("Keyword"),
+                });
+            });
+            ok
+        })
     }
 
     pub fn consume_primitive(&mut self) -> LexerResult<Option<Token>> {
@@ -676,6 +685,15 @@ impl<'a> Lexer<'a> {
                 })
             }
             _ => None,
+        })
+        .map(|ok| {
+            ok.as_ref().map(|token| {
+                self.logger.write(Event::<LexerError> {
+                    input: token.span, // This should actually be the input span (tho in the case of the Lexer the input span and output span are the same)
+                    msg: Ok("Primitive"),
+                });
+            });
+            ok
         })
     }
 
