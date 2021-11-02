@@ -565,6 +565,7 @@ impl<'a> Lexer<'a> {
             ok
         })
     }
+
     pub fn if_boolean_map(&self, token: Token) -> Token {
         trace!(self);
         match &token {
