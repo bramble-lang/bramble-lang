@@ -279,6 +279,40 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    fn consume_line_comment(&mut self) {
+        trace!(self);
+        let mut branch = LexerBranch::from(self);
+        if branch.next_ifn("//") {
+            while let Some(c) = branch.next() {
+                if c == '\n' {
+                    break;
+                }
+            }
+
+            let (_, span) = branch.merge().unwrap();
+            self.logger.write(Event::<LexerError> {
+                input: span, // This should actually be the input span (tho in the case of the Lexer the input span and output span are the same)
+                msg: Ok("Line Comment"),
+            });
+        }
+    }
+
+    fn consume_block_comment(&mut self) {
+        trace!(self);
+        let mut branch = LexerBranch::from(self);
+        if branch.next_ifn("/*") {
+            while !branch.next_ifn("*/") {
+                branch.next();
+            }
+
+            let (_, span) = branch.merge().unwrap();
+            self.logger.write(Event::<LexerError> {
+                input: span, // This should actually be the input span (tho in the case of the Lexer the input span and output span are the same)
+                msg: Ok("Block Comment"),
+            });
+        }
+    }
+
     fn consume_literal(&mut self) -> LexerResult<Option<Token>> {
         trace!(self);
         match self.consume_integer()? {
@@ -297,30 +331,6 @@ impl<'a> Lexer<'a> {
                 self.line += 1;
             }
             self.index += 1;
-        }
-    }
-
-    pub fn consume_identifier(&mut self) -> LexerResult<Option<Token>> {
-        trace!(self);
-        let mut branch = LexerBranch::from(self);
-        if branch
-            .peek()
-            .map_or_else(|| false, |c| c.is_alphabetic() || c == '_')
-        {
-            while branch
-                .peek()
-                .map_or_else(|| false, |c| c.is_alphanumeric() || c == '_')
-            {
-                match branch.next() {
-                    Some(_) => (),
-                    None => break,
-                }
-            }
-        }
-
-        match branch.merge() {
-            None => Ok(None),
-            Some((id, span)) => Ok(Some(Token::new(Lex::Identifier(id), self.line, span))),
         }
     }
 
@@ -512,32 +522,49 @@ impl<'a> Lexer<'a> {
             let (_, span) = branch.merge().unwrap();
             Token::new(*t, line, span)
         }))
+        .map(|ok| {
+            ok.as_ref().map(|token| {
+                self.logger.write(Event::<LexerError> {
+                    input: token.span, // This should actually be the input span (tho in the case of the Lexer the input span and output span are the same)
+                    msg: Ok("Operator"),
+                });
+            });
+            ok
+        })
     }
 
-    fn consume_line_comment(&mut self) {
+    pub fn consume_identifier(&mut self) -> LexerResult<Option<Token>> {
         trace!(self);
         let mut branch = LexerBranch::from(self);
-        if branch.next_ifn("//") {
-            while let Some(c) = branch.next() {
-                if c == '\n' {
-                    break;
+        if branch
+            .peek()
+            .map_or_else(|| false, |c| c.is_alphabetic() || c == '_')
+        {
+            while branch
+                .peek()
+                .map_or_else(|| false, |c| c.is_alphanumeric() || c == '_')
+            {
+                match branch.next() {
+                    Some(_) => (),
+                    None => break,
                 }
             }
-            branch.merge();
         }
-    }
 
-    fn consume_block_comment(&mut self) {
-        trace!(self);
-        let mut branch = LexerBranch::from(self);
-        if branch.next_ifn("/*") {
-            while !branch.next_ifn("*/") {
-                branch.next();
-            }
-            branch.merge();
+        match branch.merge() {
+            None => Ok(None),
+            Some((id, span)) => Ok(Some(Token::new(Lex::Identifier(id), self.line, span))),
         }
+        .map(|ok| {
+            ok.as_ref().map(|token| {
+                self.logger.write(Event::<LexerError> {
+                    input: token.span, // This should actually be the input span (tho in the case of the Lexer the input span and output span are the same)
+                    msg: Ok("Identifier"),
+                });
+            });
+            ok
+        })
     }
-
     pub fn if_boolean_map(&self, token: Token) -> Token {
         trace!(self);
         match &token {

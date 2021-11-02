@@ -1,5 +1,9 @@
 mod math {
+    /*
+    My funky test module
+    */
     mod arithmetic {
+        // Does something
         fn something(m: S) -> i64 {
             let y: i64 := 7 - "hello"  + "hello\g";
             return y;
