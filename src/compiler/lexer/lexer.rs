@@ -339,17 +339,29 @@ impl<'a> Lexer<'a> {
                     match branch.next() {
                         Some(c) if Self::is_escape_code(c) => (),
                         Some(c) => {
-                            return err!(
-                                self.span_from_index_to_char(c).unwrap(),
-                                LexerError::InvalidEscapeSequence(c)
-                            )
+                            let span = self.span_from_index_to_char(c).unwrap();
+                            let err =
+                                err!(span, LexerError::InvalidEscapeSequence(c)).map_err(|err| {
+                                    self.logger.write(Event {
+                                        input: err.span(),
+                                        msg: Err(&err),
+                                    });
+                                    err
+                                });
+                            return err;
                         }
-
                         None => {
                             return err!(
                                 self.current_char_span().unwrap(), // Need to add a span to the branch
                                 LexerError::ExpectedEscapeCharacter
-                            );
+                            )
+                            .map_err(|err| {
+                                self.logger.write(Event {
+                                    input: err.span(),
+                                    msg: Err(&err),
+                                });
+                                err
+                            });
                         }
                     }
                 }
@@ -366,6 +378,15 @@ impl<'a> Lexer<'a> {
         } else {
             Ok(None)
         }
+        .map(|ok| {
+            ok.as_ref().map(|token| {
+                self.logger.write(Event::<LexerError> {
+                    input: token.span, // This should actually be the input span (tho in the case of the Lexer the input span and output span are the same)
+                    msg: Ok("String"),
+                });
+            });
+            ok
+        })
     }
 
     pub fn consume_integer(&mut self) -> LexerResult<Option<Token>> {
@@ -388,7 +409,7 @@ impl<'a> Lexer<'a> {
 
         // Check if there is a postfix (i32, i64, etc) on the integer literal if there is
         // no suffix then default to i64
-        let type_suffix = Self::consume_int_suffix(&mut branch)?.unwrap_or(Primitive::I64);
+        let type_suffix = Self::consume_int_suffix(&mut branch).unwrap_or(Primitive::I64);
 
         // Check that the current character at the lexer cursor position is a delimiter (we have
         // reached the end of the token); otherwise this is not a valid integer literal and an
@@ -423,61 +444,8 @@ impl<'a> Lexer<'a> {
         })
     }
 
-    fn create_int_literal(
-        line: u32,
-        span: Span,
-        int_token: &str,
-        prim: Primitive,
-    ) -> LexerResult<Option<Token>> {
-        match prim {
-            Primitive::U8 => Ok(Some(Token::new(
-                U8(int_token.parse::<u8>().unwrap()),
-                line,
-                span,
-            ))),
-            Primitive::U16 => Ok(Some(Token::new(
-                U16(int_token.parse::<u16>().unwrap()),
-                line,
-                span,
-            ))),
-            Primitive::U32 => Ok(Some(Token::new(
-                U32(int_token.parse::<u32>().unwrap()),
-                line,
-                span,
-            ))),
-            Primitive::U64 => Ok(Some(Token::new(
-                U64(int_token.parse::<u64>().unwrap()),
-                line,
-                span,
-            ))),
-            Primitive::I8 => Ok(Some(Token::new(
-                I8(int_token.parse::<i8>().unwrap()),
-                line,
-                span,
-            ))),
-            Primitive::I16 => Ok(Some(Token::new(
-                I16(int_token.parse::<i16>().unwrap()),
-                line,
-                span,
-            ))),
-            Primitive::I32 => Ok(Some(Token::new(
-                I32(int_token.parse::<i32>().unwrap()),
-                line,
-                span,
-            ))),
-            Primitive::I64 => Ok(Some(Token::new(
-                I64(int_token.parse::<i64>().unwrap()),
-                line,
-                span,
-            ))),
-            Primitive::Bool | Primitive::StringLiteral => {
-                err!(span, LexerError::UnexpectedSuffixType(prim))
-            }
-        }
-    }
-
-    fn consume_int_suffix(branch: &mut LexerBranch) -> LexerResult<Option<Primitive>> {
-        Ok(if branch.next_ifn("i8") {
+    fn consume_int_suffix(branch: &mut LexerBranch) -> Option<Primitive> {
+        if branch.next_ifn("i8") {
             Some(Primitive::I8)
         } else if branch.next_ifn("i16") {
             Some(Primitive::I16)
@@ -495,7 +463,7 @@ impl<'a> Lexer<'a> {
             Some(Primitive::U64)
         } else {
             None
-        })
+        }
     }
 
     pub fn consume_operator(&mut self) -> LexerResult<Option<Token>> {
@@ -692,5 +660,58 @@ impl<'a> Lexer<'a> {
     /// Returns true if the character is a valid code for an escape sequence
     fn is_escape_code(c: SourceChar) -> bool {
         c == 'n' || c == 'r' || c == 't' || c == '"' || c == '0' || c == '\\'
+    }
+
+    fn create_int_literal(
+        line: u32,
+        span: Span,
+        int_token: &str,
+        prim: Primitive,
+    ) -> LexerResult<Option<Token>> {
+        match prim {
+            Primitive::U8 => Ok(Some(Token::new(
+                U8(int_token.parse::<u8>().unwrap()),
+                line,
+                span,
+            ))),
+            Primitive::U16 => Ok(Some(Token::new(
+                U16(int_token.parse::<u16>().unwrap()),
+                line,
+                span,
+            ))),
+            Primitive::U32 => Ok(Some(Token::new(
+                U32(int_token.parse::<u32>().unwrap()),
+                line,
+                span,
+            ))),
+            Primitive::U64 => Ok(Some(Token::new(
+                U64(int_token.parse::<u64>().unwrap()),
+                line,
+                span,
+            ))),
+            Primitive::I8 => Ok(Some(Token::new(
+                I8(int_token.parse::<i8>().unwrap()),
+                line,
+                span,
+            ))),
+            Primitive::I16 => Ok(Some(Token::new(
+                I16(int_token.parse::<i16>().unwrap()),
+                line,
+                span,
+            ))),
+            Primitive::I32 => Ok(Some(Token::new(
+                I32(int_token.parse::<i32>().unwrap()),
+                line,
+                span,
+            ))),
+            Primitive::I64 => Ok(Some(Token::new(
+                I64(int_token.parse::<i64>().unwrap()),
+                line,
+                span,
+            ))),
+            Primitive::Bool | Primitive::StringLiteral => {
+                err!(span, LexerError::UnexpectedSuffixType(prim))
+            }
+        }
     }
 }
