@@ -523,8 +523,8 @@ impl<'a> Lexer<'a> {
                     break;
                 }
             }
+            branch.merge();
         }
-        branch.merge();
     }
 
     fn consume_block_comment(&mut self) {
@@ -534,8 +534,8 @@ impl<'a> Lexer<'a> {
             while !branch.next_ifn("*/") {
                 branch.next();
             }
+            branch.merge();
         }
-        branch.merge();
     }
 
     pub fn if_boolean_map(&self, token: Token) -> Token {
