@@ -148,6 +148,7 @@ impl<'a> TokenStream<'a> {
 #[cfg(test)]
 mod test_tokenstream {
     use super::TokenStream;
+    use crate::compiler::diagnostics::Logger;
     use crate::compiler::lexer::tokens::{Lex, Token};
     use crate::compiler::source::Offset;
     use crate::compiler::{Lexer, SourceMap, Span};
@@ -166,7 +167,8 @@ mod test_tokenstream {
         let src = sm.get(0).unwrap().read().unwrap();
 
         let mut table = StringTable::new();
-        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+        let logger = Logger::new();
+        let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
             .unwrap()
             .tokenize()
             .into_iter()
@@ -201,7 +203,8 @@ mod test_tokenstream {
         let src = sm.get(0).unwrap().read().unwrap();
 
         let mut table = StringTable::new();
-        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+        let logger = Logger::new();
+        let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
             .unwrap()
             .tokenize()
             .into_iter()
@@ -242,7 +245,8 @@ mod test_tokenstream {
         let src = sm.get(0).unwrap().read().unwrap();
 
         let mut table = StringTable::new();
-        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+        let logger = Logger::new();
+        let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
             .unwrap()
             .tokenize()
             .into_iter()
@@ -333,7 +337,8 @@ mod test_tokenstream {
         let src = sm.get(0).unwrap().read().unwrap();
 
         let mut table = StringTable::new();
-        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+        let logger = Logger::new();
+        let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
             .unwrap()
             .tokenize()
             .into_iter()
@@ -384,7 +389,8 @@ mod test_tokenstream {
         let src = sm.get(0).unwrap().read().unwrap();
 
         let mut table = StringTable::new();
-        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+        let logger = Logger::new();
+        let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
             .unwrap()
             .tokenize()
             .into_iter()
@@ -429,7 +435,8 @@ mod test_tokenstream {
         let src = sm.get(0).unwrap().read().unwrap();
 
         let mut table = StringTable::new();
-        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+        let logger = Logger::new();
+        let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
             .unwrap()
             .tokenize()
             .into_iter()
@@ -453,7 +460,8 @@ mod test_tokenstream {
         let src = sm.get(0).unwrap().read().unwrap();
 
         let mut table = StringTable::new();
-        let tokens: Vec<Token> = Lexer::new(&mut table, src)
+        let logger = Logger::new();
+        let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
             .unwrap()
             .tokenize()
             .into_iter()

@@ -4,6 +4,7 @@ mod tests {
 
     use crate::compiler::{
         diagnostics::{logger::Logger, Event, Writer},
+        lexer::LexerError,
         Span,
     };
 
@@ -13,9 +14,9 @@ mod tests {
         let writer = TestWriter::new();
         logger.add_writer(&writer);
 
-        let evt = Event {
-            span: Span::zero(),
-            msg: "Hello".into(),
+        let evt = Event::<LexerError> {
+            input: Span::zero(),
+            msg: Ok("Hello"),
         };
 
         logger.write(evt);
@@ -29,9 +30,9 @@ mod tests {
         logger.add_writer(&writer);
 
         logger.disable();
-        let evt = Event {
-            span: Span::zero(),
-            msg: "Hello".into(),
+        let evt = Event::<LexerError> {
+            input: Span::zero(),
+            msg: Ok("Hello"),
         };
         logger.write(evt);
         assert_eq!("", *writer.buf.borrow());
@@ -45,18 +46,18 @@ mod tests {
 
         // First disable the logger and test that writes are blocked
         logger.disable();
-        let evt = Event {
-            span: Span::zero(),
-            msg: "Hello".into(),
+        let evt = Event::<LexerError> {
+            input: Span::zero(),
+            msg: Ok("Hello"),
         };
         logger.write(evt);
         assert_eq!("", *writer.buf.borrow());
 
         // Then enable the logger and confirm that writes are now happening
         logger.enable();
-        let evt = Event {
-            span: Span::zero(),
-            msg: "Hello".into(),
+        let evt = Event::<LexerError> {
+            input: Span::zero(),
+            msg: Ok("Hello"),
         };
         logger.write(evt);
         assert_eq!("{[0,0], msg: \"Hello\", }", *writer.buf.borrow());

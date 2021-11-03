@@ -2,6 +2,7 @@
 mod tests {
     use crate::{
         compiler::{
+            diagnostics::Logger,
             lexer::tokens::{Lex, Primitive, Token},
             source::Offset,
             SourceMap, Span,
@@ -25,7 +26,8 @@ mod tests {
         let src = sm.get(0).unwrap().read().unwrap();
 
         let mut table = StringTable::new();
-        let mut lexer = Lexer::new(&mut table, src).unwrap();
+        let logger = Logger::new();
+        let mut lexer = Lexer::new(src, &mut table, &logger).unwrap();
 
         let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 1);
@@ -41,7 +43,8 @@ mod tests {
 
         let mut table = StringTable::new();
         let src = sm.get(0).unwrap().read().unwrap();
-        let mut lexer = Lexer::new(&mut table, src).unwrap();
+        let logger = Logger::new();
+        let mut lexer = Lexer::new(src, &mut table, &logger).unwrap();
         let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
@@ -56,7 +59,8 @@ mod tests {
 
         let mut table = StringTable::new();
         let src = sm.get(0).unwrap().read().unwrap();
-        let mut lexer = Lexer::new(&mut table, src).unwrap();
+        let logger = Logger::new();
+        let mut lexer = Lexer::new(src, &mut table, &logger).unwrap();
         let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
@@ -71,7 +75,8 @@ mod tests {
 
         let mut table = StringTable::new();
         let src = sm.get(0).unwrap().read().unwrap();
-        let mut lexer = Lexer::new(&mut table, src).unwrap();
+        let logger = Logger::new();
+        let mut lexer = Lexer::new(src, &mut table, &logger).unwrap();
         let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
@@ -86,7 +91,8 @@ mod tests {
 
         let mut table = StringTable::new();
         let src = sm.get(0).unwrap().read().unwrap();
-        let mut lexer = Lexer::new(&mut table, src).unwrap();
+        let logger = Logger::new();
+        let mut lexer = Lexer::new(src, &mut table, &logger).unwrap();
         let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
@@ -101,7 +107,8 @@ mod tests {
 
         let mut table = StringTable::new();
         let src = sm.get(0).unwrap().read().unwrap();
-        let mut lexer = Lexer::new(&mut table, src).unwrap();
+        let logger = Logger::new();
+        let mut lexer = Lexer::new(src, &mut table, &logger).unwrap();
         let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
@@ -116,7 +123,8 @@ mod tests {
 
         let mut table = StringTable::new();
         let src = sm.get(0).unwrap().read().unwrap();
-        let mut lexer = Lexer::new(&mut table, src).unwrap();
+        let logger = Logger::new();
+        let mut lexer = Lexer::new(src, &mut table, &logger).unwrap();
         let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
@@ -131,7 +139,8 @@ mod tests {
 
         let mut table = StringTable::new();
         let src = sm.get(0).unwrap().read().unwrap();
-        let mut lexer = Lexer::new(&mut table, src).unwrap();
+        let logger = Logger::new();
+        let mut lexer = Lexer::new(src, &mut table, &logger).unwrap();
         let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
@@ -146,7 +155,8 @@ mod tests {
 
         let mut table = StringTable::new();
         let src = sm.get(0).unwrap().read().unwrap();
-        let mut lexer = Lexer::new(&mut table, src).unwrap();
+        let logger = Logger::new();
+        let mut lexer = Lexer::new(src, &mut table, &logger).unwrap();
         let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
@@ -161,7 +171,8 @@ mod tests {
 
         let mut table = StringTable::new();
         let src = sm.get(0).unwrap().read().unwrap();
-        let mut lexer = Lexer::new(&mut table, src).unwrap();
+        let logger = Logger::new();
+        let mut lexer = Lexer::new(src, &mut table, &logger).unwrap();
         let tokens = lexer.tokenize();
 
         assert_eq!(tokens.len(), 1, "{:?}", tokens);
@@ -184,7 +195,8 @@ mod tests {
 
             let mut table = StringTable::new();
             let src = sm.get(0).unwrap().read().unwrap();
-            let mut lexer = Lexer::new(&mut table, src).unwrap();
+            let logger = Logger::new();
+            let mut lexer = Lexer::new(src, &mut table, &logger).unwrap();
             let tokens = lexer.tokenize();
             assert_eq!(tokens.len(), 1);
             let token = tokens[0].clone().expect("Expected valid token");
@@ -207,7 +219,8 @@ mod tests {
 
             let mut table = StringTable::new();
             let src = sm.get(0).unwrap().read().unwrap();
-            let mut lexer = Lexer::new(&mut table, src).unwrap();
+            let logger = Logger::new();
+            let mut lexer = Lexer::new(src, &mut table, &logger).unwrap();
             let tokens = lexer.tokenize();
             assert_eq!(tokens.len(), 2);
             tokens[0]
@@ -254,7 +267,8 @@ mod tests {
 
             let mut table = StringTable::new();
             let src = sm.get(0).unwrap().read().unwrap();
-            let mut lexer = Lexer::new(&mut table, src).unwrap();
+            let logger = Logger::new();
+            let mut lexer = Lexer::new(src, &mut table, &logger).unwrap();
             let tokens = lexer.tokenize();
             assert_eq!(tokens.len(), 1);
 
@@ -271,7 +285,8 @@ mod tests {
 
         let mut table = StringTable::new();
         let src = sm.get(0).unwrap().read().unwrap();
-        let mut lexer = Lexer::new(&mut table, src).unwrap();
+        let logger = Logger::new();
+        let mut lexer = Lexer::new(src, &mut table, &logger).unwrap();
         let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 6);
         let token = tokens[0].clone().expect("Expected valid token");
@@ -319,7 +334,8 @@ mod tests {
 
             let mut table = StringTable::new();
             let src = sm.get(0).unwrap().read().unwrap();
-            let mut lexer = Lexer::new(&mut table, src).unwrap();
+            let logger = Logger::new();
+            let mut lexer = Lexer::new(src, &mut table, &logger).unwrap();
             let tokens = lexer.tokenize();
             assert_eq!(tokens.len(), 1);
 
@@ -349,7 +365,8 @@ mod tests {
 
             let mut table = StringTable::new();
             let src = sm.get(0).unwrap().read().unwrap();
-            let mut lexer = Lexer::new(&mut table, src).unwrap();
+            let logger = Logger::new();
+            let mut lexer = Lexer::new(src, &mut table, &logger).unwrap();
             let tokens = lexer.tokenize();
             assert_eq!(tokens.len(), 1);
 
@@ -418,7 +435,8 @@ mod tests {
 
             let mut table = StringTable::new();
             let src = sm.get(0).unwrap().read().unwrap();
-            let mut lexer = Lexer::new(&mut table, src).unwrap();
+            let logger = Logger::new();
+            let mut lexer = Lexer::new(src, &mut table, &logger).unwrap();
             let tokens = lexer.tokenize();
             assert_eq!(tokens.len(), 8, "{} => {:?}", text, tokens);
             assert_eq!(
@@ -512,7 +530,8 @@ mod tests {
 
             let mut table = StringTable::new();
             let src = sm.get(0).unwrap().read().unwrap();
-            let mut lexer = Lexer::new(&mut table, src).unwrap();
+            let logger = Logger::new();
+            let mut lexer = Lexer::new(src, &mut table, &logger).unwrap();
             let tokens = lexer.tokenize();
             assert_eq!(tokens.len(), 6, "{} => {:?}", text, tokens);
             assert_eq!(

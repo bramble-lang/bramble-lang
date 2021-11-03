@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use crate::{
     compiler::{
         ast::Module,
+        diagnostics::Logger,
         lexer::{tokens::Token, LexerError},
         parser::{self, ParserContext, ParserError},
         CompilerDisplay, CompilerDisplayError, CompilerError, Source, SourceMap, SourceMapError,
@@ -145,6 +146,7 @@ pub fn tokenize_source_map(
     sourcemap: &SourceMap,
     src_path: &std::path::Path,
     string_table: &mut StringTable,
+    logger: &Logger,
     trace_lexer: TracingConfig,
 ) -> Result<Vec<CompilationUnit<Vec<Token>>>, Vec<CompilerError<LexerError>>> {
     let mut project_token_sets = vec![];
@@ -163,7 +165,7 @@ pub fn tokenize_source_map(
         };
 
         // Get the Token Set and add to the Vector of token sets
-        let tokens = tokenize_source(string_table, src, trace_lexer)?;
+        let tokens = tokenize_source(src, string_table, trace_lexer, logger)?;
         project_token_sets.push(tokens);
     }
 
@@ -172,11 +174,12 @@ pub fn tokenize_source_map(
 
 /// Tokenizes a stream of unicode characters.
 fn tokenize_source(
-    string_table: &mut StringTable,
     src: CompilationUnit<Source>,
+    string_table: &mut StringTable,
     trace_lexer: TracingConfig,
+    logger: &Logger,
 ) -> Result<CompilationUnit<Vec<Token>>, Vec<CompilerError<LexerError>>> {
-    let mut lexer = crate::compiler::Lexer::new(string_table, src.data).unwrap();
+    let mut lexer = crate::compiler::Lexer::new(src.data, string_table, logger).unwrap();
     lexer.set_tracing(trace_lexer);
     let tokens = lexer.tokenize();
     let (tokens, errors): (

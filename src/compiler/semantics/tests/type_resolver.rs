@@ -3,6 +3,7 @@ mod type_resolver_tests {
     use crate::{
         compiler::{
             ast::*,
+            diagnostics::Logger,
             lexer::tokens::Token,
             lexer::LexerError,
             parser::{parser, ParserContext},
@@ -147,7 +148,8 @@ mod type_resolver_tests {
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
@@ -249,7 +251,8 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
+            let logger = Logger::new();
+let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -315,7 +318,8 @@ let src = sm.get(0).unwrap().read().unwrap();
             sm.add_string(text, "/test".into()).unwrap();
             let src = sm.get(0).unwrap().read().unwrap();
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
@@ -370,7 +374,8 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
+            let logger = Logger::new();
+let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -432,7 +437,8 @@ let src = sm.get(0).unwrap().read().unwrap();
             sm.add_string(text, "/test".into()).unwrap();
             let src = sm.get(0).unwrap().read().unwrap();
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
@@ -508,7 +514,8 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
@@ -578,7 +585,8 @@ let src = sm.get(0).unwrap().read().unwrap();
             sm.add_string(text, "/test".into()).unwrap();
             let src = sm.get(0).unwrap().read().unwrap();
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
@@ -633,7 +641,8 @@ let src = sm.get(0).unwrap().read().unwrap();
             sm.add_string(text, "/test".into()).unwrap();
             let src = sm.get(0).unwrap().read().unwrap();
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
@@ -682,7 +691,8 @@ let src = sm.get(0).unwrap().read().unwrap();
             sm.add_string(text, "/test".into()).unwrap();
             let src = sm.get(0).unwrap().read().unwrap();
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
@@ -886,7 +896,8 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
@@ -1021,7 +1032,8 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
@@ -1096,7 +1108,8 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
@@ -1182,7 +1195,8 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
@@ -1269,7 +1283,8 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
@@ -1356,7 +1371,8 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
@@ -1446,7 +1462,8 @@ let src = sm.get(0).unwrap().read().unwrap();
                 let main_mod = table.insert(MAIN_MODULE.into());
                 let main_fn = table.insert("my_main".into());
 
-                let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                let logger = Logger::new();
+                let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                     .unwrap()
                     .tokenize()
                     .into_iter()
@@ -1512,7 +1529,8 @@ let src = sm.get(0).unwrap().read().unwrap();
             sm.add_string(&text, "/test".into()).unwrap();
             let src = sm.get(0).unwrap().read().unwrap();
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
@@ -1597,7 +1615,8 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
@@ -1720,7 +1739,8 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
@@ -1926,7 +1946,8 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
@@ -2024,7 +2045,8 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
@@ -2119,7 +2141,8 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
@@ -2227,15 +2250,16 @@ let src = sm.get(0).unwrap().read().unwrap();
             ),
         ] {
             let mut sm = SourceMap::new();
-sm.add_string(&text, "/test".into()).unwrap();
-let src = sm.get(0).unwrap().read().unwrap();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
 
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -2401,15 +2425,16 @@ let src = sm.get(0).unwrap().read().unwrap();
             ),
         ] {
             let mut sm = SourceMap::new();
-sm.add_string(&text, "/test".into()).unwrap();
-let src = sm.get(0).unwrap().read().unwrap();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
 
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -2521,15 +2546,16 @@ let src = sm.get(0).unwrap().read().unwrap();
             ),
         ] {
             let mut sm = SourceMap::new();
-sm.add_string(&text, "/test".into()).unwrap();
-let src = sm.get(0).unwrap().read().unwrap();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
 
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -2632,7 +2658,8 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
@@ -2724,7 +2751,8 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
@@ -2802,7 +2830,8 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
@@ -2884,7 +2913,8 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
@@ -2994,7 +3024,8 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
@@ -3070,15 +3101,16 @@ let src = sm.get(0).unwrap().read().unwrap();
             ),
         ] {
             let mut sm = SourceMap::new();
-sm.add_string(&text, "/test".into()).unwrap();
-let src = sm.get(0).unwrap().read().unwrap();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
 
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
@@ -3305,20 +3337,21 @@ let src = sm.get(0).unwrap().read().unwrap();
         ] {
             println!("L{}", line);
             let mut sm = SourceMap::new();
-sm.add_string(&text, "/test".into()).unwrap();
-let src = sm.get(0).unwrap().read().unwrap();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
 
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
+            let ast = parser::parse(main, &tokens).map_err(|e| e.fmt(&sm, &table)).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
                 main_mod, main_fn,
@@ -3354,15 +3387,16 @@ let src = sm.get(0).unwrap().read().unwrap();
                 Err("L1: Return expected bool but got i64")),
             ] {
             let mut sm = SourceMap::new();
-sm.add_string(&text, "/test".into()).unwrap();
-let src = sm.get(0).unwrap().read().unwrap();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
 
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     .tokenize()
                     .into_iter()
                     .collect::<LResult>()
@@ -3463,8 +3497,8 @@ let src = sm.get(0).unwrap().read().unwrap();
             ),
         ] {
             let mut sm = SourceMap::new();
-sm.add_string(&text, "/test".into()).unwrap();
-let src = sm.get(0).unwrap().read().unwrap();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
 
             let mut table = StringTable::new();
             let std = table.insert("std".into());
@@ -3473,7 +3507,8 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
