@@ -248,6 +248,10 @@ impl<'a> Lexer<'a> {
                 break;
             }
 
+            // Skip over any comments in the code
+            self.consume_line_comment();
+            self.consume_block_comment();
+
             // Parse the next token
             match self.next_token() {
                 Ok(Some(t)) => tokens.push(Ok(t)),
@@ -271,9 +275,6 @@ impl<'a> Lexer<'a> {
     /// Attempt to parse the token which immediately follows from where the lexer
     /// cursor is currently pointing.
     fn next_token(&mut self) -> LexerResult<Option<Token>> {
-        self.consume_line_comment();
-        self.consume_block_comment();
-
         self.consume_primitive()
             .transpose()
             .or_else(|| self.consume_keyword().transpose())
