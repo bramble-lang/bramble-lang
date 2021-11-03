@@ -45,6 +45,7 @@ fn main() {
     let mut tracer = Logger::new();
     let console_writer = ConsoleWriter::new(&sourcemap);
     tracer.add_writer(&console_writer);
+    tracer.disable();
 
     let trace_lexer = get_lexer_tracing(&config);
     let token_sets = match tokenize_source_map(

@@ -229,7 +229,7 @@ impl<'a> Lexer<'a> {
 
     /// Returns the line in the source code on which the lexer cursor is currently
     /// resting.
-    pub fn line(&self) -> u32 {
+    fn line(&self) -> u32 {
         self.line as u32
     }
 
@@ -329,7 +329,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn consume_whitespace(&mut self) {
+    fn consume_whitespace(&mut self) {
         trace!(self);
         while self.index < self.chars.len() && self.chars[self.index].is_whitespace() {
             if self.chars[self.index] == '\n' {
@@ -404,7 +404,7 @@ impl<'a> Lexer<'a> {
         })
     }
 
-    pub fn consume_integer(&mut self) -> LexerResult<Option<Token>> {
+    fn consume_integer(&mut self) -> LexerResult<Option<Token>> {
         trace!(self);
         let mut branch = LexerBranch::from(self);
 
@@ -481,7 +481,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn consume_operator(&mut self) -> LexerResult<Option<Token>> {
+    fn consume_operator(&mut self) -> LexerResult<Option<Token>> {
         trace!(self);
         let line = self.line;
         let mut branch = LexerBranch::from(self);
@@ -538,7 +538,7 @@ impl<'a> Lexer<'a> {
         })
     }
 
-    pub fn consume_identifier(&mut self) -> LexerResult<Option<Token>> {
+    fn consume_identifier(&mut self) -> LexerResult<Option<Token>> {
         trace!(self);
         let mut branch = LexerBranch::from(self);
         if branch
@@ -571,7 +571,7 @@ impl<'a> Lexer<'a> {
         })
     }
 
-    pub fn consume_boolean(&mut self) -> LexerResult<Option<Token>> {
+    fn consume_boolean(&mut self) -> LexerResult<Option<Token>> {
         trace!(self);
         let mut branch = LexerBranch::from(self);
 
@@ -601,8 +601,9 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn consume_keyword(&mut self) -> LexerResult<Option<Token>> {
+    fn consume_keyword(&mut self) -> LexerResult<Option<Token>> {
         trace!(self);
+
         let mut branch = LexerBranch::from(self);
 
         let keywords = [
@@ -650,7 +651,7 @@ impl<'a> Lexer<'a> {
         })
     }
 
-    pub fn consume_primitive(&mut self) -> LexerResult<Option<Token>> {
+    fn consume_primitive(&mut self) -> LexerResult<Option<Token>> {
         trace!(self);
         let mut branch = LexerBranch::from(self);
 
