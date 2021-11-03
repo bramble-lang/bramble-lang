@@ -274,22 +274,14 @@ impl<'a> Lexer<'a> {
         self.consume_line_comment();
         self.consume_block_comment();
 
-        match self.consume_primitive()? {
-            Some(pr) => Ok(Some(pr)),
-            None => match self.consume_keyword()? {
-                Some(kw) => Ok(Some(kw)),
-                None => match self.consume_boolean()? {
-                    Some(b) => Ok(Some(b)),
-                    None => match self.consume_literal()? {
-                        Some(i) => Ok(Some(i)),
-                        None => match self.consume_identifier()? {
-                            Some(id) => Ok(Some(id)),
-                            None => self.consume_operator(),
-                        },
-                    },
-                },
-            },
-        }
+        self.consume_primitive()
+            .transpose()
+            .or_else(|| self.consume_keyword().transpose())
+            .or_else(|| self.consume_boolean().transpose())
+            .or_else(|| self.consume_literal().transpose())
+            .or_else(|| self.consume_identifier().transpose())
+            .or_else(|| self.consume_operator().transpose())
+            .transpose()
     }
 
     fn consume_line_comment(&mut self) {
