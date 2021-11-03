@@ -94,6 +94,12 @@ pub fn configure_cli() -> clap::App<'static, 'static> {
                 .help("Set the logging filter (default level is error) to gain insight into what the compiler is doing."),
         )
         .arg(
+            Arg::with_name("trace")
+                .long("trace")
+                .takes_value(false)
+                .help("Traces source code as it moves through the compiler")
+        )
+        .arg(
             Arg::with_name("trace-parser")
                 .long("trace-parser")
                 .takes_value(true)
@@ -152,6 +158,10 @@ pub fn get_log_level<'a>(args: &'a ArgMatches) -> Option<LevelFilter> {
             _ => None,
         },
     }
+}
+
+pub fn enable_tracing<'a>(args: &'a ArgMatches) -> bool {
+    args.is_present("trace")
 }
 
 pub fn get_lexer_tracing<'a>(args: &'a ArgMatches) -> TracingConfig {
