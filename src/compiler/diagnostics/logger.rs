@@ -13,7 +13,7 @@ impl<'a> Logger<'a> {
     /// Creates a new Logger with not writers and that is enabled.
     pub fn new() -> Logger<'a> {
         Logger {
-            enabled: true,
+            enabled: false,
             writers: vec![],
         }
     }

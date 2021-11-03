@@ -14,6 +14,8 @@ mod tests {
         let writer = TestWriter::new();
         logger.add_writer(&writer);
 
+        logger.enable();
+
         let evt = Event::<LexerError> {
             input: Span::zero(),
             msg: Ok("Hello"),
