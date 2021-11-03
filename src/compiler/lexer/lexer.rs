@@ -355,16 +355,17 @@ impl<'a> Lexer<'a> {
                     match branch.next() {
                         Some(c) if Self::is_escape_code(c) => (),
                         Some(c) => {
-                            let span = self.span_from_index_to_char(c).unwrap();
-                            let err =
-                                err!(span, LexerError::InvalidEscapeSequence(c)).map_err(|err| {
-                                    self.logger.write(Event {
-                                        input: err.span(),
-                                        msg: Err(&err),
-                                    });
-                                    err
+                            return err!(
+                                self.span_from_index_to_char(c).unwrap(),
+                                LexerError::InvalidEscapeSequence(c)
+                            )
+                            .map_err(|err| {
+                                self.logger.write(Event {
+                                    input: err.span(),
+                                    msg: Err(&err),
                                 });
-                            return err;
+                                err
+                            });
                         }
                         None => {
                             return err!(
