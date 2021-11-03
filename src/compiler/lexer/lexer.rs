@@ -575,27 +575,29 @@ impl<'a> Lexer<'a> {
         trace!(self);
         let mut branch = LexerBranch::from(self);
 
-        if (branch.next_if_word("true") || branch.next_if_word("false"))
-            && branch.peek().map(|c| Self::is_delimiter(c)).unwrap_or(true)
-        {
-            match branch.merge() {
-                None => Ok(None),
-                Some((id, span)) => {
-                    let b = self.string_table.get(id).unwrap() == "true";
-                    Ok(Some(Token::new(Bool(b), self.line, span)))
+        const TRUE: &str = "true";
+        const FALSE: &str = "false";
+
+        match branch.next_if_one_of(&[TRUE, FALSE]) {
+            Some(b) if branch.peek().map(|c| Self::is_delimiter(c)).unwrap_or(true) => {
+                match branch.merge() {
+                    None => Ok(None),
+                    Some((_, span)) => {
+                        let b = b == TRUE;
+                        Ok(Some(Token::new(Bool(b), self.line, span)))
+                    }
                 }
-            }
-            .map(|ok| {
-                ok.as_ref().map(|token| {
-                    self.logger.write(Event::<LexerError> {
-                        input: token.span,
-                        msg: Ok("Boolean"),
+                .map(|ok| {
+                    ok.as_ref().map(|token| {
+                        self.logger.write(Event::<LexerError> {
+                            input: token.span,
+                            msg: Ok("Boolean"),
+                        });
                     });
-                });
-                ok
-            })
-        } else {
-            Ok(None)
+                    ok
+                })
+            }
+            _ => Ok(None),
         }
     }
 
