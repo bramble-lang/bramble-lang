@@ -716,7 +716,9 @@ mod test {
                 .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens).unwrap();
-            match number(&mut stream) {
+            let logger = Logger::new();
+            let parser = Parser::new(&logger);
+            match parser.number(&mut stream) {
                 Ok(Some(e)) => assert_eq!(e, expected),
                 Ok(t) => panic!("Expected an {:?} but got {:?}", expected, t),
                 Err(err) => panic!("Expected {:?}, but got {:?}", expected, err),
@@ -801,7 +803,9 @@ mod test {
                 .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens).unwrap();
-            match array_expression(&mut stream) {
+            let logger = Logger::new();
+            let parser = Parser::new(&logger);
+            match parser.array_expression(&mut stream) {
                 Ok(Some(e)) => assert_eq!(e, expected),
                 Ok(t) => panic!("Expected an {:?} but got {:?}", expected, t),
                 Err(err) => panic!("Expected {:?}, but got {:?}", expected, err),
@@ -842,8 +846,10 @@ mod test {
                 .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens).unwrap();
+            let logger = Logger::new();
+            let parser = Parser::new(&logger);
             assert_eq!(
-                array_expression(&mut stream).unwrap_err(),
+                parser.array_expression(&mut stream).unwrap_err(),
                 *msg,
                 "{:?}",
                 text
@@ -952,7 +958,9 @@ mod test {
                 .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens).unwrap();
-            match expression(&mut stream) {
+            let logger = Logger::new();
+            let parser = Parser::new(&logger);
+            match parser.expression(&mut stream) {
                 Ok(Some(e)) => assert_eq!(e, expected),
                 Ok(t) => panic!("Expected an {:?} but got {:?}", expected, t),
                 Err(err) => panic!("Expected {:?}, but got {:?}", expected, err),
@@ -1007,7 +1015,13 @@ mod test {
                 .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens).unwrap();
-            assert_eq!(expression(&mut stream).unwrap_err(), *msg, "{:?}", text);
+            let parser = Parser::new(&logger);
+            assert_eq!(
+                parser.expression(&mut stream).unwrap_err(),
+                *msg,
+                "{:?}",
+                text
+            );
         }
     }
 
@@ -1034,7 +1048,9 @@ mod test {
                 .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens).unwrap();
-            match member_access(&mut stream) {
+            let logger = Logger::new();
+            let parser = Parser::new(&logger);
+            match parser.member_access(&mut stream) {
                 Ok(Some(Expression::MemberAccess(ctx, left, right))) => {
                     assert_eq!(ctx.line(), 1);
                     assert_eq!(
@@ -1069,8 +1085,10 @@ mod test {
             .collect::<LResult>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens).unwrap();
+
+        let parser = Parser::new(&logger);
         if let Some(Expression::ExpressionBlock(ctx, body, Some(final_exp))) =
-            expression_block(&mut stream).unwrap()
+            parser.expression_block(&mut stream).unwrap()
         {
             assert_eq!(ctx, new_ctx(0, 3));
             assert_eq!(body.len(), 0);
@@ -1118,6 +1136,8 @@ mod test {
             sm.add_string(text, "/test".into()).unwrap();
 
             let mut table = StringTable::new();
+            let logger = Logger::new();
+            let parser = Parser::new(&logger);
             let src = sm.get(0).unwrap().read().unwrap();
             let logger = Logger::new();
             let tokens = Lexer::new(src, &mut table, &logger)
@@ -1128,7 +1148,7 @@ mod test {
                 .unwrap();
             let mut stream = TokenStream::new(&tokens).unwrap();
             assert_eq!(
-                expression_block(&mut stream).unwrap_err(),
+                parser.expression_block(&mut stream).unwrap_err(),
                 *msg,
                 "{:?}",
                 text
@@ -1155,8 +1175,9 @@ mod test {
             .collect::<LResult>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens).unwrap();
+        let parser = Parser::new(&logger);
         if let Some(Expression::ExpressionBlock(ctx, body, Some(final_exp))) =
-            expression_block(&mut stream).unwrap()
+            parser.expression_block(&mut stream).unwrap()
         {
             assert_eq!(ctx, new_ctx(0, 29));
             assert_eq!(body.len(), 2);

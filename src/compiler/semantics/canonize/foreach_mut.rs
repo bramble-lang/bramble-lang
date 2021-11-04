@@ -452,7 +452,7 @@ impl<'a> ForEachPreOrderMut {
 mod tests {
     use crate::{
         compiler::{
-            diagnostics::Logger, lexer::tokens::Token, lexer::LexerError, parser::parser,
+            diagnostics::Logger, lexer::tokens::Token, lexer::LexerError, parser::Parser,
             semantics::semanticnode::SemanticAst, CompilerError, Lexer, SourceMap,
         },
         StringTable,
@@ -479,7 +479,9 @@ mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let ast = parser::parse(test, &tokens)
+        let parser = Parser::new(&logger);
+        let ast = parser
+            .parse(test, &tokens)
             .expect(&format!("{}", text))
             .unwrap();
         let mut sa = SemanticAst::new();
@@ -515,7 +517,9 @@ mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let ast = parser::parse(test, &tokens)
+        let parser = Parser::new(&logger);
+        let ast = parser
+            .parse(test, &tokens)
             .expect(&format!("{}", text))
             .unwrap();
         let mut sa = SemanticAst::new();
@@ -571,7 +575,9 @@ mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let ast = parser::parse(test, &tokens)
+        let parser = Parser::new(&logger);
+        let ast = parser
+            .parse(test, &tokens)
             .expect(&format!("{}", text))
             .unwrap();
         let mut sa = SemanticAst::new();

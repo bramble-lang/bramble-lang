@@ -76,6 +76,7 @@ fn main() {
         &sourcemap,
         &mut string_table,
         trace_parser,
+        &tracer,
     ) {
         Ok(root) => root,
         Err(errs) => {

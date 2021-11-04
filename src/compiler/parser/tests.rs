@@ -2,15 +2,12 @@
 pub mod tests {
     use core::panic;
 
-    use super::super::parser::*;
     use crate::{
         compiler::{
             ast::*,
             diagnostics::Logger,
             lexer::{tokens::Token, LexerError},
-            parser::{
-                expression::*, statement::*, tokenstream::TokenStream, ParserContext, ParserError,
-            },
+            parser::{tokenstream::TokenStream, Parser, ParserContext, ParserError},
             source::Offset,
             CompilerDisplay, CompilerError, Lexer, SourceMap, Span,
         },
@@ -47,7 +44,8 @@ pub mod tests {
                 .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens).unwrap();
-            let exp = expression(&mut stream).unwrap();
+            let parser = Parser::new(&logger);
+            let exp = parser.expression(&mut stream).unwrap();
             if let Some(Expression::UnaryOp(ctx, op, operand)) = exp {
                 assert_eq!(op, *expected);
                 assert_eq!(ctx, new_ctx(0, 2));
@@ -78,7 +76,8 @@ pub mod tests {
                 .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens).unwrap();
-            let exp = expression(&mut stream).unwrap();
+            let parser = Parser::new(&logger);
+            let exp = parser.expression(&mut stream).unwrap();
             if let Some(Expression::UnaryOp(ctx, op, operand)) = exp {
                 assert_eq!(op, *expected);
                 assert_eq!(ctx, new_ctx(0, 3));
@@ -120,8 +119,9 @@ pub mod tests {
                 .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens).unwrap();
+            let parser = Parser::new(&logger);
             if let Some(Expression::BinaryOp(ctx, op, left, right)) =
-                expression(&mut stream).unwrap()
+                parser.expression(&mut stream).unwrap()
             {
                 assert_eq!(op, expected);
                 assert_eq!(ctx, new_ctx(l, h));
@@ -157,8 +157,9 @@ pub mod tests {
                 .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens).unwrap();
+            let parser = Parser::new(&logger);
             if let Some(Expression::BinaryOp(ctx, op, left, right)) =
-                expression(&mut stream).unwrap()
+                parser.expression(&mut stream).unwrap()
             {
                 assert_eq!(op, *expected);
                 assert_eq!(ctx, new_ctx(0, 13));
@@ -186,8 +187,9 @@ pub mod tests {
             .collect::<LResult>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens).unwrap();
+        let parser = Parser::new(&logger);
         if let Some(Expression::BinaryOp(ctx, BinaryOperator::Mul, left, right)) =
-            expression(&mut stream).unwrap()
+            parser.expression(&mut stream).unwrap()
         {
             assert_eq!(ctx, new_ctx(0, 11));
             match left {
@@ -220,8 +222,9 @@ pub mod tests {
             .collect::<LResult>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens).unwrap();
+        let parser = Parser::new(&logger);
         if let Some(Expression::BinaryOp(ctx, BinaryOperator::BOr, left, right)) =
-            expression(&mut stream).unwrap()
+            parser.expression(&mut stream).unwrap()
         {
             assert_eq!(ctx, new_ctx(0, 13));
             assert_eq!(*left, Expression::Boolean(new_ctx(0, 4), true));
@@ -283,8 +286,9 @@ pub mod tests {
                 .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens).unwrap();
+            let parser = Parser::new(&logger);
             let sm = SourceMap::new();
-            match expression(&mut stream) {
+            match parser.expression(&mut stream) {
                 Ok(Some(Expression::Path(ctx, path))) => {
                     assert_eq!(ctx.line(), 1);
                     match expected {
@@ -338,7 +342,8 @@ pub mod tests {
                 .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens).unwrap();
-            match expression(&mut stream) {
+            let parser = Parser::new(&logger);
+            match parser.expression(&mut stream) {
                 Ok(Some(Expression::MemberAccess(ctx, left, right))) => {
                     assert_eq!(ctx.line(), 1); // TODO: This should test the span
                     assert_eq!(
@@ -377,7 +382,8 @@ pub mod tests {
             .collect::<LResult>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens).unwrap();
-        let stm = statement(&mut stream).unwrap().unwrap();
+        let parser = Parser::new(&logger);
+        let stm = parser.statement(&mut stream).unwrap().unwrap();
         assert_eq!(*stm.context(), new_ctx(0, 15));
         match stm {
             Statement::Bind(box b) => {
@@ -408,7 +414,8 @@ pub mod tests {
             .collect::<LResult>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens).unwrap();
-        let stm = statement(&mut stream).unwrap().unwrap();
+        let parser = Parser::new(&logger);
+        let stm = parser.statement(&mut stream).unwrap().unwrap();
         assert_eq!(*stm.context(), new_ctx(0, 19));
         match stm {
             Statement::Bind(box b) => {
@@ -459,8 +466,9 @@ pub mod tests {
                 .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens).unwrap();
+            let parser = Parser::new(&logger);
 
-            let stm = statement(&mut stream).unwrap().unwrap();
+            let stm = parser.statement(&mut stream).unwrap().unwrap();
 
             assert_eq!(*stm.context(), new_ctx(0, text.len() as u32));
 
@@ -493,7 +501,8 @@ pub mod tests {
             .collect::<LResult>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens).unwrap();
-        let stm = statement(&mut stream).unwrap().unwrap();
+        let parser = Parser::new(&logger);
+        let stm = parser.statement(&mut stream).unwrap().unwrap();
         assert_eq!(*stm.context(), new_ctx(0, text.len() as u32));
         match stm {
             Statement::Mutate(box m) => {
@@ -522,7 +531,13 @@ pub mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        if let Some(m) = parse(test, &tokens).unwrap().unwrap().get_module(test_mod) {
+        let parser = Parser::new(&logger);
+        if let Some(m) = parser
+            .parse(test, &tokens)
+            .unwrap()
+            .unwrap()
+            .get_module(test_mod)
+        {
             assert_eq!(*m.context(), new_ctx(0, 15));
             assert_eq!(m.get_name(), test_mod);
         } else {
@@ -549,8 +564,9 @@ pub mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
+        let parser = Parser::new(&logger);
 
-        if let Some(m) = parse(test, &tokens).unwrap() {
+        if let Some(m) = parser.parse(test, &tokens).unwrap() {
             assert_eq!(*m.context(), new_ctx(0, 44));
             assert_eq!(m.get_name(), test);
 
@@ -616,7 +632,9 @@ pub mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        if let Some(m) = parse(test, &tokens)
+        let parser = Parser::new(&logger);
+        if let Some(m) = parser
+            .parse(test, &tokens)
             .unwrap()
             .unwrap()
             .get_module(test_co_mod)
@@ -679,7 +697,9 @@ pub mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        if let Some(m) = parse(test, &tokens)
+        let parser = Parser::new(&logger);
+        if let Some(m) = parser
+            .parse(test, &tokens)
             .unwrap()
             .unwrap()
             .get_module(test_struct_mod)
@@ -725,7 +745,9 @@ pub mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        if let Some(m) = parse(test, &tokens)
+        let parser = Parser::new(&logger);
+        if let Some(m) = parser
+            .parse(test, &tokens)
             .unwrap()
             .unwrap()
             .get_module(test_extern_mod)
@@ -773,7 +795,9 @@ pub mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        if let Some(m) = parse(test, &tokens)
+        let parser = Parser::new(&logger);
+        if let Some(m) = parser
+            .parse(test, &tokens)
             .unwrap()
             .unwrap()
             .get_module(test_extern_mod)
@@ -820,6 +844,7 @@ pub mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
+        let parser = Parser::new(&logger);
         if let Some(Item::Routine(RoutineDef {
             context: l,
             def: RoutineDefType::Function,
@@ -828,7 +853,7 @@ pub mod tests {
             ret_ty: ty,
             body,
             ..
-        })) = parse(test, &tokens).unwrap().unwrap().get_item(test)
+        })) = parser.parse(test, &tokens).unwrap().unwrap().get_item(test)
         {
             assert_eq!(*l, new_ctx(0, 24));
             assert_eq!(*name, test);
@@ -862,6 +887,7 @@ pub mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
+        let parser = Parser::new(&logger);
         if let Some(Item::Routine(RoutineDef {
             context: l,
             def: RoutineDefType::Function,
@@ -870,7 +896,7 @@ pub mod tests {
             ret_ty: ty,
             body,
             ..
-        })) = parse(test, &tokens).unwrap().unwrap().get_item(test)
+        })) = parser.parse(test, &tokens).unwrap().unwrap().get_item(test)
         {
             assert_eq!(*l, new_ctx(0, 37));
             assert_eq!(*name, test);
@@ -917,7 +943,8 @@ pub mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        parse(test, &tokens).expect_err("This should fail");
+        let parser = Parser::new(&logger);
+        parser.parse(test, &tokens).expect_err("This should fail");
     }
 
     #[test]
@@ -940,8 +967,9 @@ pub mod tests {
             .collect::<LResult>()
             .unwrap();
         let mut iter = TokenStream::new(&tokens).unwrap();
+        let parser = Parser::new(&logger);
         if let Some(Expression::RoutineCall(l, RoutineCall::Function, name, params)) =
-            expression(&mut iter).unwrap()
+            parser.expression(&mut iter).unwrap()
         {
             assert_eq!(l, new_ctx(0, 10));
             assert_eq!(name, vec![Element::Id(test)].into());
@@ -978,8 +1006,9 @@ pub mod tests {
             .unwrap();
         println!("{:?}", table);
         let mut iter = TokenStream::new(&tokens).unwrap();
+        let parser = Parser::new(&logger);
         if let Some(Expression::RoutineCall(l, RoutineCall::Function, name, params)) =
-            expression(&mut iter).unwrap()
+            parser.expression(&mut iter).unwrap()
         {
             assert_eq!(l, new_ctx(0, 16));
             assert_eq!(name, vec![Element::Selph, Element::Id(test)].into());
@@ -1014,7 +1043,8 @@ pub mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        if let Some(m) = parse(test_mod, &tokens).unwrap() {
+        let parser = Parser::new(&logger);
+        if let Some(m) = parser.parse(test_mod, &tokens).unwrap() {
             assert_eq!(*m.context(), new_ctx(0, 37));
             if let Some(Item::Routine(RoutineDef {
                 context,
@@ -1064,7 +1094,8 @@ pub mod tests {
             .collect::<LResult>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens).unwrap();
-        let stm = statement(&mut stream).unwrap().unwrap();
+        let parser = Parser::new(&logger);
+        let stm = parser.statement(&mut stream).unwrap().unwrap();
         match stm {
             Statement::Bind(box b) => {
                 assert_eq!(b.get_id(), x);
@@ -1108,7 +1139,8 @@ pub mod tests {
             .collect::<LResult>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens).unwrap();
-        let stm = statement(&mut stream).unwrap().unwrap();
+        let parser = Parser::new(&logger);
+        let stm = parser.statement(&mut stream).unwrap().unwrap();
         match stm {
             Statement::Bind(box bind) => {
                 assert_eq!(bind.get_id(), x);
@@ -1150,6 +1182,7 @@ pub mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
+        let parser = Parser::new(&logger);
         if let Some(Item::Routine(RoutineDef {
             context: ctx,
             def: RoutineDefType::Function,
@@ -1158,7 +1191,7 @@ pub mod tests {
             ret_ty: ty,
             body,
             ..
-        })) = parse(test, &tokens).unwrap().unwrap().get_item(test)
+        })) = parser.parse(test, &tokens).unwrap().unwrap().get_item(test)
         {
             assert_eq!(*ctx, new_ctx(0, 42));
             assert_eq!(*name, test);
@@ -1200,7 +1233,8 @@ pub mod tests {
             .collect::<LResult>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens).unwrap();
-        let exp = expression(&mut stream).unwrap();
+        let parser = Parser::new(&logger);
+        let exp = parser.expression(&mut stream).unwrap();
         if let Some(Expression::If {
             context: l,
             cond,
@@ -1246,7 +1280,8 @@ pub mod tests {
             .collect::<LResult>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens).unwrap();
-        let exp = expression(&mut stream).unwrap();
+        let parser = Parser::new(&logger);
+        let exp = parser.expression(&mut stream).unwrap();
         if let Some(Expression::If {
             context,
             cond,
@@ -1318,7 +1353,8 @@ pub mod tests {
             .collect::<LResult>()
             .unwrap();
         let mut stream = TokenStream::new(&tokens).unwrap();
-        let exp = expression(&mut stream).unwrap();
+        let parser = Parser::new(&logger);
+        let exp = parser.expression(&mut stream).unwrap();
         if let Some(Expression::While {
             context: l,
             cond,
@@ -1384,7 +1420,8 @@ pub mod tests {
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            if let Some(m) = parse(test, &tokens).unwrap() {
+            let parser = Parser::new(&logger);
+            if let Some(m) = parser.parse(test, &tokens).unwrap() {
                 assert_eq!(m.get_structs()[0], Item::Struct(expected), "{:?}", text);
             }
         }
@@ -1458,7 +1495,8 @@ pub mod tests {
                 .collect::<LResult>()
                 .unwrap();
             let mut stream = TokenStream::new(&tokens).unwrap();
-            let result = expression(&mut stream);
+            let parser = Parser::new(&logger);
+            let result = parser.expression(&mut stream);
             assert_eq!(result, Ok(Some(expected)), "{:?}", text);
         }
     }
@@ -1485,7 +1523,8 @@ pub mod tests {
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let module = parse(test_mod, &tokens).unwrap();
+            let parser = Parser::new(&logger);
+            let module = parser.parse(test_mod, &tokens).unwrap();
             match module {
                 Some(m) => match &m.get_functions()[0] {
                     Item::Routine(RoutineDef { body, .. }) => match &body[0] {

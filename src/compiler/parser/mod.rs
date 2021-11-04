@@ -7,8 +7,6 @@ mod tokenstream;
 pub mod expression;
 pub mod parser;
 
-use std::marker::PhantomData;
-
 pub use context::ParserContext;
 pub use error::ParserError;
 

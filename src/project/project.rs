@@ -5,7 +5,7 @@ use crate::{
         ast::Module,
         diagnostics::Logger,
         lexer::{tokens::Token, LexerError},
-        parser::{self, ParserContext, ParserError},
+        parser::{self, Parser, ParserContext, ParserError},
         CompilerDisplay, CompilerDisplayError, CompilerError, Source, SourceMap, SourceMapError,
         Span,
     },
@@ -116,6 +116,7 @@ pub fn parse_project(
     source_map: &SourceMap,
     string_table: &mut StringTable,
     trace_parser: TracingConfig,
+    logger: &Logger,
 ) -> Result<Module<ParserContext>, Vec<CompilerError<ProjectError>>> {
     parser::parser::set_tracing(trace_parser);
 
@@ -128,7 +129,7 @@ pub fn parse_project(
     let mut root = Module::new(root_module, ParserContext::new(0, root_span));
     let mut errors = vec![];
     for src_tokens in token_sets {
-        match parse_src_tokens(string_table, src_tokens) {
+        match parse_src_tokens(src_tokens, string_table, logger) {
             Ok(ast) => append_module(string_table, &mut root, ast),
             Err(e) => errors.push(e),
         }
@@ -219,12 +220,14 @@ fn tokenize_source(
 /// part of the data field (when a module is created with the same name that becomes the
 /// parent of all items within the source file).
 fn parse_src_tokens(
-    string_table: &mut StringTable,
     src_tokens: CompilationUnit<Vec<Token>>,
+    string_table: &mut StringTable,
+    logger: &Logger,
 ) -> Result<CompilationUnit<Module<ParserContext>>, CompilerError<ProjectError>> {
+    let parser = Parser::new(logger);
     if let Some((name, parent_path)) = src_tokens.path.split_last() {
         let name = string_table.insert(name.into());
-        match parser::parser::parse(name, &src_tokens.data) {
+        match parser.parse(name, &src_tokens.data) {
             Ok(Some(ast)) => Ok(CompilationUnit {
                 path: parent_path.to_owned(),
                 data: ast,
