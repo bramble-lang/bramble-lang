@@ -19,9 +19,9 @@ use crate::{
 impl ParserCombinator<ParserResult<Expression<ParserContext>>>
     for ParserResult<Expression<ParserContext>>
 {
-    fn por(
+    fn por<F: Fn(&mut TokenStream) -> ParserResult<Expression<ParserContext>>>(
         &self,
-        f: fn(&mut TokenStream) -> ParserResult<Expression<ParserContext>>,
+        f: F,
         ts: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
         match self {
@@ -53,7 +53,7 @@ impl ParserCombinator<ParserResult<Expression<ParserContext>>>
 }
 
 pub trait ParserCombinator<R> {
-    fn por(&self, f: fn(&mut TokenStream) -> R, ts: &mut TokenStream) -> R;
+    fn por<F: Fn(&mut TokenStream) -> R>(&self, f: F, ts: &mut TokenStream) -> R;
     fn pif_then(
         &self,
         cond: Vec<Lex>,
@@ -216,12 +216,12 @@ impl<'a> Parser<'a> {
 
     fn logical_or(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
         trace!(stream);
-        self.binary_op(stream, &vec![Lex::BOr], self.logical_and)
+        self.binary_op(stream, &vec![Lex::BOr], Self::logical_and)
     }
 
     fn logical_and(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
         trace!(stream);
-        self.binary_op(stream, &vec![Lex::BAnd], self.comparison)
+        self.binary_op(stream, &vec![Lex::BAnd], Self::comparison)
     }
 
     fn comparison(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
@@ -229,28 +229,28 @@ impl<'a> Parser<'a> {
         self.binary_op(
             stream,
             &vec![Lex::Eq, Lex::NEq, Lex::Ls, Lex::LsEq, Lex::Gr, Lex::GrEq],
-            sum,
+            Self::sum,
         )
     }
 
     fn sum(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
         trace!(stream);
-        self.binary_op(stream, &vec![Lex::Add, Lex::Minus], term)
+        self.binary_op(stream, &vec![Lex::Add, Lex::Minus], Self::term)
     }
 
     fn term(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
         trace!(stream);
-        self.binary_op(stream, &vec![Lex::Mul, Lex::Div], negate)
+        self.binary_op(stream, &vec![Lex::Mul, Lex::Div], Self::negate)
     }
 
     pub fn binary_op(
         &self,
         stream: &mut TokenStream,
         test: &Vec<Lex>,
-        left_pattern: fn(&mut TokenStream) -> ParserResult<Expression<ParserContext>>,
+        left_pattern: fn(&Self, &mut TokenStream) -> ParserResult<Expression<ParserContext>>,
     ) -> ParserResult<Expression<ParserContext>> {
         trace!(stream);
-        match left_pattern(stream)? {
+        match left_pattern(self, stream)? {
             Some(left) => match stream.next_if_one_of(test.clone()) {
                 Some(op) => {
                     let right =
@@ -356,12 +356,12 @@ impl<'a> Parser<'a> {
             }
             _ => self
                 .if_expression(stream)
-                .por(while_expression, stream)
-                .por(expression_block, stream)
-                .por(function_call_or_variable, stream)
-                .por(co_yield, stream)
-                .por(constant, stream)
-                .por(array_expression, stream),
+                .por(|ts| self.while_expression(ts), stream)
+                .por(|ts| self.expression_block(ts), stream)
+                .por(|ts| self.function_call_or_variable(ts), stream)
+                .por(|ts| self.co_yield(ts), stream)
+                .por(|ts| self.constant(ts), stream)
+                .por(|ts| self.array_expression(ts), stream),
         }
     }
 
@@ -454,7 +454,7 @@ impl<'a> Parser<'a> {
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
         trace!(stream);
-        let s: Option<Expression<ParserContext>> = match path(stream)? {
+        let s: Option<Expression<ParserContext>> = match self.path(stream)? {
             Some((path, call_ctx)) => match self.routine_call_params(stream)? {
                 Some((params, params_ctx)) => Some(Expression::RoutineCall(
                     call_ctx.join(params_ctx),
@@ -568,8 +568,8 @@ impl<'a> Parser<'a> {
     fn constant(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
         trace!(stream);
         self.number(stream)
-            .por(self.boolean, stream)
-            .por(self.string_literal, stream)
+            .por(|ts| self.boolean(ts), stream)
+            .por(|ts| self.string_literal(ts), stream)
     }
 
     fn number(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
