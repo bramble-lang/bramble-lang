@@ -122,7 +122,7 @@ impl<'a> Parser<'a> {
     }
 
     fn module(&self, stream: &mut TokenStream) -> ParserResult<Module<ParserContext>> {
-        let mod_def = match stream.next_if(&Lex::ModuleDef) {
+        match stream.next_if(&Lex::ModuleDef) {
             Some(module) => match stream.next_if_id() {
                 Some((module_name, _, _)) => {
                     let mut module = Module::new(module_name, module.to_ctx());
@@ -135,16 +135,14 @@ impl<'a> Parser<'a> {
                         .to_ctx()
                         .join(*module.context());
                     *module.get_context_mut() = ctx;
-                    Some(module)
+                    Ok(Some(module))
                 }
                 _ => {
-                    return err!(module.span(), ParserError::ModExpectedName);
+                    err!(module.span(), ParserError::ModExpectedName)
                 }
             },
-            None => None,
-        };
-
-        Ok(mod_def)
+            None => Ok(None),
+        }
     }
 
     fn parse_items_into(
@@ -247,6 +245,7 @@ impl<'a> Parser<'a> {
             None => Ok(None),
         }
     }
+
     fn function_def(&self, stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserContext>> {
         let (fn_ctx, fn_name, params, fn_type) = match self.function_decl(stream, false)? {
             Some((ctx, name, params, is_variadic, ret_ty)) => {
