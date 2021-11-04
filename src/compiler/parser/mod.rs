@@ -7,6 +7,8 @@ mod tokenstream;
 pub mod expression;
 pub mod parser;
 
+use std::marker::PhantomData;
+
 pub use context::ParserContext;
 pub use error::ParserError;
 
@@ -25,4 +27,10 @@ fn ctx_over_tokens(tokens: &[Token]) -> Option<ParserContext> {
 
 pub struct Parser<'a> {
     logger: &'a Logger<'a>,
+}
+
+impl<'a> Parser<'a> {
+    pub fn new(logger: &'a Logger<'a>) -> Parser<'a> {
+        Parser { logger }
+    }
 }
