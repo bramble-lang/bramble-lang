@@ -179,7 +179,7 @@ impl Expression<ParserContext> {
 }
 
 impl<'a> Parser<'a> {
-    fn expression_block(
+    pub(super) fn expression_block(
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
@@ -214,17 +214,26 @@ impl<'a> Parser<'a> {
         self.logical_or(stream)
     }
 
-    fn logical_or(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
+    pub(super) fn logical_or(
+        &self,
+        stream: &mut TokenStream,
+    ) -> ParserResult<Expression<ParserContext>> {
         trace!(stream);
         self.binary_op(stream, &vec![Lex::BOr], Self::logical_and)
     }
 
-    fn logical_and(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
+    pub(super) fn logical_and(
+        &self,
+        stream: &mut TokenStream,
+    ) -> ParserResult<Expression<ParserContext>> {
         trace!(stream);
         self.binary_op(stream, &vec![Lex::BAnd], Self::comparison)
     }
 
-    fn comparison(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
+    pub(super) fn comparison(
+        &self,
+        stream: &mut TokenStream,
+    ) -> ParserResult<Expression<ParserContext>> {
         trace!(stream);
         self.binary_op(
             stream,
@@ -233,17 +242,17 @@ impl<'a> Parser<'a> {
         )
     }
 
-    fn sum(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
+    pub(super) fn sum(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
         trace!(stream);
         self.binary_op(stream, &vec![Lex::Add, Lex::Minus], Self::term)
     }
 
-    fn term(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
+    pub(super) fn term(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
         trace!(stream);
         self.binary_op(stream, &vec![Lex::Mul, Lex::Div], Self::negate)
     }
 
-    pub fn binary_op(
+    pub(super) fn binary_op(
         &self,
         stream: &mut TokenStream,
         test: &Vec<Lex>,
@@ -267,7 +276,10 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn negate(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
+    pub(super) fn negate(
+        &self,
+        stream: &mut TokenStream,
+    ) -> ParserResult<Expression<ParserContext>> {
         trace!(stream);
         match stream.next_if_one_of(vec![Lex::Minus, Lex::Not]) {
             Some(op) => {
@@ -281,7 +293,10 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn member_access(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
+    pub(super) fn member_access(
+        &self,
+        stream: &mut TokenStream,
+    ) -> ParserResult<Expression<ParserContext>> {
         trace!(stream);
         match self.factor(stream)? {
             Some(f) => {
@@ -336,7 +351,10 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn factor(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
+    pub(super) fn factor(
+        &self,
+        stream: &mut TokenStream,
+    ) -> ParserResult<Expression<ParserContext>> {
         trace!(stream);
         match stream.peek() {
             Some(lparen) if lparen.sym == Lex::LParen => {
@@ -365,7 +383,10 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn if_expression(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
+    pub(super) fn if_expression(
+        &self,
+        stream: &mut TokenStream,
+    ) -> ParserResult<Expression<ParserContext>> {
         trace!(stream);
         Ok(match stream.next_if(&Lex::If) {
             Some(if_tok) => {
@@ -421,7 +442,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn while_expression(
+    pub(super) fn while_expression(
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
@@ -449,7 +470,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn function_call_or_variable(
+    pub(super) fn function_call_or_variable(
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
@@ -487,7 +508,10 @@ impl<'a> Parser<'a> {
         Ok(s)
     }
 
-    fn co_yield(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
+    pub(super) fn co_yield(
+        &self,
+        stream: &mut TokenStream,
+    ) -> ParserResult<Expression<ParserContext>> {
         trace!(stream);
         match stream.next_if(&Lex::Yield) {
             Some(yield_tok) => {
@@ -506,7 +530,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn struct_expression_params(
+    pub(super) fn struct_expression_params(
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<(Vec<(StringId, Expression<ParserContext>)>, ParserContext)> {
@@ -537,7 +561,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn array_expression(
+    pub(super) fn array_expression(
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
@@ -565,14 +589,20 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn constant(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
+    pub(super) fn constant(
+        &self,
+        stream: &mut TokenStream,
+    ) -> ParserResult<Expression<ParserContext>> {
         trace!(stream);
         self.number(stream)
             .por(|ts| self.boolean(ts), stream)
             .por(|ts| self.string_literal(ts), stream)
     }
 
-    fn number(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
+    pub(super) fn number(
+        &self,
+        stream: &mut TokenStream,
+    ) -> ParserResult<Expression<ParserContext>> {
         trace!(stream);
         match stream.next_if_one_of(vec![
             Lex::U8(0),
@@ -637,7 +667,10 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn boolean(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
+    pub(super) fn boolean(
+        &self,
+        stream: &mut TokenStream,
+    ) -> ParserResult<Expression<ParserContext>> {
         trace!(stream);
         match stream.next_if(&Lex::Bool(true)) {
             Some(Token {
@@ -650,7 +683,10 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn string_literal(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
+    pub(super) fn string_literal(
+        &self,
+        stream: &mut TokenStream,
+    ) -> ParserResult<Expression<ParserContext>> {
         trace!(stream);
         match stream.next_if(&Lex::StringLiteral(StringId::new())) {
             Some(Token {
@@ -663,553 +699,6 @@ impl<'a> Parser<'a> {
                 s,
             ))),
             _ => Ok(None),
-        }
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use crate::{
-        compiler::{
-            ast::{Statement, Type},
-            diagnostics::Logger,
-            lexer::{tokens::Token, LexerError},
-            source::Offset,
-            CompilerError, Lexer, SourceMap, Span,
-        },
-        StringTable,
-    };
-    type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
-
-    fn new_span(low: u32, high: u32) -> Span {
-        Span::new(Offset::new(low), Offset::new(high))
-    }
-
-    fn new_ctx(low: u32, high: u32) -> ParserContext {
-        ParserContext::new(1, new_span(low, high))
-    }
-
-    #[test]
-    fn parse_number() {
-        for (text, expected) in vec![
-            ("64u8", Expression::U8(new_ctx(0, 4), 64)),
-            ("64u16", Expression::U16(new_ctx(0, 5), 64)),
-            ("64u32", Expression::U32(new_ctx(0, 5), 64)),
-            ("64u64", Expression::U64(new_ctx(0, 5), 64)),
-            ("5i8", Expression::I8(new_ctx(0, 3), 5)),
-            ("5i16", Expression::I16(new_ctx(0, 4), 5)),
-            ("5i32", Expression::I32(new_ctx(0, 4), 5)),
-            ("64i64", Expression::I64(new_ctx(0, 5), 64)),
-            ("64", Expression::I64(new_ctx(0, 2), 64)),
-        ] {
-            let mut sm = SourceMap::new();
-            sm.add_string(text, "/test".into()).unwrap();
-
-            let mut table = StringTable::new();
-            let src = sm.get(0).unwrap().read().unwrap();
-            let logger = Logger::new();
-            let tokens = Lexer::new(src, &mut table, &logger)
-                .unwrap()
-                .tokenize()
-                .into_iter()
-                .collect::<LResult>()
-                .unwrap();
-            let mut stream = TokenStream::new(&tokens).unwrap();
-            let logger = Logger::new();
-            let parser = Parser::new(&logger);
-            match parser.number(&mut stream) {
-                Ok(Some(e)) => assert_eq!(e, expected),
-                Ok(t) => panic!("Expected an {:?} but got {:?}", expected, t),
-                Err(err) => panic!("Expected {:?}, but got {:?}", expected, err),
-            }
-        }
-    }
-
-    #[test]
-    fn parse_array_expression() {
-        for (text, expected) in vec![
-            (
-                "[1]",
-                Expression::ArrayExpression(
-                    new_ctx(0, 3),
-                    vec![Expression::I64(new_ctx(1, 2), 1)],
-                    1,
-                ),
-            ),
-            (
-                "[1u8]",
-                Expression::ArrayExpression(
-                    new_ctx(0, 5),
-                    vec![Expression::U8(new_ctx(1, 4), 1)],
-                    1,
-                ),
-            ),
-            (
-                "[1,]",
-                Expression::ArrayExpression(
-                    new_ctx(0, 4),
-                    vec![Expression::I64(new_ctx(1, 2), 1)],
-                    1,
-                ),
-            ),
-            (
-                "[1, 2, 3]",
-                Expression::ArrayExpression(
-                    new_ctx(0, 9),
-                    vec![
-                        Expression::I64(new_ctx(1, 2), 1),
-                        Expression::I64(new_ctx(4, 5), 2),
-                        Expression::I64(new_ctx(7, 8), 3),
-                    ],
-                    3,
-                ),
-            ),
-            (
-                "[1, 2i8, 3]", // This is legal at the parser level (it is illegal semantically)
-                Expression::ArrayExpression(
-                    new_ctx(0, 11),
-                    vec![
-                        Expression::I64(new_ctx(1, 2), 1),
-                        Expression::I8(new_ctx(4, 7), 2),
-                        Expression::I64(new_ctx(9, 10), 3),
-                    ],
-                    3,
-                ),
-            ),
-            (
-                "[[1,],]",
-                Expression::ArrayExpression(
-                    new_ctx(0, 7),
-                    vec![Expression::ArrayExpression(
-                        new_ctx(1, 5),
-                        vec![Expression::I64(new_ctx(2, 3), 1)],
-                        1,
-                    )],
-                    1,
-                ),
-            ),
-        ] {
-            let mut sm = SourceMap::new();
-            sm.add_string(text, "/test".into()).unwrap();
-
-            let mut table = StringTable::new();
-            let src = sm.get(0).unwrap().read().unwrap();
-            let logger = Logger::new();
-            let tokens = Lexer::new(src, &mut table, &logger)
-                .unwrap()
-                .tokenize()
-                .into_iter()
-                .collect::<LResult>()
-                .unwrap();
-            let mut stream = TokenStream::new(&tokens).unwrap();
-            let logger = Logger::new();
-            let parser = Parser::new(&logger);
-            match parser.array_expression(&mut stream) {
-                Ok(Some(e)) => assert_eq!(e, expected),
-                Ok(t) => panic!("Expected an {:?} but got {:?}", expected, t),
-                Err(err) => panic!("Expected {:?}, but got {:?}", expected, err),
-            }
-        }
-    }
-
-    #[test]
-    fn parse_array_fails() {
-        for (text, msg) in [
-            (
-                "[5",
-                CompilerError::new(
-                    Span::new(Offset::new(2), Offset::new(2)),
-                    ParserError::ExpectedButFound(vec![Lex::RBracket], None),
-                ),
-            ),
-            (
-                "[5 6]",
-                CompilerError::new(
-                    Span::new(Offset::new(3), Offset::new(4)),
-                    ParserError::ExpectedButFound(vec![Lex::RBracket], Some(Lex::I64(6))),
-                ),
-            ),
-        ]
-        .iter()
-        {
-            let mut sm = SourceMap::new();
-            sm.add_string(text, "/test".into()).unwrap();
-
-            let mut table = StringTable::new();
-            let src = sm.get(0).unwrap().read().unwrap();
-            let logger = Logger::new();
-            let tokens = Lexer::new(src, &mut table, &logger)
-                .unwrap()
-                .tokenize()
-                .into_iter()
-                .collect::<LResult>()
-                .unwrap();
-            let mut stream = TokenStream::new(&tokens).unwrap();
-            let logger = Logger::new();
-            let parser = Parser::new(&logger);
-            assert_eq!(
-                parser.array_expression(&mut stream).unwrap_err(),
-                *msg,
-                "{:?}",
-                text
-            );
-        }
-    }
-
-    #[test]
-    fn parse_array_at_index() {
-        let mut table = StringTable::new();
-        let a = table.insert("a".into());
-        let b = table.insert("b".into());
-
-        for (text, expected) in vec![
-            //
-            (
-                "a[1]",
-                Expression::ArrayAt {
-                    context: new_ctx(0, 4),
-                    array: box Expression::Identifier(new_ctx(0, 1), a),
-                    index: box Expression::I64(new_ctx(2, 3), 1),
-                },
-            ),
-            (
-                "(a)[1]",
-                Expression::ArrayAt {
-                    context: new_ctx(0, 6),
-                    array: box Expression::Identifier(new_ctx(0, 3), a),
-                    index: box Expression::I64(new_ctx(4, 5), 1),
-                },
-            ),
-            (
-                "a.b[1]",
-                Expression::ArrayAt {
-                    context: new_ctx(0, 6),
-                    array: box Expression::MemberAccess(
-                        new_ctx(0, 3),
-                        box Expression::Identifier(new_ctx(0, 1), a),
-                        b,
-                    ),
-                    index: box Expression::I64(new_ctx(4, 5), 1),
-                },
-            ),
-            (
-                "a[1].b",
-                Expression::MemberAccess(
-                    new_ctx(0, 6),
-                    box Expression::ArrayAt {
-                        context: new_ctx(0, 4),
-                        array: box Expression::Identifier(new_ctx(0, 1), a),
-                        index: box Expression::I64(new_ctx(2, 3), 1),
-                    },
-                    b,
-                ),
-            ),
-            (
-                "a[0].b[1]",
-                Expression::ArrayAt {
-                    context: new_ctx(0, 9),
-                    array: box Expression::MemberAccess(
-                        new_ctx(0, 6),
-                        box Expression::ArrayAt {
-                            context: new_ctx(0, 4),
-                            array: box Expression::Identifier(new_ctx(0, 1), a),
-                            index: box Expression::I64(new_ctx(2, 3), 0),
-                        },
-                        b,
-                    ),
-                    index: box Expression::I64(new_ctx(7, 8), 1),
-                },
-            ),
-            (
-                "a[1][2]",
-                Expression::ArrayAt {
-                    context: new_ctx(0, 7),
-                    array: box Expression::ArrayAt {
-                        context: new_ctx(0, 4),
-                        array: box Expression::Identifier(new_ctx(0, 1), a),
-                        index: box Expression::I64(new_ctx(2, 3), 1),
-                    },
-                    index: box Expression::I64(new_ctx(5, 6), 2),
-                },
-            ),
-            (
-                "((a)[1])[2]",
-                Expression::ArrayAt {
-                    context: new_ctx(0, 11),
-                    array: box Expression::ArrayAt {
-                        context: new_ctx(0, 8),
-                        array: box Expression::Identifier(new_ctx(1, 4), a),
-                        index: box Expression::I64(new_ctx(5, 6), 1),
-                    },
-                    index: box Expression::I64(new_ctx(9, 10), 2),
-                },
-            ),
-        ] {
-            println!("Test: {}", text);
-            let mut sm = SourceMap::new();
-            sm.add_string(text, "/test".into()).unwrap();
-            let src = sm.get(0).unwrap().read().unwrap();
-            let logger = Logger::new();
-            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
-                .unwrap()
-                .tokenize()
-                .into_iter()
-                .collect::<LResult>()
-                .unwrap();
-            let mut stream = TokenStream::new(&tokens).unwrap();
-            let logger = Logger::new();
-            let parser = Parser::new(&logger);
-            match parser.expression(&mut stream) {
-                Ok(Some(e)) => assert_eq!(e, expected),
-                Ok(t) => panic!("Expected an {:?} but got {:?}", expected, t),
-                Err(err) => panic!("Expected {:?}, but got {:?}", expected, err),
-            }
-        }
-    }
-
-    #[test]
-    fn parse_array_at_index_fails() {
-        for (text, msg) in [
-            (
-                "a[5",
-                CompilerError::new(
-                    Span::new(Offset::new(3), Offset::new(3)),
-                    ParserError::ExpectedButFound(vec![Lex::RBracket], None),
-                ),
-            ),
-            (
-                "a[5 6]",
-                CompilerError::new(
-                    Span::new(Offset::new(4), Offset::new(5)),
-                    ParserError::ExpectedButFound(vec![Lex::RBracket], Some(Lex::I64(6))),
-                ),
-            ),
-            (
-                "a[]",
-                CompilerError::new(
-                    Span::new(Offset::new(1), Offset::new(2)),
-                    ParserError::IndexOpInvalidExpr,
-                ),
-            ),
-            (
-                "a[2 + ]",
-                CompilerError::new(
-                    Span::new(Offset::new(4), Offset::new(5)),
-                    ParserError::ExpectedExprAfter(Lex::Add),
-                ),
-            ),
-        ]
-        .iter()
-        {
-            let mut sm = SourceMap::new();
-            sm.add_string(text, "/test".into()).unwrap();
-
-            let mut table = StringTable::new();
-            let src = sm.get(0).unwrap().read().unwrap();
-            let logger = Logger::new();
-            let tokens = Lexer::new(src, &mut table, &logger)
-                .unwrap()
-                .tokenize()
-                .into_iter()
-                .collect::<LResult>()
-                .unwrap();
-            let mut stream = TokenStream::new(&tokens).unwrap();
-            let parser = Parser::new(&logger);
-            assert_eq!(
-                parser.expression(&mut stream).unwrap_err(),
-                *msg,
-                "{:?}",
-                text
-            );
-        }
-    }
-
-    #[test]
-    fn parse_member_access() {
-        for (text, low, high) in vec![
-            (" thing.first", 1, 6),
-            ("(thing).first", 0, 7),
-            ("(thing.first)", 1, 6),
-        ] {
-            let mut table = StringTable::new();
-            let thing_id = table.insert("thing".into());
-            let first_id = table.insert("first".into());
-
-            let mut sm = SourceMap::new();
-            sm.add_string(text, "/test".into()).unwrap();
-            let src = sm.get(0).unwrap().read().unwrap();
-
-            let logger = Logger::new();
-            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
-                .unwrap()
-                .tokenize()
-                .into_iter()
-                .collect::<LResult>()
-                .unwrap();
-            let mut stream = TokenStream::new(&tokens).unwrap();
-            let logger = Logger::new();
-            let parser = Parser::new(&logger);
-            match parser.member_access(&mut stream) {
-                Ok(Some(Expression::MemberAccess(ctx, left, right))) => {
-                    assert_eq!(ctx.line(), 1);
-                    assert_eq!(
-                        *left,
-                        Expression::Identifier(new_ctx(low, high), thing_id),
-                        "Input: {}",
-                        text,
-                    );
-                    assert_eq!(right, first_id);
-                }
-                Ok(Some(n)) => panic!("{} resulted in {:?}", text, n),
-                Ok(None) => panic!("No node returned for {}", text),
-                Err(msg) => panic!("{} caused {:?}", text, msg),
-            }
-        }
-    }
-
-    #[test]
-    fn parse_expression_block_oneline() {
-        let text = "{5}";
-        let mut table = StringTable::new();
-
-        let mut sm = SourceMap::new();
-        sm.add_string(text, "/test".into()).unwrap();
-        let src = sm.get(0).unwrap().read().unwrap();
-
-        let logger = Logger::new();
-        let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
-            .unwrap()
-            .tokenize()
-            .into_iter()
-            .collect::<LResult>()
-            .unwrap();
-        let mut stream = TokenStream::new(&tokens).unwrap();
-
-        let parser = Parser::new(&logger);
-        if let Some(Expression::ExpressionBlock(ctx, body, Some(final_exp))) =
-            parser.expression_block(&mut stream).unwrap()
-        {
-            assert_eq!(ctx, new_ctx(0, 3));
-            assert_eq!(body.len(), 0);
-            assert_eq!(*final_exp, Expression::I64(new_ctx(1, 2), 5));
-        } else {
-            panic!("No nodes returned by parser")
-        }
-    }
-
-    #[test]
-    fn parse_expression_block_bad() {
-        for (text, msg) in [
-            (
-                "{5 10 51}",
-                CompilerError::new(
-                    Span::new(Offset::new(3), Offset::new(5)),
-                    ParserError::ExpectedButFound(vec![Lex::RBrace], Some(Lex::I64(10))),
-                ),
-            ),
-            (
-                " {5; 10 51}",
-                CompilerError::new(
-                    Span::new(Offset::new(8), Offset::new(10)),
-                    ParserError::ExpectedButFound(vec![Lex::RBrace], Some(Lex::I64(51))),
-                ),
-            ),
-            (
-                "{5; 10 let x:i64 := 5}",
-                CompilerError::new(
-                    Span::new(Offset::new(7), Offset::new(10)),
-                    ParserError::ExpectedButFound(vec![Lex::RBrace], Some(Lex::Let)),
-                ),
-            ),
-            (
-                "{let x: i64 := 10 5}",
-                CompilerError::new(
-                    Span::new(Offset::new(1), Offset::new(17)),
-                    ParserError::ExpectedButFound(vec![Lex::Semicolon], Some(Lex::I64(5))),
-                ),
-            ),
-        ]
-        .iter()
-        {
-            let mut sm = SourceMap::new();
-            sm.add_string(text, "/test".into()).unwrap();
-
-            let mut table = StringTable::new();
-            let logger = Logger::new();
-            let parser = Parser::new(&logger);
-            let src = sm.get(0).unwrap().read().unwrap();
-            let logger = Logger::new();
-            let tokens = Lexer::new(src, &mut table, &logger)
-                .unwrap()
-                .tokenize()
-                .into_iter()
-                .collect::<LResult>()
-                .unwrap();
-            let mut stream = TokenStream::new(&tokens).unwrap();
-            assert_eq!(
-                parser.expression_block(&mut stream).unwrap_err(),
-                *msg,
-                "{:?}",
-                text
-            );
-        }
-    }
-
-    #[test]
-    fn parse_expression_block_multiline() {
-        let text = "{let x:i64 := 5; f(x); x * x}";
-        let mut table = StringTable::new();
-        let x = table.insert("x".into());
-        let f = table.insert("f".into());
-
-        let mut sm = SourceMap::new();
-        sm.add_string(text, "/test".into()).unwrap();
-        let src = sm.get(0).unwrap().read().unwrap();
-
-        let logger = Logger::new();
-        let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
-            .unwrap()
-            .tokenize()
-            .into_iter()
-            .collect::<LResult>()
-            .unwrap();
-        let mut stream = TokenStream::new(&tokens).unwrap();
-        let parser = Parser::new(&logger);
-        if let Some(Expression::ExpressionBlock(ctx, body, Some(final_exp))) =
-            parser.expression_block(&mut stream).unwrap()
-        {
-            assert_eq!(ctx, new_ctx(0, 29));
-            assert_eq!(body.len(), 2);
-            match &body[0] {
-                Statement::Bind(box b) => {
-                    assert_eq!(b.get_id(), x);
-                    assert_eq!(b.get_type(), Type::I64);
-                    assert_eq!(*b.get_rhs(), Expression::I64(new_ctx(14, 15), 5));
-                }
-                _ => panic!("Not a binding statement"),
-            }
-            match &body[1] {
-                Statement::Expression(box Expression::RoutineCall(
-                    _,
-                    RoutineCall::Function,
-                    fn_name,
-                    params,
-                )) => {
-                    assert_eq!(*fn_name, vec![Element::Id(f)].into());
-                    assert_eq!(params[0], Expression::Identifier(new_ctx(19, 20), x));
-                }
-                _ => panic!("No body: {:?}", &body[1]),
-            }
-            match final_exp {
-                box Expression::BinaryOp(_, BinaryOperator::Mul, l, r) => {
-                    assert_eq!(*l.as_ref(), Expression::Identifier(new_ctx(23, 24), x));
-                    assert_eq!(*r.as_ref(), Expression::Identifier(new_ctx(27, 28), x));
-                }
-                _ => panic!("No body: {:?}", &body[2]),
-            }
-        } else {
-            panic!("No nodes returned by parser")
         }
     }
 }
