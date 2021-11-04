@@ -6,6 +6,9 @@ mod math {
         // Does something
         fn something(m: S) -> i64 {
             let y: i64 := 7 - 10;
+            let b: bool := false && true;
+            let s: string := "hello";
+            
             return y;
         }
     }

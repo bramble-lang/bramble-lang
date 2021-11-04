@@ -692,6 +692,16 @@ impl<'a> Parser<'a> {
             }) => Ok(Some(Expression::Boolean(ParserContext::new(l, span), b))),
             _ => Ok(None),
         }
+        .map(|ok| {
+            ok.as_ref().map(|v| {
+                self.logger.write(Event::<ParserError> {
+                    input: v.span(),
+                    msg: Ok("Boolean"),
+                });
+                v
+            });
+            ok
+        })
     }
 
     pub(super) fn string_literal(
@@ -711,5 +721,15 @@ impl<'a> Parser<'a> {
             ))),
             _ => Ok(None),
         }
+        .map(|ok| {
+            ok.as_ref().map(|v| {
+                self.logger.write(Event::<ParserError> {
+                    input: v.span(),
+                    msg: Ok("String"),
+                });
+                v
+            });
+            ok
+        })
     }
 }
