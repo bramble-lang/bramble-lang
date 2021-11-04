@@ -9,6 +9,7 @@ use super::{tokenstream::TokenStream, ParserContext, ParserError};
 use crate::{
     compiler::{
         ast::*,
+        diagnostics::Event,
         lexer::tokens::{Lex, Token},
         source::SourceIr,
         CompilerError,
@@ -665,6 +666,16 @@ impl<'a> Parser<'a> {
             Some(t) => panic!("Unexpected token: {:?}", t),
             None => Ok(None),
         }
+        .map(|ok| {
+            ok.as_ref().map(|v| {
+                self.logger.write(Event::<ParserError> {
+                    input: v.span(),
+                    msg: Ok("Number"),
+                });
+                v
+            });
+            ok
+        })
     }
 
     pub(super) fn boolean(
