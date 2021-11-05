@@ -669,6 +669,7 @@ impl<'a> Parser<'a> {
         .map(|ok| {
             ok.as_ref().map(|v| {
                 self.logger.write(Event::<ParserError> {
+                    stage: "parser",
                     input: v.span(),
                     msg: Ok("Number"),
                 });
@@ -695,6 +696,7 @@ impl<'a> Parser<'a> {
         .map(|ok| {
             ok.as_ref().map(|v| {
                 self.logger.write(Event::<ParserError> {
+                    stage: "parser",
                     input: v.span(),
                     msg: Ok("Boolean"),
                 });
@@ -724,6 +726,7 @@ impl<'a> Parser<'a> {
         .map(|ok| {
             ok.as_ref().map(|v| {
                 self.logger.write(Event::<ParserError> {
+                    stage: "parser",
                     input: v.span(),
                     msg: Ok("String"),
                 });

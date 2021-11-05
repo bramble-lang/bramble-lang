@@ -17,6 +17,7 @@ mod tests {
         logger.enable();
 
         let evt = Event::<LexerError> {
+            stage: "test",
             input: Span::zero(),
             msg: Ok("Hello"),
         };
@@ -33,6 +34,7 @@ mod tests {
 
         logger.disable();
         let evt = Event::<LexerError> {
+            stage: "test",
             input: Span::zero(),
             msg: Ok("Hello"),
         };
@@ -49,6 +51,7 @@ mod tests {
         // First disable the logger and test that writes are blocked
         logger.disable();
         let evt = Event::<LexerError> {
+            stage: "test",
             input: Span::zero(),
             msg: Ok("Hello"),
         };
@@ -58,6 +61,7 @@ mod tests {
         // Then enable the logger and confirm that writes are now happening
         logger.enable();
         let evt = Event::<LexerError> {
+            stage: "test",
             input: Span::zero(),
             msg: Ok("Hello"),
         };

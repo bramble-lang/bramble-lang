@@ -47,6 +47,9 @@ pub trait Writable {
 /// An event from any stage in the Compiler caused by the given span of source
 /// code.
 pub struct Event<'a, E: CompilerDisplay + Debug> {
+    /// The stage of compilation that generated this event
+    pub stage: &'static str,
+
     /// The [`Span`] of input source code that caused this event to occur
     pub input: Span,
 
