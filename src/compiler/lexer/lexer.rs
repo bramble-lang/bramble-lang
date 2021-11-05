@@ -297,7 +297,7 @@ impl<'a> Lexer<'a> {
 
             let (_, span) = branch.merge().unwrap();
             self.logger.write(Event::<LexerError> {
-                stage: "parser",
+                stage: "lexer",
                 input: span,
                 msg: Ok("Line Comment"),
             });
@@ -314,7 +314,7 @@ impl<'a> Lexer<'a> {
 
             let (_, span) = branch.merge().unwrap();
             self.logger.write(Event::<LexerError> {
-                stage: "parser",
+                stage: "lexer",
                 input: span,
                 msg: Ok("Block Comment"),
             });
@@ -363,7 +363,7 @@ impl<'a> Lexer<'a> {
                             )
                             .map_err(|err| {
                                 self.logger.write(Event {
-                                    stage: "parser",
+                                    stage: "lexer",
                                     input: err.span(),
                                     msg: Err(&err),
                                 });
@@ -377,7 +377,7 @@ impl<'a> Lexer<'a> {
                             )
                             .map_err(|err| {
                                 self.logger.write(Event {
-                                    stage: "parser",
+                                    stage: "lexer",
                                     input: err.span(),
                                     msg: Err(&err),
                                 });
@@ -402,7 +402,7 @@ impl<'a> Lexer<'a> {
         .map(|ok| {
             ok.as_ref().map(|token| {
                 self.logger.write(Event::<LexerError> {
-                    stage: "parser",
+                    stage: "lexer",
                     input: token.span,
                     msg: Ok("String"),
                 });
@@ -460,7 +460,7 @@ impl<'a> Lexer<'a> {
         })
         .map_err(|err| {
             self.logger.write(Event {
-                stage: "parser",
+                stage: "lexer",
                 input: err.span(),
                 msg: Err(&err),
             });
@@ -539,7 +539,7 @@ impl<'a> Lexer<'a> {
         .map(|ok| {
             ok.as_ref().map(|token| {
                 self.logger.write(Event::<LexerError> {
-                    stage: "parser",
+                    stage: "lexer",
                     input: token.span,
                     msg: Ok("Operator"),
                 });
@@ -573,7 +573,7 @@ impl<'a> Lexer<'a> {
         .map(|ok| {
             ok.as_ref().map(|token| {
                 self.logger.write(Event::<LexerError> {
-                    stage: "parser",
+                    stage: "lexer",
                     input: token.span,
                     msg: Ok("Identifier"),
                 });
@@ -601,7 +601,7 @@ impl<'a> Lexer<'a> {
                 .map(|ok| {
                     ok.as_ref().map(|token| {
                         self.logger.write(Event::<LexerError> {
-                            stage: "parser",
+                            stage: "lexer",
                             input: token.span,
                             msg: Ok("Boolean"),
                         });
@@ -655,7 +655,7 @@ impl<'a> Lexer<'a> {
         .map(|ok| {
             ok.as_ref().map(|token| {
                 self.logger.write(Event::<LexerError> {
-                    stage: "parser",
+                    stage: "lexer",
                     input: token.span,
                     msg: Ok("Keyword"),
                 });
@@ -696,7 +696,7 @@ impl<'a> Lexer<'a> {
         .map(|ok| {
             ok.as_ref().map(|token| {
                 self.logger.write(Event::<LexerError> {
-                    stage: "parser",
+                    stage: "lexer",
                     input: token.span,
                     msg: Ok("Primitive"),
                 });

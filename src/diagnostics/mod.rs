@@ -24,7 +24,7 @@ impl<'a> Writer for ConsoleWriter<'a> {
     }
 
     fn write_str(&self, label: &str, s: &str) {
-        print!("{}: \"{}\"", label, s);
+        print!("{}: \"{}\", ", label, s);
     }
 
     fn start_event(&self) {

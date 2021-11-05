@@ -61,8 +61,9 @@ impl<'a, E: CompilerDisplay + Debug> Writable for Event<'a, E> {
     fn write(&self, w: &dyn Writer) {
         w.start_event();
         w.write_span(self.input);
+        w.write_str("stage", self.stage);
         match self.msg {
-            Ok(msg) => w.write_str("msg", msg),
+            Ok(msg) => w.write_str("ok", msg),
             Err(err) => w.write_str("error", &format!("{:?}", err)),
         }
         w.stop_event();
