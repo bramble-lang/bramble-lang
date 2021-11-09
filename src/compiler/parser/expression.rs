@@ -578,13 +578,30 @@ impl<'a> Parser<'a> {
                         None => break,
                     };
                 }
-                let rbracket = stream.next_must_be(&Lex::RBracket)?;
+                let rbracket = stream.next_must_be(&Lex::RBracket).map_err(|err| {
+                    self.logger.write(Event::<ParserError> {
+                        stage: "parser",
+                        input: err.span(),
+                        msg: Err(&err),
+                    });
+                    err
+                })?;
 
                 // Compute the new span
                 let ctx = lbracket.to_ctx().join(rbracket.to_ctx());
 
                 let len = elements.len();
-                Ok(Some(Expression::ArrayExpression(ctx, elements, len)))
+                Ok(Some(Expression::ArrayExpression(ctx, elements, len))).map(|ok| {
+                    ok.as_ref().map(|v| {
+                        self.logger.write(Event::<ParserError> {
+                            stage: "parser",
+                            input: v.span(),
+                            msg: Ok("Array Expression"),
+                        });
+                        v
+                    });
+                    ok
+                })
             }
             None => Ok(None),
         }
