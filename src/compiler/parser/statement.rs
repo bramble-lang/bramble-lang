@@ -51,7 +51,7 @@ impl<'a> Parser<'a> {
                 Some(semicolon) => {
                     let ctx = stm.context().join(semicolon.to_ctx());
                     *stm.get_context_mut() = ctx;
-                    Ok(Some(stm))
+                    Ok(Some(stm)) // TRACE
                 }
                 _ => {
                     if must_have_semicolon {
@@ -61,7 +61,7 @@ impl<'a> Parser<'a> {
                                 vec![Lex::Semicolon],
                                 stream.peek().map(|x| x.sym.clone())
                             )
-                        )
+                        ) // TRACE
                     } else {
                         stream.set_index(start_index);
                         Ok(None)
@@ -83,26 +83,26 @@ impl<'a> Parser<'a> {
                 let id_decl = self.id_declaration(stream)?.ok_or(CompilerError::new(
                     let_tok.span(),
                     ParserError::ExpectedIdDeclAfterLet,
-                ))?;
-                stream.next_must_be(&Lex::Assign)?;
+                ))?; // TRACE
+                stream.next_must_be(&Lex::Assign)?; // TRACE
 
                 let exp = match self.co_init(stream)? {
                     Some(co_init) => co_init,
                     None => self.expression(stream)?.ok_or(CompilerError::new(
                         let_tok.span(),
                         ParserError::ExpectedExpressionOnRhs,
-                    ))?,
+                    ))?, // TRACE
                 };
                 let ctx = exp.context().join(let_tok.to_ctx());
 
                 match id_decl {
                     Expression::IdentifierDeclare(_, id, ty) => {
                         Ok(Some(Bind::new(ctx, id, ty.clone(), is_mutable, exp)))
-                    }
+                    } // TRACE
                     _ => Err(CompilerError::new(
                         let_tok.span(),
                         ParserError::ExpectedTypeInIdDecl,
-                    )),
+                    )), // TRACE
                 }
             }
             None => Ok(None),
@@ -125,8 +125,8 @@ impl<'a> Parser<'a> {
                 let exp = self.expression(stream)?.ok_or(CompilerError::new(
                     tokens[2].span(),
                     ParserError::ExpectedExpressionOnRhs,
-                ))?;
-                Ok(Some(Mutate::new(tokens[0].to_ctx(), id, exp)))
+                ))?; // TRACE
+                Ok(Some(Mutate::new(tokens[0].to_ctx(), id, exp))) // TRACE
             }
         }
     }
@@ -138,18 +138,18 @@ impl<'a> Parser<'a> {
                 Some((path, path_ctx)) => {
                     let (params, params_ctx) = self.routine_call_params(stream)?.ok_or(
                         CompilerError::new(path_ctx.span(), ParserError::ExpectedParams),
-                    )?;
+                    )?; // TRACE error
                     Ok(Some(Expression::RoutineCall(
                         init_tok.to_ctx().join(params_ctx),
                         RoutineCall::CoroutineInit,
                         path,
                         params,
-                    )))
+                    ))) // TRACE event
                 }
                 None => Err(CompilerError::new(
                     init_tok.span(),
                     ParserError::ExpectedIdAfterInit,
-                )),
+                )), // TRACE error
             },
             _ => Ok(None),
         }
@@ -163,11 +163,11 @@ impl<'a> Parser<'a> {
         Ok(match stream.next_if(&Lex::Return) {
             Some(token) => {
                 let exp = self.expression(stream)?;
-                stream.next_must_be(&Lex::Semicolon)?;
+                stream.next_must_be(&Lex::Semicolon)?; // TRACE error
                 match exp {
                     Some(exp) => Some(Return::new(token.to_ctx(), Some(exp))),
                     None => Some(Return::new(token.to_ctx(), None)),
-                }
+                } // TRACE event
             }
             _ => None,
         })
@@ -181,12 +181,12 @@ impl<'a> Parser<'a> {
         Ok(match stream.next_if(&Lex::YieldReturn) {
             Some(token) => {
                 let exp = self.expression(stream)?;
-                stream.next_must_be(&Lex::Semicolon)?;
+                stream.next_must_be(&Lex::Semicolon)?; // TRACE error
                 let yret = match exp {
                     Some(exp) => YieldReturn::new(token.to_ctx(), Some(exp)),
                     None => YieldReturn::new(token.to_ctx(), None),
                 };
-                Some(Statement::YieldReturn(Box::new(yret)))
+                Some(Statement::YieldReturn(Box::new(yret))) // TRACE event
             }
             _ => None,
         })

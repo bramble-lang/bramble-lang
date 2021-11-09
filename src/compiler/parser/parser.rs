@@ -99,12 +99,12 @@ impl<'a> Parser<'a> {
         // Create the module that represents the source code unit as a whole (usually the file)
         // give it span that covers the entire set of tokens
         let module_ctx = ctx_over_tokens(&tokens)
-            .ok_or(CompilerError::new(Span::zero(), ParserError::EmptyProject))?;
+            .ok_or(CompilerError::new(Span::zero(), ParserError::EmptyProject))?; // TRACE
         let mut module = Module::new(name, module_ctx);
 
         // Create the token stream.
         let mut stream = TokenStream::new(&tokens)
-            .ok_or(CompilerError::new(Span::zero(), ParserError::EmptyProject))?;
+            .ok_or(CompilerError::new(Span::zero(), ParserError::EmptyProject))?; // TRACE
 
         while stream.peek().is_some() {
             let start_index = stream.index();
@@ -114,11 +114,11 @@ impl<'a> Parser<'a> {
                 return err!(
                     stream.peek().unwrap().span(),
                     ParserError::Locked(stream.peek().map(|t| t.clone()))
-                );
+                ); // TRACE
             }
         }
 
-        Ok(Some(module))
+        Ok(Some(module)) // TRACE
     }
 
     fn module(&self, stream: &mut TokenStream) -> ParserResult<Module<ParserContext>> {
@@ -126,18 +126,19 @@ impl<'a> Parser<'a> {
             Some(module) => match stream.next_if_id() {
                 Some((module_name, _, _)) => {
                     let mut module = Module::new(module_name, module.to_ctx());
-                    stream.next_must_be(&Lex::LBrace)?;
+                    stream.next_must_be(&Lex::LBrace)?; // TRACE error
 
                     self.parse_items_into(stream, &mut module)?;
 
                     let ctx = stream
-                        .next_must_be(&Lex::RBrace)?
+                        .next_must_be(&Lex::RBrace)? // TRACE error
                         .to_ctx()
                         .join(*module.context());
                     *module.get_context_mut() = ctx;
-                    Ok(Some(module))
+                    Ok(Some(module)) // TRACE
                 }
                 _ => {
+                    // TRACE
                     err!(module.span(), ParserError::ModExpectedName)
                 }
             },
@@ -176,7 +177,7 @@ impl<'a> Parser<'a> {
             }
 
             if let Some(f) = self.function_def(stream)? {
-                items.push(Item::Routine(f));
+                items.push(Item::Routine(f)); // TRACE?
             }
             if let Some(c) = self.coroutine_def(stream)? {
                 items.push(Item::Routine(c));
@@ -207,19 +208,20 @@ impl<'a> Parser<'a> {
             Some(extern_tok) => match self.function_decl(stream, true)? {
                 Some((fn_ctx, fn_name, params, has_varargs, fn_type)) => {
                     if has_varargs && params.len() == 0 {
+                        // TRACE
                         return err!(fn_ctx.span(), ParserError::ExternInvalidVarArgs);
                     }
-                    stream.next_must_be(&Lex::Semicolon)?;
+                    stream.next_must_be(&Lex::Semicolon)?; // TRACE
                     Ok(Some(Extern::new(
                         fn_name,
                         extern_tok.to_ctx(),
                         params,
                         has_varargs,
                         fn_type,
-                    )))
+                    ))) // TRACE
                 }
                 None => {
-                    err!(extern_tok.span(), ParserError::ExternExpectedFnDecl)
+                    err!(extern_tok.span(), ParserError::ExternExpectedFnDecl) // TRACE
                 }
             },
             None => Ok(None),
@@ -230,15 +232,16 @@ impl<'a> Parser<'a> {
         match stream.next_if(&Lex::Struct) {
             Some(st_def) => match stream.next_if_id() {
                 Some((id, _, _)) => {
-                    stream.next_must_be(&Lex::LBrace)?;
+                    stream.next_must_be(&Lex::LBrace)?; // TRACE error
                     let fields = self.parameter_list(stream)?;
                     let ctx = stream
-                        .next_must_be(&Lex::RBrace)?
+                        .next_must_be(&Lex::RBrace)? // TRACE
                         .to_ctx()
                         .join(st_def.to_ctx());
-                    Ok(Some(StructDef::new(id, ctx, fields)))
+                    Ok(Some(StructDef::new(id, ctx, fields))) // TRACE
                 }
                 None => {
+                    // TRACE
                     err!(st_def.span(), ParserError::StructExpectedIdentifier)
                 }
             },
@@ -250,6 +253,7 @@ impl<'a> Parser<'a> {
         let (fn_ctx, fn_name, params, fn_type) = match self.function_decl(stream, false)? {
             Some((ctx, name, params, is_variadic, ret_ty)) => {
                 if is_variadic {
+                    // TRACE
                     return err!(ctx.span(), ParserError::FnVarArgsNotAllowed);
                 }
                 (ctx, name, params, ret_ty)
@@ -261,15 +265,17 @@ impl<'a> Parser<'a> {
         let mut stmts = self.fn_body(stream)?;
 
         match self.return_stmt(stream)? {
+            // TRACE
             Some(ret) => stmts.push(Statement::Return(Box::new(ret))),
             None => {
+                // TRACE
                 return err!(
                     fn_ctx.span(),
                     ParserError::FnExpectedReturn(stream.peek().map(|t| t.clone()))
                 );
             }
         }
-        let ctx = stream.next_must_be(&Lex::RBrace)?.to_ctx().join(fn_ctx);
+        let ctx = stream.next_must_be(&Lex::RBrace)?.to_ctx().join(fn_ctx); // TRACE error
 
         Ok(Some(RoutineDef {
             context: ctx,
@@ -278,7 +284,7 @@ impl<'a> Parser<'a> {
             params,
             ret_ty: fn_type,
             body: stmts,
-        }))
+        })) // TRACE
     }
 
     fn function_decl(
@@ -300,7 +306,7 @@ impl<'a> Parser<'a> {
         let (fn_name, _, fn_def_span) = stream.next_if_id().ok_or(CompilerError::new(
             fn_ctx.span(),
             ParserError::FnExpectedIdentifierAfterFn,
-        ))?;
+        ))?; // TRACE
         fn_ctx = fn_ctx.extend(fn_def_span);
 
         let (params, has_varargs) = self.fn_def_params(stream, allow_var_args)?;
@@ -309,7 +315,7 @@ impl<'a> Parser<'a> {
                 .ok_or(CompilerError::new(
                     fn_ctx.span(),
                     ParserError::FnExpectedTypeAfterArrow,
-                ))?
+                ))? // TRACE
                 .0
         } else {
             Type::Unit
@@ -331,6 +337,7 @@ impl<'a> Parser<'a> {
         let (params, has_varargs) = self.fn_def_params(stream, false)?;
 
         if has_varargs {
+            // TRACE
             return err!(ctx.span(), ParserError::FnVarArgsNotAllowed);
         }
 
@@ -340,7 +347,7 @@ impl<'a> Parser<'a> {
                     .ok_or(CompilerError::new(
                         t.span(),
                         ParserError::FnExpectedTypeAfterArrow,
-                    ))?
+                    ))? // TRACE
                     .0
             }
             _ => Type::Unit,
@@ -356,7 +363,7 @@ impl<'a> Parser<'a> {
                 return err!(
                     span,
                     ParserError::FnExpectedReturn(stream.peek().map(|t| t.clone()))
-                );
+                ); // TRACE
             }
         }
         let ctx = stream.next_must_be(&Lex::RBrace)?.to_ctx().join(ctx);
@@ -368,7 +375,7 @@ impl<'a> Parser<'a> {
             params,
             ret_ty: co_type,
             body: stmts,
-        }))
+        })) // TRACE
     }
 
     pub(super) fn fn_body(
@@ -428,7 +435,7 @@ impl<'a> Parser<'a> {
                 context: *ctx,
                 name: *name,
                 ty: ty.clone(),
-            })
+            }) // TRACE
             .collect();
 
         Ok(params)
@@ -446,7 +453,7 @@ impl<'a> Parser<'a> {
                 Expression::IdentifierDeclare(ctx, id, ty) => {
                     decls.push((id, ty, ctx));
                     stream.next_if(&Lex::Comma);
-                }
+                } // TRACE
                 _ => panic!("CRITICAL: IdDeclaration not returned by id_declaration"),
             }
         }
@@ -527,13 +534,14 @@ impl<'a> Parser<'a> {
                     span
                 }
                 _ => {
+                    // TRACE
                     return err!(path_sep.span(), ParserError::PathExpectedIdentifier);
                 }
             };
             ctx = ctx.extend(span);
         }
 
-        Ok(Some((path.into(), ctx)))
+        Ok(Some((path.into(), ctx))) // TRACE
     }
 
     fn identifier(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
@@ -542,7 +550,7 @@ impl<'a> Parser<'a> {
             Some((id, ln, span)) => Ok(Some(Expression::Identifier(
                 ParserContext::new(ln, span),
                 id,
-            ))),
+            ))), // TRACE
             _ => Ok(None),
         }
     }
@@ -586,7 +594,7 @@ impl<'a> Parser<'a> {
                 (ty, ctx)
             }
         });
-        Ok(ty)
+        Ok(ty) // TRACE
     }
 
     fn array_type(&self, stream: &mut TokenStream) -> ParserResult<(Type, ParserContext)> {
@@ -597,13 +605,13 @@ impl<'a> Parser<'a> {
                 let (element_ty, _) = self.consume_type(stream)?.ok_or(CompilerError::new(
                     ctx.span(),
                     ParserError::ArrayDeclExpectedType,
-                ))?;
-                stream.next_must_be(&Lex::Semicolon)?;
+                ))?; // TRACE
+                stream.next_must_be(&Lex::Semicolon)?; // TRACE
 
                 let len = self.expression(stream)?.ok_or(CompilerError::new(
                     ctx.span(),
                     ParserError::ArrayDeclExpectedSize,
-                ))?;
+                ))?; // TRACE
                 let len = match len {
                     Expression::U8(_, l) => l as usize,
                     Expression::U16(_, l) => l as usize,
@@ -613,11 +621,11 @@ impl<'a> Parser<'a> {
                     Expression::I16(_, l) => l as usize,
                     Expression::I32(_, l) => l as usize,
                     Expression::I64(_, l) => l as usize,
-                    _ => return err!(len.span(), ParserError::ArrayExpectedIntLiteral),
+                    _ => return err!(len.span(), ParserError::ArrayExpectedIntLiteral), // TRACE
                 };
 
                 let ctx = stream.next_must_be(&Lex::RBracket)?.to_ctx().join(ctx);
-                Ok(Some((Type::Array(Box::new(element_ty), len), ctx)))
+                Ok(Some((Type::Array(Box::new(element_ty), len), ctx))) // TRACE
             }
             None => Ok(None),
         }
@@ -637,9 +645,9 @@ impl<'a> Parser<'a> {
                 let (ty, ty_ctx) = self.consume_type(stream)?.ok_or(CompilerError::new(
                     decl_tok[0].span(),
                     ParserError::IdDeclExpectedType,
-                ))?;
+                ))?; // TRACE
                 let ctx = ctx.join(ty_ctx);
-                Ok(Some(Expression::IdentifierDeclare(ctx, id, ty)))
+                Ok(Some(Expression::IdentifierDeclare(ctx, id, ty))) // TRACE
             }
             None => Ok(None),
         }
