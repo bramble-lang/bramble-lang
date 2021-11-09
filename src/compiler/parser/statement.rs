@@ -6,7 +6,7 @@ use std::sync::atomic::Ordering;
 use stdext::function_name;
 
 use crate::{
-    compiler::{ast::*, lexer::tokens::Lex, source::SourceIr, CompilerError},
+    compiler::{ast::*, diagnostics::Event, lexer::tokens::Lex, source::SourceIr, CompilerError},
     trace, StringId,
 };
 
@@ -61,7 +61,16 @@ impl<'a> Parser<'a> {
                                 vec![Lex::Semicolon],
                                 stream.peek().map(|x| x.sym.clone())
                             )
-                        ) // TRACE
+                        )
+                        .map_err(|err| {
+                            self.logger.write(Event::<ParserError> {
+                                stage: "parser",
+                                input: err.span(),
+                                msg: Err(&err),
+                            });
+                            err
+                        })
+                        // TRACE
                     } else {
                         stream.set_index(start_index);
                         Ok(None)
@@ -80,18 +89,38 @@ impl<'a> Parser<'a> {
         match stream.next_if(&Lex::Let) {
             Some(let_tok) => {
                 let is_mutable = stream.next_if(&Lex::Mut).is_some();
-                let id_decl = self.id_declaration(stream)?.ok_or(CompilerError::new(
-                    let_tok.span(),
-                    ParserError::ExpectedIdDeclAfterLet,
-                ))?; // TRACE
+                let id_decl = self
+                    .id_declaration(stream)?
+                    .ok_or(CompilerError::new(
+                        let_tok.span(),
+                        ParserError::ExpectedIdDeclAfterLet,
+                    ))
+                    .map_err(|err| {
+                        self.logger.write(Event::<ParserError> {
+                            stage: "parser",
+                            input: err.span(),
+                            msg: Err(&err),
+                        });
+                        err
+                    })?; // TRACE
                 stream.next_must_be(&Lex::Assign)?; // TRACE
 
                 let exp = match self.co_init(stream)? {
                     Some(co_init) => co_init,
-                    None => self.expression(stream)?.ok_or(CompilerError::new(
-                        let_tok.span(),
-                        ParserError::ExpectedExpressionOnRhs,
-                    ))?, // TRACE
+                    None => self
+                        .expression(stream)?
+                        .ok_or(CompilerError::new(
+                            let_tok.span(),
+                            ParserError::ExpectedExpressionOnRhs,
+                        ))
+                        .map_err(|err| {
+                            self.logger.write(Event::<ParserError> {
+                                stage: "parser",
+                                input: err.span(),
+                                msg: Err(&err),
+                            });
+                            err
+                        })?, // TRACE
                 };
                 let ctx = exp.context().join(let_tok.to_ctx());
 
@@ -102,7 +131,15 @@ impl<'a> Parser<'a> {
                     _ => Err(CompilerError::new(
                         let_tok.span(),
                         ParserError::ExpectedTypeInIdDecl,
-                    )), // TRACE
+                    ))
+                    .map_err(|err| {
+                        self.logger.write(Event::<ParserError> {
+                            stage: "parser",
+                            input: err.span(),
+                            msg: Err(&err),
+                        });
+                        err
+                    }), // TRACE
                 }
             }
             None => Ok(None),
@@ -122,10 +159,20 @@ impl<'a> Parser<'a> {
                     .sym
                     .get_str()
                     .expect("CRITICAL: identifier token cannot be converted to string");
-                let exp = self.expression(stream)?.ok_or(CompilerError::new(
-                    tokens[2].span(),
-                    ParserError::ExpectedExpressionOnRhs,
-                ))?; // TRACE
+                let exp = self
+                    .expression(stream)?
+                    .ok_or(CompilerError::new(
+                        tokens[2].span(),
+                        ParserError::ExpectedExpressionOnRhs,
+                    ))
+                    .map_err(|err| {
+                        self.logger.write(Event::<ParserError> {
+                            stage: "parser",
+                            input: err.span(),
+                            msg: Err(&err),
+                        });
+                        err
+                    })?; // TRACE
                 Ok(Some(Mutate::new(tokens[0].to_ctx(), id, exp))) // TRACE
             }
         }
@@ -136,9 +183,20 @@ impl<'a> Parser<'a> {
         match stream.next_if(&Lex::Init) {
             Some(init_tok) => match self.path(stream)? {
                 Some((path, path_ctx)) => {
-                    let (params, params_ctx) = self.routine_call_params(stream)?.ok_or(
-                        CompilerError::new(path_ctx.span(), ParserError::ExpectedParams),
-                    )?; // TRACE error
+                    let (params, params_ctx) = self
+                        .routine_call_params(stream)?
+                        .ok_or(CompilerError::new(
+                            path_ctx.span(),
+                            ParserError::ExpectedParams,
+                        ))
+                        .map_err(|err| {
+                            self.logger.write(Event::<ParserError> {
+                                stage: "parser",
+                                input: err.span(),
+                                msg: Err(&err),
+                            });
+                            err
+                        })?; // TRACE error
                     Ok(Some(Expression::RoutineCall(
                         init_tok.to_ctx().join(params_ctx),
                         RoutineCall::CoroutineInit,
@@ -149,7 +207,15 @@ impl<'a> Parser<'a> {
                 None => Err(CompilerError::new(
                     init_tok.span(),
                     ParserError::ExpectedIdAfterInit,
-                )), // TRACE error
+                ))
+                .map_err(|err| {
+                    self.logger.write(Event::<ParserError> {
+                        stage: "parser",
+                        input: err.span(),
+                        msg: Err(&err),
+                    });
+                    err
+                }), // TRACE error
             },
             _ => Ok(None),
         }
