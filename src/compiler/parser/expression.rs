@@ -265,12 +265,20 @@ impl<'a> Parser<'a> {
         match left_pattern(self, stream)? {
             Some(left) => match stream.next_if_one_of(test.clone()) {
                 Some(op) => {
-                    let right =
-                        self.binary_op(stream, test, left_pattern)?
-                            .ok_or(CompilerError::new(
-                                op.span(),
-                                ParserError::ExpectedExprAfter(op.sym.clone()),
-                            ))?; // TRACE error
+                    let right = self
+                        .binary_op(stream, test, left_pattern)?
+                        .ok_or(CompilerError::new(
+                            op.span(),
+                            ParserError::ExpectedExprAfter(op.sym.clone()),
+                        ))
+                        .map_err(|err| {
+                            self.logger.write(Event::<ParserError> {
+                                stage: "parser",
+                                input: err.span(),
+                                msg: Err(&err),
+                            });
+                            err
+                        })?; // TRACE error
 
                     // TRACE event
                     Expression::binary_op(&op.sym, Box::new(left), Box::new(right))
@@ -288,10 +296,20 @@ impl<'a> Parser<'a> {
         trace!(stream);
         match stream.next_if_one_of(vec![Lex::Minus, Lex::Not]) {
             Some(op) => {
-                let factor = self.negate(stream)?.ok_or(CompilerError::new(
-                    op.span(),
-                    ParserError::ExpectedTermAfter(op.sym.clone()),
-                ))?; // TRACE error
+                let factor = self
+                    .negate(stream)?
+                    .ok_or(CompilerError::new(
+                        op.span(),
+                        ParserError::ExpectedTermAfter(op.sym.clone()),
+                    ))
+                    .map_err(|err| {
+                        self.logger.write(Event::<ParserError> {
+                            stage: "parser",
+                            input: err.span(),
+                            msg: Err(&err),
+                        });
+                        err
+                    })?; // TRACE error
                 Expression::unary_op(op.to_ctx(), &op.sym, Box::new(factor)) // TRACE event
             }
             None => self.member_access(stream),
@@ -322,13 +340,29 @@ impl<'a> Parser<'a> {
                             .ok_or(CompilerError::new(
                                 token.span(),
                                 ParserError::MemberAccessExpectedField,
-                            ))?, // TRACE error
+                            ))
+                            .map_err(|err| {
+                                self.logger.write(Event::<ParserError> {
+                                    stage: "parser",
+                                    input: err.span(),
+                                    msg: Err(&err),
+                                });
+                                err
+                            })?, // TRACE error
                         Lex::LBracket => self
                             .expression(stream)?
                             .ok_or(CompilerError::new(
                                 token.span(),
                                 ParserError::IndexOpInvalidExpr,
                             )) // TRACE error
+                            .map_err(|err| {
+                                self.logger.write(Event::<ParserError> {
+                                    stage: "parser",
+                                    input: err.span(),
+                                    msg: Err(&err),
+                                });
+                                err
+                            })
                             .and_then(|index| {
                                 // TRACE error
                                 stream.next_must_be(&Lex::RBracket).map(|rbracket| {
@@ -346,7 +380,15 @@ impl<'a> Parser<'a> {
                                     vec![Lex::LBracket, Lex::MemberAccess],
                                     Some(token.sym.clone())
                                 )
-                            ); // TRACE error
+                            )
+                            .map_err(|err| {
+                                self.logger.write(Event::<ParserError> {
+                                    stage: "parser",
+                                    input: err.span(),
+                                    msg: Err(&err),
+                                });
+                                err
+                            }); // TRACE error
                         }
                     };
                 }
@@ -397,16 +439,36 @@ impl<'a> Parser<'a> {
         Ok(match stream.next_if(&Lex::If) {
             Some(if_tok) => {
                 stream.next_must_be(&Lex::LParen)?;
-                let cond = self.expression(stream)?.ok_or(CompilerError::new(
-                    if_tok.span(),
-                    ParserError::IfExpectedConditional,
-                ))?; // trace error
+                let cond = self
+                    .expression(stream)?
+                    .ok_or(CompilerError::new(
+                        if_tok.span(),
+                        ParserError::IfExpectedConditional,
+                    ))
+                    .map_err(|err| {
+                        self.logger.write(Event::<ParserError> {
+                            stage: "parser",
+                            input: err.span(),
+                            msg: Err(&err),
+                        });
+                        err
+                    })?; // trace error
                 stream.next_must_be(&Lex::RParen)?; // trace error
 
-                let if_arm = self.expression_block(stream)?.ok_or(CompilerError::new(
-                    if_tok.span(),
-                    ParserError::IfTrueArmMissingExpr,
-                ))?; // trace error
+                let if_arm = self
+                    .expression_block(stream)?
+                    .ok_or(CompilerError::new(
+                        if_tok.span(),
+                        ParserError::IfTrueArmMissingExpr,
+                    ))
+                    .map_err(|err| {
+                        self.logger.write(Event::<ParserError> {
+                            stage: "parser",
+                            input: err.span(),
+                            msg: Err(&err),
+                        });
+                        err
+                    })?; // trace error
 
                 // check for `else if`
                 let else_arm = match stream.next_if(&Lex::Else) {
@@ -415,17 +477,37 @@ impl<'a> Parser<'a> {
                             sym: Lex::If, span, ..
                         }) => {
                             let span = *span;
-                            Some(self.if_expression(stream)?.ok_or(CompilerError::new(
-                                span,
-                                ParserError::IfElseExpectedIfExpr,
-                            ))?) // trace error
+                            Some(
+                                self.if_expression(stream)?
+                                    .ok_or(CompilerError::new(
+                                        span,
+                                        ParserError::IfElseExpectedIfExpr,
+                                    ))
+                                    .map_err(|err| {
+                                        self.logger.write(Event::<ParserError> {
+                                            stage: "parser",
+                                            input: err.span(),
+                                            msg: Err(&err),
+                                        });
+                                        err
+                                    })?,
+                            ) // trace error
                         }
                         _ => {
-                            let false_arm =
-                                self.expression_block(stream)?.ok_or(CompilerError::new(
+                            let false_arm = self
+                                .expression_block(stream)?
+                                .ok_or(CompilerError::new(
                                     if_tok.span(),
                                     ParserError::IfFalseArmMissingExpr,
-                                ))?; // trace error
+                                ))
+                                .map_err(|err| {
+                                    self.logger.write(Event::<ParserError> {
+                                        stage: "parser",
+                                        input: err.span(),
+                                        msg: Err(&err),
+                                    });
+                                    err
+                                })?; // trace error
                             Some(false_arm)
                         }
                     },
@@ -453,26 +535,44 @@ impl<'a> Parser<'a> {
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
         trace!(stream);
-        Ok(match stream.next_if(&Lex::While) {
+        match stream.next_if(&Lex::While) {
             Some(whl) => {
                 stream.next_must_be(&Lex::LParen)?; // trace error
-                let cond = self.expression(stream)?.ok_or(CompilerError::new(
-                    whl.span(),
-                    ParserError::WhileExpectedConditional,
-                ))?; // trace error
+                let cond = self
+                    .expression(stream)?
+                    .ok_or(CompilerError::new(
+                        whl.span(),
+                        ParserError::WhileExpectedConditional,
+                    ))
+                    .map_err(|err| {
+                        self.logger.write(Event::<ParserError> {
+                            stage: "parser",
+                            input: err.span(),
+                            msg: Err(&err),
+                        });
+                        err
+                    })?; // trace error
                 stream.next_must_be(&Lex::RParen)?; // trace error
 
-                let body = self
-                    .expression_block(stream)?
-                    .ok_or(CompilerError::new(whl.span, ParserError::WhileMissingBody))?; // trace error
-
-                Some(Expression::While {
-                    context: whl.to_ctx().join(*body.context()),
-                    cond: Box::new(cond),
-                    body: Box::new(body),
-                }) // trace event
+                self.expression_block(stream)?
+                    .ok_or(CompilerError::new(whl.span, ParserError::WhileMissingBody))
+                    .map(|body| {
+                        Some(Expression::While {
+                            context: whl.to_ctx().join(*body.context()),
+                            cond: Box::new(cond),
+                            body: Box::new(body),
+                        }) // trace event
+                    })
             }
-            _ => None,
+            _ => Ok(None),
+        }
+        .map_err(|err| {
+            self.logger.write(Event::<ParserError> {
+                stage: "parser",
+                input: err.span(),
+                msg: Err(&err),
+            });
+            err
         })
     }
 
@@ -481,40 +581,47 @@ impl<'a> Parser<'a> {
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
         trace!(stream);
-        let s: Option<Expression<ParserContext>> = match self.path(stream)? {
+        match self.path(stream)? {
             Some((path, call_ctx)) => match self.routine_call_params(stream)? {
-                Some((params, params_ctx)) => Some(Expression::RoutineCall(
+                Some((params, params_ctx)) => Ok(Some(Expression::RoutineCall(
                     // trace event here
                     call_ctx.join(params_ctx),
                     RoutineCall::Function,
                     path,
                     params.clone(),
-                )),
+                ))),
                 None => match self.struct_expression_params(stream)? {
-                    Some((params, params_ctx)) => Some(Expression::StructExpression(
+                    Some((params, params_ctx)) => Ok(Some(Expression::StructExpression(
                         // trace event here
                         call_ctx.join(params_ctx),
                         path,
                         params.clone(),
-                    )),
+                    ))),
                     None => {
                         if path.len() > 1 {
-                            Some(Expression::Path(call_ctx, path)) // trace event here
+                            Ok(Some(Expression::Path(call_ctx, path))) // trace event here
                         } else {
                             if let Element::Id(sid) = path.last().unwrap() {
-                                Some(Expression::Identifier(call_ctx, *sid)) // trace event here
+                                Ok(Some(Expression::Identifier(call_ctx, *sid)))
+                            // trace event here
                             } else {
                                 // trace error here
-                                return err!(call_ctx.span(), ParserError::PathExpectedIdentifier);
+                                err!(call_ctx.span(), ParserError::PathExpectedIdentifier)
                             }
                         }
                     }
                 },
             },
-            _ => None,
-        };
-
-        Ok(s)
+            _ => Ok(None),
+        }
+        .map_err(|err| {
+            self.logger.write(Event::<ParserError> {
+                stage: "parser",
+                input: err.span(),
+                msg: Err(&err),
+            });
+            err
+        })
     }
 
     pub(super) fn co_yield(
@@ -537,6 +644,14 @@ impl<'a> Parser<'a> {
             }
             None => Ok(None),
         }
+        .map_err(|err| {
+            self.logger.write(Event::<ParserError> {
+                stage: "parser",
+                input: err.span(),
+                msg: Err(&err),
+            });
+            err
+        })
     }
 
     pub(super) fn struct_expression_params(
@@ -549,10 +664,20 @@ impl<'a> Parser<'a> {
                 let mut params = vec![];
                 while let Some((field_name, _ln, span)) = stream.next_if_id() {
                     stream.next_must_be(&Lex::Colon)?;
-                    let field_value = self.expression(stream)?.ok_or(CompilerError::new(
-                        span,
-                        ParserError::StructExpectedFieldExpr(field_name), // trace error here
-                    ))?;
+                    let field_value = self
+                        .expression(stream)?
+                        .ok_or(CompilerError::new(
+                            span,
+                            ParserError::StructExpectedFieldExpr(field_name), // trace error here
+                        ))
+                        .map_err(|err| {
+                            self.logger.write(Event::<ParserError> {
+                                stage: "parser",
+                                input: err.span(),
+                                msg: Err(&err),
+                            });
+                            err
+                        })?;
                     params.push((field_name, field_value));
                     match stream.next_if(&Lex::Comma) {
                         Some(_) => {}
@@ -586,14 +711,7 @@ impl<'a> Parser<'a> {
                         None => break,
                     };
                 }
-                let rbracket = stream.next_must_be(&Lex::RBracket).map_err(|err| {
-                    self.logger.write(Event::<ParserError> {
-                        stage: "parser",
-                        input: err.span(),
-                        msg: Err(&err),
-                    });
-                    err
-                })?;
+                let rbracket = stream.next_must_be(&Lex::RBracket)?;
 
                 // Compute the new span
                 let ctx = lbracket.to_ctx().join(rbracket.to_ctx());

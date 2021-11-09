@@ -103,7 +103,7 @@ impl<'a> Parser<'a> {
         let mut module = Module::new(name, module_ctx);
 
         // Create the token stream.
-        let mut stream = TokenStream::new(&tokens)
+        let mut stream = TokenStream::new(&tokens, self.logger)
             .ok_or(CompilerError::new(Span::zero(), ParserError::EmptyProject))?; // TRACE
 
         while stream.peek().is_some() {

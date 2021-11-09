@@ -46,7 +46,7 @@ pub mod tests {
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens).unwrap();
+            let mut stream = TokenStream::new(&tokens, &logger).unwrap();
             let parser = Parser::new(&logger);
             let exp = parser.expression(&mut stream).unwrap();
             if let Some(Expression::UnaryOp(ctx, op, operand)) = exp {
@@ -78,7 +78,7 @@ pub mod tests {
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens).unwrap();
+            let mut stream = TokenStream::new(&tokens, &logger).unwrap();
             let parser = Parser::new(&logger);
             let exp = parser.expression(&mut stream).unwrap();
             if let Some(Expression::UnaryOp(ctx, op, operand)) = exp {
@@ -121,7 +121,7 @@ pub mod tests {
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens).unwrap();
+            let mut stream = TokenStream::new(&tokens, &logger).unwrap();
             let parser = Parser::new(&logger);
             if let Some(Expression::BinaryOp(ctx, op, left, right)) =
                 parser.expression(&mut stream).unwrap()
@@ -159,7 +159,7 @@ pub mod tests {
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens).unwrap();
+            let mut stream = TokenStream::new(&tokens, &logger).unwrap();
             let parser = Parser::new(&logger);
             if let Some(Expression::BinaryOp(ctx, op, left, right)) =
                 parser.expression(&mut stream).unwrap()
@@ -189,7 +189,7 @@ pub mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens).unwrap();
+        let mut stream = TokenStream::new(&tokens, &logger).unwrap();
         let parser = Parser::new(&logger);
         if let Some(Expression::BinaryOp(ctx, BinaryOperator::Mul, left, right)) =
             parser.expression(&mut stream).unwrap()
@@ -224,7 +224,7 @@ pub mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens).unwrap();
+        let mut stream = TokenStream::new(&tokens, &logger).unwrap();
         let parser = Parser::new(&logger);
         if let Some(Expression::BinaryOp(ctx, BinaryOperator::BOr, left, right)) =
             parser.expression(&mut stream).unwrap()
@@ -288,7 +288,7 @@ pub mod tests {
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens).unwrap();
+            let mut stream = TokenStream::new(&tokens, &logger).unwrap();
             let parser = Parser::new(&logger);
             let sm = SourceMap::new();
             match parser.expression(&mut stream) {
@@ -344,7 +344,7 @@ pub mod tests {
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens).unwrap();
+            let mut stream = TokenStream::new(&tokens, &logger).unwrap();
             let parser = Parser::new(&logger);
             match parser.expression(&mut stream) {
                 Ok(Some(Expression::MemberAccess(ctx, left, right))) => {
@@ -384,7 +384,7 @@ pub mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens).unwrap();
+        let mut stream = TokenStream::new(&tokens, &logger).unwrap();
         let parser = Parser::new(&logger);
         let stm = parser.statement(&mut stream).unwrap().unwrap();
         assert_eq!(*stm.context(), new_ctx(0, 15));
@@ -416,7 +416,7 @@ pub mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens).unwrap();
+        let mut stream = TokenStream::new(&tokens, &logger).unwrap();
         let parser = Parser::new(&logger);
         let stm = parser.statement(&mut stream).unwrap().unwrap();
         assert_eq!(*stm.context(), new_ctx(0, 19));
@@ -468,7 +468,7 @@ pub mod tests {
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens).unwrap();
+            let mut stream = TokenStream::new(&tokens, &logger).unwrap();
             let parser = Parser::new(&logger);
 
             let stm = parser.statement(&mut stream).unwrap().unwrap();
@@ -503,7 +503,7 @@ pub mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens).unwrap();
+        let mut stream = TokenStream::new(&tokens, &logger).unwrap();
         let parser = Parser::new(&logger);
         let stm = parser.statement(&mut stream).unwrap().unwrap();
         assert_eq!(*stm.context(), new_ctx(0, text.len() as u32));
@@ -969,7 +969,7 @@ pub mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut iter = TokenStream::new(&tokens).unwrap();
+        let mut iter = TokenStream::new(&tokens, &logger).unwrap();
         let parser = Parser::new(&logger);
         if let Some(Expression::RoutineCall(l, RoutineCall::Function, name, params)) =
             parser.expression(&mut iter).unwrap()
@@ -1008,7 +1008,7 @@ pub mod tests {
             .collect::<LResult>()
             .unwrap();
         println!("{:?}", table);
-        let mut iter = TokenStream::new(&tokens).unwrap();
+        let mut iter = TokenStream::new(&tokens, &logger).unwrap();
         let parser = Parser::new(&logger);
         if let Some(Expression::RoutineCall(l, RoutineCall::Function, name, params)) =
             parser.expression(&mut iter).unwrap()
@@ -1096,7 +1096,7 @@ pub mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens).unwrap();
+        let mut stream = TokenStream::new(&tokens, &logger).unwrap();
         let parser = Parser::new(&logger);
         let stm = parser.statement(&mut stream).unwrap().unwrap();
         match stm {
@@ -1141,7 +1141,7 @@ pub mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens).unwrap();
+        let mut stream = TokenStream::new(&tokens, &logger).unwrap();
         let parser = Parser::new(&logger);
         let stm = parser.statement(&mut stream).unwrap().unwrap();
         match stm {
@@ -1235,7 +1235,7 @@ pub mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens).unwrap();
+        let mut stream = TokenStream::new(&tokens, &logger).unwrap();
         let parser = Parser::new(&logger);
         let exp = parser.expression(&mut stream).unwrap();
         if let Some(Expression::If {
@@ -1282,7 +1282,7 @@ pub mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens).unwrap();
+        let mut stream = TokenStream::new(&tokens, &logger).unwrap();
         let parser = Parser::new(&logger);
         let exp = parser.expression(&mut stream).unwrap();
         if let Some(Expression::If {
@@ -1355,7 +1355,7 @@ pub mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens).unwrap();
+        let mut stream = TokenStream::new(&tokens, &logger).unwrap();
         let parser = Parser::new(&logger);
         let exp = parser.expression(&mut stream).unwrap();
         if let Some(Expression::While {
@@ -1497,7 +1497,7 @@ pub mod tests {
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens).unwrap();
+            let mut stream = TokenStream::new(&tokens, &logger).unwrap();
             let parser = Parser::new(&logger);
             let result = parser.expression(&mut stream);
             assert_eq!(result, Ok(Some(expected)), "{:?}", text);
@@ -1574,7 +1574,7 @@ pub mod tests {
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens).unwrap();
+            let mut stream = TokenStream::new(&tokens, &logger).unwrap();
             let logger = Logger::new();
             let parser = Parser::new(&logger);
             match parser.number(&mut stream) {
@@ -1661,7 +1661,7 @@ pub mod tests {
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens).unwrap();
+            let mut stream = TokenStream::new(&tokens, &logger).unwrap();
             let logger = Logger::new();
             let parser = Parser::new(&logger);
             match parser.array_expression(&mut stream) {
@@ -1704,7 +1704,7 @@ pub mod tests {
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens).unwrap();
+            let mut stream = TokenStream::new(&tokens, &logger).unwrap();
             let logger = Logger::new();
             let parser = Parser::new(&logger);
             assert_eq!(
@@ -1816,7 +1816,7 @@ pub mod tests {
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens).unwrap();
+            let mut stream = TokenStream::new(&tokens, &logger).unwrap();
             let logger = Logger::new();
             let parser = Parser::new(&logger);
             match parser.expression(&mut stream) {
@@ -1873,7 +1873,7 @@ pub mod tests {
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens).unwrap();
+            let mut stream = TokenStream::new(&tokens, &logger).unwrap();
             let parser = Parser::new(&logger);
             assert_eq!(
                 parser.expression(&mut stream).unwrap_err(),
@@ -1906,7 +1906,7 @@ pub mod tests {
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens).unwrap();
+            let mut stream = TokenStream::new(&tokens, &logger).unwrap();
             let logger = Logger::new();
             let parser = Parser::new(&logger);
             match parser.member_access(&mut stream) {
@@ -1943,7 +1943,7 @@ pub mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens).unwrap();
+        let mut stream = TokenStream::new(&tokens, &logger).unwrap();
 
         let parser = Parser::new(&logger);
         if let Some(Expression::ExpressionBlock(ctx, body, Some(final_exp))) =
@@ -2005,7 +2005,7 @@ pub mod tests {
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let mut stream = TokenStream::new(&tokens).unwrap();
+            let mut stream = TokenStream::new(&tokens, &logger).unwrap();
             assert_eq!(
                 parser.expression_block(&mut stream).unwrap_err(),
                 *msg,
@@ -2033,7 +2033,7 @@ pub mod tests {
             .into_iter()
             .collect::<LResult>()
             .unwrap();
-        let mut stream = TokenStream::new(&tokens).unwrap();
+        let mut stream = TokenStream::new(&tokens, &logger).unwrap();
         let parser = Parser::new(&logger);
         if let Some(Expression::ExpressionBlock(ctx, body, Some(final_exp))) =
             parser.expression_block(&mut stream).unwrap()

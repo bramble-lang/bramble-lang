@@ -1,5 +1,6 @@
 use super::{ctx_over_tokens, ParserError};
 use crate::compiler::ast::Context;
+use crate::compiler::diagnostics::{Event, Logger};
 use crate::compiler::lexer::tokens::{Lex, Token};
 use crate::compiler::{CompilerError, Span};
 use crate::StringId;
@@ -9,14 +10,16 @@ pub struct TokenStream<'a> {
     tokens: &'a Vec<Token>,
     index: usize,
     span: Span,
+    logger: &'a Logger<'a>,
 }
 
 impl<'a> TokenStream<'a> {
-    pub fn new(tokens: &'a Vec<Token>) -> Option<TokenStream> {
+    pub fn new(tokens: &'a Vec<Token>, logger: &'a Logger<'a>) -> Option<TokenStream<'a>> {
         ctx_over_tokens(tokens).map(|ctx| TokenStream {
             tokens,
             index: 0,
             span: ctx.span(),
+            logger,
         })
     }
 
@@ -60,24 +63,34 @@ impl<'a> TokenStream<'a> {
     }
 
     pub fn next_must_be(&mut self, test: &Lex) -> Result<Token, CompilerError<ParserError>> {
-        let (span, found) = match self.peek() {
-            Some(t) => (t.span, t.sym.clone()),
+        match self.peek() {
+            Some(t) => {
+                let (span, found) = (t.span, t.sym.clone());
+                match self.next_if(test) {
+                    Some(t) => Ok(t),
+                    None => {
+                        err!(
+                            span,
+                            ParserError::ExpectedButFound(vec![test.clone()], Some(found))
+                        )
+                    }
+                }
+            }
             None => {
-                return err!(
+                err!(
                     Span::new(self.span.high(), self.span.high()),
                     ParserError::ExpectedButFound(vec![test.clone()], None)
                 )
             }
-        };
-        match self.next_if(test) {
-            Some(t) => Ok(t),
-            None => {
-                err!(
-                    span,
-                    ParserError::ExpectedButFound(vec![test.clone()], Some(found))
-                )
-            }
         }
+        .map_err(|err| {
+            self.logger.write(Event::<ParserError> {
+                stage: "parser",
+                input: err.span(),
+                msg: Err(&err),
+            });
+            err
+        })
     }
 
     pub fn next_ifn(&mut self, test: Vec<Lex>) -> Option<Vec<Token>> {
@@ -175,7 +188,7 @@ mod test_tokenstream {
             .collect::<Result<_, _>>()
             .unwrap();
 
-        let ts = TokenStream::new(&tokens).unwrap();
+        let ts = TokenStream::new(&tokens, &logger).unwrap();
         let p = ts.peek().unwrap();
         assert_eq!(
             *p,
@@ -190,7 +203,8 @@ mod test_tokenstream {
     #[test]
     fn test_empty_stream() {
         let tokens = vec![];
-        let ts = TokenStream::new(&tokens);
+        let logger = Logger::new();
+        let ts = TokenStream::new(&tokens, &logger);
         assert!(ts.is_none());
     }
 
@@ -211,7 +225,7 @@ mod test_tokenstream {
             .collect::<Result<_, _>>()
             .unwrap();
 
-        let ts = TokenStream::new(&tokens).unwrap();
+        let ts = TokenStream::new(&tokens, &logger).unwrap();
         let p = ts.peek_at(0).unwrap();
         assert_eq!(
             *p,
@@ -253,7 +267,7 @@ mod test_tokenstream {
             .collect::<Result<_, _>>()
             .unwrap();
 
-        let mut ts = TokenStream::new(&tokens).unwrap();
+        let mut ts = TokenStream::new(&tokens, &logger).unwrap();
         let p = ts.next().unwrap();
         assert_eq!(
             p,
@@ -345,7 +359,7 @@ mod test_tokenstream {
             .collect::<Result<_, _>>()
             .unwrap();
 
-        let mut ts = TokenStream::new(&tokens).unwrap();
+        let mut ts = TokenStream::new(&tokens, &logger).unwrap();
         let p = ts.next_if(&Lex::LParen).unwrap(); // should I really use a borrow for this?  If not then gotta do clones and BS i think.
         assert_eq!(
             p,
@@ -397,7 +411,7 @@ mod test_tokenstream {
             .collect::<Result<_, _>>()
             .unwrap();
 
-        let mut ts = TokenStream::new(&tokens).unwrap();
+        let mut ts = TokenStream::new(&tokens, &logger).unwrap();
         let p = ts.next_ifn(vec![Lex::LParen, Lex::I64(0)]).unwrap();
         assert_eq!(
             *p,
@@ -443,7 +457,7 @@ mod test_tokenstream {
             .collect::<Result<_, _>>()
             .unwrap();
 
-        let ts = TokenStream::new(&tokens).unwrap();
+        let ts = TokenStream::new(&tokens, &logger).unwrap();
         let p = ts.test_if_one_of(vec![Lex::LParen, Lex::I64(0)]);
         assert_eq!(p, true);
 
@@ -468,7 +482,7 @@ mod test_tokenstream {
             .collect::<Result<_, _>>()
             .unwrap();
 
-        let mut ts = TokenStream::new(&tokens).unwrap();
+        let mut ts = TokenStream::new(&tokens, &logger).unwrap();
         let p = ts.next_if_one_of(vec![Lex::LParen, Lex::I64(0)]).unwrap();
         assert_eq!(
             p,

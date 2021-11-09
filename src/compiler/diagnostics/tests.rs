@@ -23,7 +23,10 @@ mod tests {
         };
 
         logger.write(evt);
-        assert_eq!("{[0,0], msg: \"Hello\", }", *writer.buf.borrow());
+        assert_eq!(
+            "{[0,0], stage: \"test\", ok: \"Hello\", }",
+            *writer.buf.borrow()
+        );
     }
 
     #[test]
@@ -66,7 +69,10 @@ mod tests {
             msg: Ok("Hello"),
         };
         logger.write(evt);
-        assert_eq!("{[0,0], msg: \"Hello\", }", *writer.buf.borrow());
+        assert_eq!(
+            "{[0,0], stage: \"test\", ok: \"Hello\", }",
+            *writer.buf.borrow()
+        );
     }
 
     /// Writer to be used for unit testing
