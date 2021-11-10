@@ -1,11 +1,8 @@
 // Token - a type which captures the different types of tokens and which is output
 // by tokenize
-use stdext::function_name;
-
 use crate::compiler::diagnostics::{Event, Logger};
 use crate::compiler::source::{Offset, Source};
 use crate::compiler::{SourceChar, Span};
-use crate::diagnostics::config::TracingConfig;
 use crate::{StringId, StringTable};
 
 use super::super::CompilerError;
@@ -15,29 +12,6 @@ use super::{
     LexerError,
 };
 use Lex::*;
-
-macro_rules! trace {
-    ($ts:expr) => {
-        let print_trace = match &$ts.tracing {
-            &TracingConfig::Only(ln) => ($ts.line() as usize) == ln,
-            &TracingConfig::Before(ln) => ($ts.line() as usize) <= ln,
-            &TracingConfig::After(ln) => ($ts.line() as usize) >= ln,
-            &TracingConfig::Between(start, end) => {
-                ($ts.line() as usize) >= start && ($ts.line() as usize) <= end
-            }
-            &TracingConfig::All => true,
-            &TracingConfig::Off => false,
-        };
-        if print_trace {
-            println!(
-                "{} <- L{}:{:?}",
-                function_name!(),
-                $ts.line(),
-                $ts.current_char()
-            )
-        }
-    };
-}
 
 struct LexerBranch<'a, 'st> {
     lexer: &'a mut Lexer<'st>,
@@ -201,7 +175,6 @@ pub struct Lexer<'a> {
     index: usize,
     line: u32,
     string_table: &'a mut StringTable,
-    tracing: TracingConfig,
     logger: &'a Logger<'a>,
 }
 
@@ -217,14 +190,9 @@ impl<'a> Lexer<'a> {
             index: 0,
             end_offset,
             line: 1,
-            tracing: TracingConfig::Off,
             string_table,
             logger,
         })
-    }
-
-    pub fn set_tracing(&mut self, config: TracingConfig) {
-        self.tracing = config;
     }
 
     /// Returns the line in the source code on which the lexer cursor is currently
@@ -286,7 +254,6 @@ impl<'a> Lexer<'a> {
     }
 
     fn consume_line_comment(&mut self) {
-        trace!(self);
         let mut branch = LexerBranch::from(self);
         if branch.next_if_word("//") {
             while let Some(c) = branch.next() {
@@ -305,7 +272,6 @@ impl<'a> Lexer<'a> {
     }
 
     fn consume_block_comment(&mut self) {
-        trace!(self);
         let mut branch = LexerBranch::from(self);
         if branch.next_if_word("/*") {
             while !branch.next_if_word("*/") {
@@ -322,7 +288,6 @@ impl<'a> Lexer<'a> {
     }
 
     fn consume_literal(&mut self) -> LexerResult<Option<Token>> {
-        trace!(self);
         match self.consume_integer()? {
             Some(i) => Ok(Some(i)),
             None => match self.consume_string_literal()? {
@@ -333,7 +298,6 @@ impl<'a> Lexer<'a> {
     }
 
     fn consume_whitespace(&mut self) {
-        trace!(self);
         while self.index < self.chars.len() && self.chars[self.index].is_whitespace() {
             if self.chars[self.index] == '\n' {
                 self.line += 1;
@@ -343,7 +307,6 @@ impl<'a> Lexer<'a> {
     }
 
     fn consume_string_literal(&mut self) -> LexerResult<Option<Token>> {
-        trace!(self);
         let mut branch = LexerBranch::from(self);
 
         if branch.next_if('"') {
@@ -412,7 +375,6 @@ impl<'a> Lexer<'a> {
     }
 
     fn consume_integer(&mut self) -> LexerResult<Option<Token>> {
-        trace!(self);
         let mut branch = LexerBranch::from(self);
 
         if !branch.peek().map_or(false, |c| c.is_numeric()) {
@@ -491,7 +453,6 @@ impl<'a> Lexer<'a> {
     }
 
     fn consume_operator(&mut self) -> LexerResult<Option<Token>> {
-        trace!(self);
         let line = self.line;
         let mut branch = LexerBranch::from(self);
         let mut operators = vec![
@@ -549,7 +510,6 @@ impl<'a> Lexer<'a> {
     }
 
     fn consume_identifier(&mut self) -> LexerResult<Option<Token>> {
-        trace!(self);
         let mut branch = LexerBranch::from(self);
         if branch
             .peek()
@@ -583,7 +543,6 @@ impl<'a> Lexer<'a> {
     }
 
     fn consume_boolean(&mut self) -> LexerResult<Option<Token>> {
-        trace!(self);
         let mut branch = LexerBranch::from(self);
 
         const TRUE: &str = "true";
@@ -614,8 +573,6 @@ impl<'a> Lexer<'a> {
     }
 
     fn consume_keyword(&mut self) -> LexerResult<Option<Token>> {
-        trace!(self);
-
         let mut branch = LexerBranch::from(self);
 
         let keywords = [
@@ -665,7 +622,6 @@ impl<'a> Lexer<'a> {
     }
 
     fn consume_primitive(&mut self) -> LexerResult<Option<Token>> {
-        trace!(self);
         let mut branch = LexerBranch::from(self);
 
         let primitives = [

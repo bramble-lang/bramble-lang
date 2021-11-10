@@ -7,7 +7,7 @@ use crate::compiler::ast::statement::*;
 use crate::compiler::ast::structdef::*;
 use crate::compiler::ast::Expression;
 use crate::compiler::ast::Extern;
-use crate::diagnostics::{config::TracingConfig, Diag, DiagRecorder};
+use crate::diagnostics::Diag;
 
 use super::{super::node::Node, super::parameter::Parameter, Context};
 
@@ -31,7 +31,6 @@ where
 {
     pub name: String,
     f: F,
-    diag: DiagRecorder<A, B>,
     ph: PhantomData<A>,
     ph2: PhantomData<B>,
 }
@@ -42,20 +41,19 @@ where
     F: FnMut(&dyn Node<A>) -> B,
     B: Diag + Context,
 {
-    pub fn new(name: &str, f: F, config: TracingConfig) -> MapPreOrder<A, B, F> {
+    pub fn new(name: &str, f: F) -> MapPreOrder<A, B, F> {
         MapPreOrder {
             name: name.into(),
             f,
-            diag: DiagRecorder::new(name, config),
             ph: PhantomData,
             ph2: PhantomData,
         }
     }
 
     fn transform(&mut self, n: &dyn Node<A>) -> B {
-        self.diag.begin(n.context());
+        //self.diag.begin(n.context());
         let b = (self.f)(n);
-        self.diag.end(&b);
+        //self.diag.end(&b);
         b
     }
 
@@ -66,9 +64,9 @@ where
     of the new nodes.
     */
     pub fn apply(&mut self, m: &Module<A>) -> Module<B> {
-        self.diag.start_trace();
+        //self.diag.start_trace();
         let m = self.for_module(m);
-        self.diag.end_trace();
+        //self.diag.end_trace();
         m
     }
 
@@ -462,7 +460,7 @@ mod test {
             convert(n)
         };
 
-        let mut mp = MapPreOrder::new("test", f, TracingConfig::Off);
+        let mut mp = MapPreOrder::new("test", f);
         let module2 = mp.apply(&module1);
 
         assert_eq!(*module2.context(), 2i64);
@@ -484,7 +482,7 @@ mod test {
             convert(n)
         };
 
-        let mut mp = MapPreOrder::new("test", f, TracingConfig::Off);
+        let mut mp = MapPreOrder::new("test", f);
         let module2 = mp.apply(&module1);
 
         assert_eq!(*module2.context(), 2i64);
@@ -532,7 +530,7 @@ mod test {
             count += 1;
             format!("{}", n.context())
         };
-        let mut mapper = MapPreOrder::new("test", f, TracingConfig::Off);
+        let mut mapper = MapPreOrder::new("test", f);
 
         let m_prime = mapper.apply(&m);
 

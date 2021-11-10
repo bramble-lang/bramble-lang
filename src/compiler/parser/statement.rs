@@ -1,10 +1,4 @@
-use super::{
-    parser::{ENABLE_TRACING, TRACE_END, TRACE_START},
-    Parser, ParserResult,
-};
-use std::sync::atomic::Ordering;
-use stdext::function_name;
-
+use super::{Parser, ParserResult};
 use crate::{
     compiler::{
         ast::*,
@@ -13,7 +7,7 @@ use crate::{
         source::SourceIr,
         CompilerError,
     },
-    trace, StringId,
+    StringId,
 };
 
 use super::{tokenstream::TokenStream, ParserContext, ParserError};
@@ -38,7 +32,6 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Statement<ParserContext>> {
-        trace!(stream);
         let start_index = stream.index();
         let must_have_semicolon = stream.test_if_one_of(vec![Lex::Let, Lex::Mut]);
         let stm = match self.let_bind(stream)? {
@@ -93,7 +86,6 @@ impl<'a> Parser<'a> {
     }
 
     fn let_bind(&self, stream: &mut TokenStream) -> ParserResult<Bind<ParserContext>> {
-        trace!(stream);
         match stream.next_if(&Lex::Let) {
             Some(let_tok) => {
                 let is_mutable = stream.next_if(&Lex::Mut).is_some();
@@ -135,7 +127,6 @@ impl<'a> Parser<'a> {
     }
 
     fn mutate(&self, stream: &mut TokenStream) -> ParserResult<Mutate<ParserContext>> {
-        trace!(stream);
         match stream.next_ifn(vec![
             Lex::Mut,
             Lex::Identifier(StringId::new()),
@@ -161,7 +152,6 @@ impl<'a> Parser<'a> {
     }
 
     fn co_init(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
-        trace!(stream);
         match stream.next_if(&Lex::Init) {
             Some(init_tok) => match self.path(stream)? {
                 Some((path, path_ctx)) => self
@@ -193,7 +183,6 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Return<ParserContext>> {
-        trace!(stream);
         Ok(match stream.next_if(&Lex::Return) {
             Some(token) => {
                 let exp = self.expression(stream)?;
@@ -212,7 +201,6 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Statement<ParserContext>> {
-        trace!(stream);
         Ok(match stream.next_if(&Lex::YieldReturn) {
             Some(token) => {
                 let exp = self.expression(stream)?;
