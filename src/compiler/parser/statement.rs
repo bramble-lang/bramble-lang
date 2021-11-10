@@ -6,7 +6,13 @@ use std::sync::atomic::Ordering;
 use stdext::function_name;
 
 use crate::{
-    compiler::{ast::*, diagnostics::Event, lexer::tokens::Lex, source::SourceIr, CompilerError},
+    compiler::{
+        ast::*,
+        diagnostics::{View, ViewErr},
+        lexer::tokens::Lex,
+        source::SourceIr,
+        CompilerError,
+    },
     trace, StringId,
 };
 
@@ -73,31 +79,17 @@ impl<'a> Parser<'a> {
                 Ok(None)
             }
         }
-        .map(|ok| {
-            ok.map(|v| {
-                let msg = match &v {
-                    Statement::Bind(..) => "Statement Bind",
-                    Statement::Expression(..) => "Statement Expression",
-                    Statement::Mutate(..) => "Statement Mutate",
-                    Statement::Return(..) => "Statement Return",
-                    Statement::YieldReturn(..) => "Statement Yield Return",
-                };
-                self.logger.write(Event::<ParserError> {
-                    stage: "parser",
-                    input: v.span(),
-                    msg: Ok(msg),
-                });
-                v
-            })
+        .view(|v| {
+            let msg = match &v {
+                Statement::Bind(..) => "Statement Bind",
+                Statement::Expression(..) => "Statement Expression",
+                Statement::Mutate(..) => "Statement Mutate",
+                Statement::Return(..) => "Statement Return",
+                Statement::YieldReturn(..) => "Statement Yield Return",
+            };
+            self.record(v.span(), Ok(msg))
         })
-        .map_err(|err| {
-            self.logger.write(Event::<ParserError> {
-                stage: "parser",
-                input: err.span(),
-                msg: Err(&err),
-            });
-            err
-        })
+        .view_err(|err| self.record(err.span(), Err(&err)))
     }
 
     fn let_bind(&self, stream: &mut TokenStream) -> ParserResult<Bind<ParserContext>> {
@@ -111,14 +103,7 @@ impl<'a> Parser<'a> {
                         let_tok.span(),
                         ParserError::ExpectedIdDeclAfterLet,
                     ))
-                    .map_err(|err| {
-                        self.logger.write(Event::<ParserError> {
-                            stage: "parser",
-                            input: err.span(),
-                            msg: Err(&err),
-                        });
-                        err
-                    })?;
+                    .view_err(|err| self.record(err.span(), Err(&err)))?;
                 stream.next_must_be(&Lex::Assign)?;
 
                 let exp = match self.co_init(stream)? {
@@ -129,14 +114,7 @@ impl<'a> Parser<'a> {
                             let_tok.span(),
                             ParserError::ExpectedExpressionOnRhs,
                         ))
-                        .map_err(|err| {
-                            self.logger.write(Event::<ParserError> {
-                                stage: "parser",
-                                input: err.span(),
-                                msg: Err(&err),
-                            });
-                            err
-                        })?,
+                        .view_err(|err| self.record(err.span(), Err(&err)))?,
                 };
                 let ctx = exp.context().join(let_tok.to_ctx());
 
@@ -149,24 +127,8 @@ impl<'a> Parser<'a> {
                         ParserError::ExpectedTypeInIdDecl,
                     )),
                 }
-                .map(|ok| {
-                    ok.map(|v| {
-                        self.logger.write(Event::<ParserError> {
-                            stage: "parser",
-                            input: v.span(),
-                            msg: Ok("Let Binding"),
-                        });
-                        v
-                    })
-                })
-                .map_err(|err| {
-                    self.logger.write(Event::<ParserError> {
-                        stage: "parser",
-                        input: err.span(),
-                        msg: Err(&err),
-                    });
-                    err
-                })
+                .view(|v| self.record(v.span(), Ok("Let Binding")))
+                .view_err(|err| self.record(err.span(), Err(&err)))
             }
             None => Ok(None),
         }
@@ -191,24 +153,9 @@ impl<'a> Parser<'a> {
                         tokens[2].span(),
                         ParserError::ExpectedExpressionOnRhs,
                     ))
-                    .map_err(|err| {
-                        self.logger.write(Event::<ParserError> {
-                            stage: "parser",
-                            input: err.span(),
-                            msg: Err(&err),
-                        });
-                        err
-                    })?;
-                Ok(Some(Mutate::new(tokens[0].to_ctx(), id, exp))).map(|ok| {
-                    ok.map(|v| {
-                        self.logger.write(Event::<ParserError> {
-                            stage: "parser",
-                            input: v.span(),
-                            msg: Ok("Mutate"),
-                        });
-                        v
-                    })
-                })
+                    .view_err(|err| self.record(err.span(), Err(&err)))?;
+                Ok(Some(Mutate::new(tokens[0].to_ctx(), id, exp)))
+                    .view(|v| self.record(v.span(), Ok("Mutate")))
             }
         }
     }
@@ -238,24 +185,8 @@ impl<'a> Parser<'a> {
             },
             _ => Ok(None),
         }
-        .map(|ok| {
-            ok.map(|v| {
-                self.logger.write(Event::<ParserError> {
-                    stage: "parser",
-                    input: v.span(),
-                    msg: Ok("Coroutine Init"),
-                });
-                v
-            })
-        })
-        .map_err(|err| {
-            self.logger.write(Event::<ParserError> {
-                stage: "parser",
-                input: err.span(),
-                msg: Err(&err),
-            });
-            err
-        })
+        .view(|v| self.record(v.span(), Ok("Coroutine Init")))
+        .view_err(|err| self.record(err.span(), Err(&err)))
     }
 
     pub(super) fn return_stmt(
@@ -274,16 +205,7 @@ impl<'a> Parser<'a> {
             }
             _ => None,
         })
-        .map(|ok| {
-            ok.map(|v| {
-                self.logger.write(Event::<ParserError> {
-                    stage: "parser",
-                    input: v.span(),
-                    msg: Ok("Return"),
-                });
-                v
-            })
-        })
+        .view(|v| self.record(v.span(), Ok("Return")))
     }
 
     fn yield_return_stmt(
@@ -303,15 +225,6 @@ impl<'a> Parser<'a> {
             }
             _ => None,
         })
-        .map(|ok| {
-            ok.map(|v| {
-                self.logger.write(Event::<ParserError> {
-                    stage: "parser",
-                    input: v.span(),
-                    msg: Ok("Yield Return"),
-                });
-                v
-            })
-        })
+        .view(|v| self.record(v.span(), Ok("Yield Return")))
     }
 }

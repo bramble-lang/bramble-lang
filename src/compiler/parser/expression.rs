@@ -9,7 +9,7 @@ use super::{tokenstream::TokenStream, ParserContext, ParserError};
 use crate::{
     compiler::{
         ast::*,
-        diagnostics::Event,
+        diagnostics::{View, ViewErr},
         lexer::tokens::{Lex, Token},
         source::SourceIr,
         CompilerError,
@@ -202,16 +202,8 @@ impl<'a> Parser<'a> {
                     .to_ctx()
                     .join(lbrace.to_ctx());
 
-                Ok(Some(Expression::ExpressionBlock(ctx, stmts, final_exp))).map(|ok| {
-                    ok.map(|v| {
-                        self.logger.write(Event::<ParserError> {
-                            stage: "parser",
-                            input: v.span(),
-                            msg: Ok("Expression Block"),
-                        });
-                        v
-                    })
-                })
+                Ok(Some(Expression::ExpressionBlock(ctx, stmts, final_exp)))
+                    .view(|v| self.record(v.span(), Ok("Expression Block")))
             }
             None => Ok(None),
         }
@@ -279,34 +271,11 @@ impl<'a> Parser<'a> {
                             op.span(),
                             ParserError::ExpectedExprAfter(op.sym.clone()),
                         ))
-                        .map_err(|err| {
-                            self.logger.write(Event::<ParserError> {
-                                stage: "parser",
-                                input: err.span(),
-                                msg: Err(&err),
-                            });
-                            err
-                        })?;
+                        .view_err(|err| self.record(err.span(), Err(&err)))?;
 
                     Expression::binary_op(&op.sym, Box::new(left), Box::new(right))
-                        .map(|ok| {
-                            ok.map(|v| {
-                                self.logger.write(Event::<ParserError> {
-                                    stage: "parser",
-                                    input: v.span(),
-                                    msg: Ok(&op.sym.to_string()),
-                                });
-                                v
-                            })
-                        })
-                        .map_err(|err| {
-                            self.logger.write(Event::<ParserError> {
-                                stage: "parser",
-                                input: err.span(),
-                                msg: Err(&err),
-                            });
-                            err
-                        })
+                        .view(|v| self.record(v.span(), Ok(&op.sym.to_string())))
+                        .view_err(|err| self.record(err.span(), Err(&err)))
                 }
                 None => Ok(Some(left)),
             },
@@ -327,38 +296,17 @@ impl<'a> Parser<'a> {
                         op.span(),
                         ParserError::ExpectedTermAfter(op.sym.clone()),
                     ))
-                    .map_err(|err| {
-                        self.logger.write(Event::<ParserError> {
-                            stage: "parser",
-                            input: err.span(),
-                            msg: Err(&err),
-                        });
-                        err
-                    })?;
+                    .view_err(|err| self.record(err.span(), Err(&err)))?;
                 Expression::unary_op(op.to_ctx(), &op.sym, Box::new(factor))
-                    .map(|ok| {
+                    .view(|v| {
                         let msg = if op.sym == Lex::Minus {
                             "Arithmetic Negate"
                         } else {
                             "Boolean Negate"
                         };
-                        ok.map(|v| {
-                            self.logger.write(Event::<ParserError> {
-                                stage: "parser",
-                                input: v.span(),
-                                msg: Ok(msg),
-                            });
-                            v
-                        })
+                        self.record(v.span(), Ok(msg))
                     })
-                    .map_err(|err| {
-                        self.logger.write(Event::<ParserError> {
-                            stage: "parser",
-                            input: err.span(),
-                            msg: Err(&err),
-                        });
-                        err
-                    })
+                    .view_err(|err| self.record(err.span(), Err(&err)))
             }
             None => self.member_access(stream),
         }
@@ -385,26 +333,12 @@ impl<'a> Parser<'a> {
                                     member,
                                 )
                             })
+                            .view(|v| self.record(v.span(), Ok("Member Access")))
                             .ok_or(CompilerError::new(
                                 token.span(),
                                 ParserError::MemberAccessExpectedField,
                             ))
-                            .map(|v| {
-                                self.logger.write(Event::<ParserError> {
-                                    stage: "parser",
-                                    input: v.span(),
-                                    msg: Ok("Member Access"),
-                                });
-                                v
-                            })
-                            .map_err(|err| {
-                                self.logger.write(Event::<ParserError> {
-                                    stage: "parser",
-                                    input: err.span(),
-                                    msg: Err(&err),
-                                });
-                                err
-                            })?,
+                            .view_err(|err| self.record(err.span(), Err(&err)))?,
                         Lex::LBracket => self
                             .expression(stream)?
                             .ok_or(CompilerError::new(
@@ -421,21 +355,11 @@ impl<'a> Parser<'a> {
                                 })
                             })
                             .map(|v| {
-                                self.logger.write(Event::<ParserError> {
-                                    stage: "parser",
-                                    input: v.span(),
-                                    msg: Ok("Array At"),
-                                });
+                                // TODO: can I make this a view?
+                                self.record(v.span(), Ok("Array At"));
                                 v
                             })
-                            .map_err(|err| {
-                                self.logger.write(Event::<ParserError> {
-                                    stage: "parser",
-                                    input: err.span(),
-                                    msg: Err(&err),
-                                });
-                                err
-                            })?,
+                            .view_err(|err| self.record(err.span(), Err(&err)))?,
                         _ => {
                             return err!(
                                 token.span(),
@@ -444,14 +368,7 @@ impl<'a> Parser<'a> {
                                     Some(token.sym.clone())
                                 )
                             )
-                            .map_err(|err| {
-                                self.logger.write(Event::<ParserError> {
-                                    stage: "parser",
-                                    input: err.span(),
-                                    msg: Err(&err),
-                                });
-                                err
-                            });
+                            .view_err(|err| self.record(err.span(), Err(&err)));
                         }
                     };
                 }
@@ -481,16 +398,7 @@ impl<'a> Parser<'a> {
                     *exp.get_context_mut() = ctx;
                 });
 
-                Ok(exp).map(|ok| {
-                    ok.map(|v| {
-                        self.logger.write(Event::<ParserError> {
-                            stage: "parser",
-                            input: v.span(),
-                            msg: Ok("Expression"),
-                        });
-                        v
-                    })
-                })
+                Ok(exp).view(|v| self.record(v.span(), Ok("Expression")))
             }
             _ => self
                 .if_expression(stream)
@@ -517,14 +425,7 @@ impl<'a> Parser<'a> {
                         if_tok.span(),
                         ParserError::IfExpectedConditional,
                     ))
-                    .map_err(|err| {
-                        self.logger.write(Event::<ParserError> {
-                            stage: "parser",
-                            input: err.span(),
-                            msg: Err(&err),
-                        });
-                        err
-                    })?;
+                    .view_err(|err| self.record(err.span(), Err(&err)))?;
                 stream.next_must_be(&Lex::RParen)?;
 
                 let if_arm = self
@@ -533,14 +434,7 @@ impl<'a> Parser<'a> {
                         if_tok.span(),
                         ParserError::IfTrueArmMissingExpr,
                     ))
-                    .map_err(|err| {
-                        self.logger.write(Event::<ParserError> {
-                            stage: "parser",
-                            input: err.span(),
-                            msg: Err(&err),
-                        });
-                        err
-                    })?;
+                    .view_err(|err| self.record(err.span(), Err(&err)))?;
 
                 // check for `else if`
                 let else_arm = match stream.next_if(&Lex::Else) {
@@ -555,14 +449,7 @@ impl<'a> Parser<'a> {
                                         span,
                                         ParserError::IfElseExpectedIfExpr,
                                     ))
-                                    .map_err(|err| {
-                                        self.logger.write(Event::<ParserError> {
-                                            stage: "parser",
-                                            input: err.span(),
-                                            msg: Err(&err),
-                                        });
-                                        err
-                                    })?,
+                                    .view_err(|err| self.record(err.span(), Err(&err)))?,
                             )
                         }
                         _ => {
@@ -572,14 +459,7 @@ impl<'a> Parser<'a> {
                                     if_tok.span(),
                                     ParserError::IfFalseArmMissingExpr,
                                 ))
-                                .map_err(|err| {
-                                    self.logger.write(Event::<ParserError> {
-                                        stage: "parser",
-                                        input: err.span(),
-                                        msg: Err(&err),
-                                    });
-                                    err
-                                })?;
+                                .view_err(|err| self.record(err.span(), Err(&err)))?;
                             Some(false_arm)
                         }
                     },
@@ -600,16 +480,7 @@ impl<'a> Parser<'a> {
             }
             _ => None,
         })
-        .map(|ok| {
-            ok.map(|v| {
-                self.logger.write(Event::<ParserError> {
-                    stage: "parser",
-                    input: v.span(),
-                    msg: Ok("If Expression"),
-                });
-                v
-            })
-        })
+        .view(|v| self.record(v.span(), Ok("If Expression")))
     }
 
     pub(super) fn while_expression(
@@ -626,14 +497,7 @@ impl<'a> Parser<'a> {
                         whl.span(),
                         ParserError::WhileExpectedConditional,
                     ))
-                    .map_err(|err| {
-                        self.logger.write(Event::<ParserError> {
-                            stage: "parser",
-                            input: err.span(),
-                            msg: Err(&err),
-                        });
-                        err
-                    })?;
+                    .view_err(|err| self.record(err.span(), Err(&err)))?;
                 stream.next_must_be(&Lex::RParen)?;
 
                 self.expression_block(stream)?
@@ -648,24 +512,8 @@ impl<'a> Parser<'a> {
             }
             _ => Ok(None),
         }
-        .map(|ok| {
-            ok.map(|v| {
-                self.logger.write(Event::<ParserError> {
-                    stage: "parser",
-                    input: v.span(),
-                    msg: Ok("While"),
-                });
-                v
-            })
-        })
-        .map_err(|err| {
-            self.logger.write(Event::<ParserError> {
-                stage: "parser",
-                input: err.span(),
-                msg: Err(&err),
-            });
-            err
-        })
+        .view(|v| self.record(v.span(), Ok("While")))
+        .view_err(|err| self.record(err.span(), Err(&err)))
     }
 
     pub(super) fn function_call_or_variable(
@@ -702,31 +550,17 @@ impl<'a> Parser<'a> {
             },
             _ => Ok(None),
         }
-        .map(|ok| {
-            ok.map(|v| {
-                let msg = match &v {
-                    Expression::Identifier(..) => "Identifier",
-                    Expression::Path(..) => "Path",
-                    Expression::StructExpression(..) => "Struct Expression",
-                    Expression::RoutineCall(..) => "Routine Call",
-                    _ => panic!("Unexpected Expression variant"),
-                };
-                self.logger.write(Event::<ParserError> {
-                    stage: "parser",
-                    input: v.span(),
-                    msg: Ok(msg),
-                });
-                v
-            })
+        .view(|v| {
+            let msg = match &v {
+                Expression::Identifier(..) => "Identifier",
+                Expression::Path(..) => "Path",
+                Expression::StructExpression(..) => "Struct Expression",
+                Expression::RoutineCall(..) => "Routine Call",
+                _ => panic!("Unexpected Expression variant"),
+            };
+            self.record(v.span(), Ok(msg))
         })
-        .map_err(|err| {
-            self.logger.write(Event::<ParserError> {
-                stage: "parser",
-                input: err.span(),
-                msg: Err(&err),
-            });
-            err
-        })
+        .view_err(|err| self.record(err.span(), Err(&err)))
     }
 
     pub(super) fn co_yield(
@@ -749,24 +583,8 @@ impl<'a> Parser<'a> {
             }
             None => Ok(None),
         }
-        .map(|ok| {
-            ok.map(|v| {
-                self.logger.write(Event::<ParserError> {
-                    stage: "parser",
-                    input: v.span(),
-                    msg: Ok("Yield"),
-                });
-                v
-            })
-        })
-        .map_err(|err| {
-            self.logger.write(Event::<ParserError> {
-                stage: "parser",
-                input: err.span(),
-                msg: Err(&err),
-            });
-            err
-        })
+        .view(|v| self.record(v.span(), Ok("Yield")))
+        .view_err(|err| self.record(err.span(), Err(&err)))
     }
 
     pub(super) fn struct_expression_params(
@@ -785,14 +603,7 @@ impl<'a> Parser<'a> {
                             span,
                             ParserError::StructExpectedFieldExpr(field_name),
                         ))
-                        .map_err(|err| {
-                            self.logger.write(Event::<ParserError> {
-                                stage: "parser",
-                                input: err.span(),
-                                msg: Err(&err),
-                            });
-                            err
-                        })?;
+                        .view_err(|err| self.record(err.span(), Err(&err)))?;
                     params.push((field_name, field_value));
                     match stream.next_if(&Lex::Comma) {
                         Some(_) => {}
@@ -808,16 +619,7 @@ impl<'a> Parser<'a> {
             }
             _ => Ok(None),
         }
-        .map(|ok| {
-            ok.map(|v| {
-                self.logger.write(Event::<ParserError> {
-                    stage: "parser",
-                    input: v.1.span(),
-                    msg: Ok("Struct Expression Parameters"),
-                });
-                v
-            })
-        })
+        .view(|v| self.record(v.1.span(), Ok("Struct Expression Parameters")))
     }
 
     pub(super) fn array_expression(
@@ -842,17 +644,8 @@ impl<'a> Parser<'a> {
                 let ctx = lbracket.to_ctx().join(rbracket.to_ctx());
 
                 let len = elements.len();
-                Ok(Some(Expression::ArrayExpression(ctx, elements, len))).map(|ok| {
-                    ok.as_ref().map(|v| {
-                        self.logger.write(Event::<ParserError> {
-                            stage: "parser",
-                            input: v.span(),
-                            msg: Ok("Array Expression"),
-                        });
-                        v
-                    });
-                    ok
-                })
+                Ok(Some(Expression::ArrayExpression(ctx, elements, len)))
+                    .view(|v| self.record(v.span(), Ok("Array Expression")))
             }
             None => Ok(None),
         }
@@ -934,17 +727,7 @@ impl<'a> Parser<'a> {
             Some(t) => panic!("Unexpected token: {:?}", t),
             None => Ok(None),
         }
-        .map(|ok| {
-            ok.as_ref().map(|v| {
-                self.logger.write(Event::<ParserError> {
-                    stage: "parser",
-                    input: v.span(),
-                    msg: Ok("Number"),
-                });
-                v
-            });
-            ok
-        })
+        .view(|v| self.record(v.span(), Ok("Number")))
     }
 
     pub(super) fn boolean(
@@ -961,17 +744,7 @@ impl<'a> Parser<'a> {
             }) => Ok(Some(Expression::Boolean(ParserContext::new(l, span), b))),
             _ => Ok(None),
         }
-        .map(|ok| {
-            ok.as_ref().map(|v| {
-                self.logger.write(Event::<ParserError> {
-                    stage: "parser",
-                    input: v.span(),
-                    msg: Ok("Boolean"),
-                });
-                v
-            });
-            ok
-        })
+        .view(|v| self.record(v.span(), Ok("Boolean")))
     }
 
     pub(super) fn string_literal(
@@ -991,16 +764,6 @@ impl<'a> Parser<'a> {
             ))),
             _ => Ok(None),
         }
-        .map(|ok| {
-            ok.as_ref().map(|v| {
-                self.logger.write(Event::<ParserError> {
-                    stage: "parser",
-                    input: v.span(),
-                    msg: Ok("String"),
-                });
-                v
-            });
-            ok
-        })
+        .view(|v| self.record(v.span(), Ok("String")))
     }
 }

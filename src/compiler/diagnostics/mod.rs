@@ -16,8 +16,10 @@ use super::{CompilerDisplay, CompilerError, Span};
 
 mod logger;
 mod tests;
+mod view;
 
 pub use logger::Logger;
+pub use view::*;
 
 /// Defines a way for the [`Logger`] to write events that are emitted by the
 /// Compiler to the user.
