@@ -93,13 +93,7 @@ impl<'a> Parser<'a> {
                 msg: Ok(msg),
             });
         })
-        .view_err(|err| {
-            self.logger.write(Event::<ParserError> {
-                stage: "parser",
-                input: err.span(),
-                msg: Err(&err),
-            });
-        })
+        .view_err(|err| self.log(err.span(), Err(&err)))
     }
 
     fn let_bind(&self, stream: &mut TokenStream) -> ParserResult<Bind<ParserContext>> {
@@ -113,13 +107,7 @@ impl<'a> Parser<'a> {
                         let_tok.span(),
                         ParserError::ExpectedIdDeclAfterLet,
                     ))
-                    .view_err(|err| {
-                        self.logger.write(Event::<ParserError> {
-                            stage: "parser",
-                            input: err.span(),
-                            msg: Err(&err),
-                        });
-                    })?;
+                    .view_err(|err| self.log(err.span(), Err(&err)))?;
                 stream.next_must_be(&Lex::Assign)?;
 
                 let exp = match self.co_init(stream)? {
@@ -130,13 +118,7 @@ impl<'a> Parser<'a> {
                             let_tok.span(),
                             ParserError::ExpectedExpressionOnRhs,
                         ))
-                        .view_err(|err| {
-                            self.logger.write(Event::<ParserError> {
-                                stage: "parser",
-                                input: err.span(),
-                                msg: Err(&err),
-                            });
-                        })?,
+                        .view_err(|err| self.log(err.span(), Err(&err)))?,
                 };
                 let ctx = exp.context().join(let_tok.to_ctx());
 
@@ -156,13 +138,7 @@ impl<'a> Parser<'a> {
                         msg: Ok("Let Binding"),
                     });
                 })
-                .view_err(|err| {
-                    self.logger.write(Event::<ParserError> {
-                        stage: "parser",
-                        input: err.span(),
-                        msg: Err(&err),
-                    });
-                })
+                .view_err(|err| self.log(err.span(), Err(&err)))
             }
             None => Ok(None),
         }
@@ -187,13 +163,7 @@ impl<'a> Parser<'a> {
                         tokens[2].span(),
                         ParserError::ExpectedExpressionOnRhs,
                     ))
-                    .view_err(|err| {
-                        self.logger.write(Event::<ParserError> {
-                            stage: "parser",
-                            input: err.span(),
-                            msg: Err(&err),
-                        });
-                    })?;
+                    .view_err(|err| self.log(err.span(), Err(&err)))?;
                 Ok(Some(Mutate::new(tokens[0].to_ctx(), id, exp))).view(|v| {
                     self.logger.write(Event::<ParserError> {
                         stage: "parser",
@@ -237,13 +207,7 @@ impl<'a> Parser<'a> {
                 msg: Ok("Coroutine Init"),
             });
         })
-        .view_err(|err| {
-            self.logger.write(Event::<ParserError> {
-                stage: "parser",
-                input: err.span(),
-                msg: Err(&err),
-            });
-        })
+        .view_err(|err| self.log(err.span(), Err(&err)))
     }
 
     pub(super) fn return_stmt(

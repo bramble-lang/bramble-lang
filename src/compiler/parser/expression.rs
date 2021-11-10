@@ -276,13 +276,7 @@ impl<'a> Parser<'a> {
                             op.span(),
                             ParserError::ExpectedExprAfter(op.sym.clone()),
                         ))
-                        .view_err(|err| {
-                            self.logger.write(Event::<ParserError> {
-                                stage: "parser",
-                                input: err.span(),
-                                msg: Err(&err),
-                            });
-                        })?;
+                        .view_err(|err| self.log(err.span(), Err(&err)))?;
 
                     Expression::binary_op(&op.sym, Box::new(left), Box::new(right))
                         .view(|v| {
@@ -292,13 +286,7 @@ impl<'a> Parser<'a> {
                                 msg: Ok(&op.sym.to_string()),
                             });
                         })
-                        .view_err(|err| {
-                            self.logger.write(Event::<ParserError> {
-                                stage: "parser",
-                                input: err.span(),
-                                msg: Err(&err),
-                            });
-                        })
+                        .view_err(|err| self.log(err.span(), Err(&err)))
                 }
                 None => Ok(Some(left)),
             },
@@ -319,13 +307,7 @@ impl<'a> Parser<'a> {
                         op.span(),
                         ParserError::ExpectedTermAfter(op.sym.clone()),
                     ))
-                    .view_err(|err| {
-                        self.logger.write(Event::<ParserError> {
-                            stage: "parser",
-                            input: err.span(),
-                            msg: Err(&err),
-                        });
-                    })?;
+                    .view_err(|err| self.log(err.span(), Err(&err)))?;
                 Expression::unary_op(op.to_ctx(), &op.sym, Box::new(factor))
                     .view(|v| {
                         let msg = if op.sym == Lex::Minus {
@@ -339,13 +321,7 @@ impl<'a> Parser<'a> {
                             msg: Ok(msg),
                         });
                     })
-                    .view_err(|err| {
-                        self.logger.write(Event::<ParserError> {
-                            stage: "parser",
-                            input: err.span(),
-                            msg: Err(&err),
-                        });
-                    })
+                    .view_err(|err| self.log(err.span(), Err(&err)))
             }
             None => self.member_access(stream),
         }
@@ -383,13 +359,7 @@ impl<'a> Parser<'a> {
                                 token.span(),
                                 ParserError::MemberAccessExpectedField,
                             ))
-                            .view_err(|err| {
-                                self.logger.write(Event::<ParserError> {
-                                    stage: "parser",
-                                    input: err.span(),
-                                    msg: Err(&err),
-                                });
-                            })?,
+                            .view_err(|err| self.log(err.span(), Err(&err)))?,
                         Lex::LBracket => self
                             .expression(stream)?
                             .ok_or(CompilerError::new(
@@ -414,13 +384,7 @@ impl<'a> Parser<'a> {
                                 });
                                 v
                             })
-                            .view_err(|err| {
-                                self.logger.write(Event::<ParserError> {
-                                    stage: "parser",
-                                    input: err.span(),
-                                    msg: Err(&err),
-                                });
-                            })?,
+                            .view_err(|err| self.log(err.span(), Err(&err)))?,
                         _ => {
                             return err!(
                                 token.span(),
@@ -429,13 +393,7 @@ impl<'a> Parser<'a> {
                                     Some(token.sym.clone())
                                 )
                             )
-                            .view_err(|err| {
-                                self.logger.write(Event::<ParserError> {
-                                    stage: "parser",
-                                    input: err.span(),
-                                    msg: Err(&err),
-                                });
-                            });
+                            .view_err(|err| self.log(err.span(), Err(&err)));
                         }
                     };
                 }
@@ -498,13 +456,7 @@ impl<'a> Parser<'a> {
                         if_tok.span(),
                         ParserError::IfExpectedConditional,
                     ))
-                    .view_err(|err| {
-                        self.logger.write(Event::<ParserError> {
-                            stage: "parser",
-                            input: err.span(),
-                            msg: Err(&err),
-                        });
-                    })?;
+                    .view_err(|err| self.log(err.span(), Err(&err)))?;
                 stream.next_must_be(&Lex::RParen)?;
 
                 let if_arm = self
@@ -513,13 +465,7 @@ impl<'a> Parser<'a> {
                         if_tok.span(),
                         ParserError::IfTrueArmMissingExpr,
                     ))
-                    .view_err(|err| {
-                        self.logger.write(Event::<ParserError> {
-                            stage: "parser",
-                            input: err.span(),
-                            msg: Err(&err),
-                        });
-                    })?;
+                    .view_err(|err| self.log(err.span(), Err(&err)))?;
 
                 // check for `else if`
                 let else_arm = match stream.next_if(&Lex::Else) {
@@ -534,13 +480,7 @@ impl<'a> Parser<'a> {
                                         span,
                                         ParserError::IfElseExpectedIfExpr,
                                     ))
-                                    .view_err(|err| {
-                                        self.logger.write(Event::<ParserError> {
-                                            stage: "parser",
-                                            input: err.span(),
-                                            msg: Err(&err),
-                                        });
-                                    })?,
+                                    .view_err(|err| self.log(err.span(), Err(&err)))?,
                             )
                         }
                         _ => {
@@ -550,13 +490,7 @@ impl<'a> Parser<'a> {
                                     if_tok.span(),
                                     ParserError::IfFalseArmMissingExpr,
                                 ))
-                                .view_err(|err| {
-                                    self.logger.write(Event::<ParserError> {
-                                        stage: "parser",
-                                        input: err.span(),
-                                        msg: Err(&err),
-                                    });
-                                })?;
+                                .view_err(|err| self.log(err.span(), Err(&err)))?;
                             Some(false_arm)
                         }
                     },
@@ -600,13 +534,7 @@ impl<'a> Parser<'a> {
                         whl.span(),
                         ParserError::WhileExpectedConditional,
                     ))
-                    .view_err(|err| {
-                        self.logger.write(Event::<ParserError> {
-                            stage: "parser",
-                            input: err.span(),
-                            msg: Err(&err),
-                        });
-                    })?;
+                    .view_err(|err| self.log(err.span(), Err(&err)))?;
                 stream.next_must_be(&Lex::RParen)?;
 
                 self.expression_block(stream)?
@@ -628,13 +556,7 @@ impl<'a> Parser<'a> {
                 msg: Ok("While"),
             });
         })
-        .view_err(|err| {
-            self.logger.write(Event::<ParserError> {
-                stage: "parser",
-                input: err.span(),
-                msg: Err(&err),
-            });
-        })
+        .view_err(|err| self.log(err.span(), Err(&err)))
     }
 
     pub(super) fn function_call_or_variable(
@@ -685,13 +607,7 @@ impl<'a> Parser<'a> {
                 msg: Ok(msg),
             });
         })
-        .view_err(|err| {
-            self.logger.write(Event::<ParserError> {
-                stage: "parser",
-                input: err.span(),
-                msg: Err(&err),
-            });
-        })
+        .view_err(|err| self.log(err.span(), Err(&err)))
     }
 
     pub(super) fn co_yield(
@@ -721,13 +637,7 @@ impl<'a> Parser<'a> {
                 msg: Ok("Yield"),
             });
         })
-        .view_err(|err| {
-            self.logger.write(Event::<ParserError> {
-                stage: "parser",
-                input: err.span(),
-                msg: Err(&err),
-            });
-        })
+        .view_err(|err| self.log(err.span(), Err(&err)))
     }
 
     pub(super) fn struct_expression_params(
@@ -746,13 +656,7 @@ impl<'a> Parser<'a> {
                             span,
                             ParserError::StructExpectedFieldExpr(field_name),
                         ))
-                        .view_err(|err| {
-                            self.logger.write(Event::<ParserError> {
-                                stage: "parser",
-                                input: err.span(),
-                                msg: Err(&err),
-                            });
-                        })?;
+                        .view_err(|err| self.log(err.span(), Err(&err)))?;
                     params.push((field_name, field_value));
                     match stream.next_if(&Lex::Comma) {
                         Some(_) => {}

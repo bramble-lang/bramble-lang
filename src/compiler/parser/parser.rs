@@ -92,6 +92,14 @@ macro_rules! trace {
 }
 
 impl<'a> Parser<'a> {
+    pub(super) fn log(&self, span: Span, r: Result<&str, &CompilerError<ParserError>>) {
+        self.logger.write(Event {
+            stage: "parser",
+            input: span,
+            msg: r,
+        })
+    }
+
     pub fn parse(
         &self,
         name: StringId,
@@ -101,25 +109,13 @@ impl<'a> Parser<'a> {
         // give it span that covers the entire set of tokens
         let module_ctx = ctx_over_tokens(&tokens)
             .ok_or(CompilerError::new(Span::zero(), ParserError::EmptyProject))
-            .view_err(|err| {
-                self.logger.write(Event::<ParserError> {
-                    stage: "parser",
-                    input: err.span(),
-                    msg: Err(&err),
-                });
-            })?;
+            .view_err(|err| self.log(err.span(), Err(&err)))?;
         let mut module = Module::new(name, module_ctx);
 
         // Create the token stream.
         let mut stream = TokenStream::new(&tokens, self.logger)
             .ok_or(CompilerError::new(Span::zero(), ParserError::EmptyProject))
-            .view_err(|err| {
-                self.logger.write(Event::<ParserError> {
-                    stage: "parser",
-                    input: err.span(),
-                    msg: Err(&err),
-                });
-            })?;
+            .view_err(|err| self.log(err.span(), Err(&err)))?;
 
         while stream.peek().is_some() {
             let start_index = stream.index();
@@ -130,13 +126,7 @@ impl<'a> Parser<'a> {
                     stream.peek().unwrap().span(),
                     ParserError::Locked(stream.peek().map(|t| t.clone()))
                 )
-                .view_err(|err| {
-                    self.logger.write(Event::<ParserError> {
-                        stage: "parser",
-                        input: err.span(),
-                        msg: Err(&err),
-                    });
-                });
+                .view_err(|err| self.log(err.span(), Err(&err)));
             }
         }
 
@@ -175,14 +165,8 @@ impl<'a> Parser<'a> {
                         })
                     })
                 }
-                _ => err!(module.span(), ParserError::ModExpectedName).map_err(|err| {
-                    self.logger.write(Event::<ParserError> {
-                        stage: "parser",
-                        input: err.span(),
-                        msg: Err(&err),
-                    });
-                    err
-                }),
+                _ => err!(module.span(), ParserError::ModExpectedName)
+                    .view_err(|err| self.log(err.span(), Err(&err))),
             },
             None => Ok(None),
         }
@@ -250,15 +234,8 @@ impl<'a> Parser<'a> {
             Some(extern_tok) => match self.function_decl(stream, true)? {
                 Some((fn_ctx, fn_name, params, has_varargs, fn_type)) => {
                     if has_varargs && params.len() == 0 {
-                        return err!(fn_ctx.span(), ParserError::ExternInvalidVarArgs).view_err(
-                            |err| {
-                                self.logger.write(Event::<ParserError> {
-                                    stage: "parser",
-                                    input: err.span(),
-                                    msg: Err(&err),
-                                });
-                            },
-                        );
+                        return err!(fn_ctx.span(), ParserError::ExternInvalidVarArgs)
+                            .view_err(|err| self.log(err.span(), Err(&err)));
                     }
                     stream.next_must_be(&Lex::Semicolon)?;
                     Ok(Some(Extern::new(
@@ -268,25 +245,16 @@ impl<'a> Parser<'a> {
                         has_varargs,
                         fn_type,
                     )))
-                    .map(|ok| {
-                        ok.view(|v| {
-                            self.logger.write(Event::<ParserError> {
-                                stage: "parser",
-                                input: v.span(),
-                                msg: Ok("Extern Definition"),
-                            });
-                        })
-                    })
-                }
-                None => {
-                    err!(extern_tok.span(), ParserError::ExternExpectedFnDecl).view_err(|err| {
+                    .view(|v| {
                         self.logger.write(Event::<ParserError> {
                             stage: "parser",
-                            input: err.span(),
-                            msg: Err(&err),
+                            input: v.span(),
+                            msg: Ok("Extern Definition"),
                         });
                     })
                 }
+                None => err!(extern_tok.span(), ParserError::ExternExpectedFnDecl)
+                    .view_err(|err| self.log(err.span(), Err(&err))),
             },
             None => Ok(None),
         }
@@ -319,27 +287,15 @@ impl<'a> Parser<'a> {
                 });
             })
         })
-        .map_err(|err| {
-            self.logger.write(Event::<ParserError> {
-                stage: "parser",
-                input: err.span(),
-                msg: Err(&err),
-            });
-            err
-        })
+        .view_err(|err| self.log(err.span(), Err(&err)))
     }
 
     fn function_def(&self, stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserContext>> {
         let (fn_ctx, fn_name, params, fn_type) = match self.function_decl(stream, false)? {
             Some((ctx, name, params, is_variadic, ret_ty)) => {
                 if is_variadic {
-                    return err!(ctx.span(), ParserError::FnVarArgsNotAllowed).view_err(|err| {
-                        self.logger.write(Event::<ParserError> {
-                            stage: "parser",
-                            input: err.span(),
-                            msg: Err(&err),
-                        });
-                    });
+                    return err!(ctx.span(), ParserError::FnVarArgsNotAllowed)
+                        .view_err(|err| self.log(err.span(), Err(&err)));
                 }
                 (ctx, name, params, ret_ty)
             }
@@ -356,13 +312,7 @@ impl<'a> Parser<'a> {
                     fn_ctx.span(),
                     ParserError::FnExpectedReturn(stream.peek().map(|t| t.clone()))
                 )
-                .view_err(|err| {
-                    self.logger.write(Event::<ParserError> {
-                        stage: "parser",
-                        input: err.span(),
-                        msg: Err(&err),
-                    });
-                });
+                .view_err(|err| self.log(err.span(), Err(&err)));
             }
         }
         let ctx = stream.next_must_be(&Lex::RBrace)?.to_ctx().join(fn_ctx);
@@ -406,13 +356,7 @@ impl<'a> Parser<'a> {
                 fn_ctx.span(),
                 ParserError::FnExpectedIdentifierAfterFn,
             ))
-            .view_err(|err| {
-                self.logger.write(Event::<ParserError> {
-                    stage: "parser",
-                    input: err.span(),
-                    msg: Err(&err),
-                });
-            })?;
+            .view_err(|err| self.log(err.span(), Err(&err)))?;
         fn_ctx = fn_ctx.extend(fn_def_span);
 
         let (params, has_varargs, params_ctx) = self.fn_def_params(stream, allow_var_args)?;
@@ -424,13 +368,7 @@ impl<'a> Parser<'a> {
                     fn_ctx.span(),
                     ParserError::FnExpectedTypeAfterArrow,
                 ))
-                .view_err(|err| {
-                    self.logger.write(Event::<ParserError> {
-                        stage: "parser",
-                        input: err.span(),
-                        msg: Err(&err),
-                    })
-                })?
+                .view_err(|err| self.log(err.span(), Err(&err)))?
         } else {
             (Type::Unit, fn_ctx)
         };
@@ -459,23 +397,12 @@ impl<'a> Parser<'a> {
                 ctx.span(),
                 ParserError::CoExpectedIdentifierAfterCo,
             ))
-            .view_err(|err| {
-                self.logger.write(Event::<ParserError> {
-                    stage: "parser",
-                    input: err.span(),
-                    msg: Err(&err),
-                });
-            })?;
+            .view_err(|err| self.log(err.span(), Err(&err)))?;
         let (params, has_varargs, _) = self.fn_def_params(stream, false)?;
 
         if has_varargs {
-            return err!(ctx.span(), ParserError::FnVarArgsNotAllowed).view_err(|err| {
-                self.logger.write(Event::<ParserError> {
-                    stage: "parser",
-                    input: err.span(),
-                    msg: Err(&err),
-                });
-            });
+            return err!(ctx.span(), ParserError::FnVarArgsNotAllowed)
+                .view_err(|err| self.log(err.span(), Err(&err)));
         }
 
         let co_type = match stream.next_if(&Lex::LArrow) {
@@ -485,13 +412,7 @@ impl<'a> Parser<'a> {
                         t.span(),
                         ParserError::FnExpectedTypeAfterArrow,
                     ))
-                    .view_err(|err| {
-                        self.logger.write(Event::<ParserError> {
-                            stage: "parser",
-                            input: err.span(),
-                            msg: Err(&err),
-                        });
-                    })?
+                    .view_err(|err| self.log(err.span(), Err(&err)))?
                     .0
             }
             _ => Type::Unit,
@@ -508,13 +429,7 @@ impl<'a> Parser<'a> {
                     span,
                     ParserError::FnExpectedReturn(stream.peek().map(|t| t.clone()))
                 )
-                .view_err(|err| {
-                    self.logger.write(Event::<ParserError> {
-                        stage: "parser",
-                        input: err.span(),
-                        msg: Err(&err),
-                    });
-                });
+                .view_err(|err| self.log(err.span(), Err(&err)));
             }
         }
         let ctx = stream.next_must_be(&Lex::RBrace)?.to_ctx().join(ctx);
@@ -675,36 +590,30 @@ impl<'a> Parser<'a> {
         }
 
         while let Some(path_sep) = stream.next_if(&Lex::PathSeparator) {
-            let span =
-                match stream.next_if_one_of(vec![Lex::Identifier(StringId::new()), Lex::PathSuper])
-                {
-                    Some(Token {
-                        sym: Lex::PathSuper,
-                        span,
-                        ..
-                    }) => {
-                        path.push(Element::Super);
-                        span
-                    }
-                    Some(Token {
-                        sym: Lex::Identifier(id),
-                        span,
-                        ..
-                    }) => {
-                        path.push(Element::Id(id));
-                        span
-                    }
-                    _ => {
-                        return err!(path_sep.span(), ParserError::PathExpectedIdentifier)
-                            .view_err(|err| {
-                                self.logger.write(Event::<ParserError> {
-                                    stage: "parser",
-                                    input: err.span(),
-                                    msg: Err(&err),
-                                });
-                            });
-                    }
-                };
+            let span = match stream
+                .next_if_one_of(vec![Lex::Identifier(StringId::new()), Lex::PathSuper])
+            {
+                Some(Token {
+                    sym: Lex::PathSuper,
+                    span,
+                    ..
+                }) => {
+                    path.push(Element::Super);
+                    span
+                }
+                Some(Token {
+                    sym: Lex::Identifier(id),
+                    span,
+                    ..
+                }) => {
+                    path.push(Element::Id(id));
+                    span
+                }
+                _ => {
+                    return err!(path_sep.span(), ParserError::PathExpectedIdentifier)
+                        .view_err(|err| self.log(err.span(), Err(&err)));
+                }
+            };
             ctx = ctx.extend(span);
         }
 
@@ -800,13 +709,7 @@ impl<'a> Parser<'a> {
                         ctx.span(),
                         ParserError::ArrayDeclExpectedType,
                     ))
-                    .view_err(|err| {
-                        self.logger.write(Event::<ParserError> {
-                            stage: "parser",
-                            input: err.span(),
-                            msg: Err(&err),
-                        });
-                    })?;
+                    .view_err(|err| self.log(err.span(), Err(&err)))?;
                 stream.next_must_be(&Lex::Semicolon)?;
 
                 let len = self
@@ -815,13 +718,7 @@ impl<'a> Parser<'a> {
                         ctx.span(),
                         ParserError::ArrayDeclExpectedSize,
                     ))
-                    .view_err(|err| {
-                        self.logger.write(Event::<ParserError> {
-                            stage: "parser",
-                            input: err.span(),
-                            msg: Err(&err),
-                        });
-                    })?;
+                    .view_err(|err| self.log(err.span(), Err(&err)))?;
                 let len = match len {
                     Expression::U8(_, l) => l as usize,
                     Expression::U16(_, l) => l as usize,
@@ -864,13 +761,7 @@ impl<'a> Parser<'a> {
                         decl_tok[0].span(),
                         ParserError::IdDeclExpectedType,
                     ))
-                    .view_err(|err| {
-                        self.logger.write(Event::<ParserError> {
-                            stage: "parser",
-                            input: err.span(),
-                            msg: Err(&err),
-                        });
-                    })?;
+                    .view_err(|err| self.log(err.span(), Err(&err)))?;
                 let ctx = ctx.join(ty_ctx);
                 Ok(Some(Expression::IdentifierDeclare(ctx, id, ty))).view(|v| {
                     self.logger.write(Event::<ParserError> {
