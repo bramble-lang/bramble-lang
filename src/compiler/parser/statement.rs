@@ -51,7 +51,7 @@ impl<'a> Parser<'a> {
                 Some(semicolon) => {
                     let ctx = stm.context().join(semicolon.to_ctx());
                     *stm.get_context_mut() = ctx;
-                    Ok(Some(stm)) // TRACE
+                    Ok(Some(stm))
                 }
                 _ => {
                     if must_have_semicolon {
@@ -62,7 +62,6 @@ impl<'a> Parser<'a> {
                                 stream.peek().map(|x| x.sym.clone())
                             )
                         )
-                        // TRACE
                     } else {
                         stream.set_index(start_index);
                         Ok(None)
@@ -119,8 +118,8 @@ impl<'a> Parser<'a> {
                             msg: Err(&err),
                         });
                         err
-                    })?; // TRACE
-                stream.next_must_be(&Lex::Assign)?; // TRACE
+                    })?;
+                stream.next_must_be(&Lex::Assign)?;
 
                 let exp = match self.co_init(stream)? {
                     Some(co_init) => co_init,
@@ -137,18 +136,18 @@ impl<'a> Parser<'a> {
                                 msg: Err(&err),
                             });
                             err
-                        })?, // TRACE
+                        })?,
                 };
                 let ctx = exp.context().join(let_tok.to_ctx());
 
                 match id_decl {
                     Expression::IdentifierDeclare(_, id, ty) => {
                         Ok(Some(Bind::new(ctx, id, ty.clone(), is_mutable, exp)))
-                    } // TRACE
+                    }
                     _ => Err(CompilerError::new(
                         let_tok.span(),
                         ParserError::ExpectedTypeInIdDecl,
-                    )), // TRACE
+                    )),
                 }
                 .map(|ok| {
                     ok.map(|v| {
@@ -199,18 +198,17 @@ impl<'a> Parser<'a> {
                             msg: Err(&err),
                         });
                         err
-                    })?; // TRACE
-                Ok(Some(Mutate::new(tokens[0].to_ctx(), id, exp))) // TRACE
-                    .map(|ok| {
-                        ok.map(|v| {
-                            self.logger.write(Event::<ParserError> {
-                                stage: "parser",
-                                input: v.span(),
-                                msg: Ok("Mutate"),
-                            });
-                            v
-                        })
+                    })?;
+                Ok(Some(Mutate::new(tokens[0].to_ctx(), id, exp))).map(|ok| {
+                    ok.map(|v| {
+                        self.logger.write(Event::<ParserError> {
+                            stage: "parser",
+                            input: v.span(),
+                            msg: Ok("Mutate"),
+                        });
+                        v
                     })
+                })
             }
         }
     }
@@ -219,25 +217,24 @@ impl<'a> Parser<'a> {
         trace!(stream);
         match stream.next_if(&Lex::Init) {
             Some(init_tok) => match self.path(stream)? {
-                Some((path, path_ctx)) => {
-                    self.routine_call_params(stream)?
-                        .ok_or(CompilerError::new(
-                            path_ctx.span(),
-                            ParserError::ExpectedParams,
-                        ))
-                        .and_then(|(params, params_ctx)| {
-                            Ok(Some(Expression::RoutineCall(
-                                init_tok.to_ctx().join(params_ctx),
-                                RoutineCall::CoroutineInit,
-                                path,
-                                params,
-                            ))) // TRACE event
-                        })
-                }
+                Some((path, path_ctx)) => self
+                    .routine_call_params(stream)?
+                    .ok_or(CompilerError::new(
+                        path_ctx.span(),
+                        ParserError::ExpectedParams,
+                    ))
+                    .and_then(|(params, params_ctx)| {
+                        Ok(Some(Expression::RoutineCall(
+                            init_tok.to_ctx().join(params_ctx),
+                            RoutineCall::CoroutineInit,
+                            path,
+                            params,
+                        )))
+                    }),
                 None => Err(CompilerError::new(
                     init_tok.span(),
                     ParserError::ExpectedIdAfterInit,
-                )), // TRACE error
+                )),
             },
             _ => Ok(None),
         }
@@ -269,11 +266,11 @@ impl<'a> Parser<'a> {
         Ok(match stream.next_if(&Lex::Return) {
             Some(token) => {
                 let exp = self.expression(stream)?;
-                stream.next_must_be(&Lex::Semicolon)?; // TRACE error
+                stream.next_must_be(&Lex::Semicolon)?;
                 match exp {
                     Some(exp) => Some(Return::new(token.to_ctx(), Some(exp))),
                     None => Some(Return::new(token.to_ctx(), None)),
-                } // TRACE event
+                }
             }
             _ => None,
         })
@@ -297,12 +294,12 @@ impl<'a> Parser<'a> {
         Ok(match stream.next_if(&Lex::YieldReturn) {
             Some(token) => {
                 let exp = self.expression(stream)?;
-                stream.next_must_be(&Lex::Semicolon)?; // TRACE error
+                stream.next_must_be(&Lex::Semicolon)?;
                 let yret = match exp {
                     Some(exp) => YieldReturn::new(token.to_ctx(), Some(exp)),
                     None => YieldReturn::new(token.to_ctx(), None),
                 };
-                Some(Statement::YieldReturn(Box::new(yret))) // TRACE event
+                Some(Statement::YieldReturn(Box::new(yret)))
             }
             _ => None,
         })

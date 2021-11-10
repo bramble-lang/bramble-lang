@@ -68,7 +68,7 @@ impl Expression<ParserContext> {
         ctx: ParserContext,
         coroutine_value: Box<Self>,
     ) -> ParserResult<Expression<ParserContext>> {
-        Ok(Some(Expression::Yield(ctx, coroutine_value))) // TRACE event
+        Ok(Some(Expression::Yield(ctx, coroutine_value)))
     }
 
     pub fn unary_op(
@@ -88,9 +88,7 @@ impl Expression<ParserContext> {
                 operand,
             ))),
             _ => {
-                {
-                    err!(ctx.span(), ParserError::NotAUnaryOp(op.clone()))
-                } // TRACE event and error
+                err!(ctx.span(), ParserError::NotAUnaryOp(op.clone()))
             }
         }
     }
@@ -175,8 +173,8 @@ impl Expression<ParserContext> {
                 right,
             ))),
             _ => {
-                err!(ctx.span(), ParserError::NotABinaryOp(op.clone())) // TRACE error
-            } // TRACE event
+                err!(ctx.span(), ParserError::NotABinaryOp(op.clone()))
+            }
         }
     }
 }
@@ -200,11 +198,10 @@ impl<'a> Parser<'a> {
 
                 // Compute the span that goes from the `{` to the `}`
                 let ctx = stream
-                    .next_must_be(&Lex::RBrace)? // TRACE error
+                    .next_must_be(&Lex::RBrace)?
                     .to_ctx()
                     .join(lbrace.to_ctx());
 
-                // TRACE event
                 Ok(Some(Expression::ExpressionBlock(ctx, stmts, final_exp))).map(|ok| {
                     ok.map(|v| {
                         self.logger.write(Event::<ParserError> {
@@ -289,9 +286,8 @@ impl<'a> Parser<'a> {
                                 msg: Err(&err),
                             });
                             err
-                        })?; // TRACE error
+                        })?;
 
-                    // TRACE event
                     Expression::binary_op(&op.sym, Box::new(left), Box::new(right))
                         .map(|ok| {
                             ok.map(|v| {
@@ -338,8 +334,8 @@ impl<'a> Parser<'a> {
                             msg: Err(&err),
                         });
                         err
-                    })?; // TRACE error
-                Expression::unary_op(op.to_ctx(), &op.sym, Box::new(factor)) // TRACE event
+                    })?;
+                Expression::unary_op(op.to_ctx(), &op.sym, Box::new(factor))
                     .map(|ok| {
                         let msg = if op.sym == Lex::Minus {
                             "Arithmetic Negate"
@@ -388,7 +384,7 @@ impl<'a> Parser<'a> {
                                     Box::new(ma),
                                     member,
                                 )
-                            }) // TRACE event
+                            })
                             .ok_or(CompilerError::new(
                                 token.span(),
                                 ParserError::MemberAccessExpectedField,
@@ -408,22 +404,21 @@ impl<'a> Parser<'a> {
                                     msg: Err(&err),
                                 });
                                 err
-                            })?, // TRACE error
+                            })?,
                         Lex::LBracket => self
                             .expression(stream)?
                             .ok_or(CompilerError::new(
                                 token.span(),
                                 ParserError::IndexOpInvalidExpr,
-                            )) // TRACE error
+                            ))
                             .and_then(|index| {
-                                // TRACE error
                                 stream.next_must_be(&Lex::RBracket).map(|rbracket| {
                                     Expression::ArrayAt {
                                         context: ma.context().join(rbracket.to_ctx()),
                                         array: box ma,
                                         index: box index,
                                     }
-                                }) // TRACE event
+                                })
                             })
                             .map(|v| {
                                 self.logger.write(Event::<ParserError> {
@@ -456,7 +451,7 @@ impl<'a> Parser<'a> {
                                     msg: Err(&err),
                                 });
                                 err
-                            }); // TRACE error
+                            });
                         }
                     };
                 }
@@ -484,7 +479,7 @@ impl<'a> Parser<'a> {
                 exp.as_mut().map(|exp| {
                     let ctx = exp.context().join(ctx);
                     *exp.get_context_mut() = ctx;
-                }); // TRACE: Should this be recorded as an event?
+                });
 
                 Ok(exp).map(|ok| {
                     ok.map(|v| {
@@ -529,8 +524,8 @@ impl<'a> Parser<'a> {
                             msg: Err(&err),
                         });
                         err
-                    })?; // trace error
-                stream.next_must_be(&Lex::RParen)?; // trace error
+                    })?;
+                stream.next_must_be(&Lex::RParen)?;
 
                 let if_arm = self
                     .expression_block(stream)?
@@ -545,7 +540,7 @@ impl<'a> Parser<'a> {
                             msg: Err(&err),
                         });
                         err
-                    })?; // trace error
+                    })?;
 
                 // check for `else if`
                 let else_arm = match stream.next_if(&Lex::Else) {
@@ -568,7 +563,7 @@ impl<'a> Parser<'a> {
                                         });
                                         err
                                     })?,
-                            ) // trace error
+                            )
                         }
                         _ => {
                             let false_arm = self
@@ -584,7 +579,7 @@ impl<'a> Parser<'a> {
                                         msg: Err(&err),
                                     });
                                     err
-                                })?; // trace error
+                                })?;
                             Some(false_arm)
                         }
                     },
@@ -601,7 +596,7 @@ impl<'a> Parser<'a> {
                     cond: Box::new(cond),
                     if_arm: Box::new(if_arm),
                     else_arm: else_arm.map(|f| box f),
-                }) // trace event here
+                })
             }
             _ => None,
         })
@@ -624,7 +619,7 @@ impl<'a> Parser<'a> {
         trace!(stream);
         match stream.next_if(&Lex::While) {
             Some(whl) => {
-                stream.next_must_be(&Lex::LParen)?; // trace error
+                stream.next_must_be(&Lex::LParen)?;
                 let cond = self
                     .expression(stream)?
                     .ok_or(CompilerError::new(
@@ -638,8 +633,8 @@ impl<'a> Parser<'a> {
                             msg: Err(&err),
                         });
                         err
-                    })?; // trace error
-                stream.next_must_be(&Lex::RParen)?; // trace error
+                    })?;
+                stream.next_must_be(&Lex::RParen)?;
 
                 self.expression_block(stream)?
                     .ok_or(CompilerError::new(whl.span, ParserError::WhileMissingBody))
@@ -648,7 +643,7 @@ impl<'a> Parser<'a> {
                             context: whl.to_ctx().join(*body.context()),
                             cond: Box::new(cond),
                             body: Box::new(body),
-                        }) // trace event
+                        })
                     })
             }
             _ => Ok(None),
@@ -681,7 +676,6 @@ impl<'a> Parser<'a> {
         match self.path(stream)? {
             Some((path, call_ctx)) => match self.routine_call_params(stream)? {
                 Some((params, params_ctx)) => Ok(Some(Expression::RoutineCall(
-                    // trace event here
                     call_ctx.join(params_ctx),
                     RoutineCall::Function,
                     path,
@@ -689,20 +683,17 @@ impl<'a> Parser<'a> {
                 ))),
                 None => match self.struct_expression_params(stream)? {
                     Some((params, params_ctx)) => Ok(Some(Expression::StructExpression(
-                        // trace event here
                         call_ctx.join(params_ctx),
                         path,
                         params.clone(),
                     ))),
                     None => {
                         if path.len() > 1 {
-                            Ok(Some(Expression::Path(call_ctx, path))) // trace event here
+                            Ok(Some(Expression::Path(call_ctx, path)))
                         } else {
                             if let Element::Id(sid) = path.last().unwrap() {
                                 Ok(Some(Expression::Identifier(call_ctx, *sid)))
-                            // trace event here
                             } else {
-                                // trace error here
                                 err!(call_ctx.span(), ParserError::PathExpectedIdentifier)
                             }
                         }
@@ -749,10 +740,10 @@ impl<'a> Parser<'a> {
                 match self.expression(stream)? {
                     Some(coroutine) => {
                         let ctx = ctx.join(*coroutine.context());
-                        Expression::new_yield(ctx, Box::new(coroutine)) // trace event here
+                        Expression::new_yield(ctx, Box::new(coroutine))
                     }
                     None => {
-                        err!(ctx.span(), ParserError::YieldExpectedIdentifier) // trace error here
+                        err!(ctx.span(), ParserError::YieldExpectedIdentifier)
                     }
                 }
             }
@@ -792,7 +783,7 @@ impl<'a> Parser<'a> {
                         .expression(stream)?
                         .ok_or(CompilerError::new(
                             span,
-                            ParserError::StructExpectedFieldExpr(field_name), // trace error here
+                            ParserError::StructExpectedFieldExpr(field_name),
                         ))
                         .map_err(|err| {
                             self.logger.write(Event::<ParserError> {
@@ -810,7 +801,7 @@ impl<'a> Parser<'a> {
                 }
 
                 let ctx = stream
-                    .next_must_be(&Lex::RBrace)? // tracer error here
+                    .next_must_be(&Lex::RBrace)?
                     .to_ctx()
                     .join(lbrace.to_ctx());
                 Ok(Some((params, ctx)))
