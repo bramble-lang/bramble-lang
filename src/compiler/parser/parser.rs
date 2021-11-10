@@ -1,20 +1,12 @@
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::{AtomicUsize, Ordering};
-
-use stdext::function_name;
-
 use crate::compiler::diagnostics::{Event, View, ViewErr};
 use crate::compiler::source::SourceIr;
 use crate::compiler::Span;
-use crate::StringId;
-use crate::{
-    compiler::{
-        ast::*,
-        lexer::tokens::{Lex, Primitive, Token},
-        CompilerError,
-    },
-    diagnostics::config::TracingConfig,
+use crate::compiler::{
+    ast::*,
+    lexer::tokens::{Lex, Primitive, Token},
+    CompilerError,
 };
+use crate::StringId;
 
 use super::{ctx_over_tokens, Parser, ParserContext};
 // AST - a type(s) which is used to construct an AST representing the logic of the
@@ -25,71 +17,6 @@ use super::ParserResult;
 use super::{tokenstream::TokenStream, ParserError};
 
 type HasVarArgs = bool;
-
-pub(super) static ENABLE_TRACING: AtomicBool = AtomicBool::new(false);
-pub(super) static TRACE_START: AtomicUsize = AtomicUsize::new(0);
-pub(super) static TRACE_END: AtomicUsize = AtomicUsize::new(0);
-
-pub fn set_tracing(config: TracingConfig) {
-    match config {
-        TracingConfig::All => {
-            ENABLE_TRACING.store(true, Ordering::SeqCst);
-            TRACE_START.store(0, Ordering::SeqCst);
-            TRACE_END.store(0, Ordering::SeqCst);
-        }
-        TracingConfig::After(start) => {
-            ENABLE_TRACING.store(true, Ordering::SeqCst);
-            TRACE_START.store(start, Ordering::SeqCst);
-            TRACE_END.store(0, Ordering::SeqCst);
-        }
-        TracingConfig::Before(end) => {
-            ENABLE_TRACING.store(true, Ordering::SeqCst);
-            TRACE_START.store(0, Ordering::SeqCst);
-            TRACE_END.store(end, Ordering::SeqCst);
-        }
-        TracingConfig::Between(start, end) => {
-            ENABLE_TRACING.store(true, Ordering::SeqCst);
-            TRACE_START.store(start, Ordering::SeqCst);
-            TRACE_END.store(end, Ordering::SeqCst);
-        }
-        TracingConfig::Only(line) => {
-            ENABLE_TRACING.store(true, Ordering::SeqCst);
-            TRACE_START.store(line, Ordering::SeqCst);
-            TRACE_END.store(line, Ordering::SeqCst);
-        }
-        _ => (),
-    }
-}
-
-#[macro_export]
-macro_rules! trace {
-    ($ts:expr) => {
-        if ENABLE_TRACING.load(Ordering::SeqCst) {
-            match $ts.peek() {
-                None => (),
-                Some(token) => {
-                    if TRACE_START.load(Ordering::SeqCst) == 0
-                        && TRACE_END.load(Ordering::SeqCst) == 0
-                    {
-                        println!("{} <- {}", function_name!(), token)
-                    } else if TRACE_END.load(Ordering::SeqCst) == 0
-                        && TRACE_START.load(Ordering::SeqCst) <= token.line as usize
-                    {
-                        println!("{} <- {}", function_name!(), token)
-                    } else if TRACE_START.load(Ordering::SeqCst) == 0
-                        && token.line as usize <= TRACE_END.load(Ordering::SeqCst)
-                    {
-                        println!("{} <- {}", function_name!(), token)
-                    } else if TRACE_START.load(Ordering::SeqCst) <= token.line as usize
-                        && token.line as usize <= TRACE_END.load(Ordering::SeqCst)
-                    {
-                        println!("{} <- {}", function_name!(), token)
-                    }
-                }
-            }
-        }
-    };
-}
 
 impl<'a> Parser<'a> {
     /// Support function which records parser events to the tracing system
@@ -407,7 +334,6 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> Result<Vec<Statement<ParserContext>>, CompilerError<ParserError>> {
-        trace!(stream);
         let mut stmts = vec![];
         while let Some(s) = self.statement(stream)? {
             stmts.push(s);
@@ -419,7 +345,6 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> Result<Vec<Statement<ParserContext>>, CompilerError<ParserError>> {
-        trace!(stream);
         let mut stmts = vec![];
         while let Some(s) = self.statement_or_yield_return(stream)? {
             stmts.push(s);
@@ -435,7 +360,6 @@ impl<'a> Parser<'a> {
         (Vec<Parameter<ParserContext>>, HasVarArgs, ParserContext),
         CompilerError<ParserError>,
     > {
-        trace!(stream);
         let ctx = stream.next_must_be(&Lex::LParen)?.to_ctx();
         let params = self.parameter_list(stream)?;
 
@@ -473,7 +397,6 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> Result<Vec<(StringId, Type, ParserContext)>, CompilerError<ParserError>> {
-        trace!(stream);
         let mut decls = vec![];
 
         while let Some(id_decl) = self.id_declaration(stream)? {
@@ -493,7 +416,6 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<(Vec<Expression<ParserContext>>, ParserContext)> {
-        trace!(stream);
         match stream.next_if(&Lex::LParen) {
             Some(lparen) => {
                 let mut params = vec![];
@@ -520,7 +442,6 @@ impl<'a> Parser<'a> {
     }
 
     pub(super) fn path(&self, stream: &mut TokenStream) -> ParserResult<(Path, ParserContext)> {
-        trace!(stream);
         let mut path = vec![];
 
         let mut ctx = stream.peek().map(|t| t.to_ctx()).unwrap();
@@ -573,7 +494,6 @@ impl<'a> Parser<'a> {
     }
 
     fn identifier(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
-        trace!(stream);
         match stream.next_if_id() {
             Some((id, ln, span)) => Ok(Some(Expression::Identifier(
                 ParserContext::new(ln, span),
@@ -585,7 +505,6 @@ impl<'a> Parser<'a> {
     }
 
     fn consume_type(&self, stream: &mut TokenStream) -> ParserResult<(Type, ParserContext)> {
-        trace!(stream);
         let is_coroutine = stream.next_if(&Lex::CoroutineDef).is_some();
         let ty = match stream.next_if(&Lex::Primitive(Primitive::U8)) {
             Some(Token {
@@ -629,7 +548,6 @@ impl<'a> Parser<'a> {
     }
 
     fn array_type(&self, stream: &mut TokenStream) -> ParserResult<(Type, ParserContext)> {
-        trace!(stream);
         match stream.next_if(&Lex::LBracket) {
             Some(lbracket) => {
                 let ctx = lbracket.to_ctx();
@@ -673,7 +591,6 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        trace!(stream);
         match stream.next_ifn(vec![Lex::Identifier(StringId::new()), Lex::Colon]) {
             Some(decl_tok) => {
                 let ctx = decl_tok[0].to_ctx().join(decl_tok[1].to_ctx());

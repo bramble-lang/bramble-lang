@@ -5,7 +5,7 @@ use crate::{
         ast::Module,
         diagnostics::Logger,
         lexer::{tokens::Token, LexerError},
-        parser::{self, Parser, ParserContext, ParserError},
+        parser::{Parser, ParserContext, ParserError},
         CompilerDisplay, CompilerDisplayError, CompilerError, Source, SourceMap, SourceMapError,
         Span,
     },
@@ -115,11 +115,8 @@ pub fn parse_project(
     token_sets: Project<Vec<Token>>,
     source_map: &SourceMap,
     string_table: &mut StringTable,
-    trace_parser: TracingConfig,
     logger: &Logger,
 ) -> Result<Module<ParserContext>, Vec<CompilerError<ProjectError>>> {
-    parser::parser::set_tracing(trace_parser);
-
     // The root module spans the entire source code space
     let root_span = source_map.span().ok_or(vec![CompilerError::new(
         Span::zero(),

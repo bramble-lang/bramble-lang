@@ -68,14 +68,12 @@ fn main() {
         return;
     }
 
-    let trace_parser = get_parser_tracing(&config);
     let project_name_id = string_table.insert(project_name.into());
     let root = match parse_project(
         project_name_id,
         token_sets,
         &sourcemap,
         &mut string_table,
-        trace_parser,
         &tracer,
     ) {
         Ok(root) => root,

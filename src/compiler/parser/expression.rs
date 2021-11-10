@@ -1,9 +1,4 @@
-use super::{
-    parser::{ENABLE_TRACING, TRACE_END, TRACE_START},
-    Parser, ParserResult,
-};
-use std::sync::atomic::Ordering;
-use stdext::function_name;
+use super::{Parser, ParserResult};
 
 use super::{tokenstream::TokenStream, ParserContext, ParserError};
 use crate::{
@@ -14,7 +9,7 @@ use crate::{
         source::SourceIr,
         CompilerError,
     },
-    trace, StringId,
+    StringId,
 };
 
 impl ParserCombinator<ParserResult<Expression<ParserContext>>>
@@ -184,7 +179,6 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        trace!(stream);
         match stream.next_if(&Lex::LBrace) {
             Some(lbrace) => {
                 // Read the statements composing the expression block
@@ -213,7 +207,6 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        trace!(stream);
         self.logical_or(stream)
     }
 
@@ -221,7 +214,6 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        trace!(stream);
         self.binary_op(stream, &vec![Lex::BOr], Self::logical_and)
     }
 
@@ -229,7 +221,6 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        trace!(stream);
         self.binary_op(stream, &vec![Lex::BAnd], Self::comparison)
     }
 
@@ -237,7 +228,6 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        trace!(stream);
         self.binary_op(
             stream,
             &vec![Lex::Eq, Lex::NEq, Lex::Ls, Lex::LsEq, Lex::Gr, Lex::GrEq],
@@ -246,12 +236,10 @@ impl<'a> Parser<'a> {
     }
 
     pub(super) fn sum(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
-        trace!(stream);
         self.binary_op(stream, &vec![Lex::Add, Lex::Minus], Self::term)
     }
 
     pub(super) fn term(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
-        trace!(stream);
         self.binary_op(stream, &vec![Lex::Mul, Lex::Div], Self::negate)
     }
 
@@ -261,7 +249,6 @@ impl<'a> Parser<'a> {
         test: &Vec<Lex>,
         left_pattern: fn(&Self, &mut TokenStream) -> ParserResult<Expression<ParserContext>>,
     ) -> ParserResult<Expression<ParserContext>> {
-        trace!(stream);
         match left_pattern(self, stream)? {
             Some(left) => match stream.next_if_one_of(test.clone()) {
                 Some(op) => {
@@ -287,7 +274,6 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        trace!(stream);
         match stream.next_if_one_of(vec![Lex::Minus, Lex::Not]) {
             Some(op) => {
                 let factor = self
@@ -316,7 +302,6 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        trace!(stream);
         match self.factor(stream)? {
             Some(f) => {
                 let mut ma = f;
@@ -383,7 +368,6 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        trace!(stream);
         match stream.peek() {
             Some(lparen) if lparen.sym == Lex::LParen => {
                 let ctx = lparen.to_ctx();
@@ -415,7 +399,6 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        trace!(stream);
         Ok(match stream.next_if(&Lex::If) {
             Some(if_tok) => {
                 stream.next_must_be(&Lex::LParen)?;
@@ -487,7 +470,6 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        trace!(stream);
         match stream.next_if(&Lex::While) {
             Some(whl) => {
                 stream.next_must_be(&Lex::LParen)?;
@@ -520,7 +502,6 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        trace!(stream);
         match self.path(stream)? {
             Some((path, call_ctx)) => match self.routine_call_params(stream)? {
                 Some((params, params_ctx)) => Ok(Some(Expression::RoutineCall(
@@ -567,7 +548,6 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        trace!(stream);
         match stream.next_if(&Lex::Yield) {
             Some(yield_tok) => {
                 let ctx = yield_tok.to_ctx();
@@ -591,7 +571,6 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<(Vec<(StringId, Expression<ParserContext>)>, ParserContext)> {
-        trace!(stream);
         match stream.next_if(&Lex::LBrace) {
             Some(lbrace) => {
                 let mut params = vec![];
@@ -626,7 +605,6 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        trace!(stream);
         match stream.next_if(&Lex::LBracket) {
             Some(lbracket) => {
                 let mut elements = vec![];
@@ -655,7 +633,6 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        trace!(stream);
         self.number(stream)
             .por(|ts| self.boolean(ts), stream)
             .por(|ts| self.string_literal(ts), stream)
@@ -665,7 +642,6 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        trace!(stream);
         match stream.next_if_one_of(vec![
             Lex::U8(0),
             Lex::U16(0),
@@ -734,7 +710,6 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        trace!(stream);
         match stream.next_if(&Lex::Bool(true)) {
             Some(Token {
                 line: l,
@@ -751,7 +726,6 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        trace!(stream);
         match stream.next_if(&Lex::StringLiteral(StringId::new())) {
             Some(Token {
                 line: l,
