@@ -130,15 +130,7 @@ impl<'a> Parser<'a> {
             }
         }
 
-        Ok(Some(module)).map(|ok| {
-            ok.view(|v| {
-                self.logger.write(Event::<ParserError> {
-                    stage: "parser",
-                    input: v.span(),
-                    msg: Ok("File Module"),
-                });
-            })
-        })
+        Ok(Some(module)).map(|ok| ok.view(|v| self.log(v.span(), Ok("File Module"))))
     }
 
     fn module(&self, stream: &mut TokenStream) -> ParserResult<Module<ParserContext>> {
@@ -155,15 +147,7 @@ impl<'a> Parser<'a> {
                         .to_ctx()
                         .join(*module.context());
                     *module.get_context_mut() = ctx;
-                    Ok(Some(module)).map(|ok| {
-                        ok.view(|v| {
-                            self.logger.write(Event::<ParserError> {
-                                stage: "parser",
-                                input: v.span(),
-                                msg: Ok("Module"),
-                            });
-                        })
-                    })
+                    Ok(Some(module)).map(|ok| ok.view(|v| self.log(v.span(), Ok("Module"))))
                 }
                 _ => err!(module.span(), ParserError::ModExpectedName)
                     .view_err(|err| self.log(err.span(), Err(&err))),
@@ -245,13 +229,7 @@ impl<'a> Parser<'a> {
                         has_varargs,
                         fn_type,
                     )))
-                    .view(|v| {
-                        self.logger.write(Event::<ParserError> {
-                            stage: "parser",
-                            input: v.span(),
-                            msg: Ok("Extern Definition"),
-                        });
-                    })
+                    .view(|v| self.log(v.span(), Ok("Extern Definition")))
                 }
                 None => err!(extern_tok.span(), ParserError::ExternExpectedFnDecl)
                     .view_err(|err| self.log(err.span(), Err(&err))),
@@ -278,15 +256,7 @@ impl<'a> Parser<'a> {
             },
             None => Ok(None),
         }
-        .map(|ok| {
-            ok.view(|v| {
-                self.logger.write(Event::<ParserError> {
-                    stage: "parser",
-                    input: v.span(),
-                    msg: Ok("Struct Definition"),
-                });
-            })
-        })
+        .map(|ok| ok.view(|v| self.log(v.span(), Ok("Struct Definition"))))
         .view_err(|err| self.log(err.span(), Err(&err)))
     }
 
@@ -325,13 +295,7 @@ impl<'a> Parser<'a> {
             ret_ty: fn_type,
             body: stmts,
         }))
-        .view(|v| {
-            self.logger.write(Event::<ParserError> {
-                stage: "parser",
-                input: v.span(),
-                msg: Ok("Function Definition"),
-            });
-        })
+        .view(|v| self.log(v.span(), Ok("Function Definition")))
     }
 
     fn function_decl(
@@ -374,15 +338,8 @@ impl<'a> Parser<'a> {
         };
         let fn_ctx = fn_type_ctx.join(fn_ctx);
 
-        Ok(Some((fn_ctx, fn_name, params, has_varargs, fn_type))).map(|ok| {
-            ok.view(|v| {
-                self.logger.write(Event::<ParserError> {
-                    stage: "parser",
-                    input: v.0.span(),
-                    msg: Ok("Routine Declaration"),
-                });
-            })
-        })
+        Ok(Some((fn_ctx, fn_name, params, has_varargs, fn_type)))
+            .map(|ok| ok.view(|v| self.log(v.0.span(), Ok("Routine Declaration"))))
     }
 
     fn coroutine_def(&self, stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserContext>> {
@@ -442,13 +399,7 @@ impl<'a> Parser<'a> {
             ret_ty: co_type,
             body: stmts,
         }))
-        .view(|v| {
-            self.logger.write(Event::<ParserError> {
-                stage: "parser",
-                input: v.span(),
-                msg: Ok("Coroutine Definition"),
-            });
-        })
+        .view(|v| self.log(v.span(), Ok("Coroutine Definition")))
     }
 
     pub(super) fn fn_body(
@@ -617,13 +568,7 @@ impl<'a> Parser<'a> {
             ctx = ctx.extend(span);
         }
 
-        Ok(Some((path.into(), ctx))).view(|v| {
-            self.logger.write(Event::<ParserError> {
-                stage: "parser",
-                input: v.1.span(),
-                msg: Ok("Path"),
-            });
-        })
+        Ok(Some((path.into(), ctx))).view(|v| self.log(v.1.span(), Ok("Path")))
     }
 
     fn identifier(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
@@ -635,13 +580,7 @@ impl<'a> Parser<'a> {
             ))),
             _ => Ok(None),
         }
-        .view(|v| {
-            self.logger.write(Event::<ParserError> {
-                stage: "parser",
-                input: v.span(),
-                msg: Ok("Identifier"),
-            });
-        })
+        .view(|v| self.log(v.span(), Ok("Identifier")))
     }
 
     fn consume_type(&self, stream: &mut TokenStream) -> ParserResult<(Type, ParserContext)> {
@@ -666,22 +605,12 @@ impl<'a> Parser<'a> {
                     Primitive::StringLiteral => Some(Type::StringLiteral),
                 };
                 let ctx = ParserContext::new(line, span);
-                ty.map(|ty| (ty, ctx)).view(|v| {
-                    self.logger.write(Event::<ParserError> {
-                        stage: "parser",
-                        input: v.1.span(),
-                        msg: Ok("Primitive Type"),
-                    });
-                })
+                ty.map(|ty| (ty, ctx))
+                    .view(|v| self.log(v.1.span(), Ok("Primitive Type")))
             }
             _ => match self.path(stream)? {
-                Some((path, path_ctx)) => Some((Type::Custom(path), path_ctx)).view(|v| {
-                    self.logger.write(Event::<ParserError> {
-                        stage: "parser",
-                        input: v.1.span(),
-                        msg: Ok("Custom Type"),
-                    });
-                }),
+                Some((path, path_ctx)) => Some((Type::Custom(path), path_ctx))
+                    .view(|v| self.log(v.1.span(), Ok("Custom Type"))),
                 _ => match self.array_type(stream)? {
                     Some((ty, ctx)) => Some((ty, ctx)),
                     None => None,
@@ -732,13 +661,8 @@ impl<'a> Parser<'a> {
                 };
 
                 let ctx = stream.next_must_be(&Lex::RBracket)?.to_ctx().join(ctx);
-                Ok(Some((Type::Array(Box::new(element_ty), len), ctx))).view(|v| {
-                    self.logger.write(Event::<ParserError> {
-                        stage: "parser",
-                        input: v.1.span(),
-                        msg: Ok("Array Type"),
-                    });
-                })
+                Ok(Some((Type::Array(Box::new(element_ty), len), ctx)))
+                    .view(|v| self.log(v.1.span(), Ok("Array Type")))
             }
             None => Ok(None),
         }
@@ -763,13 +687,8 @@ impl<'a> Parser<'a> {
                     ))
                     .view_err(|err| self.log(err.span(), Err(&err)))?;
                 let ctx = ctx.join(ty_ctx);
-                Ok(Some(Expression::IdentifierDeclare(ctx, id, ty))).view(|v| {
-                    self.logger.write(Event::<ParserError> {
-                        stage: "parser",
-                        input: v.span(),
-                        msg: Ok("Identifier Declaration"),
-                    });
-                })
+                Ok(Some(Expression::IdentifierDeclare(ctx, id, ty)))
+                    .view(|v| self.log(v.span(), Ok("Identifier Declaration")))
             }
             None => Ok(None),
         }

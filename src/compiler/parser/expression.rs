@@ -9,7 +9,7 @@ use super::{tokenstream::TokenStream, ParserContext, ParserError};
 use crate::{
     compiler::{
         ast::*,
-        diagnostics::{Event, View, ViewErr},
+        diagnostics::{View, ViewErr},
         lexer::tokens::{Lex, Token},
         source::SourceIr,
         CompilerError,
@@ -202,13 +202,8 @@ impl<'a> Parser<'a> {
                     .to_ctx()
                     .join(lbrace.to_ctx());
 
-                Ok(Some(Expression::ExpressionBlock(ctx, stmts, final_exp))).view(|v| {
-                    self.logger.write(Event::<ParserError> {
-                        stage: "parser",
-                        input: v.span(),
-                        msg: Ok("Expression Block"),
-                    });
-                })
+                Ok(Some(Expression::ExpressionBlock(ctx, stmts, final_exp)))
+                    .view(|v| self.log(v.span(), Ok("Expression Block")))
             }
             None => Ok(None),
         }
@@ -279,13 +274,7 @@ impl<'a> Parser<'a> {
                         .view_err(|err| self.log(err.span(), Err(&err)))?;
 
                     Expression::binary_op(&op.sym, Box::new(left), Box::new(right))
-                        .view(|v| {
-                            self.logger.write(Event::<ParserError> {
-                                stage: "parser",
-                                input: v.span(),
-                                msg: Ok(&op.sym.to_string()),
-                            });
-                        })
+                        .view(|v| self.log(v.span(), Ok(&op.sym.to_string())))
                         .view_err(|err| self.log(err.span(), Err(&err)))
                 }
                 None => Ok(Some(left)),
@@ -315,11 +304,7 @@ impl<'a> Parser<'a> {
                         } else {
                             "Boolean Negate"
                         };
-                        self.logger.write(Event::<ParserError> {
-                            stage: "parser",
-                            input: v.span(),
-                            msg: Ok(msg),
-                        });
+                        self.log(v.span(), Ok(msg))
                     })
                     .view_err(|err| self.log(err.span(), Err(&err)))
             }
@@ -348,13 +333,7 @@ impl<'a> Parser<'a> {
                                     member,
                                 )
                             })
-                            .view(|v| {
-                                self.logger.write(Event::<ParserError> {
-                                    stage: "parser",
-                                    input: v.span(),
-                                    msg: Ok("Member Access"),
-                                });
-                            })
+                            .view(|v| self.log(v.span(), Ok("Member Access")))
                             .ok_or(CompilerError::new(
                                 token.span(),
                                 ParserError::MemberAccessExpectedField,
@@ -376,12 +355,8 @@ impl<'a> Parser<'a> {
                                 })
                             })
                             .map(|v| {
-                                //// HMMMMMMM
-                                self.logger.write(Event::<ParserError> {
-                                    stage: "parser",
-                                    input: v.span(),
-                                    msg: Ok("Array At"),
-                                });
+                                // TODO: can I make this a view?
+                                self.log(v.span(), Ok("Array At"));
                                 v
                             })
                             .view_err(|err| self.log(err.span(), Err(&err)))?,
@@ -423,13 +398,7 @@ impl<'a> Parser<'a> {
                     *exp.get_context_mut() = ctx;
                 });
 
-                Ok(exp).view(|v| {
-                    self.logger.write(Event::<ParserError> {
-                        stage: "parser",
-                        input: v.span(),
-                        msg: Ok("Expression"),
-                    });
-                })
+                Ok(exp).view(|v| self.log(v.span(), Ok("Expression")))
             }
             _ => self
                 .if_expression(stream)
@@ -511,13 +480,7 @@ impl<'a> Parser<'a> {
             }
             _ => None,
         })
-        .view(|v| {
-            self.logger.write(Event::<ParserError> {
-                stage: "parser",
-                input: v.span(),
-                msg: Ok("If Expression"),
-            });
-        })
+        .view(|v| self.log(v.span(), Ok("If Expression")))
     }
 
     pub(super) fn while_expression(
@@ -549,13 +512,7 @@ impl<'a> Parser<'a> {
             }
             _ => Ok(None),
         }
-        .view(|v| {
-            self.logger.write(Event::<ParserError> {
-                stage: "parser",
-                input: v.span(),
-                msg: Ok("While"),
-            });
-        })
+        .view(|v| self.log(v.span(), Ok("While")))
         .view_err(|err| self.log(err.span(), Err(&err)))
     }
 
@@ -601,11 +558,7 @@ impl<'a> Parser<'a> {
                 Expression::RoutineCall(..) => "Routine Call",
                 _ => panic!("Unexpected Expression variant"),
             };
-            self.logger.write(Event::<ParserError> {
-                stage: "parser",
-                input: v.span(),
-                msg: Ok(msg),
-            });
+            self.log(v.span(), Ok(msg))
         })
         .view_err(|err| self.log(err.span(), Err(&err)))
     }
@@ -630,13 +583,7 @@ impl<'a> Parser<'a> {
             }
             None => Ok(None),
         }
-        .view(|v| {
-            self.logger.write(Event::<ParserError> {
-                stage: "parser",
-                input: v.span(),
-                msg: Ok("Yield"),
-            });
-        })
+        .view(|v| self.log(v.span(), Ok("Yield")))
         .view_err(|err| self.log(err.span(), Err(&err)))
     }
 
@@ -672,13 +619,7 @@ impl<'a> Parser<'a> {
             }
             _ => Ok(None),
         }
-        .view(|v| {
-            self.logger.write(Event::<ParserError> {
-                stage: "parser",
-                input: v.1.span(),
-                msg: Ok("Struct Expression Parameters"),
-            });
-        })
+        .view(|v| self.log(v.1.span(), Ok("Struct Expression Parameters")))
     }
 
     pub(super) fn array_expression(
@@ -703,13 +644,8 @@ impl<'a> Parser<'a> {
                 let ctx = lbracket.to_ctx().join(rbracket.to_ctx());
 
                 let len = elements.len();
-                Ok(Some(Expression::ArrayExpression(ctx, elements, len))).view(|v| {
-                    self.logger.write(Event::<ParserError> {
-                        stage: "parser",
-                        input: v.span(),
-                        msg: Ok("Array Expression"),
-                    });
-                })
+                Ok(Some(Expression::ArrayExpression(ctx, elements, len)))
+                    .view(|v| self.log(v.span(), Ok("Array Expression")))
             }
             None => Ok(None),
         }
@@ -791,13 +727,7 @@ impl<'a> Parser<'a> {
             Some(t) => panic!("Unexpected token: {:?}", t),
             None => Ok(None),
         }
-        .view(|v| {
-            self.logger.write(Event::<ParserError> {
-                stage: "parser",
-                input: v.span(),
-                msg: Ok("Number"),
-            });
-        })
+        .view(|v| self.log(v.span(), Ok("Number")))
     }
 
     pub(super) fn boolean(
@@ -814,13 +744,7 @@ impl<'a> Parser<'a> {
             }) => Ok(Some(Expression::Boolean(ParserContext::new(l, span), b))),
             _ => Ok(None),
         }
-        .view(|v| {
-            self.logger.write(Event::<ParserError> {
-                stage: "parser",
-                input: v.span(),
-                msg: Ok("Boolean"),
-            });
-        })
+        .view(|v| self.log(v.span(), Ok("Boolean")))
     }
 
     pub(super) fn string_literal(
@@ -840,12 +764,6 @@ impl<'a> Parser<'a> {
             ))),
             _ => Ok(None),
         }
-        .view(|v| {
-            self.logger.write(Event::<ParserError> {
-                stage: "parser",
-                input: v.span(),
-                msg: Ok("String"),
-            });
-        })
+        .view(|v| self.log(v.span(), Ok("String")))
     }
 }

@@ -8,7 +8,7 @@ use stdext::function_name;
 use crate::{
     compiler::{
         ast::*,
-        diagnostics::{Event, View, ViewErr},
+        diagnostics::{View, ViewErr},
         lexer::tokens::Lex,
         source::SourceIr,
         CompilerError,
@@ -87,11 +87,7 @@ impl<'a> Parser<'a> {
                 Statement::Return(..) => "Statement Return",
                 Statement::YieldReturn(..) => "Statement Yield Return",
             };
-            self.logger.write(Event::<ParserError> {
-                stage: "parser",
-                input: v.span(),
-                msg: Ok(msg),
-            });
+            self.log(v.span(), Ok(msg))
         })
         .view_err(|err| self.log(err.span(), Err(&err)))
     }
@@ -131,13 +127,7 @@ impl<'a> Parser<'a> {
                         ParserError::ExpectedTypeInIdDecl,
                     )),
                 }
-                .view(|v| {
-                    self.logger.write(Event::<ParserError> {
-                        stage: "parser",
-                        input: v.span(),
-                        msg: Ok("Let Binding"),
-                    });
-                })
+                .view(|v| self.log(v.span(), Ok("Let Binding")))
                 .view_err(|err| self.log(err.span(), Err(&err)))
             }
             None => Ok(None),
@@ -164,13 +154,8 @@ impl<'a> Parser<'a> {
                         ParserError::ExpectedExpressionOnRhs,
                     ))
                     .view_err(|err| self.log(err.span(), Err(&err)))?;
-                Ok(Some(Mutate::new(tokens[0].to_ctx(), id, exp))).view(|v| {
-                    self.logger.write(Event::<ParserError> {
-                        stage: "parser",
-                        input: v.span(),
-                        msg: Ok("Mutate"),
-                    });
-                })
+                Ok(Some(Mutate::new(tokens[0].to_ctx(), id, exp)))
+                    .view(|v| self.log(v.span(), Ok("Mutate")))
             }
         }
     }
@@ -200,13 +185,7 @@ impl<'a> Parser<'a> {
             },
             _ => Ok(None),
         }
-        .view(|v| {
-            self.logger.write(Event::<ParserError> {
-                stage: "parser",
-                input: v.span(),
-                msg: Ok("Coroutine Init"),
-            });
-        })
+        .view(|v| self.log(v.span(), Ok("Coroutine Init")))
         .view_err(|err| self.log(err.span(), Err(&err)))
     }
 
@@ -226,13 +205,7 @@ impl<'a> Parser<'a> {
             }
             _ => None,
         })
-        .view(|v| {
-            self.logger.write(Event::<ParserError> {
-                stage: "parser",
-                input: v.span(),
-                msg: Ok("Return"),
-            });
-        })
+        .view(|v| self.log(v.span(), Ok("Return")))
     }
 
     fn yield_return_stmt(
@@ -252,12 +225,6 @@ impl<'a> Parser<'a> {
             }
             _ => None,
         })
-        .view(|v| {
-            self.logger.write(Event::<ParserError> {
-                stage: "parser",
-                input: v.span(),
-                msg: Ok("Yield Return"),
-            });
-        })
+        .view(|v| self.log(v.span(), Ok("Yield Return")))
     }
 }
