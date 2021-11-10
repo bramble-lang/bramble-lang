@@ -49,14 +49,7 @@ fn main() {
         tracer.enable();
     }
 
-    let trace_lexer = get_lexer_tracing(&config);
-    let token_sets = match tokenize_source_map(
-        &sourcemap,
-        src_path,
-        &mut string_table,
-        &tracer,
-        trace_lexer,
-    ) {
+    let token_sets = match tokenize_source_map(&sourcemap, src_path, &mut string_table, &tracer) {
         Ok(ts) => ts,
         Err(errs) => {
             print_errs(&errs, &sourcemap, &string_table);
