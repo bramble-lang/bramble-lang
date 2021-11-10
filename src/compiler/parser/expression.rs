@@ -88,8 +88,10 @@ impl Expression<ParserContext> {
                 operand,
             ))),
             _ => {
-                err!(ctx.span(), ParserError::NotAUnaryOp(op.clone()))
-            } // TRACE event and error
+                {
+                    err!(ctx.span(), ParserError::NotAUnaryOp(op.clone()))
+                } // TRACE event and error
+            }
         }
     }
 
@@ -203,7 +205,16 @@ impl<'a> Parser<'a> {
                     .join(lbrace.to_ctx());
 
                 // TRACE event
-                Ok(Some(Expression::ExpressionBlock(ctx, stmts, final_exp)))
+                Ok(Some(Expression::ExpressionBlock(ctx, stmts, final_exp))).map(|ok| {
+                    ok.map(|v| {
+                        self.logger.write(Event::<ParserError> {
+                            stage: "parser",
+                            input: v.span(),
+                            msg: Ok("Expression Block"),
+                        });
+                        v
+                    })
+                })
             }
             None => Ok(None),
         }
@@ -282,6 +293,24 @@ impl<'a> Parser<'a> {
 
                     // TRACE event
                     Expression::binary_op(&op.sym, Box::new(left), Box::new(right))
+                        .map(|ok| {
+                            ok.map(|v| {
+                                self.logger.write(Event::<ParserError> {
+                                    stage: "parser",
+                                    input: v.span(),
+                                    msg: Ok(&op.sym.to_string()),
+                                });
+                                v
+                            })
+                        })
+                        .map_err(|err| {
+                            self.logger.write(Event::<ParserError> {
+                                stage: "parser",
+                                input: err.span(),
+                                msg: Err(&err),
+                            });
+                            err
+                        })
                 }
                 None => Ok(Some(left)),
             },
@@ -311,6 +340,29 @@ impl<'a> Parser<'a> {
                         err
                     })?; // TRACE error
                 Expression::unary_op(op.to_ctx(), &op.sym, Box::new(factor)) // TRACE event
+                    .map(|ok| {
+                        let msg = if op.sym == Lex::Minus {
+                            "Arithmetic Negate"
+                        } else {
+                            "Boolean Negate"
+                        };
+                        ok.map(|v| {
+                            self.logger.write(Event::<ParserError> {
+                                stage: "parser",
+                                input: v.span(),
+                                msg: Ok(msg),
+                            });
+                            v
+                        })
+                    })
+                    .map_err(|err| {
+                        self.logger.write(Event::<ParserError> {
+                            stage: "parser",
+                            input: err.span(),
+                            msg: Err(&err),
+                        });
+                        err
+                    })
             }
             None => self.member_access(stream),
         }
@@ -341,6 +393,14 @@ impl<'a> Parser<'a> {
                                 token.span(),
                                 ParserError::MemberAccessExpectedField,
                             ))
+                            .map(|v| {
+                                self.logger.write(Event::<ParserError> {
+                                    stage: "parser",
+                                    input: v.span(),
+                                    msg: Ok("Member Access"),
+                                });
+                                v
+                            })
                             .map_err(|err| {
                                 self.logger.write(Event::<ParserError> {
                                     stage: "parser",
@@ -355,14 +415,6 @@ impl<'a> Parser<'a> {
                                 token.span(),
                                 ParserError::IndexOpInvalidExpr,
                             )) // TRACE error
-                            .map_err(|err| {
-                                self.logger.write(Event::<ParserError> {
-                                    stage: "parser",
-                                    input: err.span(),
-                                    msg: Err(&err),
-                                });
-                                err
-                            })
                             .and_then(|index| {
                                 // TRACE error
                                 stream.next_must_be(&Lex::RBracket).map(|rbracket| {
@@ -372,6 +424,22 @@ impl<'a> Parser<'a> {
                                         index: box index,
                                     }
                                 }) // TRACE event
+                            })
+                            .map(|v| {
+                                self.logger.write(Event::<ParserError> {
+                                    stage: "parser",
+                                    input: v.span(),
+                                    msg: Ok("Array At"),
+                                });
+                                v
+                            })
+                            .map_err(|err| {
+                                self.logger.write(Event::<ParserError> {
+                                    stage: "parser",
+                                    input: err.span(),
+                                    msg: Err(&err),
+                                });
+                                err
                             })?,
                         _ => {
                             return err!(
@@ -418,7 +486,16 @@ impl<'a> Parser<'a> {
                     *exp.get_context_mut() = ctx;
                 }); // TRACE: Should this be recorded as an event?
 
-                Ok(exp)
+                Ok(exp).map(|ok| {
+                    ok.map(|v| {
+                        self.logger.write(Event::<ParserError> {
+                            stage: "parser",
+                            input: v.span(),
+                            msg: Ok("Expression"),
+                        });
+                        v
+                    })
+                })
             }
             _ => self
                 .if_expression(stream)
@@ -528,6 +605,16 @@ impl<'a> Parser<'a> {
             }
             _ => None,
         })
+        .map(|ok| {
+            ok.map(|v| {
+                self.logger.write(Event::<ParserError> {
+                    stage: "parser",
+                    input: v.span(),
+                    msg: Ok("If Expression"),
+                });
+                v
+            })
+        })
     }
 
     pub(super) fn while_expression(
@@ -566,6 +653,16 @@ impl<'a> Parser<'a> {
             }
             _ => Ok(None),
         }
+        .map(|ok| {
+            ok.map(|v| {
+                self.logger.write(Event::<ParserError> {
+                    stage: "parser",
+                    input: v.span(),
+                    msg: Ok("While"),
+                });
+                v
+            })
+        })
         .map_err(|err| {
             self.logger.write(Event::<ParserError> {
                 stage: "parser",
@@ -614,6 +711,23 @@ impl<'a> Parser<'a> {
             },
             _ => Ok(None),
         }
+        .map(|ok| {
+            ok.map(|v| {
+                let msg = match &v {
+                    Expression::Identifier(..) => "Identifier",
+                    Expression::Path(..) => "Path",
+                    Expression::StructExpression(..) => "Struct Expression",
+                    Expression::RoutineCall(..) => "Routine Call",
+                    _ => panic!("Unexpected Expression variant"),
+                };
+                self.logger.write(Event::<ParserError> {
+                    stage: "parser",
+                    input: v.span(),
+                    msg: Ok(msg),
+                });
+                v
+            })
+        })
         .map_err(|err| {
             self.logger.write(Event::<ParserError> {
                 stage: "parser",
@@ -644,6 +758,16 @@ impl<'a> Parser<'a> {
             }
             None => Ok(None),
         }
+        .map(|ok| {
+            ok.map(|v| {
+                self.logger.write(Event::<ParserError> {
+                    stage: "parser",
+                    input: v.span(),
+                    msg: Ok("Yield"),
+                });
+                v
+            })
+        })
         .map_err(|err| {
             self.logger.write(Event::<ParserError> {
                 stage: "parser",
@@ -693,6 +817,16 @@ impl<'a> Parser<'a> {
             }
             _ => Ok(None),
         }
+        .map(|ok| {
+            ok.map(|v| {
+                self.logger.write(Event::<ParserError> {
+                    stage: "parser",
+                    input: v.1.span(),
+                    msg: Ok("Struct Expression Parameters"),
+                });
+                v
+            })
+        })
     }
 
     pub(super) fn array_expression(
