@@ -144,6 +144,16 @@ impl<'a> Parser<'a> {
         }
 
         Ok(Some(module)) // TRACE
+            .map(|ok| {
+                ok.map(|v| {
+                    self.logger.write(Event::<ParserError> {
+                        stage: "parser",
+                        input: v.span(),
+                        msg: Ok("Module"),
+                    });
+                    v
+                })
+            })
     }
 
     fn module(&self, stream: &mut TokenStream) -> ParserResult<Module<ParserContext>> {
@@ -161,6 +171,16 @@ impl<'a> Parser<'a> {
                         .join(*module.context());
                     *module.get_context_mut() = ctx;
                     Ok(Some(module)) // TRACE
+                        .map(|ok| {
+                            ok.map(|v| {
+                                self.logger.write(Event::<ParserError> {
+                                    stage: "parser",
+                                    input: v.span(),
+                                    msg: Ok("Module"),
+                                });
+                                v
+                            })
+                        })
                 }
                 _ => {
                     // TRACE
@@ -260,18 +280,25 @@ impl<'a> Parser<'a> {
                         has_varargs,
                         fn_type,
                     ))) // TRACE
-                }
-                None => {
-                    err!(extern_tok.span(), ParserError::ExternExpectedFnDecl) // TRACE
-                        .map_err(|err| {
+                    .map(|ok| {
+                        ok.map(|v| {
                             self.logger.write(Event::<ParserError> {
                                 stage: "parser",
-                                input: err.span(),
-                                msg: Err(&err),
+                                input: v.span(),
+                                msg: Ok("Extern Definition"),
                             });
-                            err
+                            v
                         })
+                    })
                 }
+                None => err!(extern_tok.span(), ParserError::ExternExpectedFnDecl).map_err(|err| {
+                    self.logger.write(Event::<ParserError> {
+                        stage: "parser",
+                        input: err.span(),
+                        msg: Err(&err),
+                    });
+                    err
+                }),
             },
             None => Ok(None),
         }
@@ -291,18 +318,29 @@ impl<'a> Parser<'a> {
                 }
                 None => {
                     // TRACE
-                    err!(st_def.span(), ParserError::StructExpectedIdentifier).map_err(|err| {
-                        self.logger.write(Event::<ParserError> {
-                            stage: "parser",
-                            input: err.span(),
-                            msg: Err(&err),
-                        });
-                        err
-                    })
+                    err!(st_def.span(), ParserError::StructExpectedIdentifier)
                 }
             },
             None => Ok(None),
         }
+        .map(|ok| {
+            ok.map(|v| {
+                self.logger.write(Event::<ParserError> {
+                    stage: "parser",
+                    input: v.span(),
+                    msg: Ok("Struct Definition"),
+                });
+                v
+            })
+        })
+        .map_err(|err| {
+            self.logger.write(Event::<ParserError> {
+                stage: "parser",
+                input: err.span(),
+                msg: Err(&err),
+            });
+            err
+        })
     }
 
     fn function_def(&self, stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserContext>> {
@@ -356,6 +394,16 @@ impl<'a> Parser<'a> {
             ret_ty: fn_type,
             body: stmts,
         })) // TRACE
+        .map(|ok| {
+            ok.map(|v| {
+                self.logger.write(Event::<ParserError> {
+                    stage: "parser",
+                    input: v.span(),
+                    msg: Ok("Function Definition"),
+                });
+                v
+            })
+        })
     }
 
     fn function_decl(
@@ -390,8 +438,10 @@ impl<'a> Parser<'a> {
             })?; // TRACE
         fn_ctx = fn_ctx.extend(fn_def_span);
 
-        let (params, has_varargs) = self.fn_def_params(stream, allow_var_args)?;
-        let fn_type = if stream.next_if(&Lex::LArrow).is_some() {
+        let (params, has_varargs, params_ctx) = self.fn_def_params(stream, allow_var_args)?;
+        let fn_ctx = params_ctx.join(fn_ctx);
+
+        let (fn_type, fn_type_ctx) = if stream.next_if(&Lex::LArrow).is_some() {
             self.consume_type(stream)?
                 .ok_or(CompilerError::new(
                     fn_ctx.span(),
@@ -405,13 +455,21 @@ impl<'a> Parser<'a> {
                     });
                     err
                 })?
-                // TRACE
-                .0
         } else {
-            Type::Unit
+            (Type::Unit, fn_ctx)
         };
+        let fn_ctx = fn_type_ctx.join(fn_ctx);
 
-        Ok(Some((fn_ctx, fn_name, params, has_varargs, fn_type)))
+        Ok(Some((fn_ctx, fn_name, params, has_varargs, fn_type))).map(|ok| {
+            ok.map(|v| {
+                self.logger.write(Event::<ParserError> {
+                    stage: "parser",
+                    input: v.0.span(),
+                    msg: Ok("Routine Declaration"),
+                });
+                v
+            })
+        })
     }
 
     fn coroutine_def(&self, stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserContext>> {
@@ -434,7 +492,7 @@ impl<'a> Parser<'a> {
                 });
                 err
             })?;
-        let (params, has_varargs) = self.fn_def_params(stream, false)?;
+        let (params, has_varargs, _) = self.fn_def_params(stream, false)?;
 
         if has_varargs {
             // TRACE
@@ -500,6 +558,16 @@ impl<'a> Parser<'a> {
             ret_ty: co_type,
             body: stmts,
         })) // TRACE
+        .map(|ok| {
+            ok.map(|v| {
+                self.logger.write(Event::<ParserError> {
+                    stage: "parser",
+                    input: v.span(),
+                    msg: Ok("Coroutine Definition"),
+                });
+                v
+            })
+        })
     }
 
     pub(super) fn fn_body(
@@ -530,9 +598,12 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
         allow_var_args: bool,
-    ) -> Result<(Vec<Parameter<ParserContext>>, HasVarArgs), CompilerError<ParserError>> {
+    ) -> Result<
+        (Vec<Parameter<ParserContext>>, HasVarArgs, ParserContext),
+        CompilerError<ParserError>,
+    > {
         trace!(stream);
-        stream.next_must_be(&Lex::LParen)?;
+        let ctx = stream.next_must_be(&Lex::LParen)?.to_ctx();
         let params = self.parameter_list(stream)?;
 
         let has_varargs = if allow_var_args {
@@ -541,9 +612,9 @@ impl<'a> Parser<'a> {
             false
         };
 
-        stream.next_must_be(&Lex::RParen)?;
+        let ctx = stream.next_must_be(&Lex::RParen)?.to_ctx().join(ctx);
 
-        Ok((params, has_varargs))
+        Ok((params, has_varargs, ctx))
     }
 
     fn parameter_list(
@@ -675,6 +746,16 @@ impl<'a> Parser<'a> {
         }
 
         Ok(Some((path.into(), ctx))) // TRACE
+            .map(|ok| {
+                ok.map(|v| {
+                    self.logger.write(Event::<ParserError> {
+                        stage: "parser",
+                        input: v.1.span(),
+                        msg: Ok("Path"),
+                    });
+                    v
+                })
+            })
     }
 
     fn identifier(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
@@ -686,6 +767,16 @@ impl<'a> Parser<'a> {
             ))), // TRACE
             _ => Ok(None),
         }
+        .map(|ok| {
+            ok.map(|v| {
+                self.logger.write(Event::<ParserError> {
+                    stage: "parser",
+                    input: v.span(),
+                    msg: Ok("Identifier"),
+                });
+                v
+            })
+        })
     }
 
     fn consume_type(&self, stream: &mut TokenStream) -> ParserResult<(Type, ParserContext)> {
@@ -710,10 +801,24 @@ impl<'a> Parser<'a> {
                     Primitive::StringLiteral => Some(Type::StringLiteral),
                 };
                 let ctx = ParserContext::new(line, span);
-                ty.map(|ty| (ty, ctx))
+                ty.map(|ty| (ty, ctx)).map(|v| {
+                    self.logger.write(Event::<ParserError> {
+                        stage: "parser",
+                        input: v.1.span(),
+                        msg: Ok("Primitive Type"),
+                    });
+                    v
+                })
             }
             _ => match self.path(stream)? {
-                Some((path, path_ctx)) => Some((Type::Custom(path), path_ctx)),
+                Some((path, path_ctx)) => Some((Type::Custom(path), path_ctx)).map(|v| {
+                    self.logger.write(Event::<ParserError> {
+                        stage: "parser",
+                        input: v.1.span(),
+                        msg: Ok("Custom Type"),
+                    });
+                    v
+                }),
                 _ => match self.array_type(stream)? {
                     Some((ty, ctx)) => Some((ty, ctx)),
                     None => None,
@@ -779,6 +884,16 @@ impl<'a> Parser<'a> {
 
                 let ctx = stream.next_must_be(&Lex::RBracket)?.to_ctx().join(ctx);
                 Ok(Some((Type::Array(Box::new(element_ty), len), ctx))) // TRACE
+                    .map(|ok| {
+                        ok.map(|v| {
+                            self.logger.write(Event::<ParserError> {
+                                stage: "parser",
+                                input: v.1.span(),
+                                msg: Ok("Array Type"),
+                            });
+                            v
+                        })
+                    })
             }
             None => Ok(None),
         }
@@ -811,6 +926,16 @@ impl<'a> Parser<'a> {
                     })?; // TRACE
                 let ctx = ctx.join(ty_ctx);
                 Ok(Some(Expression::IdentifierDeclare(ctx, id, ty))) // TRACE
+                    .map(|ok| {
+                        ok.map(|v| {
+                            self.logger.write(Event::<ParserError> {
+                                stage: "parser",
+                                input: v.span(),
+                                msg: Ok("Identity Declaration"),
+                            });
+                            v
+                        })
+                    })
             }
             None => Ok(None),
         }
