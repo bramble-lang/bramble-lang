@@ -149,7 +149,7 @@ impl<'a> Parser<'a> {
                     self.logger.write(Event::<ParserError> {
                         stage: "parser",
                         input: v.span(),
-                        msg: Ok("Module"),
+                        msg: Ok("File Module"),
                     });
                     v
                 })
@@ -931,7 +931,7 @@ impl<'a> Parser<'a> {
                             self.logger.write(Event::<ParserError> {
                                 stage: "parser",
                                 input: v.span(),
-                                msg: Ok("Identity Declaration"),
+                                msg: Ok("Identifier Declaration"),
                             });
                             v
                         })
