@@ -17,12 +17,16 @@ mod tests {
         logger.enable();
 
         let evt = Event::<LexerError> {
+            stage: "test",
             input: Span::zero(),
             msg: Ok("Hello"),
         };
 
         logger.write(evt);
-        assert_eq!("{[0,0], msg: \"Hello\", }", *writer.buf.borrow());
+        assert_eq!(
+            "{[0,0], stage: \"test\", ok: \"Hello\", }",
+            *writer.buf.borrow()
+        );
     }
 
     #[test]
@@ -33,6 +37,7 @@ mod tests {
 
         logger.disable();
         let evt = Event::<LexerError> {
+            stage: "test",
             input: Span::zero(),
             msg: Ok("Hello"),
         };
@@ -49,6 +54,7 @@ mod tests {
         // First disable the logger and test that writes are blocked
         logger.disable();
         let evt = Event::<LexerError> {
+            stage: "test",
             input: Span::zero(),
             msg: Ok("Hello"),
         };
@@ -58,11 +64,15 @@ mod tests {
         // Then enable the logger and confirm that writes are now happening
         logger.enable();
         let evt = Event::<LexerError> {
+            stage: "test",
             input: Span::zero(),
             msg: Ok("Hello"),
         };
         logger.write(evt);
-        assert_eq!("{[0,0], msg: \"Hello\", }", *writer.buf.borrow());
+        assert_eq!(
+            "{[0,0], stage: \"test\", ok: \"Hello\", }",
+            *writer.buf.borrow()
+        );
     }
 
     /// Writer to be used for unit testing

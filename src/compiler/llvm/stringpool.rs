@@ -185,9 +185,9 @@ impl<'a> StringPool<'a> {
 #[cfg(test)]
 mod test {
     use super::super::super::lexer::tokens::Token;
-    use super::super::super::parser::parser;
     use super::super::super::semantics::type_resolver::resolve_types;
     use crate::compiler::diagnostics::Logger;
+    use crate::compiler::parser::Parser;
     use crate::compiler::{Lexer, SourceMap};
     use crate::diagnostics::config::TracingConfig;
 
@@ -256,7 +256,9 @@ mod test {
                 .into_iter()
                 .collect::<Result<_, _>>()
                 .unwrap();
-            let ast = parser::parse(test_mod, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(test_mod, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 main_mod,

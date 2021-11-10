@@ -6,7 +6,7 @@ mod type_resolver_tests {
             diagnostics::Logger,
             lexer::tokens::Token,
             lexer::LexerError,
-            parser::{parser, ParserContext},
+            parser::{Parser, ParserContext},
             semantics::semanticnode::SemanticContext,
             CompilerDisplay, CompilerError, Lexer, SourceMap, Span,
         },
@@ -155,7 +155,10 @@ mod type_resolver_tests {
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(test, &tokens)
+
+            let parser = Parser::new(&logger);
+            let ast = parser
+                .parse(test, &tokens)
                 .expect(&format!("{}", text))
                 .unwrap();
             let module = resolve_types(
@@ -257,7 +260,9 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(test, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(test, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
                 main_mod, main_fn,
@@ -325,7 +330,9 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(test, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(test, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
                 main_mod,
@@ -366,8 +373,8 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
             ),
         ] {
             let mut sm = SourceMap::new();
-sm.add_string(&text, "/test".into()).unwrap();
-let src = sm.get(0).unwrap().read().unwrap();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
 
             let mut table = StringTable::new();
             let test = table.insert("test".into());
@@ -375,12 +382,14 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_fn = table.insert("my_main".into());
 
             let logger = Logger::new();
-let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(test, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(test, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
                 main_mod,
@@ -444,7 +453,9 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(test, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(test, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
                 main_mod,
@@ -521,7 +532,9 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 main_mod,
@@ -592,7 +605,9 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
                 main_mod,
@@ -648,7 +663,9 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
                 main_mod,
@@ -698,7 +715,9 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
                 main_mod,
@@ -903,7 +922,9 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 main_mod,
@@ -1039,7 +1060,9 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 main_mod,
@@ -1115,7 +1138,9 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 main_mod,
@@ -1202,7 +1227,9 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 main_mod,
@@ -1290,7 +1317,9 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 main_mod,
@@ -1378,7 +1407,9 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 main_mod,
@@ -1469,7 +1500,9 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     .into_iter()
                     .collect::<LResult>()
                     .unwrap();
-                let ast = parser::parse(main, &tokens).unwrap().unwrap();
+
+                let parser = Parser::new(&logger);
+                let ast = parser.parse(main, &tokens).unwrap().unwrap();
                 let module = resolve_types(
                     &ast,
                     main_mod,
@@ -1536,7 +1569,9 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 main_mod,
@@ -1622,7 +1657,9 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 main_mod,
@@ -1746,7 +1783,9 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 main_mod,
@@ -1953,7 +1992,9 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 main_mod,
@@ -2052,7 +2093,9 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 main_mod,
@@ -2148,7 +2191,9 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 main_mod,
@@ -2264,7 +2309,9 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 main_mod, main_fn,
@@ -2439,7 +2486,9 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main,&tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main,&tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 main_mod, main_fn,
@@ -2560,7 +2609,9 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 main_mod, main_fn,
@@ -2665,7 +2716,9 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 main_mod,
@@ -2758,7 +2811,9 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 main_mod,
@@ -2837,7 +2892,9 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 main_mod,
@@ -2920,7 +2977,9 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 main_mod,
@@ -3031,7 +3090,9 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 main_mod,
@@ -3115,7 +3176,9 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 main_mod, main_fn,
@@ -3351,7 +3414,9 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).map_err(|e| e.fmt(&sm, &table)).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).map_err(|e| e.fmt(&sm, &table)).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
                 main_mod, main_fn,
@@ -3401,7 +3466,9 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     .into_iter()
                     .collect::<LResult>()
                     .unwrap();
-                let ast = parser::parse(main, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+                let ast = parser.parse(main, &tokens).unwrap().unwrap();
                 let result = resolve_types(
                     &ast,
                     main_mod, main_fn,
@@ -3513,7 +3580,9 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(std, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(std, &tokens).unwrap().unwrap();
 
             let mut import_context = SemanticContext::new_local(0, new_ctx(0), Type::Unit);
             import_context.set_canonical_path(vec![Element::CanonicalRoot, Element::Id(std), Element::Id(test)].into());

@@ -10,7 +10,7 @@ pub mod parser;
 pub use context::ParserContext;
 pub use error::ParserError;
 
-use super::{lexer::tokens::Token, CompilerError};
+use super::{diagnostics::Logger, lexer::tokens::Token, CompilerError};
 
 type ParserResult<T> = Result<Option<T>, CompilerError<ParserError>>;
 
@@ -21,4 +21,14 @@ fn ctx_over_tokens(tokens: &[Token]) -> Option<ParserContext> {
     tokens
         .first()
         .and_then(|f| tokens.last().map(|l| f.to_ctx().join(l.to_ctx())))
+}
+
+pub struct Parser<'a> {
+    logger: &'a Logger<'a>,
+}
+
+impl<'a> Parser<'a> {
+    pub fn new(logger: &'a Logger<'a>) -> Parser<'a> {
+        Parser { logger }
+    }
 }
