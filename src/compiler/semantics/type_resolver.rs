@@ -1,6 +1,5 @@
 use crate::compiler::source::SourceIr;
 use crate::compiler::Span;
-use crate::diagnostics::config::{Tracing, TracingConfig};
 use crate::{
     compiler::{
         ast::*,
@@ -23,19 +22,8 @@ pub fn resolve_types(
     ast: &Module<ParserContext>,
     main_mod: StringId,
     main_fn: StringId,
-    trace: TracingConfig,
-    trace_semantic_node: TracingConfig,
-    trace_canonization: TracingConfig,
 ) -> SemanticResult<Module<SemanticContext>> {
-    resolve_types_with_imports(
-        ast,
-        main_mod,
-        main_fn,
-        &vec![],
-        trace_semantic_node,
-        trace_canonization,
-        trace,
-    )
+    resolve_types_with_imports(ast, main_mod, main_fn, &vec![])
 }
 
 pub fn resolve_types_with_imports(
@@ -43,33 +31,22 @@ pub fn resolve_types_with_imports(
     main_mod: StringId,
     main_fn: StringId,
     imports: &[Import],
-    trace_semantic_node: TracingConfig,
-    trace_canonization: TracingConfig,
-    trace_type_resolver: TracingConfig,
 ) -> SemanticResult<Module<SemanticContext>> {
     let mut sa = SemanticAst::new();
-    let mut sm_ast = sa.from_module(ast, trace_semantic_node);
-    canonize_paths(&mut sm_ast, imports, trace_canonization)?; //TODO: Add a trace for this step
+    let mut sm_ast = sa.from_module(ast);
+    canonize_paths(&mut sm_ast, imports)?; //TODO: Add a trace for this step
     SymbolTable::add_item_defs_to_table(&mut sm_ast)
         .map_err(|e| CompilerError::new(Span::zero(), e))?;
 
     let mut semantic = TypeResolver::new(&sm_ast, imports, main_mod, main_fn);
 
-    semantic.set_tracing(trace_type_resolver);
     semantic.resolve_types()
 }
 
 pub struct TypeResolver {
     symbols: SymbolTableScopeStack,
-    tracing: TracingConfig,
     imported_symbols: HashMap<String, Symbol>,
     main_fn: Path,
-}
-
-impl Tracing for TypeResolver {
-    fn set_tracing(&mut self, config: TracingConfig) {
-        self.tracing = config;
-    }
 }
 
 impl TypeResolver {
@@ -81,7 +58,6 @@ impl TypeResolver {
     ) -> TypeResolver {
         TypeResolver {
             symbols: SymbolTableScopeStack::new(root, imports),
-            tracing: TracingConfig::Off,
             imported_symbols: HashMap::new(),
             main_fn: vec![
                 Element::CanonicalRoot,

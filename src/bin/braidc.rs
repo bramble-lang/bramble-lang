@@ -81,10 +81,6 @@ fn main() {
     }
 
     // Type Check
-    let trace_semantic_node = get_semantic_node_tracing(&config);
-    let trace_canonization = get_canonization_tracing(&config);
-    let trace_type_resolver = get_type_resolver_tracing(&config);
-
     let imports: Result<Vec<_>, _> = manifests
         .into_iter()
         .map(|m| m.to_import(&mut string_table))
@@ -100,15 +96,7 @@ fn main() {
 
     let main_mod_id = string_table.insert(MAIN_MODULE.into());
     let main_fn_id = string_table.insert(USER_MAIN_FN.into());
-    let semantic_ast = match resolve_types_with_imports(
-        &root,
-        main_mod_id,
-        main_fn_id,
-        &imports,
-        trace_semantic_node,
-        trace_canonization,
-        trace_type_resolver,
-    ) {
+    let semantic_ast = match resolve_types_with_imports(&root, main_mod_id, main_fn_id, &imports) {
         Ok(ast) => ast,
         Err(msg) => {
             print_errs(&[msg], &sourcemap, &string_table);

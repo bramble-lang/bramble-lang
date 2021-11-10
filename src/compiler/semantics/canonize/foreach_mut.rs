@@ -1,7 +1,6 @@
 use crate::compiler::import::Import;
 
 use crate::compiler::ast::*;
-use crate::diagnostics::{config::TracingConfig, DiagRecorder};
 
 use super::super::{semanticnode::SemanticContext, stack::SymbolTableScopeStack};
 use super::{Canonizable, CanonizeResult};
@@ -21,7 +20,6 @@ new Annotation type.
 */
 pub struct ForEachPreOrderMut {
     pub name: String,
-    diag: DiagRecorder<SemanticContext, SemanticContext>,
     symbols: SymbolTableScopeStack, // I think I can move this into a Cell<> and then make `resolve_types` into &self instead of &mut self
 }
 
@@ -30,11 +28,9 @@ impl<'a> ForEachPreOrderMut {
         name: &str,
         root: &'a mut Module<SemanticContext>,
         imports: &[Import],
-        tracing: TracingConfig,
     ) -> ForEachPreOrderMut {
         ForEachPreOrderMut {
             name: name.into(),
-            diag: DiagRecorder::new(name, tracing),
             symbols: SymbolTableScopeStack::new(root, imports),
         }
     }
@@ -43,9 +39,9 @@ impl<'a> ForEachPreOrderMut {
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> CanonizeResult<()> + Copy,
     {
-        self.diag.begin(a.context());
+        //self.diag.begin(a.context());
         let r = f(&self.symbols, a);
-        self.diag.end(a.context());
+        //self.diag.end(a.context());
         r
     }
 
@@ -53,9 +49,9 @@ impl<'a> ForEachPreOrderMut {
     where
         F: FnMut(&SymbolTableScopeStack, &mut dyn Canonizable) -> CanonizeResult<()> + Copy,
     {
-        self.diag.start_trace();
+        //self.diag.start_trace();
         let r = self.for_module(m, f);
-        self.diag.end_trace();
+        //self.diag.end_trace();
 
         r
     }
@@ -485,9 +481,9 @@ mod tests {
             .expect(&format!("{}", text))
             .unwrap();
         let mut sa = SemanticAst::new();
-        let mut sm_ast = sa.from_module(&ast, TracingConfig::Off);
+        let mut sm_ast = sa.from_module(&ast);
 
-        let mut t = ForEachPreOrderMut::new("test", &mut sm_ast, &vec![], TracingConfig::Off);
+        let mut t = ForEachPreOrderMut::new("test", &mut sm_ast, &vec![]);
         t.for_module(&mut sm_ast, |_stack, n| {
             let ctx = n.context().with_type(Type::I64);
             *n.get_context_mut() = ctx;
@@ -523,9 +519,9 @@ mod tests {
             .expect(&format!("{}", text))
             .unwrap();
         let mut sa = SemanticAst::new();
-        let mut sm_ast = sa.from_module(&ast, TracingConfig::Off);
+        let mut sm_ast = sa.from_module(&ast);
 
-        let mut t = ForEachPreOrderMut::new("test", &mut sm_ast, &vec![], TracingConfig::Off);
+        let mut t = ForEachPreOrderMut::new("test", &mut sm_ast, &vec![]);
         t.for_module(&mut sm_ast, |stack, n| {
             let cpath = stack
                 .to_canonical(&vec![Element::Id(annotation)].into())
@@ -581,9 +577,9 @@ mod tests {
             .expect(&format!("{}", text))
             .unwrap();
         let mut sa = SemanticAst::new();
-        let mut sm_ast = sa.from_module(&ast, TracingConfig::Off);
+        let mut sm_ast = sa.from_module(&ast);
 
-        let mut t = ForEachPreOrderMut::new("test", &mut sm_ast, &vec![], TracingConfig::Off);
+        let mut t = ForEachPreOrderMut::new("test", &mut sm_ast, &vec![]);
         t.for_module(&mut sm_ast, |stack, n| match n.name() {
             Some(name) => {
                 let cpath = stack.to_canonical(&vec![Element::Id(name)].into()).unwrap();

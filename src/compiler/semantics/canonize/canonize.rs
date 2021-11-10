@@ -1,10 +1,7 @@
 use crate::compiler::{import::Import, source::SourceIr, CompilerError};
 use log::debug;
 
-use crate::{
-    compiler::{ast::*, semantics::stack::SymbolTableScopeStack},
-    diagnostics::config::TracingConfig,
-};
+use crate::compiler::{ast::*, semantics::stack::SymbolTableScopeStack};
 
 use super::{
     super::semanticnode::SemanticContext, foreach_mut::ForEachPreOrderMut, CanonizeResult,
@@ -16,11 +13,10 @@ Canonize all the paths in the AST
 pub fn canonize_paths(
     module: &mut Module<SemanticContext>,
     imports: &[Import],
-    tracing: TracingConfig,
 ) -> CanonizeResult<()> {
     debug!("Start canonization of paths");
 
-    let mut t = ForEachPreOrderMut::new("Canonize Paths", module, imports, tracing);
+    let mut t = ForEachPreOrderMut::new("Canonize Paths", module, imports);
     t.for_each(module, |stack, node| node.canonize_context_path(stack))?;
     t.for_each(module, |stack, node| node.canonize_type_refs(stack))?;
 

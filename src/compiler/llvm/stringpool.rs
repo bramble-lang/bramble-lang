@@ -189,7 +189,6 @@ mod test {
     use crate::compiler::diagnostics::Logger;
     use crate::compiler::parser::Parser;
     use crate::compiler::{Lexer, SourceMap};
-    use crate::diagnostics::config::TracingConfig;
 
     use super::*;
 
@@ -263,9 +262,6 @@ mod test {
                 &ast,
                 main_mod,
                 main_fn,
-                TracingConfig::Off,
-                TracingConfig::Off,
-                TracingConfig::Off,
             ).unwrap();
             let mut sp = StringPool::new(&table);
             sp.extract_from_module(&module);
