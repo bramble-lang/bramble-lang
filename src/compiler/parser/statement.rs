@@ -87,9 +87,9 @@ impl<'a> Parser<'a> {
                 Statement::Return(..) => "Statement Return",
                 Statement::YieldReturn(..) => "Statement Yield Return",
             };
-            self.log(v.span(), Ok(msg))
+            self.record(v.span(), Ok(msg))
         })
-        .view_err(|err| self.log(err.span(), Err(&err)))
+        .view_err(|err| self.record(err.span(), Err(&err)))
     }
 
     fn let_bind(&self, stream: &mut TokenStream) -> ParserResult<Bind<ParserContext>> {
@@ -103,7 +103,7 @@ impl<'a> Parser<'a> {
                         let_tok.span(),
                         ParserError::ExpectedIdDeclAfterLet,
                     ))
-                    .view_err(|err| self.log(err.span(), Err(&err)))?;
+                    .view_err(|err| self.record(err.span(), Err(&err)))?;
                 stream.next_must_be(&Lex::Assign)?;
 
                 let exp = match self.co_init(stream)? {
@@ -114,7 +114,7 @@ impl<'a> Parser<'a> {
                             let_tok.span(),
                             ParserError::ExpectedExpressionOnRhs,
                         ))
-                        .view_err(|err| self.log(err.span(), Err(&err)))?,
+                        .view_err(|err| self.record(err.span(), Err(&err)))?,
                 };
                 let ctx = exp.context().join(let_tok.to_ctx());
 
@@ -127,8 +127,8 @@ impl<'a> Parser<'a> {
                         ParserError::ExpectedTypeInIdDecl,
                     )),
                 }
-                .view(|v| self.log(v.span(), Ok("Let Binding")))
-                .view_err(|err| self.log(err.span(), Err(&err)))
+                .view(|v| self.record(v.span(), Ok("Let Binding")))
+                .view_err(|err| self.record(err.span(), Err(&err)))
             }
             None => Ok(None),
         }
@@ -153,9 +153,9 @@ impl<'a> Parser<'a> {
                         tokens[2].span(),
                         ParserError::ExpectedExpressionOnRhs,
                     ))
-                    .view_err(|err| self.log(err.span(), Err(&err)))?;
+                    .view_err(|err| self.record(err.span(), Err(&err)))?;
                 Ok(Some(Mutate::new(tokens[0].to_ctx(), id, exp)))
-                    .view(|v| self.log(v.span(), Ok("Mutate")))
+                    .view(|v| self.record(v.span(), Ok("Mutate")))
             }
         }
     }
@@ -185,8 +185,8 @@ impl<'a> Parser<'a> {
             },
             _ => Ok(None),
         }
-        .view(|v| self.log(v.span(), Ok("Coroutine Init")))
-        .view_err(|err| self.log(err.span(), Err(&err)))
+        .view(|v| self.record(v.span(), Ok("Coroutine Init")))
+        .view_err(|err| self.record(err.span(), Err(&err)))
     }
 
     pub(super) fn return_stmt(
@@ -205,7 +205,7 @@ impl<'a> Parser<'a> {
             }
             _ => None,
         })
-        .view(|v| self.log(v.span(), Ok("Return")))
+        .view(|v| self.record(v.span(), Ok("Return")))
     }
 
     fn yield_return_stmt(
@@ -225,6 +225,6 @@ impl<'a> Parser<'a> {
             }
             _ => None,
         })
-        .view(|v| self.log(v.span(), Ok("Yield Return")))
+        .view(|v| self.record(v.span(), Ok("Yield Return")))
     }
 }
