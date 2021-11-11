@@ -203,7 +203,7 @@ impl Canonizable for Extern<SemanticContext> {
         logger.write(Event::<_, SemanticError> {
             stage: "canonizer",
             input: self.span(),
-            msg: Ok(&cpath.to_string()),
+            msg: Ok(&cpath),
         });
 
         self.get_context_mut().set_canonical_path(cpath);
