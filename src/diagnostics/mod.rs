@@ -20,7 +20,7 @@ impl<'a> ConsoleWriter<'a> {
 
 impl<'a> Writer for ConsoleWriter<'a> {
     fn write_span(&self, span: crate::compiler::Span) {
-        let src = self.source_map.get_text(span).unwrap();
+        let src = self.source_map.text_in_span(span).unwrap();
 
         // remove intermediate newlines so that formating stays on one line
         let src: String = src.chars().filter(|c| *c != '\n').collect();

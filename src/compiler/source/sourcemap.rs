@@ -143,7 +143,7 @@ impl SourceMap {
     }
 
     /// Returns the text from the source code that the give [`Span`] covers.
-    pub fn get_text(&self, span: Span) -> Result<String, SourceError> {
+    pub fn text_in_span(&self, span: Span) -> Result<String, SourceError> {
         let files = self.files_in_span(span);
 
         if files.len() == 0 {
@@ -210,10 +210,17 @@ impl SourceMapEntry {
         Ok(Source::new(text?, self.span))
     }
 
+    /// Given a [`Span`] this will return the actual text that is covered by
+    /// that span.
     pub fn read_span(&self, span: Span) -> Result<String, SourceError> {
         // Convert the global offsets to the offsets in the source itself
-        let local_low = span.low().to_local(self.span.low());
-        let local_high = span.high().to_local(self.span.low());
+        // making sure to not exceed the actual size of this source
+        let local_low = span.low().to_local(self.span.low()).min(0);
+        let local_high = span
+            .high()
+            .to_local(self.span.low())
+            .min(self.span.high().to_local(self.span.low()));
+
         let len = local_high - local_low;
 
         let text = match &self.source {
