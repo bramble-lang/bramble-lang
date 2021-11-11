@@ -262,6 +262,7 @@ mod test {
                 &ast,
                 main_mod,
                 main_fn,
+                &logger,
             ).unwrap();
             let mut sp = StringPool::new(&table);
             sp.extract_from_module(&module);

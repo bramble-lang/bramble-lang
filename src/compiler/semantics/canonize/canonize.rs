@@ -1,4 +1,4 @@
-use crate::compiler::{import::Import, source::SourceIr, CompilerError};
+use crate::compiler::{diagnostics::Logger, import::Import, source::SourceIr, CompilerError};
 use log::debug;
 
 use crate::compiler::{ast::*, semantics::stack::SymbolTableScopeStack};
@@ -13,6 +13,7 @@ Canonize all the paths in the AST
 pub fn canonize_paths(
     module: &mut Module<SemanticContext>,
     imports: &[Import],
+    logger: &Logger,
 ) -> CanonizeResult<()> {
     debug!("Start canonization of paths");
 
@@ -58,6 +59,9 @@ fn default_canonize_context_path<T: Canonizable + ?Sized>(
             let cpath = stack
                 .to_canonical(&vec![Element::Id(name)].into())
                 .map_err(|e| CompilerError::new(node.span(), e))?;
+
+            println!("Canonizer: {} -> {}", node.span(), cpath);
+
             node.get_context_mut().set_canonical_path(cpath);
         }
         None => (),
@@ -170,6 +174,9 @@ impl Canonizable for Extern<SemanticContext> {
             None => panic!("Externs must have a name"),
         };
         let cpath = vec![Element::Id(name)].into();
+
+        println!("Canonizer: {} -> {}", self.span(), cpath);
+
         self.get_context_mut().set_canonical_path(cpath);
         Ok(())
     }

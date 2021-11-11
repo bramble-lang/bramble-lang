@@ -96,13 +96,14 @@ fn main() {
 
     let main_mod_id = string_table.insert(MAIN_MODULE.into());
     let main_fn_id = string_table.insert(USER_MAIN_FN.into());
-    let semantic_ast = match resolve_types_with_imports(&root, main_mod_id, main_fn_id, &imports) {
-        Ok(ast) => ast,
-        Err(msg) => {
-            print_errs(&[msg], &sourcemap, &string_table);
-            std::process::exit(ERR_TYPE_CHECK);
-        }
-    };
+    let semantic_ast =
+        match resolve_types_with_imports(&root, main_mod_id, main_fn_id, &imports, &tracer) {
+            Ok(ast) => ast,
+            Err(msg) => {
+                print_errs(&[msg], &sourcemap, &string_table);
+                std::process::exit(ERR_TYPE_CHECK);
+            }
+        };
 
     if stop_stage == Some(Stage::Semantic) {
         return;
