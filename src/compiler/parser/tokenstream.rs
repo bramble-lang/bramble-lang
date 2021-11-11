@@ -84,7 +84,7 @@ impl<'a> TokenStream<'a> {
             }
         }
         .map_err(|err| {
-            self.logger.write(Event::<ParserError> {
+            self.logger.write(Event::<&str, ParserError> {
                 stage: "parser",
                 input: err.span(),
                 msg: Err(&err),

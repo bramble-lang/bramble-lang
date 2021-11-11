@@ -27,8 +27,11 @@ pub trait Writer {
     /// Write a Span to the current event
     fn write_span(&self, span: Span);
 
-    /// Write a string field to the current event
-    fn write_str(&self, label: &str, s: &str);
+    /// Write a field with a [`Writable`] value to the current event
+    fn write_field(&self, label: &str, s: &dyn Writable);
+
+    /// Write a string value to the current event
+    fn write_str(&self, s: &str);
 
     /// Start writing a new compiler event.  This should emit any tokens which
     /// signal the start of an event.
@@ -48,7 +51,7 @@ pub trait Writable {
 
 /// An event from any stage in the Compiler caused by the given span of source
 /// code.
-pub struct Event<'a, E: CompilerDisplay + Debug> {
+pub struct Event<'a, V: Writable, E: CompilerDisplay + Debug> {
     /// The stage of compilation that generated this event
     pub stage: &'static str,
 
@@ -56,18 +59,36 @@ pub struct Event<'a, E: CompilerDisplay + Debug> {
     pub input: Span,
 
     /// A description of the event
-    pub msg: Result<&'a str, &'a CompilerError<E>>,
+    pub msg: Result<V, &'a CompilerError<E>>,
 }
 
-impl<'a, E: CompilerDisplay + Debug> Writable for Event<'a, E> {
+impl<'a, V: Writable, E: CompilerDisplay + Debug> Writable for Event<'a, V, E> {
     fn write(&self, w: &dyn Writer) {
         w.start_event();
-        w.write_str("stage", self.stage);
+        w.write_field("stage", &self.stage);
         w.write_span(self.input);
-        match self.msg {
-            Ok(msg) => w.write_str("ok", msg),
-            Err(err) => w.write_str("error", &format!("{:?}", err)),
+        match &self.msg {
+            Ok(msg) => w.write_field("ok", msg),
+            Err(err) => w.write_field("error", &format!("{:?}", err)),
         }
         w.stop_event();
+    }
+}
+
+impl Writable for &str {
+    fn write(&self, w: &dyn Writer) {
+        w.write_str(&self)
+    }
+}
+
+impl Writable for String {
+    fn write(&self, w: &dyn Writer) {
+        w.write_str(&self)
+    }
+}
+
+impl Writable for &String {
+    fn write(&self, w: &dyn Writer) {
+        w.write_str(&self)
     }
 }
