@@ -215,11 +215,12 @@ impl SourceMapEntry {
     pub fn read_span(&self, span: Span) -> Result<String, SourceError> {
         // Convert the global offsets to the offsets in the source itself
         // making sure to not exceed the actual size of this source
-        let local_low = span.low().to_local(self.span.low()).min(0);
-        let local_high = span
-            .high()
-            .to_local(self.span.low())
-            .min(self.span.high().to_local(self.span.low()));
+        let span = self
+            .span
+            .intersection(span)
+            .ok_or(SourceError::UnexpectedEof)?;
+        let local_low = span.low().to_local(self.span.low());
+        let local_high = span.high().to_local(self.span.low());
 
         let len = local_high - local_low;
 
