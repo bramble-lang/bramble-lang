@@ -20,7 +20,22 @@ impl<'a> ConsoleWriter<'a> {
 
 impl<'a> Writer for ConsoleWriter<'a> {
     fn write_span(&self, span: crate::compiler::Span) {
-        print!("Span: [{}, {}], ", span.low(), span.high());
+        let src = self.source_map.text_in_span(span).unwrap();
+
+        // remove intermediate newlines so that formating stays on one line
+        let src: String = src.chars().filter(|c| *c != '\n').collect();
+
+        print!("span: ");
+        let width = 20;
+        if src.len() < width {
+            print!("[{}], ", src);
+        } else {
+            print!(
+                "[{}...{}], ",
+                &src[0..width / 2],
+                &src[src.len() - width / 2..]
+            );
+        };
     }
 
     fn write_str(&self, label: &str, s: &str) {
