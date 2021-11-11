@@ -27,10 +27,10 @@ impl<'a> Writer for ConsoleWriter<'a> {
 
         let width = 20;
         if src.len() < width {
-            print!("Span: [{}], ", src);
+            print!("span: [{}], ", src);
         } else {
             print!(
-                "Span: [{}...{}], ",
+                "span: [{}...{}], ",
                 &src[0..width / 2],
                 &src[src.len() - width / 2..]
             );
