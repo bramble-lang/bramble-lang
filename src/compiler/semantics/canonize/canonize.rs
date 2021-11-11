@@ -73,7 +73,7 @@ fn default_canonize_context_path<T: Canonizable + ?Sized>(
                 .to_canonical(&vec![Element::Id(name)].into())
                 .map_err(|e| CompilerError::new(node.span(), e))?;
 
-            logger.write(Event::<SemanticError> {
+            logger.write(Event::<_, SemanticError> {
                 stage: "canonizer",
                 input: node.span(),
                 msg: Ok(&cpath.to_string()),
@@ -200,7 +200,7 @@ impl Canonizable for Extern<SemanticContext> {
         };
         let cpath: Path = vec![Element::Id(name)].into();
 
-        logger.write(Event::<SemanticError> {
+        logger.write(Event::<_, SemanticError> {
             stage: "canonizer",
             input: self.span(),
             msg: Ok(&cpath.to_string()),
