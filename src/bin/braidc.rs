@@ -1,8 +1,6 @@
 extern crate log;
 extern crate simplelog;
 
-use std::cell::RefCell;
-use std::rc::Rc;
 use std::{path::Path, process::exit};
 
 use braid_lang::compiler::diagnostics::Logger;
@@ -25,7 +23,7 @@ fn main() {
         None => (),
     }
 
-    let string_table = Rc::new(RefCell::new(StringTable::new()));
+    let mut string_table = StringTable::new();
 
     let input = config
         .value_of("input")
@@ -37,8 +35,7 @@ fn main() {
     let manifests: Vec<_> = match read_manifests(&config) {
         Ok(imports) => imports,
         Err(errs) => {
-            let st = string_table.clone();
-            print_errs(&errs, &sourcemap, &st.borrow());
+            print_errs(&errs, &sourcemap, &string_table);
             exit(ERR_IMPORT_ERROR)
         }
     };
@@ -52,16 +49,10 @@ fn main() {
         tracer.enable();
     }
 
-    let token_sets = match tokenize_source_map(
-        &sourcemap,
-        src_path,
-        &mut string_table.borrow_mut(),
-        &tracer,
-    ) {
+    let token_sets = match tokenize_source_map(&sourcemap, src_path, &mut string_table, &tracer) {
         Ok(ts) => ts,
         Err(errs) => {
-            let st = string_table.clone();
-            print_errs(&errs, &sourcemap, &st.borrow());
+            print_errs(&errs, &sourcemap, &string_table);
             exit(ERR_LEXER_ERROR)
         }
     };
@@ -70,17 +61,17 @@ fn main() {
         return;
     }
 
-    let project_name_id = string_table.borrow_mut().insert(project_name.into());
+    let project_name_id = string_table.insert(project_name.into());
     let root = match parse_project(
         project_name_id,
         token_sets,
         &sourcemap,
-        &mut string_table.borrow_mut(),
+        &mut string_table,
         &tracer,
     ) {
         Ok(root) => root,
         Err(errs) => {
-            print_errs(&errs, &sourcemap, &string_table.borrow());
+            print_errs(&errs, &sourcemap, &string_table);
             exit(ERR_PARSER_ERROR)
         }
     };
@@ -92,24 +83,24 @@ fn main() {
     // Type Check
     let imports: Result<Vec<_>, _> = manifests
         .into_iter()
-        .map(|m| m.to_import(&mut string_table.borrow_mut()))
+        .map(|m| m.to_import(&mut string_table))
         .collect();
 
     let imports = match imports {
         Ok(im) => im,
         Err(msg) => {
-            print_errs(&[msg], &sourcemap, &string_table.borrow());
+            print_errs(&[msg], &sourcemap, &string_table);
             exit(ERR_IMPORT_ERROR)
         }
     };
 
-    let main_mod_id = string_table.borrow_mut().insert(MAIN_MODULE.into());
-    let main_fn_id = string_table.borrow_mut().insert(USER_MAIN_FN.into());
+    let main_mod_id = string_table.insert(MAIN_MODULE.into());
+    let main_fn_id = string_table.insert(USER_MAIN_FN.into());
     let semantic_ast =
         match resolve_types_with_imports(&root, main_mod_id, main_fn_id, &imports, &tracer) {
             Ok(ast) => ast,
             Err(msg) => {
-                print_errs(&[msg], &sourcemap, &string_table.borrow());
+                print_errs(&[msg], &sourcemap, &string_table);
                 std::process::exit(ERR_TYPE_CHECK);
             }
         };
@@ -122,9 +113,7 @@ fn main() {
     let output_target = config.value_of("output").unwrap_or("./target/output.asm");
 
     let context = Context::create();
-    let st = string_table.clone();
-    let st = st.borrow();
-    let mut llvm = llvm::IrGen::new(&context, &sourcemap, &st, project_name, &imports);
+    let mut llvm = llvm::IrGen::new(&context, &sourcemap, &string_table, project_name, &imports);
     match llvm.ingest(&semantic_ast, main_fn_id) {
         Ok(()) => (),
         Err(msg) => {
@@ -140,8 +129,7 @@ fn main() {
     llvm.emit_object_code(Path::new(output_target)).unwrap();
 
     if config.is_present("manifest") {
-        let manifest =
-            Manifest::extract(&semantic_ast, &sourcemap, &string_table.borrow()).unwrap();
+        let manifest = Manifest::extract(&semantic_ast, &sourcemap, &string_table).unwrap();
         match std::fs::File::create(format!("./target/{}.manifest", project_name))
             .map_err(|e| format!("{}", e))
             .and_then(|mut f| manifest.write(&mut f).map_err(|e| format!("{}", e)))
