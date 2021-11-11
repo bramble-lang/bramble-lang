@@ -23,7 +23,7 @@ fn main() {
         None => (),
     }
 
-    let mut string_table = StringTable::new();
+    let string_table = StringTable::new();
 
     let input = config
         .value_of("input")
