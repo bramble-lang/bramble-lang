@@ -16,7 +16,7 @@ mod tests {
 
         logger.enable();
 
-        let evt = Event::<LexerError> {
+        let evt = Event::<_, LexerError> {
             stage: "test",
             input: Span::zero(),
             msg: Ok("Hello"),
@@ -24,7 +24,7 @@ mod tests {
 
         logger.write(evt);
         assert_eq!(
-            "{[0,0], stage: \"test\", ok: \"Hello\", }",
+            "{stage: \"test\", [0,0], ok: \"Hello\", }",
             *writer.buf.borrow()
         );
     }
@@ -36,7 +36,7 @@ mod tests {
         logger.add_writer(&writer);
 
         logger.disable();
-        let evt = Event::<LexerError> {
+        let evt = Event::<_, LexerError> {
             stage: "test",
             input: Span::zero(),
             msg: Ok("Hello"),
@@ -53,7 +53,7 @@ mod tests {
 
         // First disable the logger and test that writes are blocked
         logger.disable();
-        let evt = Event::<LexerError> {
+        let evt = Event::<_, LexerError> {
             stage: "test",
             input: Span::zero(),
             msg: Ok("Hello"),
@@ -63,14 +63,14 @@ mod tests {
 
         // Then enable the logger and confirm that writes are now happening
         logger.enable();
-        let evt = Event::<LexerError> {
+        let evt = Event::<_, LexerError> {
             stage: "test",
             input: Span::zero(),
             msg: Ok("Hello"),
         };
         logger.write(evt);
         assert_eq!(
-            "{[0,0], stage: \"test\", ok: \"Hello\", }",
+            "{stage: \"test\", [0,0], ok: \"Hello\", }",
             *writer.buf.borrow()
         );
     }
@@ -95,18 +95,22 @@ mod tests {
                 .push_str(&format!("[{},{}], ", span.low(), span.high()));
         }
 
-        fn write_str(&self, label: &str, s: &str) {
-            self.buf
-                .borrow_mut()
-                .push_str(&format!("{}: \"{}\", ", label, s));
-        }
-
         fn start_event(&self) {
             self.buf.borrow_mut().push_str("{");
         }
 
         fn stop_event(&self) {
             self.buf.borrow_mut().push_str("}");
+        }
+
+        fn write_str(&self, s: &str) {
+            self.buf.borrow_mut().push_str(&format!("\"{}\"", s));
+        }
+
+        fn write_field(&self, label: &str, s: &dyn crate::compiler::diagnostics::Writable) {
+            self.buf.borrow_mut().push_str(&format!("{}: ", label));
+            s.write(self);
+            self.buf.borrow_mut().push_str(&format!(", "));
         }
     }
 }
