@@ -4,7 +4,7 @@ mod math {
     */
     mod arithmetic {
         // Does something
-        fn something(m: S) -> i64 {
+        fn something(m: super::S) -> i64 {
             let y: i64 := 7 - 10;
             let b: bool := false && true;
             let s: string := "hello";
