@@ -391,7 +391,7 @@ mod test {
 
     #[test]
     pub fn test_new_module() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
 
         let test = table.insert("test".into());
 
@@ -402,7 +402,7 @@ mod test {
 
     #[test]
     pub fn test_get_nonexistant_item() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
 
         let test = table.insert("test".into());
         let func = table.insert("func".into());
@@ -424,7 +424,7 @@ mod test {
 
     #[test]
     pub fn test_add_function() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
 
         let test = table.insert("test".into());
         let func = table.insert("func".into());

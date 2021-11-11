@@ -402,7 +402,7 @@ impl<'a> Lexer<'a> {
             let (_, span) = branch.merge().unwrap();
             let int_text = self.string_table.get(int_token).unwrap();
 
-            Self::create_int_literal(self.line, span, int_text, type_suffix)
+            Self::create_int_literal(self.line, span, &int_text, type_suffix)
         } else {
             let span = self.current_char_span().unwrap();
             err!(

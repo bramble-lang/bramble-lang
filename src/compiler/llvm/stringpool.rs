@@ -67,7 +67,7 @@ impl<'a> StringPool<'a> {
             Boolean(..) => {}
             StringLiteral(_, s) => {
                 let val = self.string_table.get(*s).unwrap();
-                self.insert(val);
+                self.insert(&val);
             }
             ArrayExpression(_, elements, _) => {
                 for e in elements {

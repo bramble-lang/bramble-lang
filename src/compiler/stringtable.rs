@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Display};
+use std::{cell::RefCell, collections::HashMap, fmt::Display};
 
 use crate::compiler::CompilerDisplayError;
 
@@ -33,15 +33,15 @@ in return.
  */
 #[derive(Debug)]
 pub struct StringTable {
-    next_id: StringId,
-    table: HashMap<String, StringId>,
+    next_id: RefCell<StringId>,
+    table: RefCell<HashMap<String, StringId>>,
 }
 
 impl StringTable {
     pub fn new() -> StringTable {
         StringTable {
-            next_id: StringId::new(),
-            table: HashMap::new(),
+            next_id: RefCell::new(StringId::new()),
+            table: RefCell::new(HashMap::new()),
         }
     }
 
@@ -49,23 +49,25 @@ impl StringTable {
     /// string value.  If the string is already in the table, then this will
     /// simply return the already assigned ID for that string. Otherwise, it
     /// will add the string to the table and assign it a unique ID.
-    pub fn insert(&mut self, s: String) -> StringId {
-        if self.table.contains_key(&s) {
-            let id = self.table.get(&s).unwrap();
+    pub fn insert(&self, s: String) -> StringId {
+        let mut table = self.table.borrow_mut();
+        if table.contains_key(&s) {
+            let id = table.get(&s).unwrap();
             *id
         } else {
-            let id = self.next_id.get_and_inc();
-            self.table.insert(s, id);
+            let id = self.next_id.borrow_mut().get_and_inc();
+            table.insert(s, id);
             id
         }
     }
 
     /// Given an ID, if it is assigned to a string, then return the associated
     /// string, otherwise, return None.
-    pub fn get(&self, id: StringId) -> Result<&str, StringTableError> {
-        for s in &self.table {
+    pub fn get(&self, id: StringId) -> Result<String, StringTableError> {
+        let table = self.table.borrow();
+        for s in table.iter() {
             if *s.1 == id {
-                return Ok(s.0);
+                return Ok(s.0.clone());
             }
         }
 
