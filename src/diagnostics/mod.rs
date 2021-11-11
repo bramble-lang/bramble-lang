@@ -2,7 +2,10 @@ use std::{collections::HashMap, marker::PhantomData};
 
 use config::TracingConfig;
 
-use crate::compiler::{diagnostics::Writer, SourceMap};
+use crate::compiler::{
+    diagnostics::{Writable, Writer},
+    SourceMap,
+};
 
 pub mod config;
 
@@ -38,8 +41,10 @@ impl<'a> Writer for ConsoleWriter<'a> {
         };
     }
 
-    fn write_str(&self, label: &str, s: &str) {
-        print!("{}: \"{}\", ", label, s);
+    fn write_field(&self, label: &str, s: &dyn Writable) {
+        print!("{}: ", label);
+        s.write(self);
+        print!(", ");
     }
 
     fn start_event(&self) {
@@ -48,6 +53,10 @@ impl<'a> Writer for ConsoleWriter<'a> {
 
     fn stop_event(&self) {
         print!("}}\n");
+    }
+
+    fn write_str(&self, s: &str) {
+        print!("\"{}\", ", s);
     }
 }
 

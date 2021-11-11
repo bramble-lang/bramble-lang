@@ -263,7 +263,7 @@ impl<'a> Lexer<'a> {
             }
 
             let (_, span) = branch.merge().unwrap();
-            self.logger.write(Event::<LexerError> {
+            self.logger.write(Event::<_, LexerError> {
                 stage: "lexer",
                 input: span,
                 msg: Ok("Line Comment"),
@@ -279,7 +279,7 @@ impl<'a> Lexer<'a> {
             }
 
             let (_, span) = branch.merge().unwrap();
-            self.logger.write(Event::<LexerError> {
+            self.logger.write(Event::<_, LexerError> {
                 stage: "lexer",
                 input: span,
                 msg: Ok("Block Comment"),
@@ -325,7 +325,7 @@ impl<'a> Lexer<'a> {
                                 LexerError::InvalidEscapeSequence(c)
                             )
                             .map_err(|err| {
-                                self.logger.write(Event {
+                                self.logger.write(Event::<&str, _> {
                                     stage: "lexer",
                                     input: err.span(),
                                     msg: Err(&err),
@@ -339,7 +339,7 @@ impl<'a> Lexer<'a> {
                                 LexerError::ExpectedEscapeCharacter
                             )
                             .map_err(|err| {
-                                self.logger.write(Event {
+                                self.logger.write(Event::<&str, _> {
                                     stage: "lexer",
                                     input: err.span(),
                                     msg: Err(&err),
@@ -364,7 +364,7 @@ impl<'a> Lexer<'a> {
         }
         .map(|ok| {
             ok.as_ref().map(|token| {
-                self.logger.write(Event::<LexerError> {
+                self.logger.write(Event::<_, LexerError> {
                     stage: "lexer",
                     input: token.span,
                     msg: Ok("String"),
@@ -412,7 +412,7 @@ impl<'a> Lexer<'a> {
         }
         .map(|ok| {
             ok.as_ref().map(|token| {
-                self.logger.write(Event::<LexerError> {
+                self.logger.write(Event::<_, LexerError> {
                     stage: "lexer",
                     input: token.span,
                     msg: Ok("Integer"),
@@ -421,7 +421,7 @@ impl<'a> Lexer<'a> {
             ok
         })
         .map_err(|err| {
-            self.logger.write(Event {
+            self.logger.write(Event::<&str, _> {
                 stage: "lexer",
                 input: err.span(),
                 msg: Err(&err),
@@ -499,7 +499,7 @@ impl<'a> Lexer<'a> {
         }))
         .map(|ok| {
             ok.as_ref().map(|token| {
-                self.logger.write(Event::<LexerError> {
+                self.logger.write(Event::<_, LexerError> {
                     stage: "lexer",
                     input: token.span,
                     msg: Ok("Operator"),
@@ -532,7 +532,7 @@ impl<'a> Lexer<'a> {
         }
         .map(|ok| {
             ok.as_ref().map(|token| {
-                self.logger.write(Event::<LexerError> {
+                self.logger.write(Event::<_, LexerError> {
                     stage: "lexer",
                     input: token.span,
                     msg: Ok("Identifier"),
@@ -559,7 +559,7 @@ impl<'a> Lexer<'a> {
                 }
                 .map(|ok| {
                     ok.as_ref().map(|token| {
-                        self.logger.write(Event::<LexerError> {
+                        self.logger.write(Event::<_, LexerError> {
                             stage: "lexer",
                             input: token.span,
                             msg: Ok("Boolean"),
@@ -611,7 +611,7 @@ impl<'a> Lexer<'a> {
         })
         .map(|ok| {
             ok.as_ref().map(|token| {
-                self.logger.write(Event::<LexerError> {
+                self.logger.write(Event::<_, LexerError> {
                     stage: "lexer",
                     input: token.span,
                     msg: Ok("Keyword"),
@@ -651,7 +651,7 @@ impl<'a> Lexer<'a> {
         })
         .map(|ok| {
             ok.as_ref().map(|token| {
-                self.logger.write(Event::<LexerError> {
+                self.logger.write(Event::<_, LexerError> {
                     stage: "lexer",
                     input: token.span,
                     msg: Ok("Primitive"),
