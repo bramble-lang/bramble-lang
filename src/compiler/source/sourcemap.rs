@@ -146,13 +146,16 @@ impl SourceMap {
     pub fn get_text(&self, span: Span) -> Result<String, SourceError> {
         let files = self.files_in_span(span);
 
-        if files.len() != 1 {
+        if files.len() == 0 {
             // return error
-            panic!("Oh No!")
+            return Err(SourceError::SourceNotFound);
         }
 
-        // Get the local offset of the span
-        files[0].read_span(span)
+        // Convert all the spans to code snippets.  If the span crosses multiple files this will join them together
+        files
+            .iter()
+            .map(|f| f.read_span(span))
+            .collect::<Result<String, _>>()
     }
 
     /// Returns the files that a span intersects
@@ -222,7 +225,7 @@ impl SourceMapEntry {
                 file.seek(SeekFrom::Start(local_low))?;
                 file.read(&mut buf)?;
 
-                String::from_utf8(buf).unwrap()
+                String::from_utf8(buf)?
             }
             SourceType::Text(s) => {
                 let sub_str = &s[(local_low as usize)..(local_high as usize)];
