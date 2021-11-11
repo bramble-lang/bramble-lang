@@ -174,14 +174,14 @@ pub struct Lexer<'a> {
     end_offset: Offset,
     index: usize,
     line: u32,
-    string_table: &'a mut StringTable,
+    string_table: &'a StringTable,
     logger: &'a Logger<'a>,
 }
 
 impl<'a> Lexer<'a> {
     pub fn new(
         text: Source,
-        string_table: &'a mut StringTable,
+        string_table: &'a StringTable,
         logger: &'a Logger,
     ) -> Result<Lexer<'a>, LexerError> {
         let end_offset = text.high();

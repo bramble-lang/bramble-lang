@@ -49,7 +49,7 @@ fn main() {
         tracer.enable();
     }
 
-    let token_sets = match tokenize_source_map(&sourcemap, src_path, &mut string_table, &tracer) {
+    let token_sets = match tokenize_source_map(&sourcemap, src_path, &string_table, &tracer) {
         Ok(ts) => ts,
         Err(errs) => {
             print_errs(&errs, &sourcemap, &string_table);
@@ -66,7 +66,7 @@ fn main() {
         project_name_id,
         token_sets,
         &sourcemap,
-        &mut string_table,
+        &string_table,
         &tracer,
     ) {
         Ok(root) => root,
@@ -83,7 +83,7 @@ fn main() {
     // Type Check
     let imports: Result<Vec<_>, _> = manifests
         .into_iter()
-        .map(|m| m.to_import(&mut string_table))
+        .map(|m| m.to_import(&string_table))
         .collect();
 
     let imports = match imports {
