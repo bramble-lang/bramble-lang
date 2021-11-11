@@ -56,7 +56,11 @@ impl<'a> Writer for ConsoleWriter<'a> {
     }
 
     fn write_str(&self, s: &str) {
-        print!("\"{}\", ", s);
+        print!("{}", s);
+    }
+
+    fn write_stringid(&self, s: crate::StringId) {
+        print!("{}", s);
     }
 }
 

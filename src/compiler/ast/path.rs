@@ -1,3 +1,4 @@
+use crate::compiler::diagnostics::Writable;
 use crate::compiler::{CompilerDisplay, CompilerDisplayError, SourceMap};
 use crate::{StringId, StringTable};
 
@@ -235,6 +236,30 @@ impl From<Vec<Element>> for Path {
         Path {
             path: v.into(),
             is_canonical,
+        }
+    }
+}
+
+impl Writable for &Path {
+    fn write(&self, w: &dyn crate::compiler::diagnostics::Writer) {
+        if self.is_canonical {
+            w.write_str("$");
+        }
+
+        let len = self.path.len();
+
+        for idx in 0..len {
+            match &self.path[idx] {
+                Element::FileRoot => w.write_str(ROOT_PATH),
+                Element::CanonicalRoot => w.write_str(CANONICAL_ROOT),
+                Element::Selph => w.write_str(SELF),
+                Element::Super => w.write_str(SUPER),
+                Element::Id(sid) => w.write_stringid(*sid),
+            }
+
+            if idx < len - 1 {
+                w.write_str("::");
+            }
         }
     }
 }

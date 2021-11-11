@@ -76,7 +76,7 @@ fn default_canonize_context_path<T: Canonizable + ?Sized>(
             logger.write(Event::<_, SemanticError> {
                 stage: "canonizer",
                 input: node.span(),
-                msg: Ok(&cpath.to_string()),
+                msg: Ok(&cpath),
             });
 
             node.get_context_mut().set_canonical_path(cpath);
