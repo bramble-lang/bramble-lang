@@ -1,4 +1,7 @@
-use std::path::PathBuf;
+use std::{
+    io::{Read, Seek, SeekFrom},
+    path::PathBuf,
+};
 
 use super::{source::LineNumber, sourcechar::SourceCharIter, Offset, Source, SourceError, Span};
 
@@ -130,14 +133,34 @@ impl SourceMap {
     /// Returns the source code lines that a [`Span`] covers
     pub fn lines_in_span(&self, span: Span) -> Vec<(&PathBuf, Vec<LineNumber>)> {
         // Get the list of files that the span covers
-        self.map
+        self.files_in_span(span)
             .iter()
-            .filter(|e| span.intersects(e.span))
             .map(|file| {
                 let lines = file.lines_in_span(span);
                 (&file.path, lines)
             })
             .collect()
+    }
+
+    /// Returns the text from the source code that the give [`Span`] covers.
+    pub fn get_text(&self, span: Span) -> Result<String, SourceError> {
+        let files = self.files_in_span(span);
+
+        if files.len() != 1 {
+            // return error
+            panic!("Oh No!")
+        }
+
+        // Get the local offset of the span
+        files[0].read_span(span)
+    }
+
+    /// Returns the files that a span intersects
+    fn files_in_span(&self, span: Span) -> Vec<&SourceMapEntry> {
+        self.map
+            .iter()
+            .filter(|e| span.intersects(e.span))
+            .collect::<Vec<_>>()
     }
 }
 
@@ -153,8 +176,8 @@ impl SourceMapEntry {
     fn new(low: Offset, high: Offset, source: SourceType, path: PathBuf) -> SourceMapEntry {
         SourceMapEntry {
             span: Span::new(low, high),
-            source: source,
-            path: path,
+            source,
+            path,
         }
     }
 
@@ -182,6 +205,32 @@ impl SourceMapEntry {
             }
         };
         Ok(Source::new(text?, self.span))
+    }
+
+    pub fn read_span(&self, span: Span) -> Result<String, SourceError> {
+        // Convert the global offsets to the offsets in the source itself
+        let local_low = span.low().to_local(self.span.low());
+        let local_high = span.high().to_local(self.span.low());
+        let len = local_high - local_low;
+
+        let text = match &self.source {
+            SourceType::File(f) => {
+                let mut file = std::fs::File::open(f)?;
+
+                // Read the span from the file
+                let mut buf = vec![0; len as usize];
+                file.seek(SeekFrom::Start(local_low))?;
+                file.read(&mut buf)?;
+
+                String::from_utf8(buf).unwrap()
+            }
+            SourceType::Text(s) => {
+                let sub_str = &s[(local_low as usize)..(local_high as usize)];
+                sub_str.into()
+            }
+        };
+
+        Ok(text)
     }
 
     /// Returns the lines that a span covers in the given file.
