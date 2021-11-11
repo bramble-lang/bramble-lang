@@ -25,12 +25,13 @@ impl<'a> Writer for ConsoleWriter<'a> {
         // remove intermediate newlines so that formating stays on one line
         let src: String = src.chars().filter(|c| *c != '\n').collect();
 
+        print!("span: ");
         let width = 20;
         if src.len() < width {
-            print!("span: [{}], ", src);
+            print!("[{}], ", src);
         } else {
             print!(
-                "span: [{}...{}], ",
+                "[{}...{}], ",
                 &src[0..width / 2],
                 &src[src.len() - width / 2..]
             );
