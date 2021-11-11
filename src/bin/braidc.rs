@@ -43,7 +43,7 @@ fn main() {
     let stop_stage = get_stage(&config).unwrap();
 
     let mut tracer = Logger::new();
-    let console_writer = ConsoleWriter::new(&sourcemap);
+    let console_writer = ConsoleWriter::new(&sourcemap, &string_table);
     tracer.add_writer(&console_writer);
     if enable_tracing(&config) {
         tracer.enable();
