@@ -33,7 +33,11 @@ in return.
  */
 #[derive(Debug)]
 pub struct StringTable {
+    /// The next unique [`StringId`] which has not been assigned to a String
     next_id: RefCell<StringId>,
+
+    /// Table mapping raw strings to their [`StringId`]s. Used for converting
+    /// strings read from source code into their [`StringId`].
     table: RefCell<HashMap<String, StringId>>,
 }
 
