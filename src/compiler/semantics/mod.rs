@@ -1,4 +1,4 @@
-use super::{diagnostics::Writable, CompilerError};
+use super::{ast::Type, diagnostics::Writable, CompilerError};
 
 /*
  * Handles semantic analysis of a syntax tree.  This includes:
@@ -41,26 +41,32 @@ impl<'a> Writable for TypeOk<'a> {
             w.write_str("} ");
         }
 
-        match self.ty {
-            super::ast::Type::U8 => w.write_str("u8"),
-            super::ast::Type::U16 => w.write_str("u16"),
-            super::ast::Type::U32 => w.write_str("u32"),
-            super::ast::Type::U64 => todo!(),
-            super::ast::Type::I8 => todo!(),
-            super::ast::Type::I16 => todo!(),
-            super::ast::Type::I32 => todo!(),
-            super::ast::Type::I64 => w.write_str("i64"),
-            super::ast::Type::Bool => w.write_str("bool"),
-            super::ast::Type::StringLiteral => w.write_str("string"),
-            super::ast::Type::Array(_, _) => todo!(),
-            super::ast::Type::Unit => todo!(),
-            super::ast::Type::Custom(p) => w.write(&p),
-            super::ast::Type::StructDef(_) => todo!(),
-            super::ast::Type::FunctionDef(_, _) => todo!(),
-            super::ast::Type::CoroutineDef(_, _) => todo!(),
-            super::ast::Type::Coroutine(_) => todo!(),
-            super::ast::Type::ExternDecl(_, _, _) => todo!(),
-            super::ast::Type::Unknown => w.write_str("Unknown"),
+        w.write(self.ty);
+    }
+}
+
+impl Writable for Type {
+    fn write(&self, w: &dyn super::diagnostics::Writer) {
+        match self {
+            Type::U8 => w.write_str("u8"),
+            Type::U16 => w.write_str("u16"),
+            Type::U32 => w.write_str("u32"),
+            Type::U64 => w.write_str("u64"),
+            Type::I8 => w.write_str("i8"),
+            Type::I16 => w.write_str("i16"),
+            Type::I32 => w.write_str("i32"),
+            Type::I64 => w.write_str("i64"),
+            Type::Bool => w.write_str("bool"),
+            Type::StringLiteral => w.write_str("string"),
+            Type::Array(_, _) => todo!(),
+            Type::Unit => w.write_str("Unit"),
+            Type::Custom(p) => w.write(&p),
+            Type::StructDef(_) => w.write_str("Struct Def"),
+            Type::FunctionDef(_, _) => w.write_str("Function Def"),
+            Type::CoroutineDef(_, _) => w.write_str("Coroutine Def"),
+            Type::Coroutine(_) => w.write_str("Coroutine"),
+            Type::ExternDecl(_, _, _) => w.write_str("Extern"),
+            Type::Unknown => w.write_str("Unknown"),
         }
     }
 }
