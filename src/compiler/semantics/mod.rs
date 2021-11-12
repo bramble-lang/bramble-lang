@@ -58,7 +58,11 @@ impl Writable for Type {
             Type::I64 => w.write_str("i64"),
             Type::Bool => w.write_str("bool"),
             Type::StringLiteral => w.write_str("string"),
-            Type::Array(_, _) => todo!(),
+            Type::Array(ty, sz) => {
+                w.write_str("[");
+                w.write(ty.as_ref());
+                w.write_str(&format!("; {}]", sz));
+            }
             Type::Unit => w.write_str("Unit"),
             Type::Custom(p) => w.write(&p),
             Type::StructDef(_) => w.write_str("Struct Def"),
