@@ -811,14 +811,12 @@ impl<'a> TypeResolver<'a> {
             }
         }.map(|e| {
             let ctx = e.context();
-            self.logger.write(Event::<_, SemanticError> {
-                stage: "type-resolver",
-                input: ctx.span(),
-                msg: Ok(TypeOk {
+            self.record(
+                ctx.span(),
+                Ok(TypeOk {
                     ty: ctx.ty(),
                     refs,
-                }),
-            });
+                }));
             e
         })
     }
@@ -1029,4 +1027,12 @@ impl<'a> TypeResolver<'a> {
 
         Ok(())
     }
+
+fn record(&self, span: Span, r: Result<TypeOk, &CompilerError<SemanticError>>) {
+            self.logger.write(Event::<_, SemanticError> {
+                stage: "type-resolver",
+                input: span,
+                msg: r,
+            });
+}
 }
