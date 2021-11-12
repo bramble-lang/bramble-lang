@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, fmt::Display, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, fmt::Display};
 
 use crate::compiler::CompilerDisplayError;
 
@@ -34,7 +34,7 @@ in return.
 #[derive(Debug)]
 pub struct StringTable {
     next_id: RefCell<StringId>,
-    table: RefCell<HashMap<Rc<String>, StringId>>,
+    table: RefCell<HashMap<String, StringId>>,
 }
 
 impl StringTable {
@@ -56,7 +56,7 @@ impl StringTable {
             *id
         } else {
             let id = self.next_id.borrow_mut().get_and_inc();
-            table.insert(Rc::new(s), id);
+            table.insert(s, id);
             id
         }
     }
@@ -67,7 +67,7 @@ impl StringTable {
         let table = self.table.borrow();
         for s in table.iter() {
             if *s.1 == id {
-                return Ok((**s.0).clone());
+                return Ok(s.0.clone());
             }
         }
 
@@ -94,7 +94,7 @@ impl StringId {
 
 impl crate::compiler::CompilerDisplay for StringId {
     fn fmt(&self, _: &SourceMap, st: &StringTable) -> Result<String, CompilerDisplayError> {
-        st.get(*self).map(|s| s).map_err(|e| e.into())
+        st.get(*self).map(|s| s.into()).map_err(|e| e.into())
     }
 }
 

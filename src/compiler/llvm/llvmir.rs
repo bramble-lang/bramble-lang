@@ -1055,7 +1055,8 @@ impl ast::RoutineCall {
             ast::RoutineCall::Extern => llvm
                 .string_table
                 .get(target.item().expect("Extern call must have a target path"))
-                .unwrap(),
+                .unwrap()
+                .into(),
         }
     }
 
