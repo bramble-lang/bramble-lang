@@ -13,7 +13,7 @@ mod math {
 
             something(s2);
             
-            return y;
+            return s2.x + y;
         }
     }
 
