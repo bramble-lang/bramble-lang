@@ -111,7 +111,7 @@ impl Canonizable for Expression<SemanticContext> {
                     stack
                         .to_canonical(path)
                         .and_then(|canonical_path| {
-                            record(span, Ok(&canonical_path), logger);
+                            record_type_ref(span, Ok(&canonical_path), logger);
 
                             *path = canonical_path;
 
@@ -127,7 +127,7 @@ impl Canonizable for Expression<SemanticContext> {
                     stack
                         .to_canonical(path)
                         .and_then(|canonical_path| {
-                            record(span, Ok(&canonical_path), logger);
+                            record_type_ref(span, Ok(&canonical_path), logger);
 
                             *path = canonical_path;
                             Ok(())
@@ -142,7 +142,7 @@ impl Canonizable for Expression<SemanticContext> {
                     stack
                         .to_canonical(path)
                         .and_then(|canonical_path| {
-                            record(span, Ok(&canonical_path), logger);
+                            record_type_ref(span, Ok(&canonical_path), logger);
 
                             *path = canonical_path;
                             Ok(())
@@ -154,13 +154,7 @@ impl Canonizable for Expression<SemanticContext> {
             }
             _ => Ok(()),
         }
-        .view_err(|e| {
-            logger.write(Event::<&Path, _> {
-                stage: "canonize-type-ref",
-                input: self.span(),
-                msg: Err(e),
-            })
-        })
+        .view_err(|e| record_type_ref(self.span(), Err(e), logger))
     }
 }
 
@@ -175,17 +169,11 @@ impl Canonizable for Bind<SemanticContext> {
         let canon_type = stack
             .canonize_type(self.get_type())
             .map_err(|e| CompilerError::new(self.span(), e))
-            .view_err(|e| {
-                logger.write(Event::<&Path, _> {
-                    stage: "canonize-type-ref",
-                    input: self.span(),
-                    msg: Err(e),
-                })
-            })?;
+            .view_err(|e| record_type_ref(self.span(), Err(e), logger))?;
 
         canon_type
             .get_path()
-            .map(|p| record(self.span(), Ok(p), logger));
+            .map(|p| record_type_ref(self.span(), Ok(p), logger));
 
         self.set_type(canon_type);
         Ok(())
@@ -214,13 +202,7 @@ impl Canonizable for Module<SemanticContext> {
             let canonized_ty = stack
                 .canonize_type(&s.ty)
                 .map_err(|e| CompilerError::new(self.span(), e))
-                .view_err(|e| {
-                    logger.write(Event::<&Path, _> {
-                        stage: "canonize-type-ref",
-                        input: self.span(),
-                        msg: Err(e),
-                    })
-                })?;
+                .view_err(|e| record_type_ref(self.span(), Err(e), logger))?;
             s.ty = canonized_ty;
         }
 
@@ -241,15 +223,11 @@ impl Canonizable for RoutineDef<SemanticContext> {
         let ctype = stack
             .canonize_type(&self.ret_ty)
             .map_err(|e| CompilerError::new(self.span(), e))
-            .view_err(|e| {
-                logger.write(Event::<&Path, _> {
-                    stage: "canonize-type-ref",
-                    input: self.span(),
-                    msg: Err(e),
-                })
-            })?;
+            .view_err(|e| record_type_ref(self.span(), Err(e), logger))?;
 
-        ctype.get_path().map(|p| record(self.span(), Ok(p), logger));
+        ctype
+            .get_path()
+            .map(|p| record_type_ref(self.span(), Ok(p), logger));
 
         self.ret_ty = ctype;
         Ok(())
@@ -286,15 +264,11 @@ impl Canonizable for Extern<SemanticContext> {
         let ctype = stack
             .canonize_type(&self.ty)
             .map_err(|e| CompilerError::new(self.span(), e))
-            .view_err(|e| {
-                logger.write(Event::<&Path, _> {
-                    stage: "canonize-type-ref",
-                    input: self.span(),
-                    msg: Err(e),
-                })
-            })?;
+            .view_err(|e| record_type_ref(self.span(), Err(e), logger))?;
 
-        ctype.get_path().map(|p| record(self.span(), Ok(p), logger));
+        ctype
+            .get_path()
+            .map(|p| record_type_ref(self.span(), Ok(p), logger));
 
         self.ty = ctype;
         Ok(())
@@ -310,15 +284,11 @@ impl Canonizable for Parameter<SemanticContext> {
         let ctype = stack
             .canonize_type(&self.ty)
             .map_err(|e| CompilerError::new(self.span(), e))
-            .view_err(|e| {
-                logger.write(Event::<&Path, _> {
-                    stage: "canonize-type-ref",
-                    input: self.span(),
-                    msg: Err(e),
-                })
-            })?;
+            .view_err(|e| record_type_ref(self.span(), Err(e), logger))?;
 
-        ctype.get_path().map(|p| record(self.span(), Ok(p), logger));
+        ctype
+            .get_path()
+            .map(|p| record_type_ref(self.span(), Ok(p), logger));
 
         self.ty = ctype;
         Ok(())
@@ -337,7 +307,11 @@ impl Canonizable for YieldReturn<SemanticContext> {}
 
 impl Canonizable for Return<SemanticContext> {}
 
-fn record(span: Span, path: Result<&Path, &CompilerError<SemanticError>>, logger: &Logger) {
+fn record_type_ref(
+    span: Span,
+    path: Result<&Path, &CompilerError<SemanticError>>,
+    logger: &Logger,
+) {
     logger.write(Event::<_, SemanticError> {
         stage: "canonize-type-ref",
         input: span,
