@@ -428,6 +428,8 @@ impl<'a> TypeResolver<'a> {
             }
             Expression::I64(ctx, v) => {
                 let ctx = ctx.with_type(Type::I64);
+
+                // TODO: Move this to a helper function
                 self.logger.write(Event::<_, SemanticError> {
                     stage: "type-resolver",
                     input: ctx.span(),
@@ -436,6 +438,7 @@ impl<'a> TypeResolver<'a> {
                         refs: vec![],
                     }),
                 });
+
                 Ok(Expression::I64(ctx, *v))
             }
             Expression::Boolean(ctx, v) => {
