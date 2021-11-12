@@ -1,4 +1,4 @@
-use crate::compiler::diagnostics::Logger;
+use crate::compiler::diagnostics::{Event, Logger};
 use crate::compiler::source::SourceIr;
 use crate::compiler::Span;
 use crate::{
@@ -14,6 +14,7 @@ use crate::{
 };
 use std::collections::HashMap;
 
+use super::TypeOk;
 use super::{
     canonize::canonize_paths, semanticnode::SemanticContext, stack::SymbolTableScopeStack,
     SemanticError, SemanticResult,
@@ -41,24 +42,26 @@ pub fn resolve_types_with_imports(
     SymbolTable::add_item_defs_to_table(&mut sm_ast)
         .map_err(|e| CompilerError::new(Span::zero(), e))?;
 
-    let mut semantic = TypeResolver::new(&sm_ast, imports, main_mod, main_fn);
+    let mut semantic = TypeResolver::new(&sm_ast, imports, main_mod, main_fn, logger);
 
     semantic.resolve_types()
 }
 
-pub struct TypeResolver {
+pub struct TypeResolver<'a> {
     symbols: SymbolTableScopeStack,
     imported_symbols: HashMap<String, Symbol>,
     main_fn: Path,
+    logger: &'a Logger<'a>,
 }
 
-impl TypeResolver {
+impl<'a> TypeResolver<'a> {
     pub fn new(
         root: &Module<SemanticContext>,
         imports: &[Import],
         main_mod: StringId,
         main_fn: StringId,
-    ) -> TypeResolver {
+        logger: &'a Logger,
+    ) -> TypeResolver<'a> {
         TypeResolver {
             symbols: SymbolTableScopeStack::new(root, imports),
             imported_symbols: HashMap::new(),
@@ -67,7 +70,8 @@ impl TypeResolver {
                 Element::Id(main_mod),
                 Element::Id(main_fn),
             ]
-            .into(), // TODO: should get rid of this
+            .into(), // TODO: should get rid of this,
+            logger,
         }
     }
 
@@ -421,6 +425,14 @@ impl TypeResolver {
             }
             Expression::I64(ctx, v) => {
                 let ctx = ctx.with_type(Type::I64);
+                self.logger.write(Event::<_, SemanticError> {
+                    stage: "type-resolver",
+                    input: ctx.span(),
+                    msg: Ok(TypeOk {
+                        ty: &Type::I64,
+                        refs: vec![],
+                    }),
+                });
                 Ok(Expression::I64(ctx, *v))
             }
             Expression::Boolean(ctx, v) => {
