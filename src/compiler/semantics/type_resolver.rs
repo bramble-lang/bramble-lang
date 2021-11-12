@@ -677,6 +677,9 @@ impl<'a> TypeResolver<'a> {
                     .lookup_symbol_by_path(routine_path)
                     .map_err(|e| CompilerError::new(ctx.span(), e))?;
 
+                // record the reference span for this routine definition as a source for type resolution
+                symbol.span.map(|s| refs.push(s));
+
                 // if the routine is external, then change the call type to extern
                 let call = if symbol.is_extern {
                     RoutineCall::Extern
