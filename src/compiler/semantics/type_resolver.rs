@@ -762,6 +762,10 @@ impl<'a> TypeResolver<'a> {
                     .symbols
                     .lookup_symbol_by_path(&struct_name)
                     .map_err(|e| CompilerError::new(ctx.span(), e))?;
+
+                // Record the span of the struct definition as a reference for resolving the type of the member access
+                struct_def.span.map(|s| refs.push(s));
+
                 let struct_def_ty = struct_def.ty.clone();
                 let expected_num_params = struct_def_ty
                     .get_members()
