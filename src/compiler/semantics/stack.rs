@@ -5,6 +5,7 @@ use log::*;
 use crate::compiler::{
     ast::{Element, Module, Node, Path, Type},
     import::{Import, ImportStructDef},
+    Span,
 };
 use crate::StringId;
 
@@ -95,6 +96,7 @@ impl<'a> SymbolTableScopeStack {
                     ty: Type::FunctionDef(params, Box::new(return_ty)),
                     mutable: false,
                     is_extern: false,
+                    span: None,
                 },
             ),
             None => None,
@@ -118,6 +120,7 @@ impl<'a> SymbolTableScopeStack {
                     ),
                     mutable: false,
                     is_extern: false,
+                    span: None,
                 },
             ),
             None => None,
@@ -212,9 +215,10 @@ impl<'a> SymbolTableScopeStack {
         ty: Type,
         mutable: bool,
         is_extern: bool,
+        span: Span,
     ) -> Result<(), SemanticError> {
         match &mut self.head {
-            Some(h) => h.add(name, ty, mutable, is_extern),
+            Some(h) => h.add(name, ty, mutable, is_extern, span),
             None => panic!("Expected a head"),
         }
     }

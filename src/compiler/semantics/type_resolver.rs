@@ -154,7 +154,7 @@ impl<'a> TypeResolver<'a> {
 
         // Add parameters to symbol table
         for p in params.iter() {
-            ctx.add_symbol(p.name, p.ty.clone(), false, false)
+            ctx.add_symbol(p.name, p.ty.clone(), false, false, p.span())
                 .map_err(|e| CompilerError::new(p.span(), e))?;
         }
 
@@ -262,10 +262,13 @@ impl<'a> TypeResolver<'a> {
             let ctx = ctx.with_type(bind.get_type().clone());
             let rhs = self.analyze_expression(rhs)?;
             if ctx.ty() == rhs.get_type() {
-                match self
-                    .symbols
-                    .add(bind.get_id(), ctx.ty().clone(), bind.is_mutable(), false)
-                {
+                match self.symbols.add(
+                    bind.get_id(),
+                    ctx.ty().clone(),
+                    bind.is_mutable(),
+                    false,
+                    bind.span(),
+                ) {
                     Ok(()) => {
                         let ty = ctx.ty().clone();
                         Ok(Bind::new(ctx, bind.get_id(), ty, bind.is_mutable(), rhs))

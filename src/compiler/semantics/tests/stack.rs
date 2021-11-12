@@ -217,7 +217,7 @@ mod stack_tests {
 
         let local = SymbolTable::new();
         stack.enter_scope(local);
-        stack.add(x, Type::I8, false, false).unwrap();
+        stack.add(x, Type::I8, false, false, Span::zero()).unwrap();
 
         let (s, _) = stack
             .lookup_symbol_by_path(&vec![Element::Id(x)].into())
@@ -243,7 +243,7 @@ mod stack_tests {
 
         let local = SymbolTable::new();
         stack.enter_scope(local);
-        stack.add(x, Type::I8, false, false).unwrap();
+        stack.add(x, Type::I8, false, false, Span::zero()).unwrap();
 
         let local2 = SymbolTable::new();
         stack.enter_scope(local2);
@@ -270,7 +270,7 @@ mod stack_tests {
         // Module 1
         let module = SymbolTable::new_module(first);
         stack.enter_scope(module);
-        stack.add(x, Type::I8, false, false).unwrap();
+        stack.add(x, Type::I8, false, false, Span::zero()).unwrap();
 
         let func = SymbolTable::new_routine(my_func);
         stack.enter_scope(func);
@@ -310,7 +310,7 @@ mod stack_tests {
         // Module 1
         let module = SymbolTable::new_module(first);
         stack.enter_scope(module);
-        stack.add(x, Type::I8, false, false).unwrap();
+        stack.add(x, Type::I8, false, false, Span::zero()).unwrap();
 
         // Module 2
         let module2 = SymbolTable::new_module(second);

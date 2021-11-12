@@ -136,8 +136,9 @@ impl SemanticContext {
         ty: Type,
         mutable: bool,
         is_extern: bool,
+        span: Span,
     ) -> Result<(), SemanticError> {
-        self.sym.add(name, ty, mutable, is_extern)
+        self.sym.add(name, ty, mutable, is_extern, span)
     }
 }
 
