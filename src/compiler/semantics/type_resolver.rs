@@ -525,7 +525,17 @@ impl<'a> TypeResolver<'a> {
                     .lookup_var(*id)
                     .map_err(|e| CompilerError::new(ctx.span(), e))?
                 {
-                    Symbol { ty: p, .. } => ctx.with_type(p.clone()), // TODO: link the span for the symbol decl to the type resolution
+                    Symbol { ty: p, span, .. } => {
+                        self.logger.write(Event::<_, SemanticError> {
+                            stage: "type-resolver",
+                            input: ctx.span(),
+                            msg: Ok(TypeOk {
+                                ty: p,
+                                refs: span.map(|s| vec![s]).unwrap_or_default(),
+                            }),
+                        });
+                        ctx.with_type(p.clone())
+                    } // TODO: link the span for the symbol decl to the type resolution
                 };
                 Ok(Expression::Identifier(ctx, id.clone()))
             }

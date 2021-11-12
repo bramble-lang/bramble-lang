@@ -60,7 +60,7 @@ impl<'a> Writable for TypeOk<'a> {
             super::ast::Type::CoroutineDef(_, _) => todo!(),
             super::ast::Type::Coroutine(_) => todo!(),
             super::ast::Type::ExternDecl(_, _, _) => todo!(),
-            super::ast::Type::Unknown => todo!(),
+            super::ast::Type::Unknown => w.write_str("Unknown"),
         }
     }
 }
