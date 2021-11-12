@@ -154,6 +154,7 @@ impl<'a> TypeResolver<'a> {
 
         // Add parameters to symbol table
         for p in params.iter() {
+            self.record(p, vec![]);
             ctx.add_symbol(p.name, p.ty.clone(), false, false, p.span())
                 .map_err(|e| CompilerError::new(p.span(), e))
                 .view_err(|e| self.record_err(e))?;
@@ -177,6 +178,10 @@ impl<'a> TypeResolver<'a> {
             ret_ty: ret_ty.clone(),
             body: resolved_body,
         })
+        .map(|e| {
+            self.record(&e, vec![]);
+            e
+        })
     }
 
     fn analyze_structdef(
@@ -185,17 +190,13 @@ impl<'a> TypeResolver<'a> {
     ) -> SemanticResult<StructDef<SemanticContext>> {
         // Check the type of each member
         let fields = struct_def.get_fields();
-        for Parameter {
-            context: field_ctx,
-            ty: field_type,
-            ..
-        } in fields.iter()
-        {
-            match field_type {
+        for f in fields.iter() {
+            self.record(f, vec![]);
+            match &f.ty {
                 Type::Custom(ty_name) => {
                     self.symbols
                         .lookup_symbol_by_path(ty_name)
-                        .map_err(|e| CompilerError::new(field_ctx.span(), e))
+                        .map_err(|e| CompilerError::new(f.span(), e))
                         .view_err(|e| self.record_err(e))?;
                 }
                 _ => (),
@@ -210,6 +211,10 @@ impl<'a> TypeResolver<'a> {
             ctx,
             fields.clone(),
         ))
+        .map(|e| {
+            self.record(&e, vec![]);
+            e
+        })
     }
 
     fn analyze_extern(
@@ -236,6 +241,10 @@ impl<'a> TypeResolver<'a> {
             ex.has_varargs,
             ret_ty,
         ))
+        .map(|e| {
+            self.record(&e, vec![]);
+            e
+        })
     }
 
     fn analyze_statement(
@@ -286,6 +295,10 @@ impl<'a> TypeResolver<'a> {
         };
         result
             .map_err(|e| CompilerError::new(ctx.span(), e))
+            .map(|e| {
+                self.record(&e, vec![]);
+                e
+            })
             .view_err(|e| self.record_err(e))
     }
 
@@ -313,7 +326,12 @@ impl<'a> TypeResolver<'a> {
             }
             Err(e) => Err(e),
         };
-        result.map_err(|e| CompilerError::new(mutate.span(), e))
+        result
+            .map_err(|e| CompilerError::new(mutate.span(), e))
+            .map(|e| {
+                self.record(&e, vec![]);
+                e
+            })
     }
 
     fn analyze_yieldreturn(
@@ -357,6 +375,10 @@ impl<'a> TypeResolver<'a> {
             ))
         }
         .map_err(|e| CompilerError::new(yr.span(), e))
+        .map(|e| {
+            self.record(&e, vec![]);
+            e
+        })
         .view_err(|e| self.record_err(e))
     }
 
@@ -401,6 +423,10 @@ impl<'a> TypeResolver<'a> {
             ))
         }
         .map_err(|e| CompilerError::new(r.span(), e))
+        .map(|e| {
+            self.record(&e, vec![]);
+            e
+        })
         .view_err(|e| self.record_err(e))
     }
 
@@ -845,13 +871,7 @@ impl<'a> TypeResolver<'a> {
                 ))
             }
         }.map(|e| {
-            let ctx = e.context();
-            self.record(
-                ctx.span(),
-                Ok(TypeOk {
-                    ty: ctx.ty(),
-                    refs,
-                }));
+            self.record(&e, refs);
             e
         })
     }
@@ -1068,11 +1088,15 @@ impl<'a> TypeResolver<'a> {
         Ok(())
     }
 
-    fn record(&self, span: Span, r: Result<TypeOk, &CompilerError<SemanticError>>) {
-        self.logger.write(Event {
+    fn record<N: Node<SemanticContext>>(&self, n: &N, refs: Vec<Span>) {
+        let ctx = n.context();
+        self.logger.write(Event::<_, SemanticError> {
             stage: "type-resolver",
-            input: span,
-            msg: r,
+            input: ctx.span(),
+            msg: Ok(TypeOk {
+                ty: ctx.ty(),
+                refs: refs,
+            }),
         });
     }
 
