@@ -50,7 +50,7 @@ impl<'a> Writable for TypeOk<'a> {
             super::ast::Type::I16 => todo!(),
             super::ast::Type::I32 => todo!(),
             super::ast::Type::I64 => w.write_str("i64"),
-            super::ast::Type::Bool => todo!(),
+            super::ast::Type::Bool => w.write_str("bool"),
             super::ast::Type::StringLiteral => todo!(),
             super::ast::Type::Array(_, _) => todo!(),
             super::ast::Type::Unit => todo!(),

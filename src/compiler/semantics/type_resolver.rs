@@ -574,6 +574,14 @@ impl<'a> TypeResolver<'a> {
             Expression::BinaryOp(ctx, op, l, r) => {
                 let (ty, l, r) = self.binary_op(*op, &l, &r)?;
                 let ctx = ctx.with_type(ty);
+                self.logger.write(Event::<_, SemanticError> {
+                    stage: "type-resolver",
+                    input: ctx.span(),
+                    msg: Ok(TypeOk {
+                        ty: ctx.ty(),
+                        refs: vec![],
+                    }),
+                });
                 Ok(Expression::BinaryOp(ctx, *op, Box::new(l), Box::new(r)))
             }
             Expression::UnaryOp(ctx, op, operand) => {
