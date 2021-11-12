@@ -76,7 +76,14 @@ fn default_canonize_context_path<T: Canonizable + ?Sized>(
         Some(name) => {
             let cpath = stack
                 .to_canonical(&vec![Element::Id(name)].into())
-                .map_err(|e| CompilerError::new(node.span(), e))?;
+                .map_err(|e| CompilerError::new(node.span(), e))
+                .view_err(|e| {
+                    logger.write(Event::<&Path, _> {
+                        stage: "canonize-type-ref",
+                        input: node.span(),
+                        msg: Err(e),
+                    })
+                })?;
 
             logger.write(Event::<_, SemanticError> {
                 stage: "canonize-item-path",
