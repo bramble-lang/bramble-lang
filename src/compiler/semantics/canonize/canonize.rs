@@ -1,4 +1,5 @@
 use crate::compiler::{
+    diagnostics::ViewErr,
     diagnostics::{Event, Logger},
     import::Import,
     semantics::error::SemanticError,
@@ -27,7 +28,7 @@ pub fn canonize_paths(
     t.for_each(module, |stack, node| {
         node.canonize_context_path(stack, logger)
     })?;
-    t.for_each(module, |stack, node| node.canonize_type_refs(stack))?;
+    t.for_each(module, |stack, node| node.canonize_type_refs(stack, logger))?;
 
     debug!("Finished canonization of paths");
     Ok(())
@@ -52,7 +53,11 @@ pub trait Canonizable: Node<SemanticContext> {
         default_canonize_context_path(self, stack, logger)
     }
 
-    fn canonize_type_refs(&mut self, _stack: &SymbolTableScopeStack) -> CanonizeResult<()> {
+    fn canonize_type_refs(
+        &mut self,
+        _stack: &SymbolTableScopeStack,
+        _logger: &Logger,
+    ) -> CanonizeResult<()> {
         Ok(())
     }
 }
@@ -74,7 +79,7 @@ fn default_canonize_context_path<T: Canonizable + ?Sized>(
                 .map_err(|e| CompilerError::new(node.span(), e))?;
 
             logger.write(Event::<_, SemanticError> {
-                stage: "canonizer",
+                stage: "canonize-item-path",
                 input: node.span(),
                 msg: Ok(&cpath),
             });
@@ -87,14 +92,26 @@ fn default_canonize_context_path<T: Canonizable + ?Sized>(
 }
 
 impl Canonizable for Expression<SemanticContext> {
-    fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> CanonizeResult<()> {
+    fn canonize_type_refs(
+        &mut self,
+        stack: &SymbolTableScopeStack,
+        logger: &Logger,
+    ) -> CanonizeResult<()> {
+        let span = self.span();
         match self {
             Expression::Path(_, ref mut path) => {
                 if !path.is_canonical() {
                     stack
                         .to_canonical(path)
                         .and_then(|canonical_path| {
+                            logger.write(Event::<_, SemanticError> {
+                                stage: "canonize-item-path",
+                                input: span,
+                                msg: Ok(&canonical_path),
+                            });
+
                             *path = canonical_path;
+
                             Ok(())
                         })
                         .map_err(|e| CompilerError::new(self.span(), e))
@@ -107,6 +124,12 @@ impl Canonizable for Expression<SemanticContext> {
                     stack
                         .to_canonical(path)
                         .and_then(|canonical_path| {
+                            logger.write(Event::<_, SemanticError> {
+                                stage: "canonize-item-path",
+                                input: span,
+                                msg: Ok(&canonical_path),
+                            });
+
                             *path = canonical_path;
                             Ok(())
                         })
@@ -120,6 +143,12 @@ impl Canonizable for Expression<SemanticContext> {
                     stack
                         .to_canonical(path)
                         .and_then(|canonical_path| {
+                            logger.write(Event::<_, SemanticError> {
+                                stage: "canonize-type-ref",
+                                input: span,
+                                msg: Ok(&canonical_path),
+                            });
+
                             *path = canonical_path;
                             Ok(())
                         })
@@ -130,16 +159,43 @@ impl Canonizable for Expression<SemanticContext> {
             }
             _ => Ok(()),
         }
+        .view_err(|e| {
+            logger.write(Event::<&Path, _> {
+                stage: "canonize-type-ref",
+                input: self.span(),
+                msg: Err(e),
+            })
+        })
     }
 }
 
 impl Canonizable for Statement<SemanticContext> {}
 
 impl Canonizable for Bind<SemanticContext> {
-    fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> CanonizeResult<()> {
+    fn canonize_type_refs(
+        &mut self,
+        stack: &SymbolTableScopeStack,
+        logger: &Logger,
+    ) -> CanonizeResult<()> {
         let canon_type = stack
             .canonize_type(self.get_type())
-            .map_err(|e| CompilerError::new(self.span(), e))?;
+            .map_err(|e| CompilerError::new(self.span(), e))
+            .view_err(|e| {
+                logger.write(Event::<&Path, _> {
+                    stage: "canonize-type-ref",
+                    input: self.span(),
+                    msg: Err(e),
+                })
+            })?;
+
+        canon_type.get_path().map(|p| {
+            logger.write(Event::<_, SemanticError> {
+                stage: "canonize-type-ref",
+                input: self.span(),
+                msg: Ok(p),
+            })
+        });
+
         self.set_type(canon_type);
         Ok(())
     }
@@ -166,7 +222,14 @@ impl Canonizable for Module<SemanticContext> {
         for s in sym.table_mut().iter_mut() {
             let canonized_ty = stack
                 .canonize_type(&s.ty)
-                .map_err(|e| CompilerError::new(self.span(), e))?;
+                .map_err(|e| CompilerError::new(self.span(), e))
+                .view_err(|e| {
+                    logger.write(Event::<&Path, _> {
+                        stage: "canonize-type-ref",
+                        input: self.span(),
+                        msg: Err(e),
+                    })
+                })?;
             s.ty = canonized_ty;
         }
 
@@ -179,10 +242,30 @@ impl Canonizable for Module<SemanticContext> {
 impl Canonizable for StructDef<SemanticContext> {}
 
 impl Canonizable for RoutineDef<SemanticContext> {
-    fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> CanonizeResult<()> {
+    fn canonize_type_refs(
+        &mut self,
+        stack: &SymbolTableScopeStack,
+        logger: &Logger,
+    ) -> CanonizeResult<()> {
         let ctype = stack
             .canonize_type(&self.ret_ty)
-            .map_err(|e| CompilerError::new(self.span(), e))?;
+            .map_err(|e| CompilerError::new(self.span(), e))
+            .view_err(|e| {
+                logger.write(Event::<&Path, _> {
+                    stage: "canonize-type-ref",
+                    input: self.span(),
+                    msg: Err(e),
+                })
+            })?;
+
+        ctype.get_path().map(|p| {
+            logger.write(Event::<_, SemanticError> {
+                stage: "canonize-type-ref",
+                input: self.span(),
+                msg: Ok(p),
+            })
+        });
+
         self.ret_ty = ctype;
         Ok(())
     }
@@ -201,7 +284,7 @@ impl Canonizable for Extern<SemanticContext> {
         let cpath: Path = vec![Element::Id(name)].into();
 
         logger.write(Event::<_, SemanticError> {
-            stage: "canonizer",
+            stage: "canonize-item-path",
             input: self.span(),
             msg: Ok(&cpath),
         });
@@ -210,22 +293,70 @@ impl Canonizable for Extern<SemanticContext> {
         Ok(())
     }
 
-    fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> CanonizeResult<()> {
+    fn canonize_type_refs(
+        &mut self,
+        stack: &SymbolTableScopeStack,
+        logger: &Logger,
+    ) -> CanonizeResult<()> {
         let ctype = stack
             .canonize_type(&self.ty)
-            .map_err(|e| CompilerError::new(self.span(), e))?;
+            .map_err(|e| CompilerError::new(self.span(), e))
+            .view_err(|e| {
+                logger.write(Event::<&Path, _> {
+                    stage: "canonize-type-ref",
+                    input: self.span(),
+                    msg: Err(e),
+                })
+            })?;
+
+        ctype.get_path().map(|p| {
+            logger.write(Event::<_, SemanticError> {
+                stage: "canonize-type-ref",
+                input: self.span(),
+                msg: Ok(p),
+            })
+        });
+
         self.ty = ctype;
         Ok(())
     }
 }
 
 impl Canonizable for Parameter<SemanticContext> {
-    fn canonize_type_refs(&mut self, stack: &SymbolTableScopeStack) -> CanonizeResult<()> {
+    fn canonize_type_refs(
+        &mut self,
+        stack: &SymbolTableScopeStack,
+        logger: &Logger,
+    ) -> CanonizeResult<()> {
         let ctype = stack
             .canonize_type(&self.ty)
-            .map_err(|e| CompilerError::new(self.span(), e))?;
+            .map_err(|e| CompilerError::new(self.span(), e))
+            .view_err(|e| {
+                logger.write(Event::<&Path, _> {
+                    stage: "canonize-type-ref",
+                    input: self.span(),
+                    msg: Err(e),
+                })
+            })?;
+
+        ctype.get_path().map(|p| {
+            logger.write(Event::<_, SemanticError> {
+                stage: "canonize-type-ref",
+                input: self.span(),
+                msg: Ok(p),
+            })
+        });
+
         self.ty = ctype;
         Ok(())
+    }
+
+    fn canonize_context_path(
+        &mut self,
+        stack: &SymbolTableScopeStack,
+        logger: &Logger,
+    ) -> CanonizeResult<()> {
+        default_canonize_context_path(self, stack, logger)
     }
 }
 
