@@ -1,3 +1,4 @@
+use crate::compiler::diagnostics::Logger;
 use crate::compiler::source::SourceIr;
 use crate::compiler::Span;
 use crate::{
@@ -22,8 +23,9 @@ pub fn resolve_types(
     ast: &Module<ParserContext>,
     main_mod: StringId,
     main_fn: StringId,
+    logger: &Logger,
 ) -> SemanticResult<Module<SemanticContext>> {
-    resolve_types_with_imports(ast, main_mod, main_fn, &vec![])
+    resolve_types_with_imports(ast, main_mod, main_fn, &vec![], logger)
 }
 
 pub fn resolve_types_with_imports(
@@ -31,10 +33,11 @@ pub fn resolve_types_with_imports(
     main_mod: StringId,
     main_fn: StringId,
     imports: &[Import],
+    logger: &Logger,
 ) -> SemanticResult<Module<SemanticContext>> {
     let mut sa = SemanticAst::new();
     let mut sm_ast = sa.from_module(ast);
-    canonize_paths(&mut sm_ast, imports)?; //TODO: Add a trace for this step
+    canonize_paths(&mut sm_ast, imports, logger)?; //TODO: Add a trace for this step
     SymbolTable::add_item_defs_to_table(&mut sm_ast)
         .map_err(|e| CompilerError::new(Span::zero(), e))?;
 

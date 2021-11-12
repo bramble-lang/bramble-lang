@@ -450,7 +450,7 @@ mod test {
 
     #[test]
     fn empty_module() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
         let m = table.insert("m".into());
 
         let module1 = Module::new(m, 1i32);
@@ -469,7 +469,7 @@ mod test {
 
     #[test]
     fn nested_module() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
         let m = table.insert("m".into());
         let m2 = table.insert("m2".into());
 
@@ -492,7 +492,7 @@ mod test {
 
     #[test]
     fn module_with_items() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
         let m = table.insert("m".into());
         let m2 = table.insert("m2".into());
         let p = table.insert("p".into());

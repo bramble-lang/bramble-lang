@@ -67,7 +67,7 @@ impl<'a> StringPool<'a> {
             Boolean(..) => {}
             StringLiteral(_, s) => {
                 let val = self.string_table.get(*s).unwrap();
-                self.insert(val);
+                self.insert(&val);
             }
             ArrayExpression(_, elements, _) => {
                 for e in elements {
@@ -262,6 +262,7 @@ mod test {
                 &ast,
                 main_mod,
                 main_fn,
+                &logger,
             ).unwrap();
             let mut sp = StringPool::new(&table);
             sp.extract_from_module(&module);

@@ -563,9 +563,11 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::RoutineDef<SemanticContext> {
             let pname = llvm.string_table.get(*pid).unwrap();
 
             // move parameter into the stack
-            let pptr = llvm.builder.build_alloca(llvm_params[pi].get_type(), pname);
+            let pptr = llvm
+                .builder
+                .build_alloca(llvm_params[pi].get_type(), &pname);
             llvm.builder.build_store(pptr, llvm_params[pi]);
-            llvm.registers.insert(pname, pptr.into()).unwrap();
+            llvm.registers.insert(&pname, pptr.into()).unwrap();
         }
 
         // Compile the body to LLVM
@@ -609,17 +611,17 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticContext> {
             .into_basic_type()
         {
             Ok(ty) if ty.is_aggregate_type() => {
-                let ptr = llvm.builder.build_alloca(ty, name);
+                let ptr = llvm.builder.build_alloca(ty, &name);
                 let rhs_ptr = rhs.into_pointer_value();
                 llvm.build_memcpy(ptr, rhs_ptr);
 
-                llvm.registers.insert(name, ptr.into()).unwrap();
+                llvm.registers.insert(&name, ptr.into()).unwrap();
                 Some(ptr)
             }
             Ok(ty) => {
-                let ptr = llvm.builder.build_alloca(ty, name);
+                let ptr = llvm.builder.build_alloca(ty, &name);
                 llvm.builder.build_store(ptr, rhs);
-                llvm.registers.insert(name, ptr.into()).unwrap();
+                llvm.registers.insert(&name, ptr.into()).unwrap();
                 Some(ptr)
             }
             Err(msg) => panic!("Failed to convert to basic type: {}", msg),
@@ -635,7 +637,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Mutate<SemanticContext> {
         let sid = self.get_id();
         let name = llvm.string_table.get(sid).unwrap();
 
-        let v_ptr = llvm.registers.get(name).unwrap().into_pointer_value();
+        let v_ptr = llvm.registers.get(&name).unwrap().into_pointer_value();
         llvm.builder.build_store(v_ptr, rhs);
         Some(v_ptr)
     }
@@ -714,7 +716,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
             }
             ast::Expression::StringLiteral(_, s) => {
                 let val = llvm.string_table.get(*s).unwrap();
-                let str_id = llvm.get_str_var(val).unwrap();
+                let str_id = llvm.get_str_var(&val).unwrap();
                 let val = llvm.module.get_global(&str_id).unwrap();
                 let val_ptr = val.as_pointer_value();
                 let bitcast = llvm.builder.build_bitcast(
@@ -730,11 +732,11 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
             ast::Expression::Identifier(_, id) => {
                 let name = llvm.string_table.get(*id).unwrap();
 
-                let ptr = llvm.registers.get(name).unwrap().into_pointer_value();
+                let ptr = llvm.registers.get(&name).unwrap().into_pointer_value();
                 if ptr.get_type().get_element_type().is_aggregate_type() {
                     Some(ptr.into())
                 } else {
-                    let val = llvm.builder.build_load(ptr, name);
+                    let val = llvm.builder.build_load(ptr, &name);
                     Some(val)
                 }
             }

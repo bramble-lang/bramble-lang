@@ -12,6 +12,8 @@
 
 use std::fmt::Debug;
 
+use crate::StringId;
+
 use super::{CompilerDisplay, CompilerError, Span};
 
 mod logger;
@@ -32,6 +34,9 @@ pub trait Writer {
 
     /// Write a string value to the current event
     fn write_str(&self, s: &str);
+
+    /// Write a [`StringId`] value to the current event
+    fn write_stringid(&self, s: StringId);
 
     /// Start writing a new compiler event.  This should emit any tokens which
     /// signal the start of an event.

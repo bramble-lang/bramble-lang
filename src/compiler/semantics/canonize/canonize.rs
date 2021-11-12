@@ -1,4 +1,10 @@
-use crate::compiler::{import::Import, source::SourceIr, CompilerError};
+use crate::compiler::{
+    diagnostics::{Event, Logger},
+    import::Import,
+    semantics::error::SemanticError,
+    source::SourceIr,
+    CompilerError,
+};
 use log::debug;
 
 use crate::compiler::{ast::*, semantics::stack::SymbolTableScopeStack};
@@ -13,11 +19,14 @@ Canonize all the paths in the AST
 pub fn canonize_paths(
     module: &mut Module<SemanticContext>,
     imports: &[Import],
+    logger: &Logger,
 ) -> CanonizeResult<()> {
     debug!("Start canonization of paths");
 
     let mut t = ForEachPreOrderMut::new("Canonize Paths", module, imports);
-    t.for_each(module, |stack, node| node.canonize_context_path(stack))?;
+    t.for_each(module, |stack, node| {
+        node.canonize_context_path(stack, logger)
+    })?;
     t.for_each(module, |stack, node| node.canonize_type_refs(stack))?;
 
     debug!("Finished canonization of paths");
@@ -35,8 +44,12 @@ pub fn canonize_paths(
 pub trait Canonizable: Node<SemanticContext> {
     // TODO: make one canonize function that handles everything and then the special cases
     // do their own thing.  I think that will be easier than 3 separate functions
-    fn canonize_context_path(&mut self, stack: &SymbolTableScopeStack) -> CanonizeResult<()> {
-        default_canonize_context_path(self, stack)
+    fn canonize_context_path(
+        &mut self,
+        stack: &SymbolTableScopeStack,
+        logger: &Logger,
+    ) -> CanonizeResult<()> {
+        default_canonize_context_path(self, stack, logger)
     }
 
     fn canonize_type_refs(&mut self, _stack: &SymbolTableScopeStack) -> CanonizeResult<()> {
@@ -47,6 +60,7 @@ pub trait Canonizable: Node<SemanticContext> {
 fn default_canonize_context_path<T: Canonizable + ?Sized>(
     node: &mut T,
     stack: &SymbolTableScopeStack,
+    logger: &Logger,
 ) -> CanonizeResult<()> {
     // If this node has a name, then use the current stack to construct
     // a canonical path from the root of the AST to the current node
@@ -58,6 +72,13 @@ fn default_canonize_context_path<T: Canonizable + ?Sized>(
             let cpath = stack
                 .to_canonical(&vec![Element::Id(name)].into())
                 .map_err(|e| CompilerError::new(node.span(), e))?;
+
+            logger.write(Event::<_, SemanticError> {
+                stage: "canonizer",
+                input: node.span(),
+                msg: Ok(&cpath),
+            });
+
             node.get_context_mut().set_canonical_path(cpath);
         }
         None => (),
@@ -127,11 +148,15 @@ impl Canonizable for Bind<SemanticContext> {
 impl Canonizable for Mutate<SemanticContext> {}
 
 impl Canonizable for Module<SemanticContext> {
-    fn canonize_context_path(&mut self, stack: &SymbolTableScopeStack) -> CanonizeResult<()> {
+    fn canonize_context_path(
+        &mut self,
+        stack: &SymbolTableScopeStack,
+        logger: &Logger,
+    ) -> CanonizeResult<()> {
         // If this node has a name, then use the current stack to construct
         // a canonical path from the root of the AST to the current node
         // (this is for routine definitions, modules, and structure definitions)
-        default_canonize_context_path(self, stack)?;
+        default_canonize_context_path(self, stack, logger)?;
 
         // Canonize Symbol Table
         // The types used in the routine and structure definitions need to be
@@ -164,12 +189,23 @@ impl Canonizable for RoutineDef<SemanticContext> {
 }
 
 impl Canonizable for Extern<SemanticContext> {
-    fn canonize_context_path(&mut self, _: &SymbolTableScopeStack) -> CanonizeResult<()> {
+    fn canonize_context_path(
+        &mut self,
+        _: &SymbolTableScopeStack,
+        logger: &Logger,
+    ) -> CanonizeResult<()> {
         let name = match self.name() {
             Some(name) => name,
             None => panic!("Externs must have a name"),
         };
-        let cpath = vec![Element::Id(name)].into();
+        let cpath: Path = vec![Element::Id(name)].into();
+
+        logger.write(Event::<_, SemanticError> {
+            stage: "canonizer",
+            input: self.span(),
+            msg: Ok(&cpath),
+        });
+
         self.get_context_mut().set_canonical_path(cpath);
         Ok(())
     }

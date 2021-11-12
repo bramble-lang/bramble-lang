@@ -67,7 +67,7 @@ impl Manifest {
 
     /// Convert a Manifest of a Braid artifact to set of definitions which can be used
     /// by the compiler for imported items.
-    pub fn to_import(self, st: &mut StringTable) -> Result<Import, ManifestError> {
+    pub fn to_import(self, st: &StringTable) -> Result<Import, ManifestError> {
         let structs = self
             .structs
             .into_iter()
@@ -131,7 +131,7 @@ impl ManifestRoutineDef {
         })
     }
 
-    fn to_rd(self, st: &mut StringTable) -> Result<ImportRoutineDef, ManifestError> {
+    fn to_rd(self, st: &StringTable) -> Result<ImportRoutineDef, ManifestError> {
         let path = string_to_path(st, &self.canon_path)?;
         let params = self
             .params
@@ -178,7 +178,7 @@ impl ManifestStructDef {
         })
     }
 
-    fn to_sd(self, st: &mut StringTable) -> Result<ImportStructDef, ManifestError> {
+    fn to_sd(self, st: &StringTable) -> Result<ImportStructDef, ManifestError> {
         let canon_path = string_to_path(st, &self.canon_path)?;
         let fields = self
             .fields
@@ -230,7 +230,7 @@ impl ManifestType {
         Ok(man_ty)
     }
 
-    fn to_ty(&self, st: &mut StringTable) -> Result<Type, ManifestError> {
+    fn to_ty(&self, st: &StringTable) -> Result<Type, ManifestError> {
         let cty = match self {
             ManifestType::U8 => Type::U8,
             ManifestType::U16 => Type::U16,
@@ -285,7 +285,7 @@ fn path_to_string(
 }
 
 /// Convert a Manifest file Path string to a Compiler Path value.
-fn string_to_path(st: &mut StringTable, p: &str) -> Result<Path, ManifestError> {
+fn string_to_path(st: &StringTable, p: &str) -> Result<Path, ManifestError> {
     /// Tests that an element is a valid identifier
     fn is_element_valid(el: &str) -> Result<(), ManifestError> {
         let cs = el.chars().collect::<Vec<_>>();

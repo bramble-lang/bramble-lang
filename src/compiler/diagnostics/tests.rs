@@ -112,5 +112,9 @@ mod tests {
             s.write(self);
             self.buf.borrow_mut().push_str(&format!(", "));
         }
+
+        fn write_stringid(&self, _s: crate::StringId) {
+            todo!()
+        }
     }
 }

@@ -174,14 +174,14 @@ pub struct Lexer<'a> {
     end_offset: Offset,
     index: usize,
     line: u32,
-    string_table: &'a mut StringTable,
+    string_table: &'a StringTable,
     logger: &'a Logger<'a>,
 }
 
 impl<'a> Lexer<'a> {
     pub fn new(
         text: Source,
-        string_table: &'a mut StringTable,
+        string_table: &'a StringTable,
         logger: &'a Logger,
     ) -> Result<Lexer<'a>, LexerError> {
         let end_offset = text.high();
@@ -402,7 +402,7 @@ impl<'a> Lexer<'a> {
             let (_, span) = branch.merge().unwrap();
             let int_text = self.string_table.get(int_token).unwrap();
 
-            Self::create_int_literal(self.line, span, int_text, type_suffix)
+            Self::create_int_literal(self.line, span, &int_text, type_suffix)
         } else {
             let span = self.current_char_span().unwrap();
             err!(

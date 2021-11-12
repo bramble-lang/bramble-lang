@@ -2,9 +2,12 @@ use std::{collections::HashMap, marker::PhantomData};
 
 use config::TracingConfig;
 
-use crate::compiler::{
-    diagnostics::{Writable, Writer},
-    SourceMap,
+use crate::{
+    compiler::{
+        diagnostics::{Writable, Writer},
+        SourceMap,
+    },
+    StringTable,
 };
 
 pub mod config;
@@ -13,11 +16,15 @@ pub mod config;
 /// to convert Span information to human readable source code references.
 pub struct ConsoleWriter<'a> {
     source_map: &'a SourceMap,
+    string_table: &'a StringTable,
 }
 
 impl<'a> ConsoleWriter<'a> {
-    pub fn new(source_map: &'a SourceMap) -> ConsoleWriter<'a> {
-        ConsoleWriter { source_map }
+    pub fn new(source_map: &'a SourceMap, string_table: &'a StringTable) -> ConsoleWriter<'a> {
+        ConsoleWriter {
+            source_map,
+            string_table,
+        }
     }
 }
 
@@ -56,7 +63,11 @@ impl<'a> Writer for ConsoleWriter<'a> {
     }
 
     fn write_str(&self, s: &str) {
-        print!("\"{}\", ", s);
+        print!("{}", s);
+    }
+
+    fn write_stringid(&self, s: crate::StringId) {
+        print!("{}", self.string_table.get(s).unwrap());
     }
 }
 

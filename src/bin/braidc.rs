@@ -23,7 +23,7 @@ fn main() {
         None => (),
     }
 
-    let mut string_table = StringTable::new();
+    let string_table = StringTable::new();
 
     let input = config
         .value_of("input")
@@ -43,13 +43,13 @@ fn main() {
     let stop_stage = get_stage(&config).unwrap();
 
     let mut tracer = Logger::new();
-    let console_writer = ConsoleWriter::new(&sourcemap);
+    let console_writer = ConsoleWriter::new(&sourcemap, &string_table);
     tracer.add_writer(&console_writer);
     if enable_tracing(&config) {
         tracer.enable();
     }
 
-    let token_sets = match tokenize_source_map(&sourcemap, src_path, &mut string_table, &tracer) {
+    let token_sets = match tokenize_source_map(&sourcemap, src_path, &string_table, &tracer) {
         Ok(ts) => ts,
         Err(errs) => {
             print_errs(&errs, &sourcemap, &string_table);
@@ -66,7 +66,7 @@ fn main() {
         project_name_id,
         token_sets,
         &sourcemap,
-        &mut string_table,
+        &string_table,
         &tracer,
     ) {
         Ok(root) => root,
@@ -83,7 +83,7 @@ fn main() {
     // Type Check
     let imports: Result<Vec<_>, _> = manifests
         .into_iter()
-        .map(|m| m.to_import(&mut string_table))
+        .map(|m| m.to_import(&string_table))
         .collect();
 
     let imports = match imports {
@@ -96,13 +96,14 @@ fn main() {
 
     let main_mod_id = string_table.insert(MAIN_MODULE.into());
     let main_fn_id = string_table.insert(USER_MAIN_FN.into());
-    let semantic_ast = match resolve_types_with_imports(&root, main_mod_id, main_fn_id, &imports) {
-        Ok(ast) => ast,
-        Err(msg) => {
-            print_errs(&[msg], &sourcemap, &string_table);
-            std::process::exit(ERR_TYPE_CHECK);
-        }
-    };
+    let semantic_ast =
+        match resolve_types_with_imports(&root, main_mod_id, main_fn_id, &imports, &tracer) {
+            Ok(ast) => ast,
+            Err(msg) => {
+                print_errs(&[msg], &sourcemap, &string_table);
+                std::process::exit(ERR_TYPE_CHECK);
+            }
+        };
 
     if stop_stage == Some(Stage::Semantic) {
         return;

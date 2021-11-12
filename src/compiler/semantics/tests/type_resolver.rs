@@ -160,7 +160,7 @@ mod type_resolver_tests {
                 .parse(test, &tokens)
                 .expect(&format!("{}", text))
                 .unwrap();
-            let module = resolve_types(&ast, main_mod, main_fn);
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -258,7 +258,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
             let result = resolve_types(
                 &ast,
                 main_mod, main_fn,
-
+                &logger,
             );
             match expected {
                 Ok(_) => assert!(result.is_ok(), "{:?} got {:?}", expected, result),
@@ -323,7 +323,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
 
             let parser = Parser::new(&logger);
             let ast = parser.parse(test, &tokens).unwrap().unwrap();
-            let result = resolve_types(&ast, main_mod, main_fn);
+            let result = resolve_types(&ast, main_mod, main_fn, &logger);
             assert!(result.is_ok());
         }
     }
@@ -377,7 +377,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 &ast,
                 main_mod,
                 main_fn,
-
+                &logger,
             );
             match expected {
                 Ok(_) => assert!(result.is_ok(), "Expected Ok got {:?}", result),
@@ -437,7 +437,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
 
             let parser = Parser::new(&logger);
             let ast = parser.parse(test, &tokens).unwrap().unwrap();
-            let result = resolve_types(&ast, main_mod, main_fn).unwrap();
+            let result = resolve_types(&ast, main_mod, main_fn, &logger).unwrap();
             if let Item::Routine(RoutineDef { body, .. }) = &result.get_functions()[0] {
                 if let Statement::Bind(box b) = &body[0] {
                     if let Expression::StructExpression(_, struct_name, ..) = b.get_rhs() {
@@ -508,7 +508,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
 
             let parser = Parser::new(&logger);
             let ast = parser.parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, main_mod, main_fn);
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match (expected, module) {
                 (Ok(expected_ty), Ok(actual)) => {
                     let fn_main = actual.get_functions()[0].to_routine().unwrap();
@@ -574,7 +574,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
 
             let parser = Parser::new(&logger);
             let ast = parser.parse(main, &tokens).unwrap().unwrap();
-            let result = resolve_types(&ast, main_mod, main_fn).unwrap();
+            let result = resolve_types(&ast, main_mod, main_fn, &logger).unwrap();
             if let Item::Routine(RoutineDef { params, .. }) = &result.get_functions()[0] {
                 if let Parameter {
                     ty: Type::Custom(ty_path),
@@ -624,7 +624,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
 
             let parser = Parser::new(&logger);
             let ast = parser.parse(main, &tokens).unwrap().unwrap();
-            let result = resolve_types(&ast, main_mod, main_fn).unwrap();
+            let result = resolve_types(&ast, main_mod, main_fn, &logger).unwrap();
             if let Item::Routine(RoutineDef { params, .. }) = &result.get_coroutines()[0] {
                 if let Type::Custom(ty_path) = &params[0].ty {
                     let expected: Path =
@@ -668,7 +668,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
 
             let parser = Parser::new(&logger);
             let ast = parser.parse(main, &tokens).unwrap().unwrap();
-            let result = resolve_types(&ast, main_mod, main_fn).unwrap();
+            let result = resolve_types(&ast, main_mod, main_fn, &logger).unwrap();
             if let Item::Struct(s) = &result.get_structs()[1] {
                 let fields = s.get_fields();
                 if let Type::Custom(ty_path) = &fields[0].ty {
@@ -867,7 +867,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
 
             let parser = Parser::new(&logger);
             let ast = parser.parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, main_mod, main_fn);
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match expected {
                 Ok(expected_ty) => {
                     assert!(module.is_ok(), "Test Case at L:{}", line);
@@ -998,7 +998,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
 
             let parser = Parser::new(&logger);
             let ast = parser.parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, main_mod, main_fn);
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -1069,7 +1069,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
 
             let parser = Parser::new(&logger);
             let ast = parser.parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, main_mod, main_fn);
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -1151,7 +1151,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
 
             let parser = Parser::new(&logger);
             let ast = parser.parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, main_mod, main_fn);
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -1234,7 +1234,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
 
             let parser = Parser::new(&logger);
             let ast = parser.parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, main_mod, main_fn);
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -1317,7 +1317,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
 
             let parser = Parser::new(&logger);
             let ast = parser.parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, main_mod, main_fn);
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -1403,7 +1403,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
 
                 let parser = Parser::new(&logger);
                 let ast = parser.parse(main, &tokens).unwrap().unwrap();
-                let module = resolve_types(&ast, main_mod, main_fn);
+                let module = resolve_types(&ast, main_mod, main_fn, &logger);
                 match expected {
                     Ok(expected_ty) => {
                         let module = module.unwrap();
@@ -1465,7 +1465,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
 
             let parser = Parser::new(&logger);
             let ast = parser.parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, main_mod, main_fn);
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             let module = module.unwrap();
             let fn_main = module.get_functions()[0].to_routine().unwrap();
 
@@ -1546,7 +1546,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
 
             let parser = Parser::new(&logger);
             let ast = parser.parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, main_mod, main_fn);
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -1665,7 +1665,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
 
             let parser = Parser::new(&logger);
             let ast = parser.parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, main_mod, main_fn);
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -1867,7 +1867,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
 
             let parser = Parser::new(&logger);
             let ast = parser.parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, main_mod, main_fn);
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -1961,7 +1961,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
 
             let parser = Parser::new(&logger);
             let ast = parser.parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, main_mod, main_fn);
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -2052,7 +2052,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
 
             let parser = Parser::new(&logger);
             let ast = parser.parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, main_mod, main_fn);
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -2166,7 +2166,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
             let module = resolve_types(
                 &ast,
                 main_mod, main_fn,
-
+                &logger,
             );
             match expected {
                 Ok(expected_ty) => {
@@ -2341,7 +2341,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
             let module = resolve_types(
                 &ast,
                 main_mod, main_fn,
-
+                &logger,
             );
             match expected {
                 Ok(expected_ty) => {
@@ -2462,6 +2462,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
             let module = resolve_types(
                 &ast,
                 main_mod, main_fn,
+                &logger,
             );
             match expected {
                 Ok(expected_ty) => {
@@ -2563,7 +2564,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
 
             let parser = Parser::new(&logger);
             let ast = parser.parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, main_mod, main_fn);
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -2651,7 +2652,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
 
             let parser = Parser::new(&logger);
             let ast = parser.parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, main_mod, main_fn);
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -2725,7 +2726,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
 
             let parser = Parser::new(&logger);
             let ast = parser.parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, main_mod, main_fn);
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -2803,7 +2804,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
 
             let parser = Parser::new(&logger);
             let ast = parser.parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, main_mod, main_fn);
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -2909,7 +2910,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
 
             let parser = Parser::new(&logger);
             let ast = parser.parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(&ast, main_mod, main_fn);
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -2991,6 +2992,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
             let module = resolve_types(
                 &ast,
                 main_mod, main_fn,
+                &logger,
 
             );
             match expected {
@@ -3227,6 +3229,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
             let result = resolve_types(
                 &ast,
                 main_mod, main_fn,
+                &logger,
 
             );
             match expected {
@@ -3277,6 +3280,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 let result = resolve_types(
                     &ast,
                     main_mod, main_fn,
+                &logger,
                 );
                 match expected {
                     Ok(_) => assert!(result.is_ok(), "{} -> {:?}", text, result),
@@ -3401,7 +3405,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 &ast,
                 main_mod, main_fn,
                 &vec![imports],
-
+                &logger,
             );
             match expected {
                 Ok(_) => assert!(result.is_ok(), "TL{}: {:?} got {:?}", line, expected, result.map_err(|e| e.fmt(&sm, &table))),

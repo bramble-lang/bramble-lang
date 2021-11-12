@@ -391,7 +391,7 @@ mod test {
 
     #[test]
     pub fn test_new_module() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
 
         let test = table.insert("test".into());
 
@@ -402,7 +402,7 @@ mod test {
 
     #[test]
     pub fn test_get_nonexistant_item() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
 
         let test = table.insert("test".into());
         let func = table.insert("func".into());
@@ -424,7 +424,7 @@ mod test {
 
     #[test]
     pub fn test_add_function() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
 
         let test = table.insert("test".into());
         let func = table.insert("func".into());
@@ -445,7 +445,7 @@ mod test {
 
     #[test]
     pub fn test_add_function_that_already_exists() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
 
         let test = table.insert("test".into());
         let func = table.insert("func".into());
@@ -469,7 +469,7 @@ mod test {
 
     #[test]
     pub fn test_add_coroutine() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
 
         let test = table.insert("test".into());
         let cor = table.insert("cor".into());
@@ -490,7 +490,7 @@ mod test {
 
     #[test]
     pub fn test_add_coroutine_that_already_exists() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
 
         let test = table.insert("test".into());
         let cor = table.insert("cor".into());
@@ -514,7 +514,7 @@ mod test {
 
     #[test]
     pub fn test_add_coroutine_with_same_name_as_function() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
 
         let test = table.insert("test".into());
         let dupe = table.insert("dupe".into());
@@ -547,7 +547,7 @@ mod test {
 
     #[test]
     pub fn test_add_function_with_same_name_as_coroutine() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
 
         let test = table.insert("test".into());
         let dupe = table.insert("dupe".into());
@@ -580,7 +580,7 @@ mod test {
 
     #[test]
     pub fn test_get_item_that_does_not_exist() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
 
         let test = table.insert("test".into());
         let func = table.insert("func".into());
@@ -602,7 +602,7 @@ mod test {
 
     #[test]
     pub fn test_get_function() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
 
         let test = table.insert("test".into());
         let func = table.insert("func".into());
@@ -623,7 +623,7 @@ mod test {
 
     #[test]
     pub fn test_get_coroutine() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
 
         let test = table.insert("test".into());
         let co = table.insert("co".into());
@@ -644,7 +644,7 @@ mod test {
 
     #[test]
     pub fn test_go_to_nested() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
 
         let inner = table.insert("inner".into());
         let outer = table.insert("outer".into());
@@ -671,7 +671,7 @@ mod test {
 
     #[test]
     pub fn test_add_extern() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
 
         let test = table.insert("test".into());
         let puts = table.insert("puts".into());
@@ -685,7 +685,7 @@ mod test {
 
     #[test]
     pub fn test_add_extern_that_already_exists() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
 
         let test = table.insert("test".into());
         let puts = table.insert("puts".into());
@@ -702,7 +702,7 @@ mod test {
 
     #[test]
     pub fn test_add_extern_with_same_name_as_function() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
 
         let test = table.insert("test".into());
         let dupe = table.insert("dupe".into());
@@ -728,7 +728,7 @@ mod test {
 
     #[test]
     pub fn test_add_function_with_same_name_as_extern() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
 
         let test = table.insert("test".into());
         let dupe = table.insert("dupe".into());

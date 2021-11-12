@@ -1,3 +1,4 @@
+use crate::compiler::diagnostics::Writable;
 use crate::compiler::{CompilerDisplay, CompilerDisplayError, SourceMap};
 use crate::{StringId, StringTable};
 
@@ -239,13 +240,37 @@ impl From<Vec<Element>> for Path {
     }
 }
 
+impl Writable for &Path {
+    fn write(&self, w: &dyn crate::compiler::diagnostics::Writer) {
+        if self.is_canonical {
+            w.write_str("$");
+        }
+
+        let len = self.path.len();
+
+        for idx in 0..len {
+            match &self.path[idx] {
+                Element::FileRoot => w.write_str(ROOT_PATH),
+                Element::CanonicalRoot => w.write_str(CANONICAL_ROOT),
+                Element::Selph => w.write_str(SELF),
+                Element::Super => w.write_str(SUPER),
+                Element::Id(sid) => w.write_stringid(*sid),
+            }
+
+            if idx < len - 1 {
+                w.write_str("::");
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod test_path {
     use super::*;
 
     #[test]
     fn test_canonical_to_canonical() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
         let first_id = table.insert("first".into());
         let current_id = table.insert("current".into());
         let path: Path = vec![Element::FileRoot, Element::Id(first_id)].into();
@@ -263,7 +288,7 @@ mod test_path {
 
     #[test]
     fn test_relative_to_canonical() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
         let relative_id = table.insert("relative".into());
         let current_id = table.insert("current".into());
 
@@ -281,7 +306,7 @@ mod test_path {
 
     #[test]
     fn test_self_to_canonical() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
         let relative_id = Element::Id(table.insert("relative".into()));
         let current_id = Element::Id(table.insert("current".into()));
 
@@ -294,7 +319,7 @@ mod test_path {
 
     #[test]
     fn test_relative_with_super_to_canonical() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
         let relative_id = Element::Id(table.insert("relative".into()));
         let current_id = Element::Id(table.insert("current".into()));
         let test_id = Element::Id(table.insert("test".into()));
@@ -308,7 +333,7 @@ mod test_path {
 
     #[test]
     fn test_relative_with_post_super_to_canonical() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
         let relative_id = Element::Id(table.insert("relative".into()));
         let current_id = Element::Id(table.insert("current".into()));
 
@@ -321,7 +346,7 @@ mod test_path {
 
     #[test]
     fn test_too_many_supers() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
         let relative_id = Element::Id(table.insert("relative".into()));
         let current_id = Element::Id(table.insert("current".into()));
 
@@ -333,7 +358,7 @@ mod test_path {
 
     #[test]
     fn test_relative_with_scattered_super_to_canonical() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
         let relative_id = Element::Id(table.insert("relative".into()));
         let current_id = Element::Id(table.insert("current".into()));
         let test_id = Element::Id(table.insert("test".into()));
@@ -347,7 +372,7 @@ mod test_path {
 
     #[test]
     fn test_push_step() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
         let item_id = Element::Id(table.insert("item".into()));
         let test_id = Element::Id(table.insert("test".into()));
 
@@ -361,7 +386,7 @@ mod test_path {
     #[test]
     fn test_to_label() {
         let sm = SourceMap::new();
-        let mut table = StringTable::new();
+        let table = StringTable::new();
         let item_id = Element::Id(table.insert("item".into()));
 
         let path: Path = vec![Element::Selph, item_id].into();
@@ -372,7 +397,7 @@ mod test_path {
 
     #[test]
     fn test_item() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
         let item_id = table.insert("item".into());
 
         let path: Path = vec![Element::Selph, Element::Id(item_id)].into();
@@ -389,7 +414,7 @@ mod test_path {
 
     #[test]
     fn test_parent() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
         let item_id = Element::Id(table.insert("item".into()));
 
         let path: Path = vec![Element::Selph, item_id].into();
