@@ -9,6 +9,8 @@ mod math {
             let b: bool := false && true;
             let s: string := "hello";
             let s2: super::S := super::S{ x : 5};
+
+            something(s2);
             
             return y;
         }

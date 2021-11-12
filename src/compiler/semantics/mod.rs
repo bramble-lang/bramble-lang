@@ -54,7 +54,7 @@ impl<'a> Writable for TypeOk<'a> {
             super::ast::Type::StringLiteral => w.write_str("string"),
             super::ast::Type::Array(_, _) => todo!(),
             super::ast::Type::Unit => todo!(),
-            super::ast::Type::Custom(_) => todo!(),
+            super::ast::Type::Custom(p) => w.write(&p),
             super::ast::Type::StructDef(_) => todo!(),
             super::ast::Type::FunctionDef(_, _) => todo!(),
             super::ast::Type::CoroutineDef(_, _) => todo!(),

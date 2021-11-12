@@ -32,6 +32,9 @@ pub trait Writer {
     /// Write a field with a [`Writable`] value to the current event
     fn write_field(&self, label: &str, s: &dyn Writable);
 
+    /// Write a [`Writable`] value to the current event
+    fn write(&self, s: &dyn Writable);
+
     /// Write a string value to the current event
     fn write_str(&self, s: &str);
 

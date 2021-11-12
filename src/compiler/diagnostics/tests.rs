@@ -116,5 +116,9 @@ mod tests {
         fn write_stringid(&self, _s: crate::StringId) {
             todo!()
         }
+
+        fn write(&self, s: &dyn crate::compiler::diagnostics::Writable) {
+            s.write(self);
+        }
     }
 }
