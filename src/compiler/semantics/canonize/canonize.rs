@@ -79,7 +79,7 @@ fn default_canonize_context_path<T: Canonizable + ?Sized>(
                 .map_err(|e| CompilerError::new(node.span(), e))
                 .view_err(|e| {
                     logger.write(Event::<&Path, _> {
-                        stage: "canonize-type-ref",
+                        stage: "canonize-item-path",
                         input: node.span(),
                         msg: Err(e),
                     })
