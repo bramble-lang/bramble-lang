@@ -1,4 +1,4 @@
-use crate::compiler::diagnostics::Logger;
+use crate::compiler::diagnostics::{Event, Logger, View, ViewErr};
 use crate::compiler::source::SourceIr;
 use crate::compiler::Span;
 use crate::{
@@ -14,6 +14,7 @@ use crate::{
 };
 use std::collections::HashMap;
 
+use super::TypeOk;
 use super::{
     canonize::canonize_paths, semanticnode::SemanticContext, stack::SymbolTableScopeStack,
     SemanticError, SemanticResult,
@@ -41,24 +42,26 @@ pub fn resolve_types_with_imports(
     SymbolTable::add_item_defs_to_table(&mut sm_ast)
         .map_err(|e| CompilerError::new(Span::zero(), e))?;
 
-    let mut semantic = TypeResolver::new(&sm_ast, imports, main_mod, main_fn);
+    let mut semantic = TypeResolver::new(&sm_ast, imports, main_mod, main_fn, logger);
 
     semantic.resolve_types()
 }
 
-pub struct TypeResolver {
+pub struct TypeResolver<'a> {
     symbols: SymbolTableScopeStack,
     imported_symbols: HashMap<String, Symbol>,
     main_fn: Path,
+    logger: &'a Logger<'a>,
 }
 
-impl TypeResolver {
+impl<'a> TypeResolver<'a> {
     pub fn new(
         root: &Module<SemanticContext>,
         imports: &[Import],
         main_mod: StringId,
         main_fn: StringId,
-    ) -> TypeResolver {
+        logger: &'a Logger,
+    ) -> TypeResolver<'a> {
         TypeResolver {
             symbols: SymbolTableScopeStack::new(root, imports),
             imported_symbols: HashMap::new(),
@@ -67,7 +70,8 @@ impl TypeResolver {
                 Element::Id(main_mod),
                 Element::Id(main_fn),
             ]
-            .into(), // TODO: should get rid of this
+            .into(), // TODO: should get rid of this,
+            logger,
         }
     }
 
@@ -143,15 +147,17 @@ impl TypeResolver {
 
         // If routine is root::my_main it must be a function type and have type () -> i64
         if context.canonical_path() == &self.main_fn {
-            Self::validate_main_fn(routine)?;
+            Self::validate_main_fn(routine).view_err(|e| self.record_err(e))?;
         }
 
         let mut ctx = context.with_type(ret_ty.clone());
 
         // Add parameters to symbol table
         for p in params.iter() {
-            ctx.add_symbol(p.name, p.ty.clone(), false, false)
-                .map_err(|e| CompilerError::new(p.span(), e))?;
+            self.record(p, vec![]);
+            ctx.add_symbol(p.name, p.ty.clone(), false, false, p.span())
+                .map_err(|e| CompilerError::new(p.span(), e))
+                .view_err(|e| self.record_err(e))?;
         }
 
         self.symbols.enter_scope(ctx.sym().clone());
@@ -172,6 +178,7 @@ impl TypeResolver {
             ret_ty: ret_ty.clone(),
             body: resolved_body,
         })
+        .view(|e| self.record(e, vec![]))
     }
 
     fn analyze_structdef(
@@ -180,17 +187,14 @@ impl TypeResolver {
     ) -> SemanticResult<StructDef<SemanticContext>> {
         // Check the type of each member
         let fields = struct_def.get_fields();
-        for Parameter {
-            context: field_ctx,
-            ty: field_type,
-            ..
-        } in fields.iter()
-        {
-            match field_type {
+        for f in fields.iter() {
+            self.record(f, vec![]);
+            match &f.ty {
                 Type::Custom(ty_name) => {
                     self.symbols
                         .lookup_symbol_by_path(ty_name)
-                        .map_err(|e| CompilerError::new(field_ctx.span(), e))?;
+                        .map_err(|e| CompilerError::new(f.span(), e))
+                        .view_err(|e| self.record_err(e))?;
                 }
                 _ => (),
             }
@@ -204,6 +208,7 @@ impl TypeResolver {
             ctx,
             fields.clone(),
         ))
+        .view(|e| self.record(e, vec![]))
     }
 
     fn analyze_extern(
@@ -230,6 +235,7 @@ impl TypeResolver {
             ex.has_varargs,
             ret_ty,
         ))
+        .view(|e| self.record(e, vec![]))
     }
 
     fn analyze_statement(
@@ -258,10 +264,13 @@ impl TypeResolver {
             let ctx = ctx.with_type(bind.get_type().clone());
             let rhs = self.analyze_expression(rhs)?;
             if ctx.ty() == rhs.get_type() {
-                match self
-                    .symbols
-                    .add(bind.get_id(), ctx.ty().clone(), bind.is_mutable(), false)
-                {
+                match self.symbols.add(
+                    bind.get_id(),
+                    ctx.ty().clone(),
+                    bind.is_mutable(),
+                    false,
+                    bind.span(),
+                ) {
                     Ok(()) => {
                         let ty = ctx.ty().clone();
                         Ok(Bind::new(ctx, bind.get_id(), ty, bind.is_mutable(), rhs))
@@ -275,7 +284,10 @@ impl TypeResolver {
                 ))
             }
         };
-        result.map_err(|e| CompilerError::new(ctx.span(), e))
+        result
+            .map_err(|e| CompilerError::new(ctx.span(), e))
+            .view(|e| self.record(e, vec![]))
+            .view_err(|e| self.record_err(e))
     }
 
     fn analyze_mutate(
@@ -302,7 +314,9 @@ impl TypeResolver {
             }
             Err(e) => Err(e),
         };
-        result.map_err(|e| CompilerError::new(mutate.span(), e))
+        result
+            .map_err(|e| CompilerError::new(mutate.span(), e))
+            .view(|e| self.record(e, vec![]))
     }
 
     fn analyze_yieldreturn(
@@ -322,14 +336,19 @@ impl TypeResolver {
 
         // Get the expected yield return type of the coroutine that the yield return
         // occurs within.
-        let current_func = self.symbols.get_current_fn().ok_or(CompilerError::new(
-            yr.span(),
-            SemanticError::YieldInvalidLocation,
-        ))?;
+        let current_func = self
+            .symbols
+            .get_current_fn()
+            .ok_or(CompilerError::new(
+                yr.span(),
+                SemanticError::YieldInvalidLocation,
+            ))
+            .view_err(|e| self.record_err(e))?;
         let (_, expected_ret_ty) = self
             .symbols
             .lookup_coroutine(current_func)
-            .map_err(|e| CompilerError::new(yr.span(), e))?;
+            .map_err(|e| CompilerError::new(yr.span(), e))
+            .view_err(|e| self.record_err(e))?;
 
         if actual_ret_ty == expected_ret_ty {
             let ctx = yr.context().with_type(actual_ret_ty);
@@ -341,6 +360,8 @@ impl TypeResolver {
             ))
         }
         .map_err(|e| CompilerError::new(yr.span(), e))
+        .view(|e| self.record(e, vec![]))
+        .view_err(|e| self.record_err(e))
     }
 
     fn analyze_return(
@@ -364,11 +385,13 @@ impl TypeResolver {
             .symbols
             .get_current_fn()
             .ok_or(SemanticError::ReturnInvalidLocation)
-            .map_err(|e| CompilerError::new(r.span(), e))?;
+            .map_err(|e| CompilerError::new(r.span(), e))
+            .view_err(|e| self.record_err(e))?;
         let (_, expected_ret_ty) = self
             .symbols
             .lookup_func_or_cor(current_func)
-            .map_err(|e| CompilerError::new(r.span(), e))?;
+            .map_err(|e| CompilerError::new(r.span(), e))
+            .view_err(|e| self.record_err(e))?;
 
         // Check that the actual expression matches the expected return type
         // of the function
@@ -382,6 +405,8 @@ impl TypeResolver {
             ))
         }
         .map_err(|e| CompilerError::new(r.span(), e))
+        .view(|e| self.record(e, vec![]))
+        .view_err(|e| self.record_err(e))
     }
 
     /// Recursively resolve every child of the given expression and check that every
@@ -390,36 +415,37 @@ impl TypeResolver {
     /// error if there is a mismatch between the required type of an operand and
     /// the given type of an operand.
     fn analyze_expression(&mut self, ast: &SemanticNode) -> SemanticResult<SemanticNode> {
+        let mut refs = vec![];
         match &ast {
-            &Expression::U8(ctx, v) => {
+            Expression::U8(ctx, v) => {
                 let ctx = ctx.with_type(Type::U8);
                 Ok(Expression::U8(ctx, *v))
             }
-            &Expression::U16(ctx, v) => {
+            Expression::U16(ctx, v) => {
                 let ctx = ctx.with_type(Type::U16);
                 Ok(Expression::U16(ctx, *v))
             }
-            &Expression::U32(ctx, v) => {
+            Expression::U32(ctx, v) => {
                 let ctx = ctx.with_type(Type::U32);
                 Ok(Expression::U32(ctx, *v))
             }
-            &Expression::U64(ctx, v) => {
+            Expression::U64(ctx, v) => {
                 let ctx = ctx.with_type(Type::U64);
                 Ok(Expression::U64(ctx, *v))
             }
-            &Expression::I8(ctx, v) => {
+            Expression::I8(ctx, v) => {
                 let ctx = ctx.with_type(Type::I8);
                 Ok(Expression::I8(ctx, *v))
             }
-            &Expression::I16(ctx, v) => {
+            Expression::I16(ctx, v) => {
                 let ctx = ctx.with_type(Type::I16);
                 Ok(Expression::I16(ctx, *v))
             }
-            &Expression::I32(ctx, v) => {
+            Expression::I32(ctx, v) => {
                 let ctx = ctx.with_type(Type::I32);
                 Ok(Expression::I32(ctx, *v))
             }
-            &Expression::I64(ctx, v) => {
+            Expression::I64(ctx, v) => {
                 let ctx = ctx.with_type(Type::I64);
                 Ok(Expression::I64(ctx, *v))
             }
@@ -445,7 +471,8 @@ impl TypeResolver {
                     return Err(CompilerError::new(
                         ctx.span(),
                         SemanticError::ArrayInvalidSize(nelements.len()),
-                    ));
+                    ))
+                .view_err(|e| self.record_err(e));
                 } else {
                     el_ty = nelements[0].context().ty().clone();
                     for e in &nelements {
@@ -453,7 +480,8 @@ impl TypeResolver {
                             return Err(CompilerError::new(
                                 ctx.span(),
                                 SemanticError::ArrayInconsistentElementTypes,
-                            ));
+                            ))
+                            .view_err(|e| self.record_err(e));
                         }
                     }
                 }
@@ -469,12 +497,16 @@ impl TypeResolver {
             } => {
                 //  Check that the array value is an array type
                 let n_array = self.analyze_expression(array)?;
+
+                refs.push(n_array.span());
+
                 let el_ty = match n_array.context().ty() {
                     Type::Array(box el_ty, _) => Ok(el_ty),
                     ty => Err(CompilerError::new(
                         ctx.span(),
                         SemanticError::ArrayIndexingInvalidType(ty.clone()),
-                    )),
+                    ))
+                    .view_err(|e| self.record_err(e)),
                 }?;
 
                 // Check that the index is an i64 type
@@ -485,7 +517,8 @@ impl TypeResolver {
                         SemanticError::ArrayIndexingInvalidIndexType(
                             n_index.context().ty().clone(),
                         ),
-                    ));
+                    ))
+                    .view_err(|e| self.record_err(e));
                 }
 
                 let ctx = ctx.with_type(el_ty.clone());
@@ -508,9 +541,13 @@ impl TypeResolver {
                 let ctx = match self
                     .symbols
                     .lookup_var(*id)
-                    .map_err(|e| CompilerError::new(ctx.span(), e))?
+                    .map_err(|e| CompilerError::new(ctx.span(), e))
+                    .view_err(|e| self.record_err(e))?
                 {
-                    Symbol { ty: p, .. } => ctx.with_type(p.clone()),
+                    Symbol { ty: p, span, .. } => {
+                        span.and_then(|s| Some(refs.push(s)));
+                        ctx.with_type(p.clone())
+                    }
                 };
                 Ok(Expression::Identifier(ctx, id.clone()))
             }
@@ -527,7 +564,12 @@ impl TypeResolver {
                         let (struct_def, _) = self
                             .symbols
                             .lookup_symbol_by_path(&struct_name)
-                            .map_err(|e| CompilerError::new(ctx.span(), e))?;
+                            .map_err(|e| CompilerError::new(ctx.span(), e))
+                            .view_err(|e| self.record_err(e))?;
+
+                        // Record the span of the struct definition as a reference for resolving the type of the member access
+                        struct_def.span.map(|s| refs.push(s));
+
                         let member_ty = struct_def
                             .ty
                             .get_member(*member)
@@ -535,7 +577,8 @@ impl TypeResolver {
                                 struct_name.clone(),
                                 *member,
                             ))
-                            .map_err(|e| CompilerError::new(ctx.span(), e))?;
+                            .map_err(|e| CompilerError::new(ctx.span(), e))
+                            .view_err(|e| self.record_err(e))?;
 
                         let ctx = ctx.with_type(member_ty.clone());
                         Ok(Expression::MemberAccess(ctx, Box::new(src), member.clone()))
@@ -543,7 +586,8 @@ impl TypeResolver {
                     _ => Err(CompilerError::new(
                         ctx.span(),
                         SemanticError::MemberAccessInvalidRootType(src.get_type().clone()),
-                    )),
+                    ))
+                    .view_err(|e| self.record_err(e)),
                 }
             }
             Expression::BinaryOp(ctx, op, l, r) => {
@@ -592,12 +636,14 @@ impl TypeResolver {
                                 else_arm_ty,
                             ),
                         ))
+                        .view_err(|e| self.record_err(e))
                     }
                 } else {
                     Err(CompilerError::new(
                         ctx.span(),
                         SemanticError::CondExpectedBool(cond.get_type().clone()),
                     ))
+                    .view_err(|e| self.record_err(e))
                 }
             }
             Expression::While {
@@ -622,12 +668,14 @@ impl TypeResolver {
                             ctx.span(),
                             SemanticError::WhileInvalidType(body.get_type().clone()),
                         ))
+                        .view_err(|e| self.record_err(e))
                     }
                 } else {
                     Err(CompilerError::new(
                         ctx.span(),
                         SemanticError::WhileCondInvalidType(cond.get_type().clone()),
                     ))
+                    .view_err(|e| self.record_err(e))
                 }
             }
             Expression::Yield(ctx, exp) => {
@@ -639,6 +687,7 @@ impl TypeResolver {
                             ctx.span(),
                             SemanticError::YieldInvalidType(exp.get_type().clone()),
                         ))
+                        .view_err(|e| self.record_err(e))
                     }
                 };
                 Ok(Expression::Yield(ctx, Box::new(exp)))
@@ -657,7 +706,11 @@ impl TypeResolver {
                 let (symbol, routine_canon_path) = self
                     .symbols
                     .lookup_symbol_by_path(routine_path)
-                    .map_err(|e| CompilerError::new(ctx.span(), e))?;
+                    .map_err(|e| CompilerError::new(ctx.span(), e))
+                    .view_err(|e| self.record_err(e))?;
+
+                // record the reference span for this routine definition as a source for type resolution
+                symbol.span.map(|s| refs.push(s));
 
                 // if the routine is external, then change the call type to extern
                 let call = if symbol.is_extern {
@@ -668,7 +721,8 @@ impl TypeResolver {
 
                 let (expected_param_tys, has_varargs, ret_ty) = self
                     .extract_routine_type_info(symbol, &call, &routine_canon_path)
-                    .map_err(|e| CompilerError::new(ctx.span(), e))?;
+                    .map_err(|e| CompilerError::new(ctx.span(), e))
+                    .view_err(|e| self.record_err(e))?;
 
                 // Check that parameters are correct and if so, return the node annotated with
                 // semantic information
@@ -681,6 +735,7 @@ impl TypeResolver {
                             resolved_params.len(),
                         ),
                     ))
+                    .view_err(|e| self.record_err(e))
                 } else if has_varargs && (resolved_params.len() < expected_param_tys.len()) {
                     Err(CompilerError::new(
                         ctx.span(),
@@ -690,6 +745,7 @@ impl TypeResolver {
                             resolved_params.len(),
                         ),
                     ))
+                    .view_err(|e| self.record_err(e))
                 } else {
                     match Self::check_for_invalid_routine_parameters(
                         &routine_path,
@@ -697,7 +753,8 @@ impl TypeResolver {
                         &expected_param_tys,
                         has_varargs,
                     ) {
-                        Err(msg) => Err(CompilerError::new(ctx.span(), msg)),
+                        Err(msg) => Err(CompilerError::new(ctx.span(), msg))
+                                    .view_err(|e| self.record_err(e)),
                         Ok(()) => {
                             let ctx = ctx.with_type(ret_ty.clone());
                             Ok(Expression::RoutineCall(
@@ -740,20 +797,27 @@ impl TypeResolver {
                 let (struct_def, canonical_path) = self
                     .symbols
                     .lookup_symbol_by_path(&struct_name)
-                    .map_err(|e| CompilerError::new(ctx.span(), e))?;
+                    .map_err(|e| CompilerError::new(ctx.span(), e))
+                    .view_err(|e| self.record_err(e))?;
+
+                // Record the span of the struct definition as a reference for resolving the type of the member access
+                struct_def.span.map(|s| refs.push(s));
+
                 let struct_def_ty = struct_def.ty.clone();
                 let expected_num_params = struct_def_ty
                     .get_members()
                     .ok_or(CompilerError::new(
                         ctx.span(),
                         SemanticError::InvalidStructure,
-                    ))?
+                    ))
+                    .view_err(|e| self.record_err(e))?
                     .len();
                 if params.len() != expected_num_params {
                     return Err(CompilerError::new(
                         ctx.span(),
                         SemanticError::StructExprWrongNumParams(expected_num_params, params.len()),
-                    ));
+                    ))
+                    .view_err(|e| self.record_err(e));
                 }
 
                 let mut resolved_params = vec![];
@@ -772,7 +836,8 @@ impl TypeResolver {
                                 member_ty.clone(),
                                 param.get_type().clone(),
                             ),
-                        ));
+                        ))
+                        .view_err(|e| self.record_err(e));
                     }
                     resolved_params.push((pn.clone(), param));
                 }
@@ -784,7 +849,7 @@ impl TypeResolver {
                     resolved_params,
                 ))
             }
-        }
+        }.view(|e| self.record(e, refs))
     }
 
     /// Check that the operand has the correct type for the given unary
@@ -808,6 +873,7 @@ impl TypeResolver {
                         operand.span(),
                         SemanticError::ExpectedSignedInteger(op, operand.get_type().clone()),
                     ))
+                    .view_err(|e| self.record_err(e))
                 }
             }
             Not => {
@@ -818,6 +884,7 @@ impl TypeResolver {
                         operand.span(),
                         SemanticError::ExpectedBool(op, operand.get_type().clone()),
                     ))
+                    .view_err(|e| self.record_err(e))
                 }
             }
         }
@@ -859,6 +926,7 @@ impl TypeResolver {
                             r.get_type().clone(),
                         ),
                     ))
+                    .view_err(|e| self.record_err(e))
                 }
             }
             BAnd | BOr => {
@@ -874,6 +942,7 @@ impl TypeResolver {
                             r.get_type().clone(),
                         ),
                     ))
+                    .view_err(|e| self.record_err(e))
                 }
             }
             Eq | NEq | Ls | LsEq | Gr | GrEq => {
@@ -889,6 +958,7 @@ impl TypeResolver {
                             r.get_type().clone(),
                         ),
                     ))
+                    .view_err(|e| self.record_err(e))
                 }
             }
         }
@@ -992,5 +1062,25 @@ impl TypeResolver {
         }
 
         Ok(())
+    }
+
+    fn record<N: Node<SemanticContext>>(&self, n: &N, refs: Vec<Span>) {
+        let ctx = n.context();
+        self.logger.write(Event::<_, SemanticError> {
+            stage: "type-resolver",
+            input: ctx.span(),
+            msg: Ok(TypeOk {
+                ty: ctx.ty(),
+                refs: refs,
+            }),
+        });
+    }
+
+    fn record_err(&self, e: &CompilerError<SemanticError>) {
+        self.logger.write(Event::<TypeOk, SemanticError> {
+            stage: "type-resolver",
+            input: e.span(),
+            msg: Err(e),
+        });
     }
 }

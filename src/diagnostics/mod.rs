@@ -54,6 +54,10 @@ impl<'a> Writer for ConsoleWriter<'a> {
         print!(", ");
     }
 
+    fn write(&self, s: &dyn Writable) {
+        s.write(self);
+    }
+
     fn start_event(&self) {
         print!("{{");
     }
