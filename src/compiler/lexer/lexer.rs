@@ -353,7 +353,7 @@ impl<'a> Lexer<'a> {
             let (s, span) = branch.merge().unwrap();
 
             // Remove the quotes from the string
-            let mut s: String = self.string_table.get(s).unwrap().into();
+            let mut s: String = self.string_table.get(s).unwrap();
             s.remove(0);
             s.pop();
             let id = self.string_table.insert(s);

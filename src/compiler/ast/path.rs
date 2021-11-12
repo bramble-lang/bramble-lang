@@ -25,7 +25,7 @@ impl CompilerDisplay for Element {
             Element::CanonicalRoot => CANONICAL_ROOT.into(),
             Element::Selph => SELF.into(),
             Element::Super => SUPER.into(),
-            Element::Id(id) => st.get(*id)?.into(),
+            Element::Id(id) => st.get(*id)?,
         })
     }
 }

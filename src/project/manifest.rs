@@ -112,7 +112,7 @@ impl ManifestRoutineDef {
         sm: &SourceMap,
         st: &StringTable,
     ) -> Result<Self, ManifestError> {
-        let name = st.get(rd.name)?.into();
+        let name = st.get(rd.name)?;
         let params = rd
             .params
             .iter()
@@ -159,7 +159,7 @@ impl ManifestStructDef {
         sm: &SourceMap,
         st: &StringTable,
     ) -> Result<Self, ManifestError> {
-        let name = st.get(sd.get_name())?.into();
+        let name = st.get(sd.get_name())?;
         let canon_path = path_to_string(sm, st, sd.context().canonical_path())?;
         let fields = sd
             .get_fields()
@@ -167,7 +167,7 @@ impl ManifestStructDef {
             .map(|f| {
                 let name = st.get(f.name).map_err(|e| e.into());
                 let fty = ManifestType::from_ty(sm, st, &f.ty);
-                name.and_then(|name| fty.and_then(|fty| Ok((name.into(), fty))))
+                name.and_then(|name| fty.and_then(|fty| Ok((name, fty))))
             })
             .collect::<Result<Vec<_>, ManifestError>>()?;
 
