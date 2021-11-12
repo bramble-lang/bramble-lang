@@ -391,35 +391,35 @@ impl TypeResolver {
     /// the given type of an operand.
     fn analyze_expression(&mut self, ast: &SemanticNode) -> SemanticResult<SemanticNode> {
         match &ast {
-            &Expression::U8(ctx, v) => {
+            Expression::U8(ctx, v) => {
                 let ctx = ctx.with_type(Type::U8);
                 Ok(Expression::U8(ctx, *v))
             }
-            &Expression::U16(ctx, v) => {
+            Expression::U16(ctx, v) => {
                 let ctx = ctx.with_type(Type::U16);
                 Ok(Expression::U16(ctx, *v))
             }
-            &Expression::U32(ctx, v) => {
+            Expression::U32(ctx, v) => {
                 let ctx = ctx.with_type(Type::U32);
                 Ok(Expression::U32(ctx, *v))
             }
-            &Expression::U64(ctx, v) => {
+            Expression::U64(ctx, v) => {
                 let ctx = ctx.with_type(Type::U64);
                 Ok(Expression::U64(ctx, *v))
             }
-            &Expression::I8(ctx, v) => {
+            Expression::I8(ctx, v) => {
                 let ctx = ctx.with_type(Type::I8);
                 Ok(Expression::I8(ctx, *v))
             }
-            &Expression::I16(ctx, v) => {
+            Expression::I16(ctx, v) => {
                 let ctx = ctx.with_type(Type::I16);
                 Ok(Expression::I16(ctx, *v))
             }
-            &Expression::I32(ctx, v) => {
+            Expression::I32(ctx, v) => {
                 let ctx = ctx.with_type(Type::I32);
                 Ok(Expression::I32(ctx, *v))
             }
-            &Expression::I64(ctx, v) => {
+            Expression::I64(ctx, v) => {
                 let ctx = ctx.with_type(Type::I64);
                 Ok(Expression::I64(ctx, *v))
             }
@@ -510,7 +510,7 @@ impl TypeResolver {
                     .lookup_var(*id)
                     .map_err(|e| CompilerError::new(ctx.span(), e))?
                 {
-                    Symbol { ty: p, .. } => ctx.with_type(p.clone()),
+                    Symbol { ty: p, .. } => ctx.with_type(p.clone()), // TODO: link the span for the symbol decl to the type resolution
                 };
                 Ok(Expression::Identifier(ctx, id.clone()))
             }
