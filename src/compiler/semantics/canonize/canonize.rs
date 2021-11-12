@@ -4,7 +4,7 @@ use crate::compiler::{
     import::Import,
     semantics::error::SemanticError,
     source::SourceIr,
-    CompilerError,
+    CompilerError, Span,
 };
 use log::debug;
 
@@ -111,11 +111,7 @@ impl Canonizable for Expression<SemanticContext> {
                     stack
                         .to_canonical(path)
                         .and_then(|canonical_path| {
-                            logger.write(Event::<_, SemanticError> {
-                                stage: "canonize-item-path",
-                                input: span,
-                                msg: Ok(&canonical_path),
-                            });
+                            record("canonize-type-ref", span, &canonical_path, logger);
 
                             *path = canonical_path;
 
@@ -131,11 +127,7 @@ impl Canonizable for Expression<SemanticContext> {
                     stack
                         .to_canonical(path)
                         .and_then(|canonical_path| {
-                            logger.write(Event::<_, SemanticError> {
-                                stage: "canonize-item-path",
-                                input: span,
-                                msg: Ok(&canonical_path),
-                            });
+                            record("canonize-type-ref", span, &canonical_path, logger);
 
                             *path = canonical_path;
                             Ok(())
@@ -150,11 +142,7 @@ impl Canonizable for Expression<SemanticContext> {
                     stack
                         .to_canonical(path)
                         .and_then(|canonical_path| {
-                            logger.write(Event::<_, SemanticError> {
-                                stage: "canonize-type-ref",
-                                input: span,
-                                msg: Ok(&canonical_path),
-                            });
+                            record("canonize-type-ref", span, &canonical_path, logger);
 
                             *path = canonical_path;
                             Ok(())
@@ -195,13 +183,9 @@ impl Canonizable for Bind<SemanticContext> {
                 })
             })?;
 
-        canon_type.get_path().map(|p| {
-            logger.write(Event::<_, SemanticError> {
-                stage: "canonize-type-ref",
-                input: self.span(),
-                msg: Ok(p),
-            })
-        });
+        canon_type
+            .get_path()
+            .map(|p| record("canonize-type-ref", self.span(), p, logger));
 
         self.set_type(canon_type);
         Ok(())
@@ -265,13 +249,9 @@ impl Canonizable for RoutineDef<SemanticContext> {
                 })
             })?;
 
-        ctype.get_path().map(|p| {
-            logger.write(Event::<_, SemanticError> {
-                stage: "canonize-type-ref",
-                input: self.span(),
-                msg: Ok(p),
-            })
-        });
+        ctype
+            .get_path()
+            .map(|p| record("canonize-type-ref", self.span(), p, logger));
 
         self.ret_ty = ctype;
         Ok(())
@@ -316,13 +296,9 @@ impl Canonizable for Extern<SemanticContext> {
                 })
             })?;
 
-        ctype.get_path().map(|p| {
-            logger.write(Event::<_, SemanticError> {
-                stage: "canonize-type-ref",
-                input: self.span(),
-                msg: Ok(p),
-            })
-        });
+        ctype
+            .get_path()
+            .map(|p| record("canonize-type-ref", self.span(), p, logger));
 
         self.ty = ctype;
         Ok(())
@@ -346,13 +322,9 @@ impl Canonizable for Parameter<SemanticContext> {
                 })
             })?;
 
-        ctype.get_path().map(|p| {
-            logger.write(Event::<_, SemanticError> {
-                stage: "canonize-type-ref",
-                input: self.span(),
-                msg: Ok(p),
-            })
-        });
+        ctype
+            .get_path()
+            .map(|p| record("canonize-type-ref", self.span(), p, logger));
 
         self.ty = ctype;
         Ok(())
@@ -370,3 +342,11 @@ impl Canonizable for Parameter<SemanticContext> {
 impl Canonizable for YieldReturn<SemanticContext> {}
 
 impl Canonizable for Return<SemanticContext> {}
+
+fn record(stage: &str, span: Span, path: &Path, logger: &Logger) {
+    logger.write(Event::<_, SemanticError> {
+        stage,
+        input: span,
+        msg: Ok(path),
+    })
+}

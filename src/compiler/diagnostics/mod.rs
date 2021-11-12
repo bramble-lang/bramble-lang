@@ -58,7 +58,7 @@ pub trait Writable {
 /// code.
 pub struct Event<'a, V: Writable, E: CompilerDisplay + Debug> {
     /// The stage of compilation that generated this event
-    pub stage: &'static str,
+    pub stage: &'a str,
 
     /// The [`Span`] of input source code that caused this event to occur
     pub input: Span,
