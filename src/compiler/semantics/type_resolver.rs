@@ -477,6 +477,9 @@ impl<'a> TypeResolver<'a> {
             } => {
                 //  Check that the array value is an array type
                 let n_array = self.analyze_expression(array)?;
+
+                refs.push(n_array.span());
+
                 let el_ty = match n_array.context().ty() {
                     Type::Array(box el_ty, _) => Ok(el_ty),
                     ty => Err(CompilerError::new(
