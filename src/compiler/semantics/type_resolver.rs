@@ -432,7 +432,7 @@ impl<'a> TypeResolver<'a> {
                     stage: "type-resolver",
                     input: ctx.span(),
                     msg: Ok(TypeOk {
-                        ty: &Type::I64,
+                        ty: ctx.ty(),
                         refs: vec![],
                     }),
                 });
@@ -440,6 +440,14 @@ impl<'a> TypeResolver<'a> {
             }
             Expression::Boolean(ctx, v) => {
                 let ctx = ctx.with_type(Type::Bool);
+                self.logger.write(Event::<_, SemanticError> {
+                    stage: "type-resolver",
+                    input: ctx.span(),
+                    msg: Ok(TypeOk {
+                        ty: ctx.ty(),
+                        refs: vec![],
+                    }),
+                });
                 Ok(Expression::Boolean(ctx, *v))
             }
             Expression::StringLiteral(ctx, v) => {
