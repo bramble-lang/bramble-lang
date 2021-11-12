@@ -1,4 +1,10 @@
-use super::{ast::Type, diagnostics::Writable, CompilerError};
+use self::semanticnode::SemanticContext;
+
+use super::{
+    ast::Type,
+    diagnostics::{View, Writable},
+    CompilerError,
+};
 
 /*
  * Handles semantic analysis of a syntax tree.  This includes:
@@ -72,5 +78,15 @@ impl Writable for Type {
             Type::ExternDecl(_, _, _) => w.write_str("Extern"),
             Type::Unknown => w.write_str("Unknown"),
         }
+    }
+}
+
+impl<V: super::ast::Node<SemanticContext>> View<V> for Result<V, CompilerError<SemanticError>> {
+    fn view<F: FnOnce(&V)>(self, f: F) -> Self {
+        match &self {
+            Ok(v) => f(v),
+            Err(_) => (),
+        }
+        self
     }
 }
