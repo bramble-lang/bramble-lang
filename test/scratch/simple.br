@@ -8,6 +8,7 @@ mod math {
             let y: i64 := 7 - 10;
             let b: bool := false && true;
             let s: string := "hello";
+            let s2: super::S := super::S{ x : 5};
             
             return y;
         }

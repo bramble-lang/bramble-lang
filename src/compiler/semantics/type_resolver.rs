@@ -397,6 +397,7 @@ impl<'a> TypeResolver<'a> {
     /// error if there is a mismatch between the required type of an operand and
     /// the given type of an operand.
     fn analyze_expression(&mut self, ast: &SemanticNode) -> SemanticResult<SemanticNode> {
+        let mut refs = vec![];
         match &ast {
             Expression::U8(ctx, v) => {
                 let ctx = ctx.with_type(Type::U8);
@@ -428,29 +429,10 @@ impl<'a> TypeResolver<'a> {
             }
             Expression::I64(ctx, v) => {
                 let ctx = ctx.with_type(Type::I64);
-
-                // TODO: Move this to a helper function
-                self.logger.write(Event::<_, SemanticError> {
-                    stage: "type-resolver",
-                    input: ctx.span(),
-                    msg: Ok(TypeOk {
-                        ty: ctx.ty(),
-                        refs: vec![],
-                    }),
-                });
-
                 Ok(Expression::I64(ctx, *v))
             }
             Expression::Boolean(ctx, v) => {
                 let ctx = ctx.with_type(Type::Bool);
-                self.logger.write(Event::<_, SemanticError> {
-                    stage: "type-resolver",
-                    input: ctx.span(),
-                    msg: Ok(TypeOk {
-                        ty: ctx.ty(),
-                        refs: vec![],
-                    }),
-                });
                 Ok(Expression::Boolean(ctx, *v))
             }
             Expression::StringLiteral(ctx, v) => {
@@ -537,14 +519,7 @@ impl<'a> TypeResolver<'a> {
                     .map_err(|e| CompilerError::new(ctx.span(), e))?
                 {
                     Symbol { ty: p, span, .. } => {
-                        self.logger.write(Event::<_, SemanticError> {
-                            stage: "type-resolver",
-                            input: ctx.span(),
-                            msg: Ok(TypeOk {
-                                ty: p,
-                                refs: span.map(|s| vec![s]).unwrap_or_default(),
-                            }),
-                        });
+                        span.and_then(|s| Some(refs.push(s)));
                         ctx.with_type(p.clone())
                     } // TODO: link the span for the symbol decl to the type resolution
                 };
@@ -585,14 +560,6 @@ impl<'a> TypeResolver<'a> {
             Expression::BinaryOp(ctx, op, l, r) => {
                 let (ty, l, r) = self.binary_op(*op, &l, &r)?;
                 let ctx = ctx.with_type(ty);
-                self.logger.write(Event::<_, SemanticError> {
-                    stage: "type-resolver",
-                    input: ctx.span(),
-                    msg: Ok(TypeOk {
-                        ty: ctx.ty(),
-                        refs: vec![],
-                    }),
-                });
                 Ok(Expression::BinaryOp(ctx, *op, Box::new(l), Box::new(r)))
             }
             Expression::UnaryOp(ctx, op, operand) => {
@@ -828,7 +795,18 @@ impl<'a> TypeResolver<'a> {
                     resolved_params,
                 ))
             }
-        }
+        }.map(|e| {
+            let ctx = e.context();
+            self.logger.write(Event::<_, SemanticError> {
+                stage: "type-resolver",
+                input: ctx.span(),
+                msg: Ok(TypeOk {
+                    ty: ctx.ty(),
+                    refs,
+                }),
+            });
+            e
+        })
     }
 
     /// Check that the operand has the correct type for the given unary
