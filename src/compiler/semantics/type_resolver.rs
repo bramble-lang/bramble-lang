@@ -524,7 +524,7 @@ impl<'a> TypeResolver<'a> {
                     Symbol { ty: p, span, .. } => {
                         span.and_then(|s| Some(refs.push(s)));
                         ctx.with_type(p.clone())
-                    } // TODO: link the span for the symbol decl to the type resolution
+                    } 
                 };
                 Ok(Expression::Identifier(ctx, id.clone()))
             }
