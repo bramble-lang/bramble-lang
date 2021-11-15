@@ -171,14 +171,7 @@ impl TypeResolver {
         // Add parameters to symbol table
         for p in params.iter() {
             // Check that the type exists
-            match &p.ty {
-                Type::Custom(type_name) => {
-                    self.symbols
-                        .lookup_symbol_by_path(type_name)
-                        .map_err(|e| CompilerError::new(ctx.span(), e))?;
-                }
-                _ => (),
-            }
+            self.valid_type(&p.ty, ctx.span())?;
 
             ctx.add_symbol(p.name, p.ty.clone(), false, false)
                 .map_err(|e| CompilerError::new(p.context().span(), e))?;
@@ -216,14 +209,7 @@ impl TypeResolver {
             ..
         } in fields.iter()
         {
-            match field_type {
-                Type::Custom(ty_name) => {
-                    self.symbols
-                        .lookup_symbol_by_path(ty_name)
-                        .map_err(|e| CompilerError::new(field_ctx.span(), e))?;
-                }
-                _ => (),
-            }
+            self.valid_type(field_type, field_ctx.span())?;
         }
 
         // Update the context with canonical path information and set the type to Type::Unit
@@ -1022,5 +1008,16 @@ impl TypeResolver {
         }
 
         Ok(())
+    }
+
+    fn valid_type(&self, ty: &Type, span: Span) -> SemanticResult<()> {
+        match ty {
+            Type::Custom(type_name) => self
+                .symbols
+                .lookup_symbol_by_path(type_name)
+                .map(|_| ())
+                .map_err(|e| CompilerError::new(span, e)),
+            _ => Ok(()),
+        }
     }
 }
