@@ -631,6 +631,13 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticContext> {
             }
             Err(msg) => panic!("Failed to convert to basic type: {}", msg),
         }
+        .view(|ir| {
+            llvm.logger.write(Event::<_, ParserError> {
+                stage: "llvm",
+                input: self.span(),
+                msg: Ok(ir),
+            })
+        })
     }
 }
 
@@ -644,7 +651,13 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Mutate<SemanticContext> {
 
         let v_ptr = llvm.registers.get(&name).unwrap().into_pointer_value();
         llvm.builder.build_store(v_ptr, rhs);
-        Some(v_ptr)
+        Some(v_ptr).view(|ir| {
+            llvm.logger.write(Event::<_, ParserError> {
+                stage: "llvm",
+                input: self.span(),
+                msg: Ok(ir),
+            })
+        })
     }
 }
 
@@ -674,6 +687,13 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Return<SemanticContext> {
                     }
                 }
             }
+        })
+        .view(|ir| {
+            llvm.logger.write(Event::<_, ParserError> {
+                stage: "llvm",
+                input: self.span(),
+                msg: Ok(ir),
+            })
         })
     }
 }
