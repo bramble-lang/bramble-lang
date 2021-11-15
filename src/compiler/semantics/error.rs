@@ -50,6 +50,7 @@ pub enum SemanticError {
     MainFnInvalidParams,
     InvalidStructure,
     RoutineCallInvalidTarget(RoutineCall, Path, Type),
+    InvalidIdentifierType(Type),
 }
 
 impl CompilerDisplay for SemanticError {
@@ -233,6 +234,10 @@ impl CompilerDisplay for SemanticError {
                     ty.fmt(sm, st)?
                 ))
             }
+            SemanticError::InvalidIdentifierType(ty) => Ok(format!(
+                "Invalid type used in identifier declaration: {}",
+                ty.fmt(sm, st)?
+            )),
         }
     }
 }

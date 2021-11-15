@@ -170,6 +170,9 @@ impl TypeResolver {
 
         // Add parameters to symbol table
         for p in params.iter() {
+            // Check that the type exists
+            self.valid_type(&p.ty, ctx.span())?;
+
             ctx.add_symbol(p.name, p.ty.clone(), false, false)
                 .map_err(|e| CompilerError::new(p.context().span(), e))?;
         }
@@ -206,14 +209,7 @@ impl TypeResolver {
             ..
         } in fields.iter()
         {
-            match field_type {
-                Type::Custom(ty_name) => {
-                    self.symbols
-                        .lookup_symbol_by_path(ty_name)
-                        .map_err(|e| CompilerError::new(field_ctx.span(), e))?;
-                }
-                _ => (),
-            }
+            self.valid_type(field_type, field_ctx.span())?;
         }
 
         // Update the context with canonical path information and set the type to Type::Unit
@@ -1012,5 +1008,26 @@ impl TypeResolver {
         }
 
         Ok(())
+    }
+
+    /// Check that the given [`Type`] is valid. If it is a custom type, such as
+    /// a structure, this will make sure that the path points to a valid item.
+    fn valid_type(&self, ty: &Type, span: Span) -> SemanticResult<()> {
+        match ty {
+            Type::Custom(type_name) => {
+                // Find item that the path points to
+                let (item, _) = self
+                    .symbols
+                    .lookup_symbol_by_path(type_name)
+                    .map_err(|e| CompilerError::new(span, e))?;
+
+                // Make sure the item is a structure
+                match item.ty {
+                    Type::StructDef(_) => Ok(()),
+                    _ => err!(span, SemanticError::InvalidIdentifierType(item.ty.clone())),
+                }
+            }
+            _ => Ok(()),
+        }
     }
 }
