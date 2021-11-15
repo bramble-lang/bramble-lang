@@ -154,10 +154,14 @@ impl<'a> TypeResolver<'a> {
 
         // Add parameters to symbol table
         for p in params.iter() {
-            self.record(p, vec![]);
+            // Check that the type exists
+            self.valid_type(&p.ty, ctx.span())?;
+
             ctx.add_symbol(p.name, p.ty.clone(), false, false, p.span())
                 .map_err(|e| CompilerError::new(p.span(), e))
                 .view_err(|e| self.record_err(e))?;
+
+            self.record(p, vec![]);
         }
 
         self.symbols.enter_scope(ctx.sym().clone());
@@ -188,16 +192,8 @@ impl<'a> TypeResolver<'a> {
         // Check the type of each member
         let fields = struct_def.get_fields();
         for f in fields.iter() {
+            self.valid_type(&f.ty, f.context().span())?;
             self.record(f, vec![]);
-            match &f.ty {
-                Type::Custom(ty_name) => {
-                    self.symbols
-                        .lookup_symbol_by_path(ty_name)
-                        .map_err(|e| CompilerError::new(f.span(), e))
-                        .view_err(|e| self.record_err(e))?;
-                }
-                _ => (),
-            }
         }
 
         // Update the context with canonical path information and set the type to Type::Unit
@@ -1082,5 +1078,28 @@ impl<'a> TypeResolver<'a> {
             input: e.span(),
             msg: Err(e),
         });
+    }
+
+    /// Check that the given [`Type`] is valid. If it is a custom type, such as
+    /// a structure, this will make sure that the path points to a valid item.
+    fn valid_type(&self, ty: &Type, span: Span) -> SemanticResult<()> {
+        match ty {
+            Type::Custom(type_name) => {
+                // Find item that the path points to
+                let (item, _) = self
+                    .symbols
+                    .lookup_symbol_by_path(type_name)
+                    .map_err(|e| CompilerError::new(span, e))
+                    .view_err(|e| self.record_err(e))?;
+
+                // Make sure the item is a structure
+                match item.ty {
+                    Type::StructDef(_) => Ok(()),
+                    _ => err!(span, SemanticError::InvalidIdentifierType(item.ty.clone()))
+                        .view_err(|e| self.record_err(e)),
+                }
+            }
+            _ => Ok(()),
+        }
     }
 }

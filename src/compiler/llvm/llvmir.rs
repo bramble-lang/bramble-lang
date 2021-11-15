@@ -1139,11 +1139,13 @@ impl ast::Type {
                 .array_type(0)
                 .ptr_type(AddressSpace::Generic)
                 .into(),
-            ast::Type::Custom(name) => llvm
-                .module
-                .get_struct_type(&name.to_label(llvm.source_map, llvm.string_table))
-                .expect(&format!("Could not find struct {}", name))
-                .into(),
+            ast::Type::Custom(name) => {
+                let label = name.to_label(llvm.source_map, llvm.string_table);
+                llvm.module
+                    .get_struct_type(&label)
+                    .expect(&format!("Could not find struct {}", label))
+                    .into()
+            }
             ast::Type::Array(a, len) => {
                 let el_ty = a.to_llvm_ir(llvm)?;
                 let len = *len as u32;
