@@ -170,6 +170,16 @@ impl TypeResolver {
 
         // Add parameters to symbol table
         for p in params.iter() {
+            // Check that the type exists
+            match &p.ty {
+                Type::Custom(type_name) => {
+                    self.symbols
+                        .lookup_symbol_by_path(type_name)
+                        .map_err(|e| CompilerError::new(ctx.span(), e))?;
+                }
+                _ => (),
+            }
+
             ctx.add_symbol(p.name, p.ty.clone(), false, false)
                 .map_err(|e| CompilerError::new(p.context().span(), e))?;
         }
