@@ -27,6 +27,7 @@ use inkwell::{
 use crate::{
     compiler::{
         ast::{Element, Parameter, StructDef},
+        diagnostics::Logger,
         import::{Import, ImportRoutineDef, ImportStructDef},
         parser::ParserContext,
         SourceMap, Span,
@@ -57,11 +58,12 @@ pub struct IrGen<'ctx> {
     builder: Builder<'ctx>,
     imports: &'ctx [Import],
     string_pool: StringPool<'ctx>,
-    string_table: &'ctx StringTable,
-    source_map: &'ctx SourceMap,
     registers: RegisterLookup<'ctx>,
     struct_table: HashMap<String, ast::StructDef<SemanticContext>>,
     fn_use_out_param: HashSet<String>,
+    string_table: &'ctx StringTable,
+    source_map: &'ctx SourceMap,
+    logger: &'ctx Logger<'ctx>,
 }
 
 impl<'ctx> IrGen<'ctx> {
@@ -71,18 +73,20 @@ impl<'ctx> IrGen<'ctx> {
         string_table: &'ctx StringTable,
         module: &str,
         imports: &'ctx [Import],
+        logger: &'ctx Logger,
     ) -> IrGen<'ctx> {
         IrGen {
             context: ctx,
             module: ctx.create_module(module),
             builder: ctx.create_builder(),
-            source_map,
-            string_table,
             imports,
             string_pool: StringPool::new(string_table),
             registers: RegisterLookup::new(),
             struct_table: HashMap::new(),
             fn_use_out_param: HashSet::new(),
+            source_map,
+            string_table,
+            logger,
         }
     }
 

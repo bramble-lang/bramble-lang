@@ -113,7 +113,14 @@ fn main() {
     let output_target = config.value_of("output").unwrap_or("./target/output.asm");
 
     let context = Context::create();
-    let mut llvm = llvm::IrGen::new(&context, &sourcemap, &string_table, project_name, &imports);
+    let mut llvm = llvm::IrGen::new(
+        &context,
+        &sourcemap,
+        &string_table,
+        project_name,
+        &imports,
+        &tracer,
+    );
     match llvm.ingest(&semantic_ast, main_fn_id) {
         Ok(()) => (),
         Err(msg) => {
