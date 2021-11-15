@@ -27,10 +27,11 @@ use inkwell::{
 use crate::{
     compiler::{
         ast::{Element, Parameter, StructDef},
-        diagnostics::Logger,
+        diagnostics::{Event, Logger, View},
         import::{Import, ImportRoutineDef, ImportStructDef},
-        parser::ParserContext,
-        SourceMap, Span,
+        parser::{ParserContext, ParserError},
+        source::SourceIr,
+        CompilerError, SourceMap, Span,
     },
     result::Result,
     StringId, StringTable,
@@ -976,7 +977,11 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 panic!("IdentifierDelcare nodes should be resolved and removed before the compiler stage")
             }
             ast::Expression::Yield(..) => panic!("Yield is not yet implemented for LLVM"),
-        }
+        }.view(|ir| llvm.logger.write(Event::<_, ParserError>{
+            stage: "llvm",
+            input: self.span(),
+            msg: Ok(ir),
+        }))
     }
 }
 
