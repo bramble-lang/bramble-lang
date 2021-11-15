@@ -88,10 +88,10 @@ fn let_bind(stream: &mut TokenStream) -> ParserResult<Bind<ParserContext>> {
                     ParserError::ExpectedExpressionOnRhs,
                 ))?,
             };
-            let ctx = exp.context().join(let_tok.to_ctx());
 
             match id_decl {
                 Expression::IdentifierDeclare(_, id, ty) => {
+                    let ctx = exp.context().join(let_tok.to_ctx());
                     Ok(Some(Bind::new(ctx, id, ty.clone(), is_mutable, exp)))
                 }
                 _ => Err(CompilerError::new(
@@ -121,7 +121,8 @@ fn mutate(stream: &mut TokenStream) -> ParserResult<Mutate<ParserContext>> {
                 tokens[2].span,
                 ParserError::ExpectedExpressionOnRhs,
             ))?;
-            Ok(Some(Mutate::new(tokens[0].to_ctx(), id, exp)))
+            let ctx = tokens[0].to_ctx().join(*exp.context());
+            Ok(Some(Mutate::new(ctx, id, exp)))
         }
     }
 }
@@ -157,7 +158,10 @@ pub(super) fn return_stmt(stream: &mut TokenStream) -> ParserResult<Return<Parse
             let exp = expression(stream)?;
             stream.next_must_be(&Lex::Semicolon)?;
             match exp {
-                Some(exp) => Some(Return::new(token.to_ctx(), Some(exp))),
+                Some(exp) => {
+                    let ctx = token.to_ctx().join(*exp.context());
+                    Some(Return::new(ctx, Some(exp)))
+                }
                 None => Some(Return::new(token.to_ctx(), None)),
             }
         }
@@ -172,7 +176,10 @@ fn yield_return_stmt(stream: &mut TokenStream) -> ParserResult<Statement<ParserC
             let exp = expression(stream)?;
             stream.next_must_be(&Lex::Semicolon)?;
             let yret = match exp {
-                Some(exp) => YieldReturn::new(token.to_ctx(), Some(exp)),
+                Some(exp) => {
+                    let ctx = token.to_ctx().join(*exp.context());
+                    YieldReturn::new(ctx, Some(exp))
+                }
                 None => YieldReturn::new(token.to_ctx(), None),
             };
             Some(Statement::YieldReturn(Box::new(yret)))
