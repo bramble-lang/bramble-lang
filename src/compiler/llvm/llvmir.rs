@@ -690,7 +690,8 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Return<SemanticContext> {
                     ast::Type::Custom(_) | ast::Type::Array(..) => {
                         let out = llvm.registers.get(".out").unwrap().into_pointer_value();
                         let src_ptr = val.to_llvm_ir(llvm).unwrap().into_pointer_value();
-                        llvm.build_memcpy(out, src_ptr);
+                        let mc = llvm.build_memcpy(out, src_ptr);
+                        llvm.record(self.span(), &mc);
 
                         // Use the return parameter as a ptr to memory to store the struct and copy it there
                         llvm.builder.build_return(None)
