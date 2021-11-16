@@ -312,15 +312,20 @@ impl<'ctx> IrGen<'ctx> {
     fn add_extern_fn_decl(&mut self, ex: &'ctx ast::Extern<SemanticContext>) {
         // Declare external function
         let params: Vec<_> = ex.get_params().iter().map(|p| p.ty.clone()).collect();
-        self.add_fn_decl(
+        let label = 
             &ex.context()
                 .canonical_path()
-                .to_label(self.source_map, self.string_table),
+                .to_label(self.source_map, self.string_table);
+        self.add_fn_decl(
+            &label,
             &params,
             ex.has_varargs,
             ex.get_return_type(),
             ex.context().line(),
         );
+
+        let llvm_fn_decl = self.module.get_function(&label).unwrap();
+        self.record(ex.span(), &llvm_fn_decl);
     }
 
     /// Takes a tuple describing the signature of an function (internal or external) to the
