@@ -27,7 +27,7 @@ use inkwell::{
 use crate::{
     compiler::{
         ast::{Element, Parameter, StructDef},
-        diagnostics::{Event, Logger, View},
+        diagnostics::{Event, Logger, View, Writable},
         import::{Import, ImportRoutineDef, ImportStructDef},
         parser::{ParserContext, ParserError},
         source::SourceIr,
@@ -500,6 +500,14 @@ impl<'ctx> IrGen<'ctx> {
             id
         )
     }
+
+    fn record<IR: Writable>(&self, span: Span, ir: IR) {
+        self.logger.write(Event::<_, ParserError> {
+            stage: "llvm",
+            input: span,
+            msg: Ok(ir),
+        })
+    }
 }
 
 trait ToLlvmIr<'ctx> {
@@ -631,13 +639,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticContext> {
             }
             Err(msg) => panic!("Failed to convert to basic type: {}", msg),
         }
-        .view(|ir| {
-            llvm.logger.write(Event::<_, ParserError> {
-                stage: "llvm",
-                input: self.span(),
-                msg: Ok(ir),
-            })
-        })
+        .view(|ir| llvm.record(self.span(), ir))
     }
 }
 
@@ -651,13 +653,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Mutate<SemanticContext> {
 
         let v_ptr = llvm.registers.get(&name).unwrap().into_pointer_value();
         llvm.builder.build_store(v_ptr, rhs);
-        Some(v_ptr).view(|ir| {
-            llvm.logger.write(Event::<_, ParserError> {
-                stage: "llvm",
-                input: self.span(),
-                msg: Ok(ir),
-            })
-        })
+        Some(v_ptr).view(|ir| llvm.record(self.span(), ir))
     }
 }
 
@@ -688,13 +684,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Return<SemanticContext> {
                 }
             }
         })
-        .view(|ir| {
-            llvm.logger.write(Event::<_, ParserError> {
-                stage: "llvm",
-                input: self.span(),
-                msg: Ok(ir),
-            })
-        })
+        .view(|ir| llvm.record(self.span(), ir))
     }
 }
 
@@ -791,18 +781,22 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 let then_bb = llvm.context.append_basic_block(current_fn, "then");
                 let else_bb = llvm.context.insert_basic_block_after(then_bb, "else");
                 let merge_bb = llvm.context.insert_basic_block_after(else_bb, "merge");
-                llvm.builder
-                    .build_conditional_branch(cond_val, then_bb, else_bb);
+                llvm.record(
+                    self.span(), 
+                    &llvm.builder
+                        .build_conditional_branch(cond_val, then_bb, else_bb));
 
                 llvm.builder.position_at_end(then_bb);
                 let then_arm_val = then_arm.to_llvm_ir(llvm);
                 let then_bb = llvm.builder.get_insert_block().unwrap(); // The builders position may change after compiling the then block
-                llvm.builder.build_unconditional_branch(merge_bb);
+                let br = llvm.builder.build_unconditional_branch(merge_bb);
+                llvm.record(self.span(), &br);
 
                 llvm.builder.position_at_end(else_bb);
                 let else_arm_val = else_arm.as_ref().map(|ea| ea.to_llvm_ir(llvm)).flatten();
                 let else_bb = llvm.builder.get_insert_block().unwrap(); // The builders position may changing after compiling the else block
-                llvm.builder.build_unconditional_branch(merge_bb);
+                let br = llvm.builder.build_unconditional_branch(merge_bb);
+                llvm.record(self.span(), &br);
 
                 llvm.builder.position_at_end(merge_bb);
 
@@ -832,17 +826,20 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 let after_bb = llvm.context.append_basic_block(current_fn, "while_end");
 
                 // Emit the logic for checking the while condition
-                llvm.builder.build_unconditional_branch(loop_bb);
+                let br = llvm.builder.build_unconditional_branch(loop_bb);
+                llvm.record(self.span(), &br);
                 llvm.builder.position_at_end(loop_bb);
                 // Test the condition and determine if the loop should be terminated
                 let cond_val = cond.to_llvm_ir(llvm).unwrap().into_int_value();
-                llvm.builder
+                let br = llvm.builder
                     .build_conditional_branch(cond_val, body_bb, after_bb);
+                llvm.record(self.span(), &br);
 
                 // Emit the code that will evaluate the loop body
                 llvm.builder.position_at_end(body_bb);
                 body.to_llvm_ir(llvm); // The result of the body is not used for anything so ignore it
-                llvm.builder.build_unconditional_branch(loop_bb);
+                let br = llvm.builder.build_unconditional_branch(loop_bb);
+                llvm.record(self.span(), &br);
 
                 // Position the LLVM Builder cursor to be immediately after the loop
                 llvm.builder.position_at_end(after_bb);
@@ -997,11 +994,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 panic!("IdentifierDelcare nodes should be resolved and removed before the compiler stage")
             }
             ast::Expression::Yield(..) => panic!("Yield is not yet implemented for LLVM"),
-        }.view(|ir| llvm.logger.write(Event::<_, ParserError>{
-            stage: "llvm",
-            input: self.span(),
-            msg: Ok(ir),
-        }))
+        }.view(|ir| llvm.record(self.span(), ir))
     }
 }
 

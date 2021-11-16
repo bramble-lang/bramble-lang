@@ -25,6 +25,15 @@ mod math {
 
             return s;
         }
+
+        fn looper(a: i64) {
+            let mut x: i64 := 0;
+            while (x <= a) {
+                mut x := x + 1;
+            };
+
+            return;
+        }
     }
 
     struct S {
