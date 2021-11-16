@@ -1,4 +1,7 @@
-use inkwell::values::*;
+use inkwell::{
+    types::{AnyType, StructType},
+    values::*,
+};
 
 use crate::compiler::diagnostics::Writable;
 
@@ -21,6 +24,12 @@ impl<'ctx> Writable for &PointerValue<'ctx> {
 }
 
 impl<'ctx> Writable for &FunctionValue<'ctx> {
+    fn write(&self, w: &dyn crate::compiler::diagnostics::Writer) {
+        w.write_str(&format!("{}", self.print_to_string()));
+    }
+}
+
+impl<'ctx> Writable for &StructType<'ctx> {
     fn write(&self, w: &dyn crate::compiler::diagnostics::Writer) {
         w.write_str(&format!("{}", self.print_to_string()));
     }

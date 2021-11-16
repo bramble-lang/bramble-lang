@@ -414,6 +414,7 @@ impl<'ctx> IrGen<'ctx> {
             .collect();
         let struct_ty = self.context.opaque_struct_type(&name);
         struct_ty.set_body(&fields_llvm, false);
+        self.record(sd.span(), &struct_ty);
     }
 
     /// Add a struct definition to the LLVM context and module.
