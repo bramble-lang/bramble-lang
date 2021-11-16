@@ -312,10 +312,10 @@ impl<'ctx> IrGen<'ctx> {
     fn add_extern_fn_decl(&mut self, ex: &'ctx ast::Extern<SemanticContext>) {
         // Declare external function
         let params: Vec<_> = ex.get_params().iter().map(|p| p.ty.clone()).collect();
-        let label = 
-            &ex.context()
-                .canonical_path()
-                .to_label(self.source_map, self.string_table);
+        let label = &ex
+            .context()
+            .canonical_path()
+            .to_label(self.source_map, self.string_table);
         self.add_fn_decl(
             &label,
             &params,
@@ -669,7 +669,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Mutate<SemanticContext> {
         let name = llvm.string_table.get(sid).unwrap();
 
         let v_ptr = llvm.registers.get(&name).unwrap().into_pointer_value();
-        
+
         let st = llvm.builder.build_store(v_ptr, rhs);
         llvm.record(self.span(), &st);
 
@@ -802,9 +802,11 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 let else_bb = llvm.context.insert_basic_block_after(then_bb, "else");
                 let merge_bb = llvm.context.insert_basic_block_after(else_bb, "merge");
                 llvm.record(
-                    self.span(), 
-                    &llvm.builder
-                        .build_conditional_branch(cond_val, then_bb, else_bb));
+                    self.span(),
+                    &llvm
+                        .builder
+                        .build_conditional_branch(cond_val, then_bb, else_bb),
+                );
 
                 llvm.builder.position_at_end(then_bb);
                 let then_arm_val = then_arm.to_llvm_ir(llvm);
@@ -851,7 +853,8 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 llvm.builder.position_at_end(loop_bb);
                 // Test the condition and determine if the loop should be terminated
                 let cond_val = cond.to_llvm_ir(llvm).unwrap().into_int_value();
-                let br = llvm.builder
+                let br = llvm
+                    .builder
                     .build_conditional_branch(cond_val, body_bb, after_bb);
                 llvm.record(self.span(), &br);
 
@@ -962,7 +965,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     let llvm_idx = llvm.context.i64_type().const_int(idx, false);
                     let el_ptr =
                         unsafe { llvm.builder.build_gep(a_ptr, &[outer_idx, llvm_idx], "") };
-                    
+
                     let el_ty = el_ptr.get_type().get_element_type();
 
                     if el_ty.is_aggregate_type() {
@@ -1019,7 +1022,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 panic!("IdentifierDelcare nodes should be resolved and removed before the compiler stage")
             }
             ast::Expression::Yield(..) => panic!("Yield is not yet implemented for LLVM"),
-        }.view(|ir| llvm.record(self.span(), ir))
+        }
     }
 }
 
@@ -1119,7 +1122,7 @@ impl ast::RoutineCall {
     ) -> Result<Option<PointerValue<'ctx>>> {
         if llvm.fn_use_out_param.contains(target) {
             let out_ty = ret_ty.to_llvm_ir(llvm)?.into_basic_type().unwrap();
-            
+
             if !out_ty.is_aggregate_type() {
                 panic!("Expected an aggregate type but got {}. Out parameters should only be used with LLVM Aggregate Types (arrays, structs).", ret_ty);
             }
