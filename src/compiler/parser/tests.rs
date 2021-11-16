@@ -722,7 +722,7 @@ pub mod tests {
             assert_eq!(m.get_externs().len(), 1);
 
             if let Some(Item::Extern(e)) = m.get_item(my_fn) {
-                assert_eq!(*e.context(), new_ctx(22, 28));
+                assert_eq!(*e.context(), new_ctx(22, 53));
                 assert_eq!(e.get_name(), my_fn);
                 assert_eq!(
                     e.get_params(),
@@ -769,7 +769,7 @@ pub mod tests {
             assert_eq!(m.get_externs().len(), 1);
 
             if let Some(Item::Extern(e)) = m.get_item(my_fn) {
-                assert_eq!(*e.context(), new_ctx(22, 28));
+                assert_eq!(*e.context(), new_ctx(22, 58));
                 assert_eq!(e.get_name(), my_fn);
                 assert_eq!(
                     e.get_params(),
