@@ -12,8 +12,6 @@ mod math {
             let s: string := "hello";
             let a: [i64; 2] := [1, 2];
             let s2: super::S := get_s();
-
-            something(s2);
             
             return s2.x + y;
         }

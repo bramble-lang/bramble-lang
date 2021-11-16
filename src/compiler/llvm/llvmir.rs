@@ -1148,6 +1148,7 @@ impl ast::RoutineCall {
                     .get_function(&fn_name)
                     .expect(&format!("Could not find function {}", fn_name));
                 let result = llvm.builder.build_call(call, &llvm_params, "result");
+                llvm.record(span, &result);
                 match out_param {
                     Some(ptr) => Ok(Some(ptr.into())),
                     None => Ok(result.try_as_basic_value().left()),

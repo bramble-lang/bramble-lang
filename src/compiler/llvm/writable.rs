@@ -26,6 +26,12 @@ impl<'ctx> Writable for &FunctionValue<'ctx> {
     }
 }
 
+impl<'ctx> Writable for &CallSiteValue<'ctx> {
+    fn write(&self, w: &dyn crate::compiler::diagnostics::Writer) {
+        w.write_str(&format!("{}", self.print_to_string()));
+    }
+}
+
 impl<'ctx> Writable for &StructType<'ctx> {
     fn write(&self, w: &dyn crate::compiler::diagnostics::Writer) {
         w.write_str(&format!("{}", self.print_to_string()));
