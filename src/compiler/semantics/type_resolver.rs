@@ -153,15 +153,29 @@ impl<'a> TypeResolver<'a> {
         let mut ctx = context.with_type(ret_ty.clone());
 
         // Add parameters to symbol table
+        let mut resolved_params = vec![];
         for p in params.iter() {
             // Check that the type exists
             self.valid_type(&p.ty, ctx.span())?;
 
-            ctx.add_symbol(p.name, p.ty.clone(), false, false, p.span())
-                .map_err(|e| CompilerError::new(p.span(), e))
-                .view_err(|e| self.record_err(e))?;
+            // Set the resolved type of the parameter node
+            let mut resolved_param = p.clone();
+            let param_ctx = p.context().with_type(p.ty.clone());
+            resolved_param.context = param_ctx;
 
-            self.record(p, vec![]);
+            // Add parameter to the routines symbol table
+            ctx.add_symbol(
+                resolved_param.name,
+                resolved_param.ty.clone(),
+                false,
+                false,
+                resolved_param.span(),
+            )
+            .map_err(|e| CompilerError::new(p.span(), e))
+            .view_err(|e| self.record_err(e))?;
+
+            self.record(&resolved_param, vec![]);
+            resolved_params.push(resolved_param);
         }
 
         self.symbols.enter_scope(ctx.sym().clone());
@@ -178,7 +192,7 @@ impl<'a> TypeResolver<'a> {
             context: ctx.with_sym(sym),
             def: def.clone(),
             name: name.clone(),
-            params: params.clone(),
+            params: resolved_params,
             ret_ty: ret_ty.clone(),
             body: resolved_body,
         })
