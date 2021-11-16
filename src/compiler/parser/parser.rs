@@ -240,10 +240,13 @@ fn extern_def(stream: &mut TokenStream) -> ParserResult<Extern<ParserContext>> {
                 if has_varargs && params.len() == 0 {
                     return err!(fn_ctx.span(), ParserError::ExternInvalidVarArgs);
                 }
-                stream.next_must_be(&Lex::Semicolon)?;
+                let ctx = stream
+                    .next_must_be(&Lex::Semicolon)?
+                    .to_ctx()
+                    .join(extern_tok.to_ctx());
                 Ok(Some(Extern::new(
                     fn_name,
-                    extern_tok.to_ctx(),
+                    ctx,
                     params,
                     has_varargs,
                     fn_type,
