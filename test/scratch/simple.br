@@ -14,8 +14,12 @@ mod math {
 
         fn get_s() -> super::S {
             return super::S {
-                x: 5,
+                x: get_i(),
             };
+        }
+
+        fn get_i() -> i64 {
+            return 5;
         }
     }
 

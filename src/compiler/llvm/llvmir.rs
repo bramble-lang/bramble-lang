@@ -927,6 +927,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                         .builder
                         .build_struct_gep(s_ptr, f_idx as u32, "")
                         .unwrap();
+                    llvm.record(e.span(), &fld_ptr);
 
                     let el_ty = fld_ptr.get_type().get_element_type();
                     if el_ty.is_aggregate_type() {
