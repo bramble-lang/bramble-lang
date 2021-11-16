@@ -149,10 +149,13 @@ impl<'a> Parser<'a> {
                         return err!(fn_ctx.span(), ParserError::ExternInvalidVarArgs)
                             .view_err(|err| self.record(err.span(), Err(&err)));
                     }
-                    stream.next_must_be(&Lex::Semicolon)?;
+                    let ctx = stream
+                        .next_must_be(&Lex::Semicolon)?
+                        .to_ctx()
+                        .join(extern_tok.to_ctx());
                     Ok(Some(Extern::new(
                         fn_name,
-                        extern_tok.to_ctx(),
+                        ctx,
                         params,
                         has_varargs,
                         fn_type,
