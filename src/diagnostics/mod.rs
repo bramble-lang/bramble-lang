@@ -30,7 +30,7 @@ impl<'a> ConsoleWriter<'a> {
 
 impl<'a> Writer for ConsoleWriter<'a> {
     fn write_span(&self, span: crate::compiler::Span) {
-        print!("span[{}]: ", span);
+        print!("span: ");
 
         // Get source code that the span covers
         let src = self.source_map.text_in_span(span).unwrap();
