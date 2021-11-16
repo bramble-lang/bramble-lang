@@ -204,10 +204,17 @@ impl<'a> TypeResolver<'a> {
         struct_def: &StructDef<SemanticContext>,
     ) -> SemanticResult<StructDef<SemanticContext>> {
         // Check the type of each member
+        let mut resolved_fields = vec![];
         let fields = struct_def.get_fields();
         for f in fields.iter() {
             self.valid_type(&f.ty, f.context().span())?;
-            self.record(f, vec![]);
+
+            let ctx = f.context().with_type(f.ty.clone());
+            let mut resolved_field = f.clone();
+            resolved_field.context = ctx;
+
+            self.record(&resolved_field, vec![]);
+            resolved_fields.push(resolved_field);
         }
 
         // Update the context with canonical path information and set the type to Type::Unit
@@ -216,7 +223,7 @@ impl<'a> TypeResolver<'a> {
         Ok(StructDef::new(
             struct_def.get_name().clone(),
             ctx,
-            fields.clone(),
+            resolved_fields,
         ))
         .view(|e| self.record(e, vec![]))
     }
