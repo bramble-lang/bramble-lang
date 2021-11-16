@@ -11,30 +11,17 @@ mod math {
             let b: bool := false && true;
             let s: string := "hello";
             let a: [i64; 2] := [1, 2];
-            let s2: super::S := super::S{ x : a[1]};
+            let s2: super::S := get_s();
 
             something(s2);
             
             return s2.x + y;
         }
 
-        fn something_else(a: i64, b: i64) -> string {
-            let s: string := if (a <= b) {
-                "hello"
-            } else {
-                "world"
+        fn get_s() -> super::S {
+            return super::S {
+                x: 5,
             };
-
-            return s;
-        }
-
-        fn looper(a: i64) {
-            let mut x: i64 := 0;
-            while (x <= a) {
-                mut x := x + 1;
-            };
-
-            return;
         }
     }
 

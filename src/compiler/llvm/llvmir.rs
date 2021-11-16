@@ -766,7 +766,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
             ast::Expression::UnaryOp(_, op, exp) => Some(op.to_llvm_ir(llvm, exp)),
             ast::Expression::BinaryOp(_, op, l, r) => Some(op.to_llvm_ir(llvm, l, r)),
             ast::Expression::RoutineCall(meta, call, name, params) => call
-                .to_llvm_ir(llvm, name, params, self.get_type())
+                .to_llvm_ir(llvm, name, params, self.get_type(), self.span())
                 .map_err(|e| format!("L{}: {}", meta.line(), e))
                 .unwrap(),
             ast::Expression::ExpressionBlock(_, stmts, exp) => {
@@ -1098,9 +1098,11 @@ impl ast::RoutineCall {
         llvm: &mut IrGen<'ctx>,
         target: &str,
         ret_ty: &Type,
+        span: Span,
     ) -> Result<Option<PointerValue<'ctx>>> {
         if llvm.fn_use_out_param.contains(target) {
             let out_ty = ret_ty.to_llvm_ir(llvm)?.into_basic_type().unwrap();
+            
             if !out_ty.is_aggregate_type() {
                 panic!("Expected an aggregate type but got {}. Out parameters should only be used with LLVM Aggregate Types (arrays, structs).", ret_ty);
             }
@@ -1108,6 +1110,7 @@ impl ast::RoutineCall {
             let ptr = llvm
                 .builder
                 .build_alloca(out_ty, &format!("_out_{}", target));
+            llvm.record(span, &ptr);
             Ok(Some(ptr))
         } else {
             Ok(None)
@@ -1120,6 +1123,7 @@ impl ast::RoutineCall {
         target: &ast::Path,
         params: &Vec<ast::Expression<SemanticContext>>,
         ret_ty: &ast::Type,
+        span: Span,
     ) -> Result<Option<BasicValueEnum<'ctx>>> {
         match self {
             ast::RoutineCall::Function | ast::RoutineCall::Extern => {
@@ -1128,7 +1132,7 @@ impl ast::RoutineCall {
                 let fn_name = self.to_label(llvm, target);
                 let mut llvm_params: Vec<BasicValueEnum<'ctx>> = Vec::new();
 
-                let out_param = Self::to_out_param(llvm, &fn_name, ret_ty)?;
+                let out_param = Self::to_out_param(llvm, &fn_name, ret_ty, span)?;
 
                 // If this will use an out param to return the result then
                 // add it to the list of parameters for this function.
