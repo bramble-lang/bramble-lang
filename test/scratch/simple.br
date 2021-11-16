@@ -15,6 +15,16 @@ mod math {
             
             return s2.x + y;
         }
+
+        fn something_else(a: i64, b: i64) -> string {
+            let s: string := if (a <= b) {
+                "hello"
+            } else {
+                "world"
+            };
+
+            return s;
+        }
     }
 
     struct S {
