@@ -567,6 +567,8 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::RoutineDef<SemanticContext> {
         let llvm_params = fn_value.get_params();
         let num_params = llvm_params.len();
 
+        llvm.record(self.span(), &fn_value);
+
         // If the function returns a structure, then the first parameter will
         // be the return parameter.
         let start = if llvm.fn_use_out_param.contains(&fn_name) {
