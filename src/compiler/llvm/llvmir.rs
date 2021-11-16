@@ -716,39 +716,43 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
         match self {
             ast::Expression::U8(_, i) => {
                 let u8t = llvm.context.i8_type();
-                Some(u8t.const_int(*i as u64, false).into()) // TODO: Is it correct to NOT sign extend for unsigned ints?
+                Some(u8t.const_int(*i as u64, false).into()).view(|ir| llvm.record(self.span(), ir))
+                // TODO: Is it correct to NOT sign extend for unsigned ints?
             }
             ast::Expression::U16(_, i) => {
                 let u16t = llvm.context.i16_type();
-                Some(u16t.const_int(*i as u64, false).into()) // TODO: Is it correct to NOT sign extend for unsigned ints?
+                Some(u16t.const_int(*i as u64, false).into())
+                    .view(|ir| llvm.record(self.span(), ir)) // TODO: Is it correct to NOT sign extend for unsigned ints?
             }
             ast::Expression::U32(_, i) => {
                 let u32t = llvm.context.i32_type();
-                Some(u32t.const_int(*i as u64, false).into()) // TODO: Is it correct to NOT sign extend for unsigned ints?
+                Some(u32t.const_int(*i as u64, false).into())
+                    .view(|ir| llvm.record(self.span(), ir)) // TODO: Is it correct to NOT sign extend for unsigned ints?
             }
             ast::Expression::U64(_, i) => {
                 let u64t = llvm.context.i64_type();
-                Some(u64t.const_int(*i as u64, false).into()) // TODO: Is it correct to NOT sign extend for unsigned ints?
+                Some(u64t.const_int(*i as u64, false).into())
+                    .view(|ir| llvm.record(self.span(), ir)) // TODO: Is it correct to NOT sign extend for unsigned ints?
             }
             ast::Expression::I8(_, i) => {
                 let i8t = llvm.context.i8_type();
-                Some(i8t.const_int(*i as u64, true).into())
+                Some(i8t.const_int(*i as u64, true).into()).view(|ir| llvm.record(self.span(), ir))
             }
             ast::Expression::I16(_, i) => {
                 let i16t = llvm.context.i16_type();
-                Some(i16t.const_int(*i as u64, true).into())
+                Some(i16t.const_int(*i as u64, true).into()).view(|ir| llvm.record(self.span(), ir))
             }
             ast::Expression::I32(_, i) => {
                 let i32t = llvm.context.i32_type();
-                Some(i32t.const_int(*i as u64, true).into())
+                Some(i32t.const_int(*i as u64, true).into()).view(|ir| llvm.record(self.span(), ir))
             }
             ast::Expression::I64(_, i) => {
                 let i64t = llvm.context.i64_type();
-                Some(i64t.const_int(*i as u64, true).into())
+                Some(i64t.const_int(*i as u64, true).into()).view(|ir| llvm.record(self.span(), ir))
             }
             ast::Expression::Boolean(_, b) => {
                 let bt = llvm.context.bool_type();
-                Some(bt.const_int(*b as u64, true).into())
+                Some(bt.const_int(*b as u64, true).into()).view(|ir| llvm.record(self.span(), ir))
             }
             ast::Expression::StringLiteral(_, s) => {
                 let val = llvm.string_table.get(*s).unwrap();
@@ -763,7 +767,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                         .ptr_type(AddressSpace::Generic),
                     "",
                 );
-                Some(bitcast.into())
+                Some(bitcast.into()).view(|ir| llvm.record(self.span(), ir))
             }
             ast::Expression::Identifier(_, id) => {
                 let name = llvm.string_table.get(*id).unwrap();
@@ -773,7 +777,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     Some(ptr.into())
                 } else {
                     let val = llvm.builder.build_load(ptr, &name);
-                    Some(val)
+                    Some(val).view(|ir| llvm.record(self.span(), ir))
                 }
             }
             ast::Expression::UnaryOp(_, op, exp) => Some(op.to_llvm_ir(llvm, exp)),
@@ -982,7 +986,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 }
 
                 // The arch value of this expression is the ptr to the array
-                Some(a_ptr.into())
+                Some(a_ptr.into()).view(|ir| llvm.record(self.span(), ir))
             }
             ast::Expression::ArrayAt {
                 context: meta,
@@ -996,7 +1000,6 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     Some(a) => panic!("Unexpected type for array: {:?}", a),
                     None => panic!("Could not convert type {} to LLVM type", array),
                 };
-                llvm.record(self.span(), &llvm_array_ptr);
 
                 // evaluate the index to get the index value
                 let llvm_index = index.to_llvm_ir(llvm).unwrap().into_int_value();

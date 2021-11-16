@@ -30,10 +30,10 @@ impl<'a> ConsoleWriter<'a> {
 
 impl<'a> Writer for ConsoleWriter<'a> {
     fn write_span(&self, span: crate::compiler::Span) {
-        print!("span [{}]: ", span);
+        print!("span[{}]: ", span);
 
         // Get source code that the span covers
-        /*let src = self.source_map.text_in_span(span).unwrap();
+        let src = self.source_map.text_in_span(span).unwrap();
 
         // remove intermediate newlines so that formating stays on one line
         let src: String = src.chars().filter(|c| *c != '\n').collect();
@@ -47,7 +47,7 @@ impl<'a> Writer for ConsoleWriter<'a> {
                 &src[0..width / 2],
                 &src[src.len() - width / 2..]
             );
-        };*/
+        };
     }
 
     fn write_field(&self, label: &str, s: &dyn Writable) {
