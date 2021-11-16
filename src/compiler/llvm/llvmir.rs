@@ -463,7 +463,7 @@ impl<'ctx> IrGen<'ctx> {
         }
     }
 
-    fn build_memcpy(&self, dest: PointerValue<'ctx>, src: PointerValue<'ctx>) {
+    fn build_memcpy(&self, dest: PointerValue<'ctx>, src: PointerValue<'ctx>) -> PointerValue {
         let dest_align = get_ptr_alignment(dest);
         let src_align = get_ptr_alignment(src);
         self.builder
@@ -474,7 +474,7 @@ impl<'ctx> IrGen<'ctx> {
                 src_align,
                 dest.get_type().get_element_type().size_of().unwrap(),
             )
-            .unwrap();
+            .unwrap()
     }
 
     /// If the LLVM builder cursor is currently within a function, this will
@@ -580,14 +580,17 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::RoutineDef<SemanticContext> {
         };
 
         for pi in start..num_params {
-            let pid = &(*self.get_params())[pi - start].name;
+            let param = &(*self.get_params())[pi - start];
+            let pid = &param.name;
             let pname = llvm.string_table.get(*pid).unwrap();
 
             // move parameter into the stack
             let pptr = llvm
                 .builder
                 .build_alloca(llvm_params[pi].get_type(), &pname);
-            llvm.builder.build_store(pptr, llvm_params[pi]);
+            llvm.record(param.span(), &pptr);
+            let st = llvm.builder.build_store(pptr, llvm_params[pi]);
+            llvm.record(param.span(), &st);
             llvm.registers.insert(&pname, pptr.into()).unwrap();
         }
 
@@ -632,16 +635,22 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticContext> {
             .into_basic_type()
         {
             Ok(ty) if ty.is_aggregate_type() => {
-                let ptr = llvm.builder.build_alloca(ty, &name);
                 let rhs_ptr = rhs.into_pointer_value();
-                llvm.build_memcpy(ptr, rhs_ptr);
 
-                llvm.registers.insert(&name, ptr.into()).unwrap();
-                Some(ptr)
+                let dest = llvm.builder.build_alloca(ty, &name);
+                llvm.record(self.span(), &dest);
+
+                let mc = llvm.build_memcpy(dest, rhs_ptr);
+                llvm.record(self.span(), &mc);
+
+                llvm.registers.insert(&name, dest.into()).unwrap();
+                Some(dest)
             }
             Ok(ty) => {
                 let ptr = llvm.builder.build_alloca(ty, &name);
-                llvm.builder.build_store(ptr, rhs);
+                llvm.record(self.span(), &ptr);
+                let st = llvm.builder.build_store(ptr, rhs);
+                llvm.record(self.span(), &st);
                 llvm.registers.insert(&name, ptr.into()).unwrap();
                 Some(ptr)
             }
@@ -660,8 +669,11 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Mutate<SemanticContext> {
         let name = llvm.string_table.get(sid).unwrap();
 
         let v_ptr = llvm.registers.get(&name).unwrap().into_pointer_value();
-        llvm.builder.build_store(v_ptr, rhs);
-        Some(v_ptr).view(|ir| llvm.record(self.span(), ir))
+        
+        let st = llvm.builder.build_store(v_ptr, rhs);
+        llvm.record(self.span(), &st);
+
+        Some(v_ptr)
     }
 }
 
@@ -897,6 +909,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     .expect(&format!("Cannot find {} in {:?}", sname, llvm.struct_table));
                 let sdef_llvm = llvm.module.get_struct_type(&sname).unwrap();
                 let s_ptr = llvm.builder.build_alloca(sdef_llvm, "");
+                llvm.record(self.span(), &s_ptr);
 
                 // convert field names to field indexes (order of fields in expression may not
                 // be the same as in the defintion)
@@ -916,9 +929,11 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     if el_ty.is_aggregate_type() {
                         // TODO: should I do this for all pointer values?
                         let val_ptr = val.into_pointer_value();
-                        llvm.build_memcpy(fld_ptr, val_ptr);
+                        let mc = llvm.build_memcpy(fld_ptr, val_ptr);
+                        llvm.record(self.span(), &mc);
                     } else {
-                        llvm.builder.build_store(fld_ptr, val);
+                        let st = llvm.builder.build_store(fld_ptr, val);
+                        llvm.record(self.span(), &st);
                     }
                 }
                 Some(s_ptr.into())
@@ -932,6 +947,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     .into_basic_type()
                     .unwrap();
                 let a_ptr = llvm.builder.build_alloca(a_llvm_ty, "");
+                llvm.record(self.span(), &a_ptr);
 
                 // Compute the results for each element of the array value
                 let elements_llvm: Vec<_> = elements
@@ -946,6 +962,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     let llvm_idx = llvm.context.i64_type().const_int(idx, false);
                     let el_ptr =
                         unsafe { llvm.builder.build_gep(a_ptr, &[outer_idx, llvm_idx], "") };
+                    
                     let el_ty = el_ptr.get_type().get_element_type();
 
                     if el_ty.is_aggregate_type() {

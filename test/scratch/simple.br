@@ -7,13 +7,9 @@ mod math {
     mod arithmetic {
         // Does something
         fn something(m: super::S) -> i64 {
-            let y: i64 := 7 - 10;
-            let b: bool := false && true;
-            let s: string := "hello";
-            let a: [i64; 2] := [1, 2];
             let s2: super::S := get_s();
             
-            return s2.x + y;
+            return s2.x;
         }
 
         fn get_s() -> super::S {
