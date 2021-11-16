@@ -1,6 +1,6 @@
 use std::io::{Bytes, Read};
 
-use super::{Offset, SourceChar};
+use super::{Offset, SourceChar, Span};
 
 /// Iterates over each character in a Source File.
 pub struct SourceCharIter<R: Read> {
@@ -249,7 +249,7 @@ pub enum SourceError {
     UnicodeError(UnicodeParsingError),
     Io(std::io::Error),
     FromUtf8Error(std::string::FromUtf8Error),
-    SourceNotFound,
+    SourceNotFound(Span),
 }
 
 impl From<UnicodeParsingError> for SourceError {

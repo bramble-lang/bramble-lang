@@ -148,7 +148,7 @@ impl SourceMap {
 
         if files.len() == 0 {
             // return error
-            return Err(SourceError::SourceNotFound);
+            return Err(SourceError::SourceNotFound(span));
         }
 
         // Convert all the spans to code snippets.  If the span crosses multiple files this will join them together

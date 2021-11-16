@@ -1,3 +1,5 @@
+extern fn printf(fmt: string, ...);
+
 mod math {
     /*
     My funky test module
@@ -5,15 +7,19 @@ mod math {
     mod arithmetic {
         // Does something
         fn something(m: super::S) -> i64 {
-            let y: i64 := 7 - 10;
-            let b: bool := false && true;
-            let s: string := "hello";
             let a: [i64; 2] := [1, 2];
-            let s2: super::S := super::S{ x : a[1]};
-
-            something(s2);
             
-            return s2.x + y;
+            return a[0];
+        }
+
+        fn get_s() -> super::S {
+            return super::S {
+                x: get_i(),
+            };
+        }
+
+        fn get_i() -> i64 {
+            return 5;
         }
     }
 
