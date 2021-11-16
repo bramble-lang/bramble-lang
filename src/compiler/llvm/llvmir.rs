@@ -894,6 +894,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     .builder
                     .build_struct_gep(val_llvm, field_idx as u32, "")
                     .unwrap();
+                llvm.record(self.span(), &field_ptr);
 
                 // check if the field_ptr element type is an aggregate, if so, return the ptr
                 let el_ty = field_ptr.get_type().get_element_type();
@@ -901,7 +902,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     Some(field_ptr.into())
                 } else {
                     let field_val = llvm.builder.build_load(field_ptr, "");
-                    Some(field_val)
+                    Some(field_val).view(|ir| llvm.record(self.span(), ir))
                 }
             }
             ast::Expression::StructExpression(_, name, fields) => {
