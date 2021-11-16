@@ -957,23 +957,26 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 // Compute the results for each element of the array value
                 let elements_llvm: Vec<_> = elements
                     .iter()
-                    .map(|e| e.to_llvm_ir(llvm).unwrap())
+                    .map(|e| (e.to_llvm_ir(llvm).unwrap(), e.span()))
                     .collect();
 
                 // Move those results into the elements of the array
                 let mut idx = 0;
                 let outer_idx = llvm.context.i64_type().const_int(0, false);
-                for e in elements_llvm {
+                for (e, e_span) in elements_llvm {
                     let llvm_idx = llvm.context.i64_type().const_int(idx, false);
                     let el_ptr =
                         unsafe { llvm.builder.build_gep(a_ptr, &[outer_idx, llvm_idx], "") };
+                    llvm.record(e_span, &el_ptr);
 
                     let el_ty = el_ptr.get_type().get_element_type();
 
                     if el_ty.is_aggregate_type() {
-                        llvm.build_memcpy(el_ptr, e.into_pointer_value());
+                        let mc = llvm.build_memcpy(el_ptr, e.into_pointer_value());
+                        llvm.record(e_span, &mc);
                     } else {
-                        llvm.builder.build_store(el_ptr, e);
+                        let st = llvm.builder.build_store(el_ptr, e);
+                        llvm.record(e_span, &st);
                     }
                     idx += 1;
                 }
