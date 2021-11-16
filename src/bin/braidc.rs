@@ -115,10 +115,10 @@ fn main() {
     let context = Context::create();
     let mut llvm = llvm::IrGen::new(
         &context,
-        &sourcemap,
-        &string_table,
         project_name,
         &imports,
+        &sourcemap,
+        &string_table,
         &tracer,
     );
     match llvm.ingest(&semantic_ast, main_fn_id) {

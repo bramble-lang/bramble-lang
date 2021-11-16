@@ -70,10 +70,10 @@ pub struct IrGen<'ctx> {
 impl<'ctx> IrGen<'ctx> {
     pub fn new(
         ctx: &'ctx context::Context,
-        source_map: &'ctx SourceMap,
-        string_table: &'ctx StringTable,
         module: &str,
         imports: &'ctx [Import],
+        source_map: &'ctx SourceMap,
+        string_table: &'ctx StringTable,
         logger: &'ctx Logger,
     ) -> IrGen<'ctx> {
         IrGen {
