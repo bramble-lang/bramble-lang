@@ -993,6 +993,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     Some(a) => panic!("Unexpected type for array: {:?}", a),
                     None => panic!("Could not convert type {} to LLVM type", array),
                 };
+                llvm.record(self.span(), &llvm_array_ptr);
 
                 // evaluate the index to get the index value
                 let llvm_index = index.to_llvm_ir(llvm).unwrap().into_int_value();
@@ -1003,13 +1004,16 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     llvm.builder
                         .build_gep(llvm_array_ptr, &[outer_idx, llvm_index], "")
                 };
+                llvm.record(self.span(), &el_ptr);
 
                 // Load the value pointed to by GEP and return that
                 let el_ty = el_ptr.get_type().get_element_type();
                 let el_val = if el_ty.is_aggregate_type() {
                     el_ptr.into()
                 } else {
-                    llvm.builder.build_load(el_ptr, "").into()
+                    let ld = llvm.builder.build_load(el_ptr, "").into();
+                    llvm.record(self.span(), &ld);
+                    ld
                 };
 
                 Some(el_val)
