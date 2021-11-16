@@ -35,8 +35,8 @@ impl<'a> Writer for ConsoleWriter<'a> {
         // Get source code that the span covers
         let src = self.source_map.text_in_span(span).unwrap();
 
-        // remove intermediate newlines so that formating stays on one line
-        let src: String = src.chars().filter(|c| *c != '\n').collect();
+        // Compress blocks of whitespace to a single space
+        let src = src.split_ascii_whitespace().collect::<Vec<_>>().join(" ");
 
         let width = 20;
         if src.len() < width {
