@@ -32,10 +32,6 @@ impl Context for ParserContext {
         0
     }
 
-    fn line(&self) -> u32 {
-        0
-    }
-
     fn span(&self) -> Span {
         self.span
     }

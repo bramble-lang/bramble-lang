@@ -292,23 +292,17 @@ pub mod tests {
             let parser = Parser::new(&logger);
             let sm = SourceMap::new();
             match parser.expression(&mut stream) {
-                Ok(Some(Expression::Path(ctx, path))) => {
-                    assert_eq!(ctx.line(), 1);
-                    match expected {
-                        Ok(expected) => assert_eq!(path, expected.into()),
-                        Err(msg) => assert!(false, "{:?}", msg.fmt(&sm, &table)),
+                Ok(Some(Expression::Path(ctx, path))) => match expected {
+                    Ok(expected) => assert_eq!(path, expected.into()),
+                    Err(msg) => assert!(false, "{:?}", msg.fmt(&sm, &table)),
+                },
+                Ok(Some(Expression::Identifier(ctx, id))) => match expected {
+                    Ok(expected) => {
+                        assert_eq!(expected.len(), 1);
+                        assert_eq!(Element::Id(id), expected[0]);
                     }
-                }
-                Ok(Some(Expression::Identifier(ctx, id))) => {
-                    assert_eq!(ctx.line(), 1);
-                    match expected {
-                        Ok(expected) => {
-                            assert_eq!(expected.len(), 1);
-                            assert_eq!(Element::Id(id), expected[0]);
-                        }
-                        Err(msg) => assert!(false, "{:?}", msg),
-                    }
-                }
+                    Err(msg) => assert!(false, "{:?}", msg),
+                },
                 Ok(Some(n)) => panic!("{} resulted in {:?}, expected {:?}", text, n, expected),
                 Ok(None) => panic!("No node returned for {}, expected {:?}", text, expected),
                 Err(msg) => match expected {
@@ -348,7 +342,6 @@ pub mod tests {
             let parser = Parser::new(&logger);
             match parser.expression(&mut stream) {
                 Ok(Some(Expression::MemberAccess(ctx, left, right))) => {
-                    assert_eq!(ctx.line(), 1); // TODO: This should test the span
                     assert_eq!(
                         *left,
                         Expression::MemberAccess(
@@ -1911,7 +1904,6 @@ pub mod tests {
             let parser = Parser::new(&logger);
             match parser.member_access(&mut stream) {
                 Ok(Some(Expression::MemberAccess(ctx, left, right))) => {
-                    assert_eq!(ctx.line(), 1);
                     assert_eq!(
                         *left,
                         Expression::Identifier(new_ctx(low, high), thing_id),

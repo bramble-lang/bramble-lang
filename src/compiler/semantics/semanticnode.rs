@@ -21,10 +21,6 @@ impl Context for SemanticContext {
         self.id
     }
 
-    fn line(&self) -> u32 {
-        self.ln
-    }
-
     fn span(&self) -> Span {
         self.span
     }
@@ -66,7 +62,7 @@ impl SemanticContext {
     pub fn new_local(id: u32, ctx: ParserContext, ty: Type) -> SemanticContext {
         SemanticContext {
             id,
-            ln: ctx.line(),
+            ln: 0,
             span: ctx.span(),
             ty,
             sym: SymbolTable::new(),
@@ -77,7 +73,7 @@ impl SemanticContext {
     pub fn new_routine(id: u32, ctx: ParserContext, name: StringId, ty: Type) -> SemanticContext {
         SemanticContext {
             id,
-            ln: ctx.line(),
+            ln: 0,
             span: ctx.span(),
             ty,
             sym: SymbolTable::new_routine(name),
@@ -88,7 +84,7 @@ impl SemanticContext {
     pub fn new_module(id: u32, ctx: ParserContext, name: StringId) -> SemanticContext {
         SemanticContext {
             id,
-            ln: ctx.line(),
+            ln: 0,
             span: ctx.span(),
             ty: Type::Unit,
             sym: SymbolTable::new_module(name),
