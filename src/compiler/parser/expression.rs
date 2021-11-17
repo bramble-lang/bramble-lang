@@ -311,7 +311,7 @@ impl<'a> Parser<'a> {
                     ma = match token.sym {
                         Lex::MemberAccess => stream
                             .next_if_id()
-                            .map(|(member, _, member_span)| {
+                            .map(|(member, member_span)| {
                                 Expression::MemberAccess(
                                     ma.context().extend(member_span),
                                     Box::new(ma),
@@ -574,7 +574,7 @@ impl<'a> Parser<'a> {
         match stream.next_if(&Lex::LBrace) {
             Some(lbrace) => {
                 let mut params = vec![];
-                while let Some((field_name, _ln, span)) = stream.next_if_id() {
+                while let Some((field_name, span)) = stream.next_if_id() {
                     stream.next_must_be(&Lex::Colon)?;
                     let field_value = self
                         .expression(stream)?

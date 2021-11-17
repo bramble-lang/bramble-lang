@@ -64,7 +64,7 @@ impl<'a> Parser<'a> {
     fn module(&self, stream: &mut TokenStream) -> ParserResult<Module<ParserContext>> {
         match stream.next_if(&Lex::ModuleDef) {
             Some(module) => match stream.next_if_id() {
-                Some((module_name, _, _)) => {
+                Some((module_name, _)) => {
                     let mut module = Module::new(module_name, module.to_ctx());
                     stream.next_must_be(&Lex::LBrace)?;
 
@@ -172,7 +172,7 @@ impl<'a> Parser<'a> {
     fn struct_def(&self, stream: &mut TokenStream) -> ParserResult<StructDef<ParserContext>> {
         match stream.next_if(&Lex::Struct) {
             Some(st_def) => match stream.next_if_id() {
-                Some((id, _, _)) => {
+                Some((id, _)) => {
                     stream.next_must_be(&Lex::LBrace)?;
                     let fields = self.parameter_list(stream)?;
                     let ctx = stream
@@ -245,7 +245,7 @@ impl<'a> Parser<'a> {
             None => return Ok(None),
         };
 
-        let (fn_name, _, fn_def_span) = stream
+        let (fn_name, fn_def_span) = stream
             .next_if_id()
             .ok_or(CompilerError::new(
                 fn_ctx.span(),
@@ -279,7 +279,7 @@ impl<'a> Parser<'a> {
             None => return Ok(None),
         };
 
-        let (co_name, _, _) = stream
+        let (co_name, _) = stream
             .next_if_id()
             .ok_or(CompilerError::new(
                 ctx.span(),
@@ -459,7 +459,7 @@ impl<'a> Parser<'a> {
             path.push(Element::Selph);
         } else if stream.next_if(&Lex::PathSuper).is_some() {
             path.push(Element::Super);
-        } else if let Some((id, _, _)) = stream.next_if_id() {
+        } else if let Some((id, _)) = stream.next_if_id() {
             path.push(Element::Id(id));
         } else {
             return Ok(None);
@@ -498,7 +498,7 @@ impl<'a> Parser<'a> {
 
     fn identifier(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
         match stream.next_if_id() {
-            Some((id, _, span)) => Ok(Some(Expression::Identifier(ParserContext::new(span), id))),
+            Some((id, span)) => Ok(Some(Expression::Identifier(ParserContext::new(span), id))),
             _ => Ok(None),
         }
         .view(|v| self.record(v.span(), Ok("Identifier")))

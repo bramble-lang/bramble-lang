@@ -16,14 +16,12 @@ use Lex::*;
 struct LexerBranch<'a, 'st> {
     lexer: &'a mut Lexer<'st>,
     index: usize,
-    line: u32,
 }
 
 impl<'a, 'st> LexerBranch<'a, 'st> {
     fn from(l: &'a mut Lexer<'st>) -> LexerBranch<'a, 'st> {
         LexerBranch {
             index: l.index,
-            line: l.line,
             lexer: l,
         }
     }
@@ -34,7 +32,6 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
     fn merge(mut self) -> Option<(StringId, Span)> {
         self.cut().and_then(|cut| {
             self.lexer.index = self.index;
-            self.lexer.line = self.line;
             Some(cut)
         })
     }
@@ -76,9 +73,6 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
         if self.index < self.lexer.chars.len() {
             let c = self.lexer.chars[self.index];
             self.index += 1;
-            if c == '\n' {
-                self.line += 1;
-            }
             Some(c)
         } else {
             None
@@ -173,7 +167,6 @@ pub struct Lexer<'a> {
     chars: Source,
     end_offset: Offset,
     index: usize,
-    line: u32,
     string_table: &'a StringTable,
     logger: &'a Logger<'a>,
 }
@@ -189,16 +182,9 @@ impl<'a> Lexer<'a> {
             chars: text,
             index: 0,
             end_offset,
-            line: 1,
             string_table,
             logger,
         })
-    }
-
-    /// Returns the line in the source code on which the lexer cursor is currently
-    /// resting.
-    fn line(&self) -> u32 {
-        self.line as u32
     }
 
     /// Converts the given vector of characters to a vector of tokens.
@@ -299,9 +285,6 @@ impl<'a> Lexer<'a> {
 
     fn consume_whitespace(&mut self) {
         while self.index < self.chars.len() && self.chars[self.index].is_whitespace() {
-            if self.chars[self.index] == '\n' {
-                self.line += 1;
-            }
             self.index += 1;
         }
     }
