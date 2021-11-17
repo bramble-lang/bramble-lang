@@ -212,7 +212,7 @@ impl CompilerDisplay for Token {
 }
 
 impl Token {
-    pub fn new(s: Lex, l: u32, span: Span) -> Token {
+    pub fn new(s: Lex, span: Span) -> Token {
         Token { sym: s, span }
     }
 

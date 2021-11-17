@@ -359,7 +359,7 @@ impl<'a> Lexer<'a> {
                 s.pop();
                 let id = self.string_table.insert(s);
 
-                Ok(Some(Token::new(Lex::StringLiteral(id), self.line, span)))
+                Ok(Some(Token::new(Lex::StringLiteral(id), span)))
             } else {
                 err!(span, LexerError::UnexpectedEof)
             }
@@ -406,7 +406,7 @@ impl<'a> Lexer<'a> {
             let (_, span) = branch.merge().unwrap();
             let int_text = self.string_table.get(int_token).unwrap();
 
-            Self::create_int_literal(self.line, span, &int_text, type_suffix)
+            Self::create_int_literal(span, &int_text, type_suffix)
         } else {
             let span = self.current_char_span().unwrap();
             err!(
@@ -457,7 +457,6 @@ impl<'a> Lexer<'a> {
     }
 
     fn consume_operator(&mut self) -> LexerResult<Option<Token>> {
-        let line = self.line;
         let mut branch = LexerBranch::from(self);
         let mut operators = vec![
             ("...", VarArgs),
@@ -499,7 +498,7 @@ impl<'a> Lexer<'a> {
         }
         Ok(token.map(|t| {
             let (_, span) = branch.merge().unwrap();
-            Token::new(*t, line, span)
+            Token::new(*t, span)
         }))
         .map(|ok| {
             ok.as_ref().map(|token| {
@@ -532,7 +531,7 @@ impl<'a> Lexer<'a> {
 
         match branch.merge() {
             None => Ok(None),
-            Some((id, span)) => Ok(Some(Token::new(Lex::Identifier(id), self.line, span))),
+            Some((id, span)) => Ok(Some(Token::new(Lex::Identifier(id), span))),
         }
         .map(|ok| {
             ok.as_ref().map(|token| {
@@ -558,7 +557,7 @@ impl<'a> Lexer<'a> {
                     None => Ok(None),
                     Some((_, span)) => {
                         let b = b == TRUE;
-                        Ok(Some(Token::new(Bool(b), self.line, span)))
+                        Ok(Some(Token::new(Bool(b), span)))
                     }
                 }
                 .map(|ok| {
@@ -587,27 +586,26 @@ impl<'a> Lexer<'a> {
         Ok(match branch.next_if_one_of(&keywords) {
             Some(w) if branch.peek().map(|c| Self::is_delimiter(c)).unwrap_or(true) => {
                 let (_, span) = branch.merge().unwrap();
-                let l = self.line();
 
                 Some(match w {
-                    "let" => Token::new(Let, l, span),
-                    "mut" => Token::new(Mut, l, span),
-                    "return" => Token::new(Return, l, span),
-                    "yield" => Token::new(Yield, l, span),
-                    "yret" => Token::new(YieldReturn, l, span),
-                    "fn" => Token::new(FunctionDef, l, span),
-                    "co" => Token::new(CoroutineDef, l, span),
-                    "mod" => Token::new(ModuleDef, l, span),
-                    "struct" => Token::new(Struct, l, span),
-                    "extern" => Token::new(Extern, l, span),
-                    "init" => Token::new(Init, l, span),
-                    "if" => Token::new(If, l, span),
-                    "else" => Token::new(Else, l, span),
-                    "while" => Token::new(While, l, span),
-                    "self" => Token::new(PathSelf, l, span),
-                    "super" => Token::new(PathSuper, l, span),
-                    "root" => Token::new(PathFileRoot, l, span),
-                    "project" => Token::new(PathProjectRoot, l, span),
+                    "let" => Token::new(Let, span),
+                    "mut" => Token::new(Mut, span),
+                    "return" => Token::new(Return, span),
+                    "yield" => Token::new(Yield, span),
+                    "yret" => Token::new(YieldReturn, span),
+                    "fn" => Token::new(FunctionDef, span),
+                    "co" => Token::new(CoroutineDef, span),
+                    "mod" => Token::new(ModuleDef, span),
+                    "struct" => Token::new(Struct, span),
+                    "extern" => Token::new(Extern, span),
+                    "init" => Token::new(Init, span),
+                    "if" => Token::new(If, span),
+                    "else" => Token::new(Else, span),
+                    "while" => Token::new(While, span),
+                    "self" => Token::new(PathSelf, span),
+                    "super" => Token::new(PathSuper, span),
+                    "root" => Token::new(PathFileRoot, span),
+                    "project" => Token::new(PathProjectRoot, span),
                     _ => panic!("Matched a keyword which does not exist: {}", w),
                 })
             }
@@ -635,19 +633,18 @@ impl<'a> Lexer<'a> {
         Ok(match branch.next_if_one_of(&primitives) {
             Some(w) if branch.peek().map(|c| Self::is_delimiter(c)).unwrap_or(true) => {
                 let (_, span) = branch.merge().unwrap();
-                let l = self.line();
 
                 Some(match w {
-                    "u8" => Token::new(Primitive(Primitive::U8), l, span),
-                    "u16" => Token::new(Primitive(Primitive::U16), l, span),
-                    "u32" => Token::new(Primitive(Primitive::U32), l, span),
-                    "u64" => Token::new(Primitive(Primitive::U64), l, span),
-                    "i8" => Token::new(Primitive(Primitive::I8), l, span),
-                    "i16" => Token::new(Primitive(Primitive::I16), l, span),
-                    "i32" => Token::new(Primitive(Primitive::I32), l, span),
-                    "i64" => Token::new(Primitive(Primitive::I64), l, span),
-                    "bool" => Token::new(Primitive(Primitive::Bool), l, span),
-                    "string" => Token::new(Primitive(Primitive::StringLiteral), l, span),
+                    "u8" => Token::new(Primitive(Primitive::U8), span),
+                    "u16" => Token::new(Primitive(Primitive::U16), span),
+                    "u32" => Token::new(Primitive(Primitive::U32), span),
+                    "u64" => Token::new(Primitive(Primitive::U64), span),
+                    "i8" => Token::new(Primitive(Primitive::I8), span),
+                    "i16" => Token::new(Primitive(Primitive::I16), span),
+                    "i32" => Token::new(Primitive(Primitive::I32), span),
+                    "i64" => Token::new(Primitive(Primitive::I64), span),
+                    "bool" => Token::new(Primitive(Primitive::Bool), span),
+                    "string" => Token::new(Primitive(Primitive::StringLiteral), span),
                     _ => panic!("Matched a primitive which does not exist: {}", w),
                 })
             }
@@ -715,50 +712,35 @@ impl<'a> Lexer<'a> {
     }
 
     fn create_int_literal(
-        line: u32,
         span: Span,
         int_token: &str,
         prim: Primitive,
     ) -> LexerResult<Option<Token>> {
         match prim {
-            Primitive::U8 => Ok(Some(Token::new(
-                U8(int_token.parse::<u8>().unwrap()),
-                line,
-                span,
-            ))),
+            Primitive::U8 => Ok(Some(Token::new(U8(int_token.parse::<u8>().unwrap()), span))),
             Primitive::U16 => Ok(Some(Token::new(
                 U16(int_token.parse::<u16>().unwrap()),
-                line,
                 span,
             ))),
             Primitive::U32 => Ok(Some(Token::new(
                 U32(int_token.parse::<u32>().unwrap()),
-                line,
                 span,
             ))),
             Primitive::U64 => Ok(Some(Token::new(
                 U64(int_token.parse::<u64>().unwrap()),
-                line,
                 span,
             ))),
-            Primitive::I8 => Ok(Some(Token::new(
-                I8(int_token.parse::<i8>().unwrap()),
-                line,
-                span,
-            ))),
+            Primitive::I8 => Ok(Some(Token::new(I8(int_token.parse::<i8>().unwrap()), span))),
             Primitive::I16 => Ok(Some(Token::new(
                 I16(int_token.parse::<i16>().unwrap()),
-                line,
                 span,
             ))),
             Primitive::I32 => Ok(Some(Token::new(
                 I32(int_token.parse::<i32>().unwrap()),
-                line,
                 span,
             ))),
             Primitive::I64 => Ok(Some(Token::new(
                 I64(int_token.parse::<i64>().unwrap()),
-                line,
                 span,
             ))),
             Primitive::Bool | Primitive::StringLiteral => {
