@@ -191,7 +191,7 @@ mod tests {
     }
 
     #[test]
-    fn test_invalidd_string_literal() {
+    fn test_invalid_string_literal() {
         let text = "\"text";
         let mut sm = SourceMap::new();
         sm.add_string(text, "/test".into()).unwrap();
