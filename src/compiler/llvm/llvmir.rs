@@ -463,10 +463,11 @@ impl<'ctx> IrGen<'ctx> {
         }
     }
 
-    fn build_memcpy(&self, dest: PointerValue<'ctx>, src: PointerValue<'ctx>) -> PointerValue {
+    fn build_memcpy(&self, dest: PointerValue<'ctx>, src: PointerValue<'ctx>, span: Span) {
         let dest_align = get_ptr_alignment(dest);
         let src_align = get_ptr_alignment(src);
-        self.builder
+        let mc = self
+            .builder
             .build_memcpy(
                 dest,
                 dest_align,
@@ -474,7 +475,8 @@ impl<'ctx> IrGen<'ctx> {
                 src_align,
                 dest.get_type().get_element_type().size_of().unwrap(),
             )
-            .unwrap()
+            .unwrap();
+        self.record(span, &mc);
     }
 
     /// If the LLVM builder cursor is currently within a function, this will
@@ -640,8 +642,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticContext> {
                 let dest = llvm.builder.build_alloca(ty, &name);
                 llvm.record(self.span(), &dest);
 
-                let mc = llvm.build_memcpy(dest, rhs_ptr);
-                llvm.record(self.span(), &mc);
+                llvm.build_memcpy(dest, rhs_ptr, self.span());
 
                 llvm.registers.insert(&name, dest.into()).unwrap();
                 Some(dest)
@@ -691,8 +692,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Return<SemanticContext> {
                     ast::Type::Custom(_) | ast::Type::Array(..) => {
                         let out = llvm.registers.get(".out").unwrap().into_pointer_value();
                         let src_ptr = val.to_llvm_ir(llvm).unwrap().into_pointer_value();
-                        let mc = llvm.build_memcpy(out, src_ptr);
-                        llvm.record(self.span(), &mc);
+                        llvm.build_memcpy(out, src_ptr, self.span());
 
                         // Use the return parameter as a ptr to memory to store the struct and copy it there
                         llvm.builder.build_return(None)
@@ -940,8 +940,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     if el_ty.is_aggregate_type() {
                         // TODO: should I do this for all pointer values?
                         let val_ptr = val.into_pointer_value();
-                        let mc = llvm.build_memcpy(fld_ptr, val_ptr);
-                        llvm.record(self.span(), &mc);
+                        llvm.build_memcpy(fld_ptr, val_ptr, self.span());
                     } else {
                         let st = llvm.builder.build_store(fld_ptr, val);
                         llvm.record(self.span(), &st);
@@ -978,8 +977,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     let el_ty = el_ptr.get_type().get_element_type();
 
                     if el_ty.is_aggregate_type() {
-                        let mc = llvm.build_memcpy(el_ptr, e.into_pointer_value());
-                        llvm.record(e_span, &mc);
+                        llvm.build_memcpy(el_ptr, e.into_pointer_value(), self.span());
                     } else {
                         let st = llvm.builder.build_store(el_ptr, e);
                         llvm.record(e_span, &st);

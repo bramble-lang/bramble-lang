@@ -6,19 +6,13 @@ mod math {
     */
     mod arithmetic {
         // Does something
-        fn something(m: super::S) -> i64 {
-            let s: string := "hello";
-            project::std::io::write(s);
-            while (!(-m.x < 4 + 2)) {
-                foo();
-            };
-            
+        fn something() -> i64 {
+            let a: [i64; 2] := foo();
             return 5;
         }
 
-        fn foo() {
-            let s2: super::S2 := super::S2{ s: super::S{ x: 5}};
-            return;
+        fn foo() -> [i64; 2] {
+            return [0, 3];
         }
     }
 
