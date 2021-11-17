@@ -7,23 +7,26 @@ mod math {
     mod arithmetic {
         // Does something
         fn something(m: super::S) -> i64 {
-            let a: [i64; 2] := [1, 2];
-            
-            return a[0];
-        }
-
-        fn get_s() -> super::S {
-            return super::S {
-                x: get_i(),
+            let s: string := "hello";
+            project::std::io::write(s);
+            while (!(-m.x < 4 + 2)) {
+                foo();
             };
+            
+            return 5;
         }
 
-        fn get_i() -> i64 {
-            return 5;
+        fn foo() {
+            let s2: super::S2 := super::S2{ s: super::S{ x: 5}};
+            return;
         }
     }
 
     struct S {
         x: i64,
+    }
+
+    struct S2 {
+        s: S,
     }
 }

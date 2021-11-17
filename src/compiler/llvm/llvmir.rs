@@ -649,14 +649,15 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticContext> {
             Ok(ty) => {
                 let ptr = llvm.builder.build_alloca(ty, &name);
                 llvm.record(self.span(), &ptr);
+
                 let st = llvm.builder.build_store(ptr, rhs);
                 llvm.record(self.span(), &st);
+
                 llvm.registers.insert(&name, ptr.into()).unwrap();
                 Some(ptr)
             }
             Err(msg) => panic!("Failed to convert to basic type: {}", msg),
         }
-        .view(|ir| llvm.record(self.span(), ir))
     }
 }
 
@@ -780,8 +781,8 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     Some(val).view(|ir| llvm.record(self.span(), ir))
                 }
             }
-            ast::Expression::UnaryOp(_, op, exp) => Some(op.to_llvm_ir(llvm, exp)),
-            ast::Expression::BinaryOp(_, op, l, r) => Some(op.to_llvm_ir(llvm, l, r)),
+            ast::Expression::UnaryOp(_, op, exp) => Some(op.to_llvm_ir(llvm, exp, self.span())),
+            ast::Expression::BinaryOp(_, op, l, r) => Some(op.to_llvm_ir(llvm, l, r, self.span())),
             ast::Expression::RoutineCall(meta, call, name, params) => call
                 .to_llvm_ir(llvm, name, params, self.get_type(), self.span())
                 .map_err(|e| format!("L{}: {}", meta.line(), e))
@@ -1044,13 +1045,18 @@ impl ast::UnaryOperator {
         &self,
         llvm: &mut IrGen<'ctx>,
         right: &ast::Expression<SemanticContext>,
+        span: Span,
     ) -> BasicValueEnum<'ctx> {
         let r = right.to_llvm_ir(llvm).expect("Expected a value");
         let rv = r.into_int_value();
-        match self {
+        let op = match self {
             ast::UnaryOperator::Negate => llvm.builder.build_int_neg(rv, "").into(),
             ast::UnaryOperator::Not => llvm.builder.build_not(rv, "").into(),
-        }
+        };
+
+        llvm.record(span, &op);
+
+        op
     }
 }
 
@@ -1060,12 +1066,13 @@ impl ast::BinaryOperator {
         llvm: &mut IrGen<'ctx>,
         left: &ast::Expression<SemanticContext>,
         right: &ast::Expression<SemanticContext>,
+        span: Span,
     ) -> BasicValueEnum<'ctx> {
         let l = left.to_llvm_ir(llvm).expect("Expected a value");
         let r = right.to_llvm_ir(llvm).expect("Expected a value");
         let lv = l.into_int_value();
         let rv = r.into_int_value();
-        match self {
+        let op = match self {
             ast::BinaryOperator::Add => llvm.builder.build_int_add(lv, rv, ""),
             ast::BinaryOperator::Sub => llvm.builder.build_int_sub(lv, rv, ""),
             ast::BinaryOperator::Mul => llvm.builder.build_int_mul(lv, rv, ""),
@@ -1105,7 +1112,11 @@ impl ast::BinaryOperator {
                     .build_int_compare(IntPredicate::SGE, lv, rv, "")
             }
         }
-        .into()
+        .into();
+
+        llvm.record(span, &op);
+
+        op
     }
 }
 
