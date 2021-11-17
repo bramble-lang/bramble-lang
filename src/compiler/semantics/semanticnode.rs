@@ -136,8 +136,9 @@ impl SemanticContext {
         ty: Type,
         mutable: bool,
         is_extern: bool,
+        span: Span,
     ) -> Result<(), SemanticError> {
-        self.sym.add(name, ty, mutable, is_extern)
+        self.sym.add(name, ty, mutable, is_extern, span)
     }
 }
 
@@ -154,11 +155,7 @@ impl SemanticAst {
         }
     }
 
-    pub fn from_module(
-        &mut self,
-        m: &Module<ParserContext>,
-        tracing: TracingConfig,
-    ) -> Module<SemanticContext> {
+    pub fn from_module(&mut self, m: &Module<ParserContext>) -> Module<SemanticContext> {
         let f = |n: &dyn Node<ParserContext>| match n.node_type() {
             NodeType::Module => {
                 let name = n.name().expect("Modules must have a name");
@@ -171,7 +168,7 @@ impl SemanticAst {
             _ => self.semantic_context_from(*n.context()),
         };
 
-        let mut mapper = MapPreOrder::new("parser-to-semantic", f, tracing);
+        let mut mapper = MapPreOrder::new("parser-to-semantic", f);
         mapper.apply(m)
     }
 

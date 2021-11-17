@@ -1,12 +1,26 @@
+extern fn printf(fmt: string, ...);
+
 mod math {
+    /*
+    My funky test module
+    */
     mod arithmetic {
-        fn something(m: S) -> i64 {
-            let y: i64 := m.x;
-            return y;
+        // Does something
+        fn something() -> i64 {
+            let a: [i64; 2] := foo();
+            return 5;
+        }
+
+        fn foo() -> [i64; 2] {
+            return [0, 3];
         }
     }
 
     struct S {
         x: i64,
+    }
+
+    struct S2 {
+        s: S,
     }
 }

@@ -132,7 +132,7 @@ mod test_preorder {
 
     #[test]
     fn empty_module() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
         let m = table.insert("m".into());
 
         let module1 = Module::new(m, 1i32);
@@ -147,7 +147,7 @@ mod test_preorder {
 
     #[test]
     fn nested_module() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
         let m = table.insert("m".into());
         let m2 = table.insert("m2".into());
 
@@ -164,7 +164,7 @@ mod test_preorder {
 
     #[test]
     fn module_with_items() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
         let m = table.insert("m".into());
         let m2 = table.insert("m2".into());
         let p = table.insert("p".into());
@@ -203,7 +203,7 @@ mod test_preorder {
 
     #[test]
     fn function() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
         let p = table.insert("p".into());
         let x = table.insert("x".into());
         let y = table.insert("y".into());
@@ -280,7 +280,7 @@ mod test_postorder {
 
     #[test]
     fn empty_module() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
         let m = table.insert("m".into());
 
         let module1 = Module::new(m, 1i32);
@@ -295,7 +295,7 @@ mod test_postorder {
 
     #[test]
     fn nested_module() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
         let m = table.insert("m".into());
         let m2 = table.insert("m2".into());
 
@@ -312,7 +312,7 @@ mod test_postorder {
 
     #[test]
     fn module_with_items() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
         let m = table.insert("m".into());
         let m2 = table.insert("m2".into());
         let p = table.insert("p".into());
@@ -351,7 +351,7 @@ mod test_postorder {
 
     #[test]
     fn function() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
         let x = table.insert("x".into());
         let y = table.insert("y".into());
         let func = table.insert("func".into());

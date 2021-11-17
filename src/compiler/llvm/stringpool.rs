@@ -67,7 +67,7 @@ impl<'a> StringPool<'a> {
             Boolean(..) => {}
             StringLiteral(_, s) => {
                 let val = self.string_table.get(*s).unwrap();
-                self.insert(val);
+                self.insert(&val);
             }
             ArrayExpression(_, elements, _) => {
                 for e in elements {
@@ -185,10 +185,10 @@ impl<'a> StringPool<'a> {
 #[cfg(test)]
 mod test {
     use super::super::super::lexer::tokens::Token;
-    use super::super::super::parser::parser;
     use super::super::super::semantics::type_resolver::resolve_types;
+    use crate::compiler::diagnostics::Logger;
+    use crate::compiler::parser::Parser;
     use crate::compiler::{Lexer, SourceMap};
-    use crate::diagnostics::config::TracingConfig;
 
     use super::*;
 
@@ -249,19 +249,20 @@ mod test {
             let test_mod = table.insert("test_mod".into());
 
             let src = sm.get(0).unwrap().read().unwrap();
-            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<Result<_, _>>()
                 .unwrap();
-            let ast = parser::parse(test_mod, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(test_mod, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 main_mod,
                 main_fn,
-                TracingConfig::Off,
-                TracingConfig::Off,
-                TracingConfig::Off,
+                &logger,
             ).unwrap();
             let mut sp = StringPool::new(&table);
             sp.extract_from_module(&module);

@@ -4,6 +4,7 @@ mod source;
 
 // Modules which should be accessible outside of  the [`compiler`] module
 pub mod ast;
+pub mod diagnostics;
 pub mod import;
 pub mod lexer;
 pub mod llvm;

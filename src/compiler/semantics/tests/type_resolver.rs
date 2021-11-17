@@ -3,13 +3,13 @@ mod type_resolver_tests {
     use crate::{
         compiler::{
             ast::*,
+            diagnostics::Logger,
             lexer::tokens::Token,
             lexer::LexerError,
-            parser::{parser, ParserContext},
+            parser::{Parser, ParserContext},
             semantics::semanticnode::SemanticContext,
             CompilerDisplay, CompilerError, Lexer, SourceMap, Span,
         },
-        diagnostics::config::TracingConfig,
         project::manifest::Manifest,
         StringTable,
     };
@@ -147,23 +147,20 @@ mod type_resolver_tests {
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(test, &tokens)
+
+            let parser = Parser::new(&logger);
+            let ast = parser
+                .parse(test, &tokens)
                 .expect(&format!("{}", text))
                 .unwrap();
-            let module = resolve_types(
-                &ast,
-                main_mod,
-                main_fn,
-                TracingConfig::Off,
-                TracingConfig::Off,
-                TracingConfig::Off,
-            );
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -249,18 +246,19 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
+            let logger = Logger::new();
+let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(test, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(test, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
                 main_mod, main_fn,
-                TracingConfig::Off,
-                TracingConfig::Off,
-                TracingConfig::Off,
+                &logger,
             );
             match expected {
                 Ok(_) => assert!(result.is_ok(), "{:?} got {:?}", expected, result),
@@ -315,21 +313,17 @@ let src = sm.get(0).unwrap().read().unwrap();
             sm.add_string(text, "/test".into()).unwrap();
             let src = sm.get(0).unwrap().read().unwrap();
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(test, &tokens).unwrap().unwrap();
-            let result = resolve_types(
-                &ast,
-                main_mod,
-                main_fn,
-                TracingConfig::Off,
-                TracingConfig::Off,
-                TracingConfig::Off,
-            );
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(test, &tokens).unwrap().unwrap();
+            let result = resolve_types(&ast, main_mod, main_fn, &logger);
             assert!(result.is_ok());
         }
     }
@@ -362,27 +356,28 @@ let src = sm.get(0).unwrap().read().unwrap();
             ),
         ] {
             let mut sm = SourceMap::new();
-sm.add_string(&text, "/test".into()).unwrap();
-let src = sm.get(0).unwrap().read().unwrap();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
 
             let mut table = StringTable::new();
             let test = table.insert("test".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(test, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(test, &tokens).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
                 main_mod,
                 main_fn,
-                TracingConfig::Off,
-                TracingConfig::Off,
-                TracingConfig::Off,
+                &logger,
             );
             match expected {
                 Ok(_) => assert!(result.is_ok(), "Expected Ok got {:?}", result),
@@ -432,22 +427,17 @@ let src = sm.get(0).unwrap().read().unwrap();
             sm.add_string(text, "/test".into()).unwrap();
             let src = sm.get(0).unwrap().read().unwrap();
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(test, &tokens).unwrap().unwrap();
-            let result = resolve_types(
-                &ast,
-                main_mod,
-                main_fn,
-                TracingConfig::Off,
-                TracingConfig::Off,
-                TracingConfig::Off,
-            )
-            .unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(test, &tokens).unwrap().unwrap();
+            let result = resolve_types(&ast, main_mod, main_fn, &logger).unwrap();
             if let Item::Routine(RoutineDef { body, .. }) = &result.get_functions()[0] {
                 if let Statement::Bind(box b) = &body[0] {
                     if let Expression::StructExpression(_, struct_name, ..) = b.get_rhs() {
@@ -508,21 +498,17 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(
-                &ast,
-                main_mod,
-                main_fn,
-                TracingConfig::Off,
-                TracingConfig::Off,
-                TracingConfig::Off,
-            );
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match (expected, module) {
                 (Ok(expected_ty), Ok(actual)) => {
                     let fn_main = actual.get_functions()[0].to_routine().unwrap();
@@ -578,22 +564,17 @@ let src = sm.get(0).unwrap().read().unwrap();
             sm.add_string(text, "/test".into()).unwrap();
             let src = sm.get(0).unwrap().read().unwrap();
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
-            let result = resolve_types(
-                &ast,
-                main_mod,
-                main_fn,
-                TracingConfig::Off,
-                TracingConfig::Off,
-                TracingConfig::Off,
-            )
-            .unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
+            let result = resolve_types(&ast, main_mod, main_fn, &logger).unwrap();
             if let Item::Routine(RoutineDef { params, .. }) = &result.get_functions()[0] {
                 if let Parameter {
                     ty: Type::Custom(ty_path),
@@ -633,22 +614,17 @@ let src = sm.get(0).unwrap().read().unwrap();
             sm.add_string(text, "/test".into()).unwrap();
             let src = sm.get(0).unwrap().read().unwrap();
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
-            let result = resolve_types(
-                &ast,
-                main_mod,
-                main_fn,
-                TracingConfig::Off,
-                TracingConfig::Off,
-                TracingConfig::Off,
-            )
-            .unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
+            let result = resolve_types(&ast, main_mod, main_fn, &logger).unwrap();
             if let Item::Routine(RoutineDef { params, .. }) = &result.get_coroutines()[0] {
                 if let Type::Custom(ty_path) = &params[0].ty {
                     let expected: Path =
@@ -682,22 +658,17 @@ let src = sm.get(0).unwrap().read().unwrap();
             sm.add_string(text, "/test".into()).unwrap();
             let src = sm.get(0).unwrap().read().unwrap();
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
-            let result = resolve_types(
-                &ast,
-                main_mod,
-                main_fn,
-                TracingConfig::Off,
-                TracingConfig::Off,
-                TracingConfig::Off,
-            )
-            .unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
+            let result = resolve_types(&ast, main_mod, main_fn, &logger).unwrap();
             if let Item::Struct(s) = &result.get_structs()[1] {
                 let fields = s.get_fields();
                 if let Type::Custom(ty_path) = &fields[0].ty {
@@ -886,21 +857,17 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(
-                &ast,
-                main_mod,
-                main_fn,
-                TracingConfig::Off,
-                TracingConfig::Off,
-                TracingConfig::Off,
-            );
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match expected {
                 Ok(expected_ty) => {
                     assert!(module.is_ok(), "Test Case at L:{}", line);
@@ -1021,21 +988,17 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(
-                &ast,
-                main_mod,
-                main_fn,
-                TracingConfig::Off,
-                TracingConfig::Off,
-                TracingConfig::Off,
-            );
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -1096,21 +1059,17 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(
-                &ast,
-                main_mod,
-                main_fn,
-                TracingConfig::Off,
-                TracingConfig::Off,
-                TracingConfig::Off,
-            );
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -1182,21 +1141,17 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(
-                &ast,
-                main_mod,
-                main_fn,
-                TracingConfig::Off,
-                TracingConfig::Off,
-                TracingConfig::Off,
-            );
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -1269,21 +1224,17 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(
-                &ast,
-                main_mod,
-                main_fn,
-                TracingConfig::Off,
-                TracingConfig::Off,
-                TracingConfig::Off,
-            );
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -1356,21 +1307,17 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(
-                &ast,
-                main_mod,
-                main_fn,
-                TracingConfig::Off,
-                TracingConfig::Off,
-                TracingConfig::Off,
-            );
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -1446,21 +1393,17 @@ let src = sm.get(0).unwrap().read().unwrap();
                 let main_mod = table.insert(MAIN_MODULE.into());
                 let main_fn = table.insert("my_main".into());
 
-                let tokens: Vec<Token> = Lexer::new(&mut table, src)
+                let logger = Logger::new();
+                let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                     .unwrap()
                     .tokenize()
                     .into_iter()
                     .collect::<LResult>()
                     .unwrap();
-                let ast = parser::parse(main, &tokens).unwrap().unwrap();
-                let module = resolve_types(
-                    &ast,
-                    main_mod,
-                    main_fn,
-                    TracingConfig::Off,
-                    TracingConfig::Off,
-                    TracingConfig::Off,
-                );
+
+                let parser = Parser::new(&logger);
+                let ast = parser.parse(main, &tokens).unwrap().unwrap();
+                let module = resolve_types(&ast, main_mod, main_fn, &logger);
                 match expected {
                     Ok(expected_ty) => {
                         let module = module.unwrap();
@@ -1512,21 +1455,17 @@ let src = sm.get(0).unwrap().read().unwrap();
             sm.add_string(&text, "/test".into()).unwrap();
             let src = sm.get(0).unwrap().read().unwrap();
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(
-                &ast,
-                main_mod,
-                main_fn,
-                TracingConfig::Off,
-                TracingConfig::Off,
-                TracingConfig::Off,
-            );
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             let module = module.unwrap();
             let fn_main = module.get_functions()[0].to_routine().unwrap();
 
@@ -1597,21 +1536,17 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(
-                &ast,
-                main_mod,
-                main_fn,
-                TracingConfig::Off,
-                TracingConfig::Off,
-                TracingConfig::Off,
-            );
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -1720,21 +1655,17 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(
-                &ast,
-                main_mod,
-                main_fn,
-                TracingConfig::Off,
-                TracingConfig::Off,
-                TracingConfig::Off,
-            );
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -1926,21 +1857,17 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(
-                &ast,
-                main_mod,
-                main_fn,
-                TracingConfig::Off,
-                TracingConfig::Off,
-                TracingConfig::Off,
-            );
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -2024,21 +1951,17 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(
-                &ast,
-                main_mod,
-                main_fn,
-                TracingConfig::Off,
-                TracingConfig::Off,
-                TracingConfig::Off,
-            );
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -2119,21 +2042,17 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(
-                &ast,
-                main_mod,
-                main_fn,
-                TracingConfig::Off,
-                TracingConfig::Off,
-                TracingConfig::Off,
-            );
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -2227,26 +2146,27 @@ let src = sm.get(0).unwrap().read().unwrap();
             ),
         ] {
             let mut sm = SourceMap::new();
-sm.add_string(&text, "/test".into()).unwrap();
-let src = sm.get(0).unwrap().read().unwrap();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
 
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 main_mod, main_fn,
-                TracingConfig::Off,
-                TracingConfig::Off,
-                TracingConfig::Off,
+                &logger,
             );
             match expected {
                 Ok(expected_ty) => {
@@ -2401,26 +2321,27 @@ let src = sm.get(0).unwrap().read().unwrap();
             ),
         ] {
             let mut sm = SourceMap::new();
-sm.add_string(&text, "/test".into()).unwrap();
-let src = sm.get(0).unwrap().read().unwrap();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
 
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main,&tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main,&tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 main_mod, main_fn,
-                TracingConfig::Off,
-                TracingConfig::Off,
-                TracingConfig::Off,
+                &logger,
             );
             match expected {
                 Ok(expected_ty) => {
@@ -2521,26 +2442,27 @@ let src = sm.get(0).unwrap().read().unwrap();
             ),
         ] {
             let mut sm = SourceMap::new();
-sm.add_string(&text, "/test".into()).unwrap();
-let src = sm.get(0).unwrap().read().unwrap();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
 
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 main_mod, main_fn,
-                TracingConfig::Off,
-                TracingConfig::Off,
-                TracingConfig::Off
+                &logger,
             );
             match expected {
                 Ok(expected_ty) => {
@@ -2632,21 +2554,17 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(
-                &ast,
-                main_mod,
-                main_fn,
-                TracingConfig::Off,
-                TracingConfig::Off,
-                TracingConfig::Off,
-            );
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -2724,21 +2642,17 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(
-                &ast,
-                main_mod,
-                main_fn,
-                TracingConfig::Off,
-                TracingConfig::Off,
-                TracingConfig::Off,
-            );
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -2802,21 +2716,17 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(
-                &ast,
-                main_mod,
-                main_fn,
-                TracingConfig::Off,
-                TracingConfig::Off,
-                TracingConfig::Off,
-            );
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -2884,21 +2794,17 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(
-                &ast,
-                main_mod,
-                main_fn,
-                TracingConfig::Off,
-                TracingConfig::Off,
-                TracingConfig::Off,
-            );
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -2994,21 +2900,17 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src)
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
                 .unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
-            let module = resolve_types(
-                &ast,
-                main_mod,
-                main_fn,
-                TracingConfig::Off,
-                TracingConfig::Off,
-                TracingConfig::Off,
-            );
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
             match expected {
                 Ok(expected_ty) => {
                     let module = module.unwrap();
@@ -3070,26 +2972,28 @@ let src = sm.get(0).unwrap().read().unwrap();
             ),
         ] {
             let mut sm = SourceMap::new();
-sm.add_string(&text, "/test".into()).unwrap();
-let src = sm.get(0).unwrap().read().unwrap();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
 
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
             let module = resolve_types(
                 &ast,
                 main_mod, main_fn,
-                TracingConfig::Off,
-                TracingConfig::Off,
-                TracingConfig::Off,
+                &logger,
+
             );
             match expected {
                 Ok(expected_ty) => {
@@ -3305,26 +3209,28 @@ let src = sm.get(0).unwrap().read().unwrap();
         ] {
             println!("L{}", line);
             let mut sm = SourceMap::new();
-sm.add_string(&text, "/test".into()).unwrap();
-let src = sm.get(0).unwrap().read().unwrap();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
 
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(main, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).map_err(|e| e.fmt(&sm, &table)).unwrap().unwrap();
             let result = resolve_types(
                 &ast,
                 main_mod, main_fn,
-                TracingConfig::Off,
-                TracingConfig::Off,
-                TracingConfig::Off,
+                &logger,
+
             );
             match expected {
                 Ok(_) => {assert!(result.is_ok(), "\nL{}: {} => {:?}\n\nST: {:?}", line, text, result.map_err(|e| e.fmt(&sm, &table)), table)},
@@ -3354,26 +3260,27 @@ let src = sm.get(0).unwrap().read().unwrap();
                 Err("L1: Return expected bool but got i64")),
             ] {
             let mut sm = SourceMap::new();
-sm.add_string(&text, "/test".into()).unwrap();
-let src = sm.get(0).unwrap().read().unwrap();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
 
             let mut table = StringTable::new();
             let main = table.insert("main".into());
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     .tokenize()
                     .into_iter()
                     .collect::<LResult>()
                     .unwrap();
-                let ast = parser::parse(main, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+                let ast = parser.parse(main, &tokens).unwrap().unwrap();
                 let result = resolve_types(
                     &ast,
                     main_mod, main_fn,
-                    TracingConfig::Off,
-                    TracingConfig::Off,
-                    TracingConfig::Off,
+                &logger,
                 );
                 match expected {
                     Ok(_) => assert!(result.is_ok(), "{} -> {:?}", text, result),
@@ -3463,8 +3370,8 @@ let src = sm.get(0).unwrap().read().unwrap();
             ),
         ] {
             let mut sm = SourceMap::new();
-sm.add_string(&text, "/test".into()).unwrap();
-let src = sm.get(0).unwrap().read().unwrap();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
 
             let mut table = StringTable::new();
             let std = table.insert("std".into());
@@ -3473,12 +3380,15 @@ let src = sm.get(0).unwrap().read().unwrap();
             let main_mod = table.insert(MAIN_MODULE.into());
             let main_fn = table.insert("my_main".into());
 
-            let tokens: Vec<Token> = Lexer::new(&mut table, src).unwrap()
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 .tokenize()
                 .into_iter()
                 .collect::<LResult>()
                 .unwrap();
-            let ast = parser::parse(std, &tokens).unwrap().unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(std, &tokens).unwrap().unwrap();
 
             let mut import_context = SemanticContext::new_local(0, new_ctx(0), Type::Unit);
             import_context.set_canonical_path(vec![Element::CanonicalRoot, Element::Id(std), Element::Id(test)].into());
@@ -3495,9 +3405,7 @@ let src = sm.get(0).unwrap().read().unwrap();
                 &ast,
                 main_mod, main_fn,
                 &vec![imports],
-                TracingConfig::Off,
-                TracingConfig::Off,
-                TracingConfig::Off,
+                &logger,
             );
             match expected {
                 Ok(_) => assert!(result.is_ok(), "TL{}: {:?} got {:?}", line, expected, result.map_err(|e| e.fmt(&sm, &table))),

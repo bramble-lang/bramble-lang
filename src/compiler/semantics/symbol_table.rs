@@ -1,7 +1,7 @@
 use log::debug;
 
 use crate::{
-    compiler::{ast::*, semantics::semanticnode::SemanticContext},
+    compiler::{ast::*, semantics::semanticnode::SemanticContext, source::SourceIr, Span},
     StringId,
 };
 
@@ -125,6 +125,7 @@ impl SymbolTable {
             ),
             false,
             false,
+            structdef.span(),
         )
     }
 
@@ -142,7 +143,7 @@ impl SymbolTable {
             Box::new(ty.clone()),
         );
 
-        sym.add_symbol(*name, def, false, true)
+        sym.add_symbol(*name, def, false, true, ex.span())
     }
 
     fn add_routine_parameters(
@@ -166,7 +167,7 @@ impl SymbolTable {
             }
         };
 
-        sym.add_symbol(*name, def, false, false)
+        sym.add_symbol(*name, def, false, false, routine.span())
     }
 
     fn get_types_for_params(params: &Vec<Parameter<SemanticContext>>) -> Vec<Type> {
@@ -203,6 +204,7 @@ impl SymbolTable {
         ty: Type,
         mutable: bool,
         is_extern: bool,
+        span: Span,
     ) -> Result<(), SemanticError> {
         if self.get(name).is_some() {
             Err(SemanticError::AlreadyDeclared(name))
@@ -212,6 +214,7 @@ impl SymbolTable {
                 ty,
                 mutable,
                 is_extern,
+                span: Some(span),
             });
             Ok(())
         }
@@ -239,6 +242,7 @@ pub struct Symbol {
     pub ty: Type,
     pub mutable: bool,
     pub is_extern: bool,
+    pub span: Option<Span>,
 }
 
 impl std::fmt::Display for Symbol {

@@ -8,7 +8,7 @@ use super::{
     structdef::StructDef,
     AstError,
 };
-use crate::compiler::CompilerError;
+use crate::compiler::{source::SourceIr, CompilerError, Span};
 use crate::StringId;
 
 type AstResult<T> = Result<T, CompilerError<AstError>>;
@@ -22,6 +22,12 @@ pub struct Module<M> {
     coroutines: Vec<Item<M>>,
     structs: Vec<Item<M>>,
     externs: Vec<Item<M>>,
+}
+
+impl<M: Context> SourceIr for Module<M> {
+    fn span(&self) -> Span {
+        self.context.span()
+    }
 }
 
 impl<M: Context> Node<M> for Module<M> {
@@ -102,7 +108,7 @@ where
             self.functions.push(Item::Routine(f));
             Ok(())
         } else {
-            err!(f.context().span(), AstError::ModuleAlreadyContains(fname))
+            err!(f.span(), AstError::ModuleAlreadyContains(fname))
         }
     }
 
@@ -112,7 +118,7 @@ where
             self.coroutines.push(Item::Routine(c));
             Ok(())
         } else {
-            err!(c.context().span(), AstError::ModuleAlreadyContains(cname))
+            err!(c.span(), AstError::ModuleAlreadyContains(cname))
         }
     }
 
@@ -122,7 +128,7 @@ where
             self.structs.push(Item::Struct(s));
             Ok(())
         } else {
-            err!(s.context().span(), AstError::ModuleAlreadyContains(name))
+            err!(s.span(), AstError::ModuleAlreadyContains(name))
         }
     }
 
@@ -132,7 +138,7 @@ where
             self.externs.push(Item::Extern(e));
             Ok(())
         } else {
-            err!(e.context().span(), AstError::ModuleAlreadyContains(name))
+            err!(e.span(), AstError::ModuleAlreadyContains(name))
         }
     }
 
@@ -287,6 +293,12 @@ pub enum Item<M> {
     Extern(Extern<M>),
 }
 
+impl<M: Context> SourceIr for Item<M> {
+    fn span(&self) -> Span {
+        self.context().span()
+    }
+}
+
 impl<M: Context> Node<M> for Item<M> {
     fn context(&self) -> &M {
         match self {
@@ -379,7 +391,7 @@ mod test {
 
     #[test]
     pub fn test_new_module() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
 
         let test = table.insert("test".into());
 
@@ -390,7 +402,7 @@ mod test {
 
     #[test]
     pub fn test_get_nonexistant_item() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
 
         let test = table.insert("test".into());
         let func = table.insert("func".into());
@@ -412,7 +424,7 @@ mod test {
 
     #[test]
     pub fn test_add_function() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
 
         let test = table.insert("test".into());
         let func = table.insert("func".into());
@@ -433,7 +445,7 @@ mod test {
 
     #[test]
     pub fn test_add_function_that_already_exists() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
 
         let test = table.insert("test".into());
         let func = table.insert("func".into());
@@ -451,16 +463,13 @@ mod test {
         let result = module.add_function(fdef.clone());
         assert_eq!(
             result,
-            err!(
-                module.context().span(),
-                AstError::ModuleAlreadyContains(func)
-            )
+            err!(module.span(), AstError::ModuleAlreadyContains(func))
         );
     }
 
     #[test]
     pub fn test_add_coroutine() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
 
         let test = table.insert("test".into());
         let cor = table.insert("cor".into());
@@ -481,7 +490,7 @@ mod test {
 
     #[test]
     pub fn test_add_coroutine_that_already_exists() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
 
         let test = table.insert("test".into());
         let cor = table.insert("cor".into());
@@ -499,16 +508,13 @@ mod test {
         let result = module.add_coroutine(cdef.clone());
         assert_eq!(
             result,
-            err!(
-                module.context().span(),
-                AstError::ModuleAlreadyContains(cor)
-            )
+            err!(module.span(), AstError::ModuleAlreadyContains(cor))
         );
     }
 
     #[test]
     pub fn test_add_coroutine_with_same_name_as_function() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
 
         let test = table.insert("test".into());
         let dupe = table.insert("dupe".into());
@@ -535,16 +541,13 @@ mod test {
         let result = module.add_coroutine(cdef.clone());
         assert_eq!(
             result,
-            err!(
-                module.context().span(),
-                AstError::ModuleAlreadyContains(dupe)
-            )
+            err!(module.span(), AstError::ModuleAlreadyContains(dupe))
         );
     }
 
     #[test]
     pub fn test_add_function_with_same_name_as_coroutine() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
 
         let test = table.insert("test".into());
         let dupe = table.insert("dupe".into());
@@ -571,16 +574,13 @@ mod test {
         let result = module.add_function(fdef.clone());
         assert_eq!(
             result,
-            err!(
-                module.context().span(),
-                AstError::ModuleAlreadyContains(dupe)
-            )
+            err!(module.span(), AstError::ModuleAlreadyContains(dupe))
         );
     }
 
     #[test]
     pub fn test_get_item_that_does_not_exist() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
 
         let test = table.insert("test".into());
         let func = table.insert("func".into());
@@ -602,7 +602,7 @@ mod test {
 
     #[test]
     pub fn test_get_function() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
 
         let test = table.insert("test".into());
         let func = table.insert("func".into());
@@ -623,7 +623,7 @@ mod test {
 
     #[test]
     pub fn test_get_coroutine() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
 
         let test = table.insert("test".into());
         let co = table.insert("co".into());
@@ -644,7 +644,7 @@ mod test {
 
     #[test]
     pub fn test_go_to_nested() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
 
         let inner = table.insert("inner".into());
         let outer = table.insert("outer".into());
@@ -671,7 +671,7 @@ mod test {
 
     #[test]
     pub fn test_add_extern() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
 
         let test = table.insert("test".into());
         let puts = table.insert("puts".into());
@@ -685,7 +685,7 @@ mod test {
 
     #[test]
     pub fn test_add_extern_that_already_exists() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
 
         let test = table.insert("test".into());
         let puts = table.insert("puts".into());
@@ -696,16 +696,13 @@ mod test {
         let result = module.add_extern(edef.clone());
         assert_eq!(
             result,
-            err!(
-                module.context().span(),
-                AstError::ModuleAlreadyContains(puts)
-            )
+            err!(module.span(), AstError::ModuleAlreadyContains(puts))
         );
     }
 
     #[test]
     pub fn test_add_extern_with_same_name_as_function() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
 
         let test = table.insert("test".into());
         let dupe = table.insert("dupe".into());
@@ -725,16 +722,13 @@ mod test {
         let result = module.add_extern(edef.clone());
         assert_eq!(
             result,
-            err!(
-                module.context().span(),
-                AstError::ModuleAlreadyContains(dupe)
-            )
+            err!(module.span(), AstError::ModuleAlreadyContains(dupe))
         );
     }
 
     #[test]
     pub fn test_add_function_with_same_name_as_extern() {
-        let mut table = StringTable::new();
+        let table = StringTable::new();
 
         let test = table.insert("test".into());
         let dupe = table.insert("dupe".into());
@@ -754,10 +748,7 @@ mod test {
         let result = module.add_function(fdef.clone());
         assert_eq!(
             result,
-            err!(
-                module.context().span(),
-                AstError::ModuleAlreadyContains(dupe)
-            )
+            err!(module.span(), AstError::ModuleAlreadyContains(dupe))
         );
     }
 }

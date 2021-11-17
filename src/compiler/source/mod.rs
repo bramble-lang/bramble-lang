@@ -15,7 +15,7 @@ mod span;
 pub use source::{LineNumber, Source};
 pub use sourcechar::{SourceCharIter, SourceError};
 pub use sourcemap::{SourceMap, SourceMapEntry, SourceMapError};
-pub use span::Span;
+pub use span::{SourceIr, Span};
 
 /// Represents a single char from a source code file.  This includes the character
 /// and the global offset of the character (which points to the specific source
@@ -97,5 +97,11 @@ impl Offset {
 impl AddAssign<u32> for Offset {
     fn add_assign(&mut self, rhs: u32) {
         self.0 += rhs
+    }
+}
+
+impl std::fmt::Display for Offset {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{}", self.0))
     }
 }
