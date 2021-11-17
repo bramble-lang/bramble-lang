@@ -308,10 +308,11 @@ impl<'a> Lexer<'a> {
 
     fn consume_string_literal(&mut self) -> LexerResult<Option<Token>> {
         let mut branch = LexerBranch::from(self);
-
+        let mut closed = false;
         if branch.next_if('"') {
             while let Some(c) = branch.next() {
                 if c == '"' {
+                    closed = true;
                     break;
                 }
 
@@ -351,14 +352,17 @@ impl<'a> Lexer<'a> {
                 }
             }
             let (s, span) = branch.merge().unwrap();
+            if closed {
+                // Remove the quotes from the string
+                let mut s: String = self.string_table.get(s).unwrap().into();
+                s.remove(0);
+                s.pop();
+                let id = self.string_table.insert(s);
 
-            // Remove the quotes from the string
-            let mut s: String = self.string_table.get(s).unwrap().into();
-            s.remove(0);
-            s.pop();
-            let id = self.string_table.insert(s);
-
-            Ok(Some(Token::new(Lex::StringLiteral(id), self.line, span)))
+                Ok(Some(Token::new(Lex::StringLiteral(id), self.line, span)))
+            } else {
+                err!(span, LexerError::UnexpectedEof)
+            }
         } else {
             Ok(None)
         }
