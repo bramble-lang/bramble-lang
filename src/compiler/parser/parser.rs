@@ -498,7 +498,7 @@ impl<'a> Parser<'a> {
 
     fn identifier(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
         match stream.next_if_id() {
-            Some((id, ln, span)) => Ok(Some(Expression::Identifier(ParserContext::new(span), id))),
+            Some((id, _, span)) => Ok(Some(Expression::Identifier(ParserContext::new(span), id))),
             _ => Ok(None),
         }
         .view(|v| self.record(v.span(), Ok("Identifier")))

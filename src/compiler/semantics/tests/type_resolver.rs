@@ -18,7 +18,7 @@ mod type_resolver_tests {
 
     type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
 
-    fn new_ctx(line: u32) -> ParserContext {
+    fn new_ctx() -> ParserContext {
         ParserContext::new(Span::zero())
     }
 
@@ -3390,14 +3390,14 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
             let parser = Parser::new(&logger);
             let ast = parser.parse(std, &tokens).unwrap().unwrap();
 
-            let mut import_context = SemanticContext::new_local(0, new_ctx(0), Type::Unit);
+            let mut import_context = SemanticContext::new_local(0, new_ctx(), Type::Unit);
             import_context.set_canonical_path(vec![Element::CanonicalRoot, Element::Id(std), Element::Id(test)].into());
             let manifest = Manifest::new(&sm, &table, &vec![RoutineDef{
                 context: import_context,
                 def: RoutineDefType::Function,
                 name: test,
                 ret_ty: import_func.1.clone(),
-                params: import_func.0.iter().map(|p| Parameter::new(SemanticContext::new_local(0, new_ctx(0), p.clone()), a, p)).collect(),
+                params: import_func.0.iter().map(|p| Parameter::new(SemanticContext::new_local(0, new_ctx(), p.clone()), a, p)).collect(),
                 body: vec![],
             }], &vec![]).unwrap();
             let imports = manifest.to_import(&mut table).unwrap();
