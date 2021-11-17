@@ -1,17 +1,26 @@
-use crate::{
-    compiler::{ast::*, parser::ParserContext, Span},
-    diagnostics::{Diag, DiagData},
-};
-use crate::{diagnostics::config::TracingConfig, StringId};
+use crate::compiler::{ast::*, parser::ParserContext, Span};
+use crate::StringId;
 
 use super::{error::SemanticError, symbol_table::SymbolTable};
 
+/// Contextual data that is derived during the semantic analysis process
+/// This includes the resolved [`Type`] of a node or expression from the user
+/// input and the scoped symbol tables
 #[derive(Clone, Debug, PartialEq)]
 pub struct SemanticContext {
+    /// Unique id of a node in the Semantic AST
     id: u32,
+
+    /// [`Span`] that this node represents
     span: Span,
+
+    /// Resolved [`Type`] of this node
     ty: Type,
+
+    /// Symbols which are within the scope of this node and its children
     sym: SymbolTable,
+
+    /// Canonical path from the root of the project to this node
     canonical_path: Path,
 }
 
@@ -22,22 +31,6 @@ impl Context for SemanticContext {
 
     fn span(&self) -> Span {
         self.span
-    }
-}
-
-impl Diag for SemanticContext {
-    fn diag(&self) -> DiagData {
-        let mut dd = DiagData::new(0, self.id);
-
-        if self.sym.size() > 0 {
-            dd.add("sym", &format!("{}", self.sym));
-        }
-
-        if self.canonical_path.len() > 0 {
-            dd.add("canon path", &format!("{}", self.canonical_path));
-        }
-
-        dd
     }
 }
 
@@ -136,15 +129,11 @@ impl SemanticContext {
 
 pub struct SemanticAst {
     next_id: u32,
-    tracing: TracingConfig,
 }
 
 impl SemanticAst {
     pub fn new() -> SemanticAst {
-        SemanticAst {
-            next_id: 0,
-            tracing: TracingConfig::Off,
-        }
+        SemanticAst { next_id: 0 }
     }
 
     pub fn from_module(&mut self, m: &Module<ParserContext>) -> Module<SemanticContext> {

@@ -1,7 +1,4 @@
-use crate::{
-    compiler::{ast::Context, lexer::tokens::Token, source::SourceIr, Span},
-    diagnostics::{Diag, DiagData},
-};
+use crate::compiler::{ast::Context, lexer::tokens::Token, source::SourceIr, Span};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ParserContext {
@@ -34,12 +31,6 @@ impl Context for ParserContext {
 
     fn span(&self) -> Span {
         self.span
-    }
-}
-
-impl Diag for ParserContext {
-    fn diag(&self) -> DiagData {
-        DiagData::new(0, 0)
     }
 }
 
