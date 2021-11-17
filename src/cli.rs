@@ -4,7 +4,6 @@ use simplelog::*;
 
 use crate::{
     compiler::{CompilerDisplay, CompilerDisplayError, SourceMap},
-    diagnostics::config::TracingConfig,
     StringTable,
 };
 
@@ -100,38 +99,6 @@ pub fn configure_cli() -> clap::App<'static, 'static> {
                 .help("Traces source code as it moves through the compiler")
         )
         .arg(
-            Arg::with_name("trace-parser")
-                .long("trace-parser")
-                .takes_value(true)
-                .help("Prints out a trace of all the steps the parser follows as it converts the token vector into an AST.  The current token is printed next to the step.
-                This is for debugging the parser when adding new syntactical elements.")
-        )
-        .arg(
-            Arg::with_name("trace-lexer")
-                .long("trace-lexer")
-                .takes_value(true)
-                .help("Prints out a trace of all the steps the lexer follows as it converts the token vector into an AST.  The current token is printed next to the step.
-                This is for debugging the lexer when adding new tokens.")
-        )
-        .arg(
-            Arg::with_name("trace-semantic-node")
-                .long("trace-symbol-table")
-                .takes_value(true)
-                .help("Traces the transformation from Parser AST to Semantic AST")
-        )
-        .arg(
-            Arg::with_name("trace-canonization")
-                .long("trace-canonization")
-                .takes_value(true)
-                .help("Shows the transformation of relative paths to canonized/absolute paths.")
-        )
-        .arg(
-            Arg::with_name("trace-type-resolver")
-                .long("trace-type-resolver")
-                .takes_value(true)
-                .help("Traces the type resolution unit")
-        )
-        .arg(
             Arg::with_name("stage")
             .long("stage")
             .takes_value(true)
@@ -162,26 +129,6 @@ pub fn get_log_level<'a>(args: &'a ArgMatches) -> Option<LevelFilter> {
 
 pub fn enable_tracing<'a>(args: &'a ArgMatches) -> bool {
     args.is_present("trace")
-}
-
-pub fn get_lexer_tracing<'a>(args: &'a ArgMatches) -> TracingConfig {
-    TracingConfig::parse(args.value_of("trace-lexer"))
-}
-
-pub fn get_parser_tracing<'a>(args: &'a ArgMatches) -> TracingConfig {
-    TracingConfig::parse(args.value_of("trace-parser"))
-}
-
-pub fn get_semantic_node_tracing<'a>(args: &'a ArgMatches) -> TracingConfig {
-    TracingConfig::parse(args.value_of("trace-semantic-node"))
-}
-
-pub fn get_canonization_tracing<'a>(args: &'a ArgMatches) -> TracingConfig {
-    TracingConfig::parse(args.value_of("trace-canonization"))
-}
-
-pub fn get_type_resolver_tracing<'a>(args: &'a ArgMatches) -> TracingConfig {
-    TracingConfig::parse(args.value_of("trace-type-resolver"))
 }
 
 pub fn get_stage<'a>(args: &'a ArgMatches) -> Result<Option<Stage>, String> {

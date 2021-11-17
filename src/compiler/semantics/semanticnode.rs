@@ -1,8 +1,5 @@
-use crate::{
-    compiler::{ast::*, parser::ParserContext, Span},
-    diagnostics::{Diag, DiagData},
-};
-use crate::{diagnostics::config::TracingConfig, StringId};
+use crate::compiler::{ast::*, parser::ParserContext, Span};
+use crate::StringId;
 
 use super::{error::SemanticError, symbol_table::SymbolTable};
 
@@ -27,22 +24,6 @@ impl Context for SemanticContext {
 
     fn span(&self) -> Span {
         self.span
-    }
-}
-
-impl Diag for SemanticContext {
-    fn diag(&self) -> DiagData {
-        let mut dd = DiagData::new(self.ln, self.id);
-
-        if self.sym.size() > 0 {
-            dd.add("sym", &format!("{}", self.sym));
-        }
-
-        if self.canonical_path.len() > 0 {
-            dd.add("canon path", &format!("{}", self.canonical_path));
-        }
-
-        dd
     }
 }
 
@@ -144,15 +125,11 @@ impl SemanticContext {
 
 pub struct SemanticAst {
     next_id: u32,
-    tracing: TracingConfig,
 }
 
 impl SemanticAst {
     pub fn new() -> SemanticAst {
-        SemanticAst {
-            next_id: 0,
-            tracing: TracingConfig::Off,
-        }
+        SemanticAst { next_id: 0 }
     }
 
     pub fn from_module(&mut self, m: &Module<ParserContext>) -> Module<SemanticContext> {

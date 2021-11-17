@@ -7,7 +7,6 @@ use crate::compiler::ast::statement::*;
 use crate::compiler::ast::structdef::*;
 use crate::compiler::ast::Expression;
 use crate::compiler::ast::Extern;
-use crate::diagnostics::Diag;
 
 use super::{super::node::Node, super::parameter::Parameter, Context};
 
@@ -25,8 +24,7 @@ Compiler UI.
 */
 pub struct MapPreOrder<A, B, F>
 where
-    A: Debug + Context + Diag,
-    B: Diag,
+    A: Debug + Context,
     F: FnMut(&dyn Node<A>) -> B,
 {
     pub name: String,
@@ -37,9 +35,9 @@ where
 
 impl<A, B, F> MapPreOrder<A, B, F>
 where
-    A: Debug + Context + Diag,
+    A: Debug + Context,
     F: FnMut(&dyn Node<A>) -> B,
-    B: Diag + Context,
+    B: Context,
 {
     pub fn new(name: &str, f: F) -> MapPreOrder<A, B, F> {
         MapPreOrder {
@@ -374,7 +372,6 @@ mod test {
     use super::*;
     use crate::compiler::ast::{module::Module, ty::Type};
     use crate::compiler::Span;
-    use crate::diagnostics::DiagData;
     use crate::StringTable;
 
     impl Context for i32 {
@@ -388,14 +385,6 @@ mod test {
 
         fn span(&self) -> Span {
             Span::zero()
-        }
-    }
-
-    impl Diag for i32 {
-        fn diag(&self) -> DiagData {
-            let mut d = DiagData::new(0, 0);
-            d.add("i32", "0");
-            d
         }
     }
 
@@ -413,14 +402,6 @@ mod test {
         }
     }
 
-    impl Diag for i64 {
-        fn diag(&self) -> DiagData {
-            let mut d = DiagData::new(0, 0);
-            d.add("i32", "0");
-            d
-        }
-    }
-
     impl Context for String {
         fn id(&self) -> u32 {
             0
@@ -432,14 +413,6 @@ mod test {
 
         fn span(&self) -> Span {
             Span::zero()
-        }
-    }
-
-    impl Diag for String {
-        fn diag(&self) -> DiagData {
-            let mut d = DiagData::new(0, 0);
-            d.add("i32", "0");
-            d
         }
     }
 
