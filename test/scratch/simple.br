@@ -17,11 +17,16 @@ mod math {
         }
 
         fn foo() {
+            let s2: super::S2 := super::S2{ s: super::S{ x: 5}};
             return;
         }
     }
 
     struct S {
         x: i64,
+    }
+
+    struct S2 {
+        s: S,
     }
 }
