@@ -3,6 +3,9 @@ use crate::StringId;
 
 use super::{error::SemanticError, symbol_table::SymbolTable};
 
+/// Contextual data that is derived during the semantic analysis process
+/// This includes the resolved [`Type`] of a node or expression from the user
+/// input and the scoped symbol tables
 #[derive(Clone, Debug, PartialEq)]
 pub struct SemanticContext {
     /// Unique id of a node in the Semantic AST
