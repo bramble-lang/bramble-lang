@@ -62,6 +62,5 @@ impl Display for NodeType {
 /// a specific stage or analysis performed by the compiler.
 pub trait Context {
     fn id(&self) -> u32;
-    fn line(&self) -> u32;
     fn span(&self) -> Span;
 }
