@@ -137,7 +137,6 @@ run_fail_test() {
     fi
 }
 
-cargo clean
 if [[ "${target}" == "debug" ]]; then
     cargo build
 else

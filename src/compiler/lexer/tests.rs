@@ -3,9 +3,12 @@ mod tests {
     use crate::{
         compiler::{
             diagnostics::Logger,
-            lexer::tokens::{Lex, Primitive, Token},
+            lexer::{
+                tokens::{Lex, Primitive, Token},
+                LexerError,
+            },
             source::Offset,
-            SourceMap, Span,
+            CompilerError, SourceMap, Span,
         },
         StringTable,
     };
@@ -184,6 +187,26 @@ mod tests {
                 1,
                 new_span(0, 6)
             )
+        );
+    }
+
+    #[test]
+    fn test_invalid_string_literal() {
+        let text = "\"text";
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+
+        let mut table = StringTable::new();
+        let src = sm.get(0).unwrap().read().unwrap();
+        let logger = Logger::new();
+        let mut lexer = Lexer::new(src, &mut table, &logger).unwrap();
+        let tokens = lexer.tokenize();
+
+        assert_eq!(tokens.len(), 1, "{:?}", tokens);
+        let token = tokens[0].clone().expect_err("Expected error");
+        assert_eq!(
+            token,
+            CompilerError::new(new_span(0, 5), LexerError::UnexpectedEof)
         );
     }
 
