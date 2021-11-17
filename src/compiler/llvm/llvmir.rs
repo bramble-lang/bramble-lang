@@ -658,7 +658,6 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticContext> {
             }
             Err(msg) => panic!("Failed to convert to basic type: {}", msg),
         }
-        .view(|ir| llvm.record(self.span(), ir))
     }
 }
 
