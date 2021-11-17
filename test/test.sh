@@ -18,6 +18,7 @@ num_pass=0
 
 std_dir=./target/std
 build_dir=./target/build
+target=debug
 
 build_std() {
     rm -rf ${std_dir}
@@ -25,10 +26,10 @@ build_std() {
 
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         nasm -g -f elf64 ../braid/linux/llvm/std/input.asm -l ${std_dir}/std_input.lst -o ${std_dir}/std_input.obj > ${std_dir}/assembler.log
-        ../target/release/braidc --llvm -p linux -i ../braid/std -o ${std_dir}/std.obj --manifest > ${std_dir}/stdout
+        ../target/${target}/braidc --llvm -p linux -i ../braid/std -o ${std_dir}/std.obj --manifest > ${std_dir}/stdout
     elif [[ "$OSTYPE" == "darwin"* ]]; then
         nasm -g -f macho64 ../braid/macho64/llvm/std/input.asm -l ${std_dir}/std_input.lst -o ${std_dir}/std_input.obj > ${std_dir}/assembler.log
-        ../target/release/braidc --llvm -p machos -i ../braid/std -o ${std_dir}/std.obj --manifest > ${std_dir}/stdout
+        ../target/${target}/braidc --llvm -p machos -i ../braid/std -o ${std_dir}/std.obj --manifest > ${std_dir}/stdout
     fi
     mv ./target/std.manifest ./target/std/.
 }
@@ -41,9 +42,9 @@ run_test() {
     built=1
 
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        ../target/release/braidc --llvm -p linux --import ${std_dir}/std.manifest -i ./src/${test} -o ${build_dir}/output.obj > ${build_dir}/stdout
+        ../target/${target}/braidc --llvm -p linux --import ${std_dir}/std.manifest -i ./src/${test} -o ${build_dir}/output.obj > ${build_dir}/stdout
     elif [[ "$OSTYPE" == "darwin"* ]]; then
-        ../target/release/braidc --llvm -p machos --import ${std_dir}/std.manifest -i ./src/${test} -o ${build_dir}/output.obj > ${build_dir}/stdout
+        ../target/${target}/braidc --llvm -p machos --import ${std_dir}/std.manifest -i ./src/${test} -o ${build_dir}/output.obj > ${build_dir}/stdout
     fi
 
     # If there were no compilation errors then run the assembler and linker
@@ -102,11 +103,11 @@ run_fail_test() {
     input="./src/${test}.in"
 
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        ../target/release/braidc --llvm -p linux -i ../braid/std -o ./target/std.obj > ./target/stdout
-        ../target/release/braidc --llvm -p linux -i ./src/${test} -o ./target/output.obj > ./target/stdout
+        ../target/${target}/braidc --llvm -p linux -i ../braid/std -o ./target/std.obj > ./target/stdout
+        ../target/${target}/braidc --llvm -p linux -i ./src/${test} -o ./target/output.obj > ./target/stdout
     elif [[ "$OSTYPE" == "darwin"* ]]; then
-        ../target/release/braidc --llvm -p machos -i ../braid/std -o ./target/std.obj > ./target/stdout
-        ../target/release/braidc --llvm -p machos -i ./src/${test} -o ./target/output.obj > ./target/stdout
+        ../target/${target}/braidc --llvm -p machos -i ../braid/std -o ./target/std.obj > ./target/stdout
+        ../target/${target}/braidc --llvm -p machos -i ./src/${test} -o ./target/output.obj > ./target/stdout
     fi
 
     # If there were no compilation errors then run the assembler and linker
@@ -136,7 +137,13 @@ run_fail_test() {
     fi
 }
 
-cargo build --release
+cargo clean
+if [[ "${target}" == "debug" ]]; then
+    cargo build
+else
+    cargo build --${target}
+fi
+
 if [ $? -eq 0 ]
 then
     start_time=$SECONDS
