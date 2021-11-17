@@ -7,11 +7,11 @@ if [ -z "$1" ]
 fi
 
 echo "Random Syntax Check: Running $1 Iterations"
-cargo build --release
+cargo build
 COUNTER=0
 until [ $COUNTER -ge $1 ]; do
-    ../target/release/braid-gen 10 10 > /tmp/braid_test.br
-    ../target/release/braidc --stage=parser --platform=linux -i /tmp/braid_test.br --output=./
+    ../target/debug/braid-gen 10 10 > /tmp/braid_test.br
+    ../target/debug/braidc --stage=parser --platform=linux -i /tmp/braid_test.br --output=./
     result=$?
 
     if [[ result -ne 0 ]]; then

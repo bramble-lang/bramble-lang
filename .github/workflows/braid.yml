@@ -49,4 +49,4 @@ jobs:
           cd test
           bash ./test.sh
           bash ./test-imports.sh
-          bash ./syntax-test.sh 25
+          bash ./syntax-test.sh 5
