@@ -6,7 +6,6 @@ use super::{error::SemanticError, symbol_table::SymbolTable};
 #[derive(Clone, Debug, PartialEq)]
 pub struct SemanticContext {
     id: u32,
-    ln: u32,
     span: Span,
     ty: Type,
     sym: SymbolTable,
@@ -16,10 +15,6 @@ pub struct SemanticContext {
 impl Context for SemanticContext {
     fn id(&self) -> u32 {
         self.id
-    }
-
-    fn line(&self) -> u32 {
-        self.ln
     }
 
     fn span(&self) -> Span {
@@ -47,7 +42,6 @@ impl SemanticContext {
     pub fn new_local(id: u32, ctx: ParserContext, ty: Type) -> SemanticContext {
         SemanticContext {
             id,
-            ln: ctx.line(),
             span: ctx.span(),
             ty,
             sym: SymbolTable::new(),
@@ -58,7 +52,6 @@ impl SemanticContext {
     pub fn new_routine(id: u32, ctx: ParserContext, name: StringId, ty: Type) -> SemanticContext {
         SemanticContext {
             id,
-            ln: ctx.line(),
             span: ctx.span(),
             ty,
             sym: SymbolTable::new_routine(name),
@@ -69,7 +62,6 @@ impl SemanticContext {
     pub fn new_module(id: u32, ctx: ParserContext, name: StringId) -> SemanticContext {
         SemanticContext {
             id,
-            ln: ctx.line(),
             span: ctx.span(),
             ty: Type::Unit,
             sym: SymbolTable::new_module(name),

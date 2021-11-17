@@ -24,7 +24,7 @@ pub mod tests {
     }
 
     fn new_ctx(low: u32, high: u32) -> ParserContext {
-        ParserContext::new(1, new_span(low, high))
+        ParserContext::new(new_span(low, high))
     }
 
     #[test]
@@ -292,23 +292,17 @@ pub mod tests {
             let parser = Parser::new(&logger);
             let sm = SourceMap::new();
             match parser.expression(&mut stream) {
-                Ok(Some(Expression::Path(ctx, path))) => {
-                    assert_eq!(ctx.line(), 1);
-                    match expected {
-                        Ok(expected) => assert_eq!(path, expected.into()),
-                        Err(msg) => assert!(false, "{:?}", msg.fmt(&sm, &table)),
+                Ok(Some(Expression::Path(_, path))) => match expected {
+                    Ok(expected) => assert_eq!(path, expected.into()),
+                    Err(msg) => assert!(false, "{:?}", msg.fmt(&sm, &table)),
+                },
+                Ok(Some(Expression::Identifier(_, id))) => match expected {
+                    Ok(expected) => {
+                        assert_eq!(expected.len(), 1);
+                        assert_eq!(Element::Id(id), expected[0]);
                     }
-                }
-                Ok(Some(Expression::Identifier(ctx, id))) => {
-                    assert_eq!(ctx.line(), 1);
-                    match expected {
-                        Ok(expected) => {
-                            assert_eq!(expected.len(), 1);
-                            assert_eq!(Element::Id(id), expected[0]);
-                        }
-                        Err(msg) => assert!(false, "{:?}", msg),
-                    }
-                }
+                    Err(msg) => assert!(false, "{:?}", msg),
+                },
                 Ok(Some(n)) => panic!("{} resulted in {:?}, expected {:?}", text, n, expected),
                 Ok(None) => panic!("No node returned for {}, expected {:?}", text, expected),
                 Err(msg) => match expected {
@@ -347,8 +341,7 @@ pub mod tests {
             let mut stream = TokenStream::new(&tokens, &logger).unwrap();
             let parser = Parser::new(&logger);
             match parser.expression(&mut stream) {
-                Ok(Some(Expression::MemberAccess(ctx, left, right))) => {
-                    assert_eq!(ctx.line(), 1); // TODO: This should test the span
+                Ok(Some(Expression::MemberAccess(_, left, right))) => {
                     assert_eq!(
                         *left,
                         Expression::MemberAccess(
@@ -1910,8 +1903,7 @@ pub mod tests {
             let logger = Logger::new();
             let parser = Parser::new(&logger);
             match parser.member_access(&mut stream) {
-                Ok(Some(Expression::MemberAccess(ctx, left, right))) => {
-                    assert_eq!(ctx.line(), 1);
+                Ok(Some(Expression::MemberAccess(_, left, right))) => {
                     assert_eq!(
                         *left,
                         Expression::Identifier(new_ctx(low, high), thing_id),

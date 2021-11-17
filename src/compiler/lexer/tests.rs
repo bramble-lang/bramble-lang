@@ -3,9 +3,12 @@ mod tests {
     use crate::{
         compiler::{
             diagnostics::Logger,
-            lexer::tokens::{Lex, Primitive, Token},
+            lexer::{
+                tokens::{Lex, Primitive, Token},
+                LexerError,
+            },
             source::Offset,
-            SourceMap, Span,
+            CompilerError, SourceMap, Span,
         },
         StringTable,
     };
@@ -32,7 +35,7 @@ mod tests {
         let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
-        assert_eq!(token, Token::new(I64(5), 1, new_span(0, 1)));
+        assert_eq!(token, Token::new(I64(5), new_span(0, 1)));
     }
 
     #[test]
@@ -48,7 +51,7 @@ mod tests {
         let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
-        assert_eq!(token, Token::new(I8(5), 1, new_span(0, 3)))
+        assert_eq!(token, Token::new(I8(5), new_span(0, 3)))
     }
 
     #[test]
@@ -64,7 +67,7 @@ mod tests {
         let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
-        assert_eq!(token, Token::new(I16(5), 1, new_span(0, 4)));
+        assert_eq!(token, Token::new(I16(5), new_span(0, 4)));
     }
 
     #[test]
@@ -80,7 +83,7 @@ mod tests {
         let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
-        assert_eq!(token, Token::new(I32(5), 1, new_span(0, 4)));
+        assert_eq!(token, Token::new(I32(5), new_span(0, 4)));
     }
 
     #[test]
@@ -96,7 +99,7 @@ mod tests {
         let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
-        assert_eq!(token, Token::new(I64(5), 1, new_span(0, 4)));
+        assert_eq!(token, Token::new(I64(5), new_span(0, 4)));
     }
 
     #[test]
@@ -112,7 +115,7 @@ mod tests {
         let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
-        assert_eq!(token, Token::new(U8(5), 1, new_span(0, 3)));
+        assert_eq!(token, Token::new(U8(5), new_span(0, 3)));
     }
 
     #[test]
@@ -128,7 +131,7 @@ mod tests {
         let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
-        assert_eq!(token, Token::new(U16(5), 1, new_span(0, 4)));
+        assert_eq!(token, Token::new(U16(5), new_span(0, 4)));
     }
 
     #[test]
@@ -144,7 +147,7 @@ mod tests {
         let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
-        assert_eq!(token, Token::new(U32(5), 1, new_span(0, 4)));
+        assert_eq!(token, Token::new(U32(5), new_span(0, 4)));
     }
 
     #[test]
@@ -160,7 +163,7 @@ mod tests {
         let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 1);
         let token = tokens[0].clone().expect("Expected valid token");
-        assert_eq!(token, Token::new(U64(5), 1, new_span(0, 4)));
+        assert_eq!(token, Token::new(U64(5), new_span(0, 4)));
     }
 
     #[test]
@@ -179,11 +182,27 @@ mod tests {
         let token = tokens[0].clone().expect("Expected valid token");
         assert_eq!(
             token,
-            Token::new(
-                StringLiteral(table.insert("text".into())),
-                1,
-                new_span(0, 6)
-            )
+            Token::new(StringLiteral(table.insert("text".into())), new_span(0, 6))
+        );
+    }
+
+    #[test]
+    fn test_invalid_string_literal() {
+        let text = "\"text";
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+
+        let mut table = StringTable::new();
+        let src = sm.get(0).unwrap().read().unwrap();
+        let logger = Logger::new();
+        let mut lexer = Lexer::new(src, &mut table, &logger).unwrap();
+        let tokens = lexer.tokenize();
+
+        assert_eq!(tokens.len(), 1, "{:?}", tokens);
+        let token = tokens[0].clone().expect_err("Expected error");
+        assert_eq!(
+            token,
+            CompilerError::new(new_span(0, 5), LexerError::UnexpectedEof)
         );
     }
 
@@ -204,7 +223,6 @@ mod tests {
                 token,
                 Token::new(
                     Identifier(table.insert((*text).into())),
-                    1,
                     new_span(0, text.len() as u32)
                 )
             );
@@ -272,7 +290,7 @@ mod tests {
             let tokens = lexer.tokenize();
             assert_eq!(tokens.len(), 1);
 
-            let expected_token = Token::new(*expected_symbol, 1, new_span(0, text.len() as u32));
+            let expected_token = Token::new(*expected_symbol, new_span(0, text.len() as u32));
             assert_eq!(tokens[0].clone(), Ok(expected_token), "{}", text);
         }
     }
@@ -292,21 +310,18 @@ mod tests {
         let token = tokens[0].clone().expect("Expected valid token");
         assert_eq!(
             token,
-            Token::new(Identifier(table.insert("x".into())), 1, new_span(0, 1))
+            Token::new(Identifier(table.insert("x".into())), new_span(0, 1))
         );
         let token = tokens[1].clone().expect("Expected valid token");
-        assert_eq!(token, Token::new(Colon, 1, new_span(1, 2)));
+        assert_eq!(token, Token::new(Colon, new_span(1, 2)));
         let token = tokens[2].clone().expect("Expected valid token");
-        assert_eq!(
-            token,
-            Token::new(Primitive(Primitive::I64), 1, new_span(2, 5))
-        );
+        assert_eq!(token, Token::new(Primitive(Primitive::I64), new_span(2, 5)));
         let token = tokens[3].clone().expect("Expected valid token");
-        assert_eq!(token, Token::new(Semicolon, 1, new_span(5, 6)));
+        assert_eq!(token, Token::new(Semicolon, new_span(5, 6)));
         let token = tokens[4].clone().expect("Expected valid token");
-        assert_eq!(token, Token::new(LArrow, 1, new_span(6, 8)));
+        assert_eq!(token, Token::new(LArrow, new_span(6, 8)));
         let token = tokens[5].clone().expect("Expected valid token");
-        assert_eq!(token, Token::new(Yield, 1, new_span(8, 13)));
+        assert_eq!(token, Token::new(Yield, new_span(8, 13)));
     }
 
     #[test]
@@ -339,7 +354,7 @@ mod tests {
             let tokens = lexer.tokenize();
             assert_eq!(tokens.len(), 1);
 
-            let expected_token = Token::new(*expected_symbol, 1, new_span(0, text.len() as u32));
+            let expected_token = Token::new(*expected_symbol, new_span(0, text.len() as u32));
             assert_eq!(tokens[0].clone().unwrap(), expected_token);
         }
     }
@@ -370,7 +385,7 @@ mod tests {
             let tokens = lexer.tokenize();
             assert_eq!(tokens.len(), 1);
 
-            let expected_token = Token::new(*expected_symbol, 1, new_span(0, text.len() as u32));
+            let expected_token = Token::new(*expected_symbol, new_span(0, text.len() as u32));
             assert_eq!(tokens[0].clone().unwrap(), expected_token);
         }
     }
@@ -441,39 +456,38 @@ mod tests {
             assert_eq!(tokens.len(), 8, "{} => {:?}", text, tokens);
             assert_eq!(
                 tokens[0].clone().unwrap(),
-                Token::new(Return, t1.0, new_span(t1.1 .0, t1.1 .1))
+                Token::new(Return, new_span(t1.1 .0, t1.1 .1))
             );
             assert_eq!(
                 tokens[1].clone().unwrap(),
-                Token::new(LParen, t2.0, new_span(t2.1 .0, t2.1 .1))
+                Token::new(LParen, new_span(t2.1 .0, t2.1 .1))
             );
             assert_eq!(
                 tokens[2].clone().unwrap(),
                 Token::new(
                     Identifier(table.insert("x".into())),
-                    t3.0,
                     new_span(t3.1 .0, t3.1 .1)
                 )
             );
             assert_eq!(
                 tokens[3].clone().unwrap(),
-                Token::new(Add, t4.0, new_span(t4.1 .0, t4.1 .1))
+                Token::new(Add, new_span(t4.1 .0, t4.1 .1))
             );
             assert_eq!(
                 tokens[4].clone().unwrap(),
-                Token::new(I64(5), t5.0, new_span(t5.1 .0, t5.1 .1))
+                Token::new(I64(5), new_span(t5.1 .0, t5.1 .1))
             );
             assert_eq!(
                 tokens[5].clone().unwrap(),
-                Token::new(BOr, t6.0, new_span(t6.1 .0, t6.1 .1))
+                Token::new(BOr, new_span(t6.1 .0, t6.1 .1))
             );
             assert_eq!(
                 tokens[6].clone().unwrap(),
-                Token::new(Bool(true), t7.0, new_span(t7.1 .0, t7.1 .1))
+                Token::new(Bool(true), new_span(t7.1 .0, t7.1 .1))
             );
             assert_eq!(
                 tokens[7].clone().unwrap(),
-                Token::new(RParen, t8.0, new_span(t8.1 .0, t8.1 .1))
+                Token::new(RParen, new_span(t8.1 .0, t8.1 .1))
             );
         }
     }
@@ -536,31 +550,30 @@ mod tests {
             assert_eq!(tokens.len(), 6, "{} => {:?}", text, tokens);
             assert_eq!(
                 tokens[0].clone().unwrap(),
-                Token::new(Return, t1.0, new_span(t1.1 .0, t1.1 .1))
+                Token::new(Return, new_span(t1.1 .0, t1.1 .1))
             );
             assert_eq!(
                 tokens[1].clone().unwrap(),
-                Token::new(LParen, t2.0, new_span(t2.1 .0, t2.1 .1))
+                Token::new(LParen, new_span(t2.1 .0, t2.1 .1))
             );
             assert_eq!(
                 tokens[2].clone().unwrap(),
                 Token::new(
                     Identifier(table.insert("x".into())),
-                    t3.0,
                     new_span(t3.1 .0, t3.1 .1)
                 )
             );
             assert_eq!(
                 tokens[3].clone().unwrap(),
-                Token::new(Add, t4.0, new_span(t4.1 .0, t4.1 .1))
+                Token::new(Add, new_span(t4.1 .0, t4.1 .1))
             );
             assert_eq!(
                 tokens[4].clone().unwrap(),
-                Token::new(I64(5), t5.0, new_span(t5.1 .0, t5.1 .1))
+                Token::new(I64(5), new_span(t5.1 .0, t5.1 .1))
             );
             assert_eq!(
                 tokens[5].clone().unwrap(),
-                Token::new(BOr, t6.0, new_span(t6.1 .0, t6.1 .1))
+                Token::new(BOr, new_span(t6.1 .0, t6.1 .1))
             );
         }
     }

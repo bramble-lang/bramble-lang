@@ -256,7 +256,7 @@ impl<'ctx> IrGen<'ctx> {
                     rd.params(),
                     false,
                     rd.ty(),
-                    0,
+                    Span::zero(),
                 );
             }
         }
@@ -305,7 +305,7 @@ impl<'ctx> IrGen<'ctx> {
             &params,
             false,
             &rd.ret_ty,
-            rd.context().line(),
+            rd.span(),
         )
     }
 
@@ -321,7 +321,7 @@ impl<'ctx> IrGen<'ctx> {
             &params,
             ex.has_varargs,
             ex.get_return_type(),
-            ex.context().line(),
+            ex.span(),
         );
 
         let llvm_fn_decl = self.module.get_function(&label).unwrap();
@@ -339,7 +339,7 @@ impl<'ctx> IrGen<'ctx> {
         params: &[ast::Type],
         has_var_arg: bool,
         ret_ty: &ast::Type,
-        line: u32,
+        span: Span,
     ) {
         let mut llvm_params = vec![];
 
@@ -351,7 +351,7 @@ impl<'ctx> IrGen<'ctx> {
 
                 let ptr_ty = ret_ty
                     .to_llvm_ir(self)
-                    .map_err(|e| format!("L{}: {}", line, e))
+                    .map_err(|e| format!("S{}: {}", span, e))
                     .unwrap()
                     .into_basic_type()
                     .unwrap()
@@ -363,13 +363,13 @@ impl<'ctx> IrGen<'ctx> {
             }
             _ => ret_ty.to_llvm_ir(self),
         }
-        .map_err(|e| format!("L{}: {}", line, e))
+        .map_err(|e| format!("S{}: {}", span, e))
         .unwrap();
 
         for p in params {
             let ty_llvm = p
                 .to_llvm_ir(self)
-                .map_err(|e| format!("L{}: {}", line, e))
+                .map_err(|e| format!("S{}: {}", span, e))
                 .unwrap()
                 .into_basic_type();
             match ty_llvm {
@@ -411,7 +411,7 @@ impl<'ctx> IrGen<'ctx> {
                     ast::Type::Custom(_) => f.ty.to_llvm_ir(self),
                     _ => f.ty.to_llvm_ir(self),
                 }
-                .map_err(|e| format!("L{}: {}", f.context().line(), e))
+                .map_err(|e| format!("S{}: {}", f.span(), e))
                 .unwrap()
                 .into_basic_type()
                 .ok()
@@ -632,7 +632,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticContext> {
         match self
             .get_type()
             .to_llvm_ir(llvm)
-            .map_err(|e| format!("L{}: {}", self.context().line(), e))
+            .map_err(|e| format!("S{}: {}", self.span(), e))
             .unwrap()
             .into_basic_type()
         {
@@ -785,7 +785,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
             ast::Expression::BinaryOp(_, op, l, r) => Some(op.to_llvm_ir(llvm, l, r, self.span())),
             ast::Expression::RoutineCall(meta, call, name, params) => call
                 .to_llvm_ir(llvm, name, params, self.get_type(), self.span())
-                .map_err(|e| format!("L{}: {}", meta.line(), e))
+                .map_err(|e| format!("S{}: {}", self.span(), e))
                 .unwrap(),
             ast::Expression::ExpressionBlock(_, stmts, exp) => {
                 llvm.registers.open_local().unwrap();
@@ -952,7 +952,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 let a_ty = meta.ty();
                 let a_llvm_ty = a_ty
                     .to_llvm_ir(llvm)
-                    .map_err(|e| format!("L{}: {}", meta.line(), e))
+                    .map_err(|e| format!("S{}: {}", self.span(), e))
                     .unwrap()
                     .into_basic_type()
                     .unwrap();

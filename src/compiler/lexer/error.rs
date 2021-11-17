@@ -7,6 +7,7 @@ use super::tokens::Primitive;
 /// Errors which can be encountered while tokenizing a compilation unit
 #[derive(Clone, PartialEq, Debug)]
 pub enum LexerError {
+    UnexpectedEof,
     Locked(Option<SourceChar>),
     InvalidEscapeSequence(SourceChar),
     ExpectedEscapeCharacter,
@@ -26,6 +27,7 @@ impl CompilerDisplay for LexerError {
             InvalidInteger => format!("Invalid integer"),
             UnexpectedSuffixType(ref prim) => format!("Invalid type suffix: {}", prim.fmt(sm, st)?),
             SourceError => format!("Error reading characters from source code"),
+            UnexpectedEof => format!("Unexpected EOF"),
         };
 
         Ok(format!("{}", msg))

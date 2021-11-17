@@ -379,10 +379,6 @@ mod test {
             0
         }
 
-        fn line(&self) -> u32 {
-            0
-        }
-
         fn span(&self) -> Span {
             Span::zero()
         }
@@ -393,10 +389,6 @@ mod test {
             0
         }
 
-        fn line(&self) -> u32 {
-            0
-        }
-
         fn span(&self) -> Span {
             Span::zero()
         }
@@ -404,10 +396,6 @@ mod test {
 
     impl Context for String {
         fn id(&self) -> u32 {
-            0
-        }
-
-        fn line(&self) -> u32 {
             0
         }
 
