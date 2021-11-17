@@ -187,9 +187,6 @@ impl CompilerDisplay for Lex {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {
-    /// Line that the token occurs on
-    pub line: u32,
-
     /// The value of the token
     pub sym: Lex,
 
@@ -204,7 +201,7 @@ impl SourceIr for Token {
 
 impl std::fmt::Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("L{}: {}", self.line, self.sym))
+        f.write_fmt(format_args!("S{}: {}", self.span, self.sym))
     }
 }
 
@@ -216,11 +213,7 @@ impl CompilerDisplay for Token {
 
 impl Token {
     pub fn new(s: Lex, l: u32, span: Span) -> Token {
-        Token {
-            line: l,
-            sym: s,
-            span,
-        }
+        Token { sym: s, span }
     }
 
     pub fn token_eq(&self, a: &Lex) -> bool {

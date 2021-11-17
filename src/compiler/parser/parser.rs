@@ -512,7 +512,6 @@ impl<'a> Parser<'a> {
         let ty = match stream.next_if(&Lex::Primitive(Primitive::U8)) {
             Some(Token {
                 sym: Lex::Primitive(prim_ty),
-                line,
                 span,
             }) => {
                 let ty = match prim_ty {
@@ -527,7 +526,7 @@ impl<'a> Parser<'a> {
                     Primitive::Bool => Some(Type::Bool),
                     Primitive::StringLiteral => Some(Type::StringLiteral),
                 };
-                let ctx = ParserContext::new(line, span);
+                let ctx = ParserContext::new(0, span);
                 ty.map(|ty| (ty, ctx))
                     .view(|v| self.record(v.1.span(), Ok("Primitive Type")))
             }
