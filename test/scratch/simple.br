@@ -7,7 +7,9 @@ mod math {
     mod arithmetic {
         // Does something
         fn something(m: super::S) -> i64 {
-            while (!(-m.x < 4)) {
+            let s: string := "hello";
+            project::std::io::write(s);
+            while (!(-m.x < 4 + 2)) {
                 foo();
             };
             

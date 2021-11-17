@@ -649,8 +649,10 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticContext> {
             Ok(ty) => {
                 let ptr = llvm.builder.build_alloca(ty, &name);
                 llvm.record(self.span(), &ptr);
+
                 let st = llvm.builder.build_store(ptr, rhs);
                 llvm.record(self.span(), &st);
+
                 llvm.registers.insert(&name, ptr.into()).unwrap();
                 Some(ptr)
             }
