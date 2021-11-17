@@ -498,10 +498,7 @@ impl<'a> Parser<'a> {
 
     fn identifier(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
         match stream.next_if_id() {
-            Some((id, ln, span)) => Ok(Some(Expression::Identifier(
-                ParserContext::new(ln, span),
-                id,
-            ))),
+            Some((id, ln, span)) => Ok(Some(Expression::Identifier(ParserContext::new(span), id))),
             _ => Ok(None),
         }
         .view(|v| self.record(v.span(), Ok("Identifier")))
@@ -526,7 +523,7 @@ impl<'a> Parser<'a> {
                     Primitive::Bool => Some(Type::Bool),
                     Primitive::StringLiteral => Some(Type::StringLiteral),
                 };
-                let ctx = ParserContext::new(0, span);
+                let ctx = ParserContext::new(span);
                 ty.map(|ty| (ty, ctx))
                     .view(|v| self.record(v.1.span(), Ok("Primitive Type")))
             }

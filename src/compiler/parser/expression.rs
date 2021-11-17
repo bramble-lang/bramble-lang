@@ -656,42 +656,42 @@ impl<'a> Parser<'a> {
                 span,
                 sym: Lex::U8(i),
                 ..
-            }) => Ok(Some(Expression::U8(ParserContext::new(0, span), i))),
+            }) => Ok(Some(Expression::U8(ParserContext::new(span), i))),
             Some(Token {
                 span,
                 sym: Lex::U16(i),
                 ..
-            }) => Ok(Some(Expression::U16(ParserContext::new(0, span), i))),
+            }) => Ok(Some(Expression::U16(ParserContext::new(span), i))),
             Some(Token {
                 span,
                 sym: Lex::U32(i),
                 ..
-            }) => Ok(Some(Expression::U32(ParserContext::new(0, span), i))),
+            }) => Ok(Some(Expression::U32(ParserContext::new(span), i))),
             Some(Token {
                 span,
                 sym: Lex::U64(i),
                 ..
-            }) => Ok(Some(Expression::U64(ParserContext::new(0, span), i))),
+            }) => Ok(Some(Expression::U64(ParserContext::new(span), i))),
             Some(Token {
                 span,
                 sym: Lex::I8(i),
                 ..
-            }) => Ok(Some(Expression::I8(ParserContext::new(0, span), i))),
+            }) => Ok(Some(Expression::I8(ParserContext::new(span), i))),
             Some(Token {
                 span,
                 sym: Lex::I16(i),
                 ..
-            }) => Ok(Some(Expression::I16(ParserContext::new(0, span), i))),
+            }) => Ok(Some(Expression::I16(ParserContext::new(span), i))),
             Some(Token {
                 span,
                 sym: Lex::I32(i),
                 ..
-            }) => Ok(Some(Expression::I32(ParserContext::new(0, span), i))),
+            }) => Ok(Some(Expression::I32(ParserContext::new(span), i))),
             Some(Token {
                 span,
                 sym: Lex::I64(i),
                 ..
-            }) => Ok(Some(Expression::I64(ParserContext::new(0, span), i))),
+            }) => Ok(Some(Expression::I64(ParserContext::new(span), i))),
             Some(t) => panic!("Unexpected token: {:?}", t),
             None => Ok(None),
         }
@@ -707,7 +707,7 @@ impl<'a> Parser<'a> {
                 span,
                 sym: Lex::Bool(b),
                 ..
-            }) => Ok(Some(Expression::Boolean(ParserContext::new(0, span), b))),
+            }) => Ok(Some(Expression::Boolean(ParserContext::new(span), b))),
             _ => Ok(None),
         }
         .view(|v| self.record(v.span(), Ok("Boolean")))
@@ -722,10 +722,7 @@ impl<'a> Parser<'a> {
                 span,
                 sym: Lex::StringLiteral(s),
                 ..
-            }) => Ok(Some(Expression::StringLiteral(
-                ParserContext::new(0, span),
-                s,
-            ))),
+            }) => Ok(Some(Expression::StringLiteral(ParserContext::new(span), s))),
             _ => Ok(None),
         }
         .view(|v| self.record(v.span(), Ok("String")))

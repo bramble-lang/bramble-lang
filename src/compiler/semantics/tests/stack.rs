@@ -13,7 +13,7 @@ mod stack_tests {
     use stack::*;
 
     fn new_ctx(line: u32) -> ParserContext {
-        ParserContext::new(line, Span::zero())
+        ParserContext::new(Span::zero())
     }
 
     #[test]

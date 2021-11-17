@@ -19,7 +19,7 @@ mod type_resolver_tests {
     type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
 
     fn new_ctx(line: u32) -> ParserContext {
-        ParserContext::new(line, Span::zero())
+        ParserContext::new(Span::zero())
     }
 
     #[test]

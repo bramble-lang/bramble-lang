@@ -9,7 +9,7 @@ pub struct ParserContext {
 }
 
 impl ParserContext {
-    pub fn new(line: u32, span: Span) -> ParserContext {
+    pub fn new(span: Span) -> ParserContext {
         ParserContext { span }
     }
 
@@ -17,13 +17,13 @@ impl ParserContext {
     /// both contexts.
     pub fn join(self, b: ParserContext) -> ParserContext {
         let span = Span::cover(self.span, b.span);
-        ParserContext::new(0, span)
+        ParserContext::new(span)
     }
 
     /// Extends the span of this [`ParserContext`] such that it also covers the
     /// span described by `b`.
     pub fn extend(self, b: Span) -> ParserContext {
-        ParserContext::new(0, Span::cover(self.span, b))
+        ParserContext::new(Span::cover(self.span, b))
     }
 }
 
