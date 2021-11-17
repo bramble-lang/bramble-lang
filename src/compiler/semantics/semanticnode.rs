@@ -5,10 +5,19 @@ use super::{error::SemanticError, symbol_table::SymbolTable};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SemanticContext {
+    /// Unique id of a node in the Semantic AST
     id: u32,
+
+    /// [`Span`] that this node represents
     span: Span,
+
+    /// Resolved [`Type`] of this node
     ty: Type,
+
+    /// Symbols which are within the scope of this node and its children
     sym: SymbolTable,
+
+    /// Canonical path from the root of the project to this node
     canonical_path: Path,
 }
 
