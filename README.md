@@ -45,7 +45,7 @@ for any host that can run docker.
 
 
 ## Compiling a Braid File
-The `./test/make-llvm.sh` script file will compile a given Braid project.
+The `./test/make.sh` script file will compile a given Braid project.
 
 ### Compiler Options
 #### Main Options
