@@ -68,41 +68,9 @@ They allow you to gain insight into exactly what is happening in the compiler,
 how it is interpreting input source code, and what decisions it's making.
 - `log`: Set to `debug|info|error` to turn on logging during compilation.  This 
 is primarily used during compiler development.
-- `trace-lexer`: When enabled, the compiler will emit a describing how an input 
-source code file is converted from text to tokens.
-- `trace-parser`: This will enable tracing during the parsing. Tracing allows 
-you to see how the Parser stage is converting the input source code into an AST.
-- `trace-semantic-node`: When enabled, the compiler will emit a trace of the 
-semantic analysis of the input source code.
-- `trace-canonization`: When enabled, the compiler will emit a trace showing the 
-canonization of each node in the AST.
-- `trace-type-resolver`: When enabled, the copmiler will emit a trace showing 
-how each line of code in the input source code is assigned a type.
-
-#### Compiler Tracing
-Compiler traces provide a way to see exactly what the compiler is doing with a 
-given input source code. This exists for debugging the compiler and validating 
-in progress development. The output expects a lot of contextual knowledge and 
-is not the most user friendly. One goal of Braid is to change that and generate 
-an output that any user of the language can use to understand how their code is 
-being converted into assembly.
-
-All `trace-<stage>` options allow you to specify a filter so that only a subset 
-of the input source file will emit tracing information, the format of the range 
-option is: 
-```
-all - Trace the entire input file
-: - Trace the entire input file
-<line> - Trace only this line of the input file
-:<before line> - Trace every line up to and including <before line>
-<after line>: - Trace every line from <after line> on.
-<from line>:<to line> - Trace every line between <from line> and <to line> 
-(inclusive)
-```
-
-Currently, this does not specify a file, so it will apply the filter to each 
-file within a project. It's primary purpose was for debugging new language and 
-compiler features on single file test inputs. This will change soon.
+- `trace`: Enables transparency tracing of all actions taken by the compiler and
+connects those actions back to the specific span(s) in the input source code that
+led to those actions.
 
 ## Testing
 There are two sets of tests for Braid
@@ -113,6 +81,14 @@ the actual compiled Braid code works correctly.  Each test consists of a pair of
 a Braid file (extension `.br`) and an expected output file (extension `.out`).  Some
 Braid files contain intentional errors to validate that the compilers syntactic and
 semantic analysis is working, those `.out` files will contain compiler error messages.
+3. Syntax Fuzz Tests - this is a tool which randomly generates syntactically valid
+(but not semantically valid) source code and has `braidc` perform syntax analysis
+on the randomly generated code.  The code should pass the syntax analysis.  This
+test tool is meant to find all the weird and difficult combinations of code that
+could be written and that is still correct and make sure the compiler correctly
+parses that code.
+4. Import Tests - this is a small set of tests to verify that the compiler can
+properly import external Braid projects.
 
 ### Running Tests
 #### Unit Tests
@@ -127,11 +103,26 @@ This will run all unit tests and output the results to the console.
 #### Braid Tests
 From within the `./test` directory, run: 
 ```
-./test-llvm.sh
+./test.sh
 ```
 
 This will run through every Braid test and test that the source code compiles and 
 executes correctly.
+
+#### Syntax Fuzz Test
+From within the `./test` directory, run:
+```
+./test-syntax.sh <Repititions>
+```
+
+This will run the syntax fuzz test tool for `<Repititions>` repititions.
+
+#### Import Test
+From within `./test` run:
+```
+./test-imports.sh
+```
+
 
 ## Project Layout
 Directories and what they contain
@@ -145,15 +136,16 @@ developers.
 - `docker` - Docker setup files for spinning up a docker container to run the Braid compiler tests.
 This is to allow for testing Braid on Linux while working on another OS.
 - `src` - The compiler source code.
+    - `bin` - the source code for the different Braid tool executables
+    - `compiler` - the compiler source code itself
+    - `diagnostics` - code related to transparency and diagnostic tooling for the
+    tools and the compiler.
+    - `project` - manages the concept of a Braid project consisting of one or more
+    source code files and imports.
+    - `.` - Code dealing with UI/UX interfacing.
 - `test` - All the Braid integration tests and test scripts.  These are source code file and
 projects, written in Braid, used to test that the compiler works correctly.  The tests are compiled
 from Braid to the platform specific binary executable then run. The output from the compiled code is
 compared against the expected output to verify if the test passed or not.
-
-### src
-A break down of what's in the `src` directory:
-- `compiler` - The module containing the compiler.
-- `diagnostics` - Tools used to collect diagnostic data as the compiler runs (e.g. tracing)
-- `project` - The abstraction of a Braid "project".  This is used for managing the files in a
-project and orchestrating the compilation.
-- The files in the root of `./src` are primarily concerned with the CLI for the braid compiler.
+    - `scratch` - a directory for putting scratch Braid code that you are writing to
+    do quick tests and experiments.  This directory is ignored by git.
