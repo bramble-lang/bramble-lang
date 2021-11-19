@@ -25,7 +25,7 @@ if [[ $? -ne 0 ]]; then
     ret=$(($ret + 1))
 fi
 
-./syntax-test.sh 25
+./test-syntax.sh 25
 if [[ $? -ne 0 ]]; then 
     ret=$(($ret + 1))
 fi

@@ -2,6 +2,7 @@
 *.swp
 *.swap
 .tisk/
+/test/scratch
 /test/target
 /test/*.log
 .vscode/
