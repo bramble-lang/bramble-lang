@@ -5,7 +5,7 @@ use std::fs::File;
 use std::{path::Path, process::exit};
 
 use braid_lang::compiler::diagnostics::Logger;
-use braid_lang::diagnostics::{ConsoleWriter, JsonWriter};
+use braid_lang::diagnostics::{write_source_map, ConsoleWriter, JsonWriter};
 use inkwell::context::Context;
 
 use braid_lang::project::*;
@@ -60,6 +60,9 @@ fn main() {
     let json_writer = JsonWriter::new(trace_file, &string_table);
     if enable_json_tracing(&config) {
         tracer.add_writer(&json_writer);
+
+        let source_map_file = File::create("./target/source.map").unwrap();
+        write_source_map(source_map_file, &sourcemap);
     }
 
     let token_sets = match tokenize_source_map(&sourcemap, src_path, &string_table, &tracer) {

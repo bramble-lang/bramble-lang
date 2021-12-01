@@ -3,7 +3,10 @@ use std::{
     io::{BufWriter, Write},
 };
 
-use crate::{compiler::diagnostics::Writer, StringTable};
+use crate::{
+    compiler::{diagnostics::Writer, SourceMap},
+    StringTable,
+};
 
 /// Writes compiler trace data to a JSON file.
 pub struct JsonWriter<'a, W: Write> {
@@ -55,5 +58,21 @@ impl<'a, W: Write> Writer for JsonWriter<'a, W> {
 
     fn stop_event(&self) {
         self.writer.borrow_mut().write("}\n".as_bytes()).unwrap();
+    }
+}
+
+pub fn write_source_map<W: Write>(mut w: W, sm: &SourceMap) {
+    let len = sm.len();
+    for idx in 0..len {
+        let s = sm.get(idx).unwrap();
+        let span = s.span();
+        let path = s.path();
+        let entry = format!(
+            "[{}, {}]: \"{}\"\n",
+            span.low(),
+            span.high(),
+            path.display()
+        );
+        w.write(entry.as_bytes()).unwrap();
     }
 }
