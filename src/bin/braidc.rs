@@ -2,7 +2,6 @@ extern crate log;
 extern crate simplelog;
 
 use std::fs::File;
-use std::io::stdout;
 use std::{path::Path, process::exit};
 
 use braid_lang::compiler::diagnostics::Logger;
@@ -44,18 +43,23 @@ fn main() {
 
     let stop_stage = get_stage(&config).unwrap();
 
+    // Setup tracing system
     let mut tracer = Logger::new();
-    let console_writer = ConsoleWriter::new(&sourcemap, &string_table);
-    tracer.add_writer(&console_writer);
+    if enable_tracing(&config) || enable_json_tracing(&config) {
+        tracer.enable();
+    }
 
+    // Setup trace console writer
+    let console_writer = ConsoleWriter::new(&sourcemap, &string_table);
+    if enable_tracing(&config) {
+        tracer.add_writer(&console_writer);
+    }
+
+    // Setup JSON Trace writer
     let trace_file = File::create("./target/trace.json").unwrap();
     let json_writer = JsonWriter::new(trace_file, &string_table);
     if enable_json_tracing(&config) {
         tracer.add_writer(&json_writer);
-    }
-
-    if enable_tracing(&config) {
-        tracer.enable();
     }
 
     let token_sets = match tokenize_source_map(&sourcemap, src_path, &string_table, &tracer) {
