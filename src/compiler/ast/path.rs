@@ -243,22 +243,22 @@ impl From<Vec<Element>> for Path {
 impl Writable for &Path {
     fn write(&self, w: &dyn crate::compiler::diagnostics::Writer) {
         if self.is_canonical {
-            w.write_str("$");
+            w.write_text("$");
         }
 
         let len = self.path.len();
 
         for idx in 0..len {
             match &self.path[idx] {
-                Element::FileRoot => w.write_str(ROOT_PATH),
-                Element::CanonicalRoot => w.write_str(CANONICAL_ROOT),
-                Element::Selph => w.write_str(SELF),
-                Element::Super => w.write_str(SUPER),
+                Element::FileRoot => w.write_text(ROOT_PATH),
+                Element::CanonicalRoot => w.write_text(CANONICAL_ROOT),
+                Element::Selph => w.write_text(SELF),
+                Element::Super => w.write_text(SUPER),
                 Element::Id(sid) => w.write_stringid(*sid),
             }
 
             if idx < len - 1 {
-                w.write_str("::");
+                w.write_text("::");
             }
         }
     }

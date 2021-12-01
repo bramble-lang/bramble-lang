@@ -54,29 +54,29 @@ impl<'a> Writable for TypeOk<'a> {
 impl Writable for Type {
     fn write(&self, w: &dyn super::diagnostics::Writer) {
         match self {
-            Type::U8 => w.write_str("u8"),
-            Type::U16 => w.write_str("u16"),
-            Type::U32 => w.write_str("u32"),
-            Type::U64 => w.write_str("u64"),
-            Type::I8 => w.write_str("i8"),
-            Type::I16 => w.write_str("i16"),
-            Type::I32 => w.write_str("i32"),
-            Type::I64 => w.write_str("i64"),
-            Type::Bool => w.write_str("bool"),
-            Type::StringLiteral => w.write_str("string"),
+            Type::U8 => w.write_text("u8"),
+            Type::U16 => w.write_text("u16"),
+            Type::U32 => w.write_text("u32"),
+            Type::U64 => w.write_text("u64"),
+            Type::I8 => w.write_text("i8"),
+            Type::I16 => w.write_text("i16"),
+            Type::I32 => w.write_text("i32"),
+            Type::I64 => w.write_text("i64"),
+            Type::Bool => w.write_text("bool"),
+            Type::StringLiteral => w.write_text("string"),
             Type::Array(ty, sz) => {
-                w.write_str("[");
+                w.write_text("[");
                 w.write(ty.as_ref());
-                w.write_str(&format!("; {}]", sz));
+                w.write_text(&format!("; {}]", sz));
             }
-            Type::Unit => w.write_str("Unit"),
+            Type::Unit => w.write_text("Unit"),
             Type::Custom(p) => w.write(&p),
-            Type::StructDef(_) => w.write_str("Struct Def"),
-            Type::FunctionDef(_, _) => w.write_str("Function Def"),
-            Type::CoroutineDef(_, _) => w.write_str("Coroutine Def"),
-            Type::Coroutine(_) => w.write_str("Coroutine"),
-            Type::ExternDecl(_, _, _) => w.write_str("Extern"),
-            Type::Unknown => w.write_str("Unknown"),
+            Type::StructDef(_) => w.write_text("Struct Def"),
+            Type::FunctionDef(_, _) => w.write_text("Function Def"),
+            Type::CoroutineDef(_, _) => w.write_text("Coroutine Def"),
+            Type::Coroutine(_) => w.write_text("Coroutine"),
+            Type::ExternDecl(_, _, _) => w.write_text("Extern"),
+            Type::Unknown => w.write_text("Unknown"),
         }
     }
 }

@@ -123,5 +123,9 @@ mod tests {
         fn write(&self, s: &dyn crate::compiler::diagnostics::Writable) {
             s.write(self);
         }
+
+        fn write_text(&self, _: &str) {
+            todo!()
+        }
     }
 }

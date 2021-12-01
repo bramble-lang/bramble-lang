@@ -1,5 +1,5 @@
 use std::{
-    cell::RefCell,
+    cell::{Cell, RefCell},
     io::{BufWriter, Write},
 };
 
@@ -15,28 +15,53 @@ pub struct JsonWriter<'a, W: Write> {
 
     /// Maps [`StringId`]s to string values
     string_table: &'a StringTable,
+
+    comma_prefix: Cell<bool>,
 }
 
 impl<'a, W: Write> JsonWriter<'a, W> {
     pub fn new(file: W, string_table: &'a StringTable) -> JsonWriter<'a, W> {
-        JsonWriter {
+        let jw = JsonWriter {
             writer: RefCell::new(BufWriter::new(file)),
             string_table,
-        }
+            comma_prefix: Cell::new(false),
+        };
+
+        jw.writer.borrow_mut().write("[".as_bytes()).unwrap();
+
+        jw
+    }
+}
+
+impl<'a, W: Write> Drop for JsonWriter<'a, W> {
+    fn drop(&mut self) {
+        self.writer.borrow_mut().write("]".as_bytes()).unwrap();
     }
 }
 
 impl<'a, W: Write> Writer for JsonWriter<'a, W> {
     fn write_span(&self, field: &str, span: crate::compiler::Span) {
-        let field = format!("{}: [{}, {}], ", field, span.low(), span.high());
+        if self.comma_prefix.get() {
+            self.writer.borrow_mut().write(", ".as_bytes()).unwrap();
+        } else {
+            self.comma_prefix.set(true);
+        }
+
+        let field = format!("\"{}\": [{}, {}]", field, span.low(), span.high());
         self.writer.borrow_mut().write(field.as_bytes()).unwrap();
     }
 
     fn write_field(&self, label: &str, s: &dyn crate::compiler::diagnostics::Writable) {
-        self.writer.borrow_mut().write(label.as_bytes()).unwrap();
-        self.writer.borrow_mut().write(": ".as_bytes()).unwrap();
+        if self.comma_prefix.get() {
+            self.writer.borrow_mut().write(", ".as_bytes()).unwrap();
+        } else {
+            self.comma_prefix.set(true);
+        }
+
+        let field = format!("\"{}\": \"", label);
+        self.writer.borrow_mut().write(field.as_bytes()).unwrap();
         s.write(self);
-        self.writer.borrow_mut().write(", ".as_bytes()).unwrap();
+        self.writer.borrow_mut().write("\"".as_bytes()).unwrap();
     }
 
     fn write(&self, s: &dyn crate::compiler::diagnostics::Writable) {
@@ -44,7 +69,8 @@ impl<'a, W: Write> Writer for JsonWriter<'a, W> {
     }
 
     fn write_str(&self, s: &str) {
-        self.writer.borrow_mut().write(s.as_bytes()).unwrap();
+        let js = format!("{}", s);
+        self.writer.borrow_mut().write(js.as_bytes()).unwrap();
     }
 
     fn write_stringid(&self, s: crate::StringId) {
@@ -52,12 +78,18 @@ impl<'a, W: Write> Writer for JsonWriter<'a, W> {
         self.writer.borrow_mut().write(val.as_bytes()).unwrap();
     }
 
+    fn write_text(&self, s: &str) {
+        let js = format!("{}", s);
+        self.writer.borrow_mut().write(js.as_bytes()).unwrap();
+    }
+
     fn start_event(&self) {
         self.writer.borrow_mut().write("{".as_bytes()).unwrap();
     }
 
     fn stop_event(&self) {
-        self.writer.borrow_mut().write("}\n".as_bytes()).unwrap();
+        self.writer.borrow_mut().write("}, \n".as_bytes()).unwrap();
+        self.comma_prefix.set(false);
     }
 }
 

@@ -41,6 +41,9 @@ pub trait Writer {
     /// Write a [`StringId`] value to the current event
     fn write_stringid(&self, s: StringId);
 
+    /// Write text to the current event
+    fn write_text(&self, s: &str);
+
     /// Start writing a new compiler event.  This should emit any tokens which
     /// signal the start of an event.
     fn start_event(&self);

@@ -69,4 +69,8 @@ impl<'a> Writer for ConsoleWriter<'a> {
     fn write_stringid(&self, s: crate::StringId) {
         print!("{}", self.string_table.get(s).unwrap());
     }
+
+    fn write_text(&self, s: &str) {
+        print!("{}", s);
+    }
 }
