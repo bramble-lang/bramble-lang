@@ -127,5 +127,9 @@ mod tests {
         fn write_text(&self, _: &str) {
             todo!()
         }
+
+        fn write_path(&self, p: &crate::compiler::ast::Path) {
+            todo!()
+        }
     }
 }

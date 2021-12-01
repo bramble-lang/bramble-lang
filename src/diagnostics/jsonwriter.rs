@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    compiler::{diagnostics::Writer, SourceMap},
+    compiler::{ast::*, diagnostics::Writer, SourceMap},
     StringTable,
 };
 
@@ -58,10 +58,9 @@ impl<'a, W: Write> Writer for JsonWriter<'a, W> {
             self.comma_prefix.set(true);
         }
 
-        let field = format!("\"{}\": \"", label);
+        let field = format!("\"{}\": ", label);
         self.writer.borrow_mut().write(field.as_bytes()).unwrap();
         s.write(self);
-        self.writer.borrow_mut().write("\"".as_bytes()).unwrap();
     }
 
     fn write(&self, s: &dyn crate::compiler::diagnostics::Writable) {
@@ -69,7 +68,7 @@ impl<'a, W: Write> Writer for JsonWriter<'a, W> {
     }
 
     fn write_str(&self, s: &str) {
-        let js = format!("{}", s);
+        let js = format!("\"{}\"", s);
         self.writer.borrow_mut().write(js.as_bytes()).unwrap();
     }
 
@@ -90,6 +89,28 @@ impl<'a, W: Write> Writer for JsonWriter<'a, W> {
     fn stop_event(&self) {
         self.writer.borrow_mut().write("}, \n".as_bytes()).unwrap();
         self.comma_prefix.set(false);
+    }
+
+    fn write_path(&self, p: &crate::compiler::ast::Path) {
+        if p.is_canonical() {
+            self.write_text("$");
+        }
+
+        let len = p.len();
+
+        for idx in 0..len {
+            match &p[idx] {
+                Element::FileRoot => self.write_text(ROOT_PATH),
+                Element::CanonicalRoot => self.write_text(CANONICAL_ROOT),
+                Element::Selph => self.write_text(SELF),
+                Element::Super => self.write_text(SUPER),
+                Element::Id(sid) => self.write_stringid(*sid),
+            }
+
+            if idx < len - 1 {
+                self.write_text("::");
+            }
+        }
     }
 }
 
