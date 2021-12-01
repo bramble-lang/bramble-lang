@@ -17,6 +17,7 @@ pub struct JsonWriter<'a, W: Write> {
     string_table: &'a StringTable,
 
     comma_prefix: Cell<bool>,
+    event_comma_prefix: Cell<bool>,
 }
 
 impl<'a, W: Write> JsonWriter<'a, W> {
@@ -25,6 +26,7 @@ impl<'a, W: Write> JsonWriter<'a, W> {
             writer: RefCell::new(BufWriter::new(file)),
             string_table,
             comma_prefix: Cell::new(false),
+            event_comma_prefix: Cell::new(false),
         };
 
         jw.writer.borrow_mut().write("[".as_bytes()).unwrap();
@@ -83,11 +85,17 @@ impl<'a, W: Write> Writer for JsonWriter<'a, W> {
     }
 
     fn start_event(&self) {
+        if self.event_comma_prefix.get() {
+            self.writer.borrow_mut().write(",\n".as_bytes()).unwrap();
+        } else {
+            self.event_comma_prefix.set(true);
+        }
+
         self.writer.borrow_mut().write("{".as_bytes()).unwrap();
     }
 
     fn stop_event(&self) {
-        self.writer.borrow_mut().write("}, \n".as_bytes()).unwrap();
+        self.writer.borrow_mut().write("}".as_bytes()).unwrap();
         self.comma_prefix.set(false);
     }
 
