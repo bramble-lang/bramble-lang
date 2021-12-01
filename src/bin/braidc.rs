@@ -1,10 +1,12 @@
 extern crate log;
 extern crate simplelog;
 
+use std::fs::File;
+use std::io::stdout;
 use std::{path::Path, process::exit};
 
 use braid_lang::compiler::diagnostics::Logger;
-use braid_lang::diagnostics::ConsoleWriter;
+use braid_lang::diagnostics::{ConsoleWriter, JsonWriter};
 use inkwell::context::Context;
 
 use braid_lang::project::*;
@@ -45,6 +47,13 @@ fn main() {
     let mut tracer = Logger::new();
     let console_writer = ConsoleWriter::new(&sourcemap, &string_table);
     tracer.add_writer(&console_writer);
+
+    let trace_file = File::create("./target/trace.json").unwrap();
+    let json_writer = JsonWriter::new(trace_file, &string_table);
+    if enable_json_tracing(&config) {
+        tracer.add_writer(&json_writer);
+    }
+
     if enable_tracing(&config) {
         tracer.enable();
     }
