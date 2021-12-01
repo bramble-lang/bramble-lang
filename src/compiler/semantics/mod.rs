@@ -39,15 +39,14 @@ struct TypeOk<'a> {
 
 impl<'a> Writable for TypeOk<'a> {
     fn write(&self, w: &dyn super::diagnostics::Writer) {
+        w.write(self.ty);
+        w.write_text("\"");
+
         if self.refs.len() > 0 {
-            w.write_str("{");
             for r in &self.refs {
                 w.write_span("ref", *r);
             }
-            w.write_str("} ");
         }
-
-        w.write(self.ty);
     }
 }
 
