@@ -1086,10 +1086,7 @@ impl<'a> TypeResolver<'a> {
         self.logger.write(Event::<_, SemanticError> {
             stage: "type-resolver",
             input: ctx.span(),
-            msg: Ok(TypeOk {
-                ty: ctx.ty(),
-                refs: refs,
-            }),
+            msg: Ok(TypeOk { ty: ctx.ty(), refs }),
         });
     }
 
