@@ -24,7 +24,7 @@ mod tests {
 
         logger.write(evt);
         assert_eq!(
-            "{stage: \"test\", [0,0], ok: \"Hello\", }",
+            "{stage: \"test\", source: [0,0], ok: \"Hello\", }",
             *writer.buf.borrow()
         );
     }
@@ -70,7 +70,7 @@ mod tests {
         };
         logger.write(evt);
         assert_eq!(
-            "{stage: \"test\", [0,0], ok: \"Hello\", }",
+            "{stage: \"test\", source: [0,0], ok: \"Hello\", }",
             *writer.buf.borrow()
         );
     }
@@ -89,10 +89,13 @@ mod tests {
     }
 
     impl Writer for TestWriter {
-        fn write_span(&self, span: crate::compiler::Span) {
-            self.buf
-                .borrow_mut()
-                .push_str(&format!("[{},{}], ", span.low(), span.high()));
+        fn write_span(&self, field: &str, span: crate::compiler::Span) {
+            self.buf.borrow_mut().push_str(&format!(
+                "{}: [{},{}], ",
+                field,
+                span.low(),
+                span.high()
+            ));
         }
 
         fn start_event(&self) {

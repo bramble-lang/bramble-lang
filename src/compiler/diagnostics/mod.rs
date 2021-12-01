@@ -27,7 +27,7 @@ pub use view::*;
 /// Compiler to the user.
 pub trait Writer {
     /// Write a Span to the current event
-    fn write_span(&self, span: Span);
+    fn write_span(&self, field: &str, span: Span);
 
     /// Write a field with a [`Writable`] value to the current event
     fn write_field(&self, label: &str, s: &dyn Writable);
@@ -74,7 +74,7 @@ impl<'a, V: Writable, E: CompilerDisplay + Debug> Writable for Event<'a, V, E> {
     fn write(&self, w: &dyn Writer) {
         w.start_event();
         w.write_field("stage", &self.stage);
-        w.write_span(self.input);
+        w.write_span("source", self.input);
         match &self.msg {
             Ok(msg) => w.write_field("ok", msg),
             Err(err) => w.write_field("error", &format!("{:?}", err)),

@@ -42,7 +42,7 @@ impl<'a> Writable for TypeOk<'a> {
         if self.refs.len() > 0 {
             w.write_str("{");
             for r in &self.refs {
-                w.write_span(*r);
+                w.write_span("ref", *r);
             }
             w.write_str("} ");
         }
