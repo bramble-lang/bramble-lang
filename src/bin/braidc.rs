@@ -3,6 +3,7 @@ extern crate simplelog;
 
 use std::fs::File;
 use std::path::Path;
+use std::time::Instant;
 
 use braid_lang::compiler::diagnostics::Logger;
 use braid_lang::diagnostics::{write_source_map, ConsoleWriter, JsonWriter};
@@ -65,6 +66,7 @@ fn main() -> Result<(), i32> {
         write_source_map(source_map_file, &sourcemap);
     }
 
+    let tokenize_time = Instant::now();
     let token_sets = match tokenize_source_map(&sourcemap, src_path, &string_table, &tracer) {
         Ok(ts) => ts,
         Err(errs) => {
@@ -72,11 +74,14 @@ fn main() -> Result<(), i32> {
             return Err(ERR_LEXER_ERROR);
         }
     };
+    let tokenize_duration = tokenize_time.elapsed();
+    println!("Lexer: {}", tokenize_duration.as_secs_f32());
 
     if stop_stage == Some(Stage::Lexer) {
         return Ok(());
     }
 
+    let parse_time = Instant::now();
     let project_name_id = string_table.insert(project_name.into());
     let root = match parse_project(
         project_name_id,
@@ -91,6 +96,8 @@ fn main() -> Result<(), i32> {
             return Err(ERR_PARSER_ERROR);
         }
     };
+    let parse_duration = parse_time.elapsed();
+    println!("Parser: {}", parse_duration.as_secs_f32());
 
     if stop_stage == Some(Stage::Parser) {
         return Ok(());
@@ -112,14 +119,19 @@ fn main() -> Result<(), i32> {
 
     let main_mod_id = string_table.insert(MAIN_MODULE.into());
     let main_fn_id = string_table.insert(USER_MAIN_FN.into());
+    let semantic_time = Instant::now();
     let semantic_ast =
         match resolve_types_with_imports(&root, main_mod_id, main_fn_id, &imports, &tracer) {
             Ok(ast) => ast,
             Err(msg) => {
                 print_errs(&[msg], &sourcemap, &string_table);
+                let semantic_duration = semantic_time.elapsed();
+                println!("Semantic: {}", semantic_duration.as_secs_f32());
                 return Err(ERR_TYPE_CHECK);
             }
         };
+    let semantic_duration = semantic_time.elapsed();
+    println!("Semantic: {}", semantic_duration.as_secs_f32());
 
     if stop_stage == Some(Stage::Semantic) {
         return Ok(());
