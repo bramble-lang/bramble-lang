@@ -1,6 +1,6 @@
 use std::{
     cell::{Cell, RefCell},
-    io::{BufWriter, Write},
+    io::Write,
 };
 
 use crate::{
@@ -11,7 +11,7 @@ use crate::{
 /// Writes compiler trace data to a JSON file.
 pub struct JsonWriter<'a, W: Write> {
     /// Output target for the JSON Writer
-    writer: RefCell<BufWriter<W>>,
+    writer: RefCell<W>,
 
     /// Maps [`StringId`]s to string values
     string_table: &'a StringTable,
@@ -23,7 +23,7 @@ pub struct JsonWriter<'a, W: Write> {
 impl<'a, W: Write> JsonWriter<'a, W> {
     pub fn new(file: W, string_table: &'a StringTable) -> JsonWriter<'a, W> {
         let jw = JsonWriter {
-            writer: RefCell::new(BufWriter::new(file)),
+            writer: RefCell::new(file),
             string_table,
             comma_prefix: Cell::new(false),
             event_comma_prefix: Cell::new(false),
