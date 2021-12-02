@@ -2,7 +2,7 @@ extern crate log;
 extern crate simplelog;
 
 use std::fs::File;
-use std::{path::Path, process::exit};
+use std::path::Path;
 
 use braid_lang::compiler::diagnostics::Logger;
 use braid_lang::diagnostics::{write_source_map, ConsoleWriter, JsonWriter};
@@ -16,7 +16,7 @@ use crate::compiler::ast::MAIN_MODULE;
 const BRAID_FILE_EXT: &str = "br";
 const USER_MAIN_FN: &str = "my_main";
 
-fn main() {
+fn main() -> Result<(), i32> {
     let config = configure_cli().get_matches();
 
     match get_log_level(&config) {
@@ -37,7 +37,7 @@ fn main() {
         Ok(imports) => imports,
         Err(errs) => {
             print_errs(&errs, &sourcemap, &string_table);
-            exit(ERR_IMPORT_ERROR)
+            return Err(ERR_IMPORT_ERROR);
         }
     };
 
@@ -69,12 +69,12 @@ fn main() {
         Ok(ts) => ts,
         Err(errs) => {
             print_errs(&errs, &sourcemap, &string_table);
-            exit(ERR_LEXER_ERROR)
+            return Err(ERR_LEXER_ERROR);
         }
     };
 
     if stop_stage == Some(Stage::Lexer) {
-        return;
+        return Ok(());
     }
 
     let project_name_id = string_table.insert(project_name.into());
@@ -88,12 +88,12 @@ fn main() {
         Ok(root) => root,
         Err(errs) => {
             print_errs(&errs, &sourcemap, &string_table);
-            exit(ERR_PARSER_ERROR)
+            return Err(ERR_PARSER_ERROR);
         }
     };
 
     if stop_stage == Some(Stage::Parser) {
-        return;
+        return Ok(());
     }
 
     // Type Check
@@ -106,7 +106,7 @@ fn main() {
         Ok(im) => im,
         Err(msg) => {
             print_errs(&[msg], &sourcemap, &string_table);
-            exit(ERR_IMPORT_ERROR)
+            return Err(ERR_IMPORT_ERROR);
         }
     };
 
@@ -117,12 +117,12 @@ fn main() {
             Ok(ast) => ast,
             Err(msg) => {
                 print_errs(&[msg], &sourcemap, &string_table);
-                std::process::exit(ERR_TYPE_CHECK);
+                return Err(ERR_TYPE_CHECK);
             }
         };
 
     if stop_stage == Some(Stage::Semantic) {
-        return;
+        return Ok(());
     }
 
     // Configure the compiler
@@ -141,7 +141,7 @@ fn main() {
         Ok(()) => (),
         Err(msg) => {
             println!("LLVM IR translation failed: {}", msg);
-            std::process::exit(ERR_LLVM_IR_ERROR);
+            return Err(ERR_LLVM_IR_ERROR);
         }
     }
 
@@ -160,8 +160,10 @@ fn main() {
             Ok(()) => (),
             Err(e) => {
                 println!("Failed to write manifest file: {}", e);
-                exit(ERR_MANIFEST_WRITE_ERROR)
+                return Err(ERR_MANIFEST_WRITE_ERROR);
             }
         }
     }
+
+    Ok(())
 }
