@@ -16,7 +16,10 @@ pub struct JsonWriter<'a, W: Write> {
     /// Maps [`StringId`]s to string values
     string_table: &'a StringTable,
 
+    /// Was there a field before the current field? If so, then add a comma separator
     comma_prefix: Cell<bool>,
+
+    /// Was there an event before the current event? If so, then add a command separator
     event_comma_prefix: Cell<bool>,
 }
 
