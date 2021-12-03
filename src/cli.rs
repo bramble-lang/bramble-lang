@@ -99,6 +99,12 @@ pub fn configure_cli() -> clap::App<'static, 'static> {
                 .help("Traces source code as it moves through the compiler")
         )
         .arg(
+            Arg::with_name("json-trace")
+                .long("json-trace")
+                .takes_value(false)
+                .help("Writes a JSON file with the trace results to the target directory")
+        )
+        .arg(
             Arg::with_name("stage")
             .long("stage")
             .takes_value(true)
@@ -129,6 +135,10 @@ pub fn get_log_level<'a>(args: &'a ArgMatches) -> Option<LevelFilter> {
 
 pub fn enable_tracing<'a>(args: &'a ArgMatches) -> bool {
     args.is_present("trace")
+}
+
+pub fn enable_json_tracing<'a>(args: &'a ArgMatches) -> bool {
+    args.is_present("json-trace")
 }
 
 pub fn get_stage<'a>(args: &'a ArgMatches) -> Result<Option<Stage>, String> {

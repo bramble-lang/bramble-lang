@@ -1,5 +1,6 @@
 use crate::{
     compiler::{
+        ast::*,
         diagnostics::{Writable, Writer},
         SourceMap,
     },
@@ -68,5 +69,31 @@ impl<'a> Writer for ConsoleWriter<'a> {
 
     fn write_stringid(&self, s: crate::StringId) {
         print!("{}", self.string_table.get(s).unwrap());
+    }
+
+    fn write_text(&self, s: &str) {
+        print!("{}", s);
+    }
+
+    fn write_path(&self, p: &crate::compiler::ast::Path) {
+        if p.is_canonical() {
+            self.write_text("$");
+        }
+
+        let len = p.len();
+
+        for idx in 0..len {
+            match &p[idx] {
+                Element::FileRoot => self.write_text(ROOT_PATH),
+                Element::CanonicalRoot => self.write_text(CANONICAL_ROOT),
+                Element::Selph => self.write_text(SELF),
+                Element::Super => self.write_text(SUPER),
+                Element::Id(sid) => self.write_stringid(*sid),
+            }
+
+            if idx < len - 1 {
+                self.write_text("::");
+            }
+        }
     }
 }

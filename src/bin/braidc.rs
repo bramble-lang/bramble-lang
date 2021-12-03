@@ -1,10 +1,12 @@
 extern crate log;
 extern crate simplelog;
 
-use std::{path::Path, process::exit};
+use std::fs::File;
+use std::path::Path;
+use std::time::Instant;
 
 use braid_lang::compiler::diagnostics::Logger;
-use braid_lang::diagnostics::ConsoleWriter;
+use braid_lang::diagnostics::{write_source_map, ConsoleWriter, JsonWriter};
 use inkwell::context::Context;
 
 use braid_lang::project::*;
@@ -15,7 +17,7 @@ use crate::compiler::ast::MAIN_MODULE;
 const BRAID_FILE_EXT: &str = "br";
 const USER_MAIN_FN: &str = "my_main";
 
-fn main() {
+fn main() -> Result<(), i32> {
     let config = configure_cli().get_matches();
 
     match get_log_level(&config) {
@@ -36,31 +38,50 @@ fn main() {
         Ok(imports) => imports,
         Err(errs) => {
             print_errs(&errs, &sourcemap, &string_table);
-            exit(ERR_IMPORT_ERROR)
+            return Err(ERR_IMPORT_ERROR);
         }
     };
 
     let stop_stage = get_stage(&config).unwrap();
 
+    // Setup tracing system
     let mut tracer = Logger::new();
-    let console_writer = ConsoleWriter::new(&sourcemap, &string_table);
-    tracer.add_writer(&console_writer);
-    if enable_tracing(&config) {
+    if enable_tracing(&config) || enable_json_tracing(&config) {
         tracer.enable();
     }
 
+    // Setup trace console writer
+    let console_writer = ConsoleWriter::new(&sourcemap, &string_table);
+    if enable_tracing(&config) {
+        tracer.add_writer(&console_writer);
+    }
+
+    // Setup JSON Trace writer
+    let trace_file = File::create("./target/trace.json").unwrap();
+    let json_writer = JsonWriter::new(trace_file, &string_table);
+    if enable_json_tracing(&config) {
+        tracer.add_writer(&json_writer);
+
+        let source_map_file = File::create("./target/source.map").unwrap();
+        write_source_map(source_map_file, &sourcemap);
+    }
+
+    let tokenize_time = Instant::now();
     let token_sets = match tokenize_source_map(&sourcemap, src_path, &string_table, &tracer) {
         Ok(ts) => ts,
         Err(errs) => {
             print_errs(&errs, &sourcemap, &string_table);
-            exit(ERR_LEXER_ERROR)
+            return Err(ERR_LEXER_ERROR);
         }
     };
+    let tokenize_duration = tokenize_time.elapsed();
+    eprintln!("Lexer: {}", tokenize_duration.as_secs_f32());
 
     if stop_stage == Some(Stage::Lexer) {
-        return;
+        return Ok(());
     }
 
+    let parse_time = Instant::now();
     let project_name_id = string_table.insert(project_name.into());
     let root = match parse_project(
         project_name_id,
@@ -72,12 +93,14 @@ fn main() {
         Ok(root) => root,
         Err(errs) => {
             print_errs(&errs, &sourcemap, &string_table);
-            exit(ERR_PARSER_ERROR)
+            return Err(ERR_PARSER_ERROR);
         }
     };
+    let parse_duration = parse_time.elapsed();
+    eprintln!("Parser: {}", parse_duration.as_secs_f32());
 
     if stop_stage == Some(Stage::Parser) {
-        return;
+        return Ok(());
     }
 
     // Type Check
@@ -90,26 +113,30 @@ fn main() {
         Ok(im) => im,
         Err(msg) => {
             print_errs(&[msg], &sourcemap, &string_table);
-            exit(ERR_IMPORT_ERROR)
+            return Err(ERR_IMPORT_ERROR);
         }
     };
 
     let main_mod_id = string_table.insert(MAIN_MODULE.into());
     let main_fn_id = string_table.insert(USER_MAIN_FN.into());
+    let semantic_time = Instant::now();
     let semantic_ast =
         match resolve_types_with_imports(&root, main_mod_id, main_fn_id, &imports, &tracer) {
             Ok(ast) => ast,
             Err(msg) => {
                 print_errs(&[msg], &sourcemap, &string_table);
-                std::process::exit(ERR_TYPE_CHECK);
+                return Err(ERR_TYPE_CHECK);
             }
         };
+    let semantic_duration = semantic_time.elapsed();
+    eprintln!("Semantic: {}", semantic_duration.as_secs_f32());
 
     if stop_stage == Some(Stage::Semantic) {
-        return;
+        return Ok(());
     }
 
     // Configure the compiler
+    let llvm_time = Instant::now();
     let output_target = config.value_of("output").unwrap_or("./target/output.asm");
 
     let context = Context::create();
@@ -125,7 +152,7 @@ fn main() {
         Ok(()) => (),
         Err(msg) => {
             println!("LLVM IR translation failed: {}", msg);
-            std::process::exit(ERR_LLVM_IR_ERROR);
+            return Err(ERR_LLVM_IR_ERROR);
         }
     }
 
@@ -144,8 +171,12 @@ fn main() {
             Ok(()) => (),
             Err(e) => {
                 println!("Failed to write manifest file: {}", e);
-                exit(ERR_MANIFEST_WRITE_ERROR)
+                return Err(ERR_MANIFEST_WRITE_ERROR);
             }
         }
     }
+    let llvm_duration = llvm_time.elapsed();
+    eprintln!("LLVM: {}", llvm_duration.as_secs_f32());
+
+    Ok(())
 }

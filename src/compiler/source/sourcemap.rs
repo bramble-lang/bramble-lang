@@ -190,6 +190,11 @@ impl SourceMapEntry {
         &self.path
     }
 
+    /// Returns the [`Span`] that is assigned to this source file
+    pub fn span(&self) -> Span {
+        self.span
+    }
+
     /// Creates a iterator over the unicode characters in the source code that
     /// this entry represents. Each entry in the iterator will include the
     /// unicode character and it's offset within the global offset space.
