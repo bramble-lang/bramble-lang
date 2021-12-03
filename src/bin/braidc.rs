@@ -75,7 +75,7 @@ fn main() -> Result<(), i32> {
         }
     };
     let tokenize_duration = tokenize_time.elapsed();
-    println!("Lexer: {}", tokenize_duration.as_secs_f32());
+    eprintln!("Lexer: {}", tokenize_duration.as_secs_f32());
 
     if stop_stage == Some(Stage::Lexer) {
         return Ok(());
@@ -97,7 +97,7 @@ fn main() -> Result<(), i32> {
         }
     };
     let parse_duration = parse_time.elapsed();
-    println!("Parser: {}", parse_duration.as_secs_f32());
+    eprintln!("Parser: {}", parse_duration.as_secs_f32());
 
     if stop_stage == Some(Stage::Parser) {
         return Ok(());
@@ -126,18 +126,19 @@ fn main() -> Result<(), i32> {
             Err(msg) => {
                 print_errs(&[msg], &sourcemap, &string_table);
                 let semantic_duration = semantic_time.elapsed();
-                println!("Semantic: {}", semantic_duration.as_secs_f32());
+                eprintln!("Semantic: {}", semantic_duration.as_secs_f32());
                 return Err(ERR_TYPE_CHECK);
             }
         };
     let semantic_duration = semantic_time.elapsed();
-    println!("Semantic: {}", semantic_duration.as_secs_f32());
+    eprintln!("Semantic: {}", semantic_duration.as_secs_f32());
 
     if stop_stage == Some(Stage::Semantic) {
         return Ok(());
     }
 
     // Configure the compiler
+    let llvm_time = Instant::now();
     let output_target = config.value_of("output").unwrap_or("./target/output.asm");
 
     let context = Context::create();
@@ -176,6 +177,8 @@ fn main() -> Result<(), i32> {
             }
         }
     }
+    let llvm_duration = llvm_time.elapsed();
+    eprintln!("LLVM: {}", llvm_duration.as_secs_f32());
 
     Ok(())
 }
