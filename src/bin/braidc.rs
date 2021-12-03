@@ -125,8 +125,6 @@ fn main() -> Result<(), i32> {
             Ok(ast) => ast,
             Err(msg) => {
                 print_errs(&[msg], &sourcemap, &string_table);
-                let semantic_duration = semantic_time.elapsed();
-                eprintln!("Semantic: {}", semantic_duration.as_secs_f32());
                 return Err(ERR_TYPE_CHECK);
             }
         };
