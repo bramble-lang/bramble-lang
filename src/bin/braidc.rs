@@ -62,7 +62,7 @@ fn main() -> Result<(), i32> {
     if enable_json_tracing(&config) {
         tracer.add_writer(&json_writer);
 
-        let source_map_file = File::create("./target/source.map").unwrap();
+        let source_map_file = File::create("./target/sourcemap.json").unwrap();
         write_source_map(source_map_file, &sourcemap);
     }
 
