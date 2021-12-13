@@ -1,10 +1,13 @@
 use std::{
     cell::{Cell, RefCell},
     io::{BufWriter, Write},
+    path::PathBuf,
 };
 
+use serde::Serialize;
+
 use crate::{
-    compiler::{ast::*, diagnostics::Writer, SourceMap},
+    compiler::{ast::*, diagnostics::Writer, SourceMap, Span},
     StringTable,
 };
 
@@ -126,17 +129,47 @@ impl<'a, W: Write> Writer for JsonWriter<'a, W> {
 }
 
 pub fn write_source_map<W: Write>(mut w: W, sm: &SourceMap) {
-    let len = sm.len();
-    for idx in 0..len {
-        let s = sm.get(idx).unwrap();
-        let span = s.span();
-        let path = s.path();
-        let entry = format!(
-            "[{}, {}]: \"{}\"\n",
-            span.low(),
-            span.high(),
-            path.display()
-        );
-        w.write(entry.as_bytes()).unwrap();
+    let json_sm: JsonSourceMap = sm.into();
+    serde_yaml::to_writer(w, &json_sm).unwrap();
+}
+
+#[derive(Serialize)]
+struct JsonSourceMap {
+    map: Vec<JsonSourceMapEntry>,
+}
+
+impl From<&SourceMap> for JsonSourceMap {
+    fn from(sm: &SourceMap) -> Self {
+        let mut map = vec![];
+        for idx in 0..sm.len() {
+            sm.get(idx)
+                .map(|entry| JsonSourceMapEntry {
+                    source: entry.path().clone(),
+                    span: entry.span().into(),
+                })
+                .and_then(|json_entry| Some(map.push(json_entry)));
+        }
+        JsonSourceMap { map }
+    }
+}
+
+#[derive(Serialize)]
+struct JsonSourceMapEntry {
+    source: PathBuf,
+    span: JsonSpan,
+}
+
+#[derive(Serialize)]
+struct JsonSpan {
+    low: u32,
+    high: u32,
+}
+
+impl From<Span> for JsonSpan {
+    fn from(s: Span) -> Self {
+        JsonSpan {
+            low: s.low().as_u32(),
+            high: s.high().as_u32(),
+        }
     }
 }

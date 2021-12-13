@@ -92,6 +92,12 @@ impl Offset {
     pub fn to_local(&self, base: Offset) -> u64 {
         (self.0 - base.0) as u64
     }
+
+    /// Return the value of the offset as a u32.  This is for use with IO
+    /// layers (e.g. serializing to JSON or printing to the screen)
+    pub fn as_u32(&self) -> u32 {
+        self.0
+    }
 }
 
 impl AddAssign<u32> for Offset {
