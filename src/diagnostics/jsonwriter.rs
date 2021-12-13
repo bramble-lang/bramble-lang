@@ -153,6 +153,11 @@ impl From<&SourceMap> for JsonSourceMap {
     }
 }
 
+/// Represents the interface between the on-disk file for saving the SourceMap
+/// and the [`SourceMap`] used by the compiler. Having this type defined here
+/// allows for the decoupling of serialization and deserialization from the compiler
+/// code and the UI code; meaning that serde logic can be written without ever
+/// making changes to the Compiler's types.
 #[derive(Serialize)]
 struct JsonSourceMapEntry {
     source: PathBuf,
