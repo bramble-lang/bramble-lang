@@ -128,9 +128,9 @@ impl<'a, W: Write> Writer for JsonWriter<'a, W> {
     }
 }
 
-pub fn write_source_map<W: Write>(mut w: W, sm: &SourceMap) {
+pub fn write_source_map<W: Write>(w: W, sm: &SourceMap) {
     let json_sm: JsonSourceMap = sm.into();
-    serde_yaml::to_writer(w, &json_sm).unwrap();
+    serde_json::to_writer(w, &json_sm).unwrap();
 }
 
 /// Represents the interface between the on-disk file for saving the SourceMap
