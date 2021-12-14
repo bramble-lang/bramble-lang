@@ -130,7 +130,7 @@ impl<'a, W: Write> Writer for JsonWriter<'a, W> {
 
 pub fn write_source_map<W: Write>(w: W, sm: &SourceMap) {
     let json_sm: JsonSourceMap = sm.into();
-    serde_json::to_writer(w, &json_sm).unwrap();
+    serde_json::to_writer(w, &json_sm.map).unwrap();
 }
 
 /// Represents the interface between the on-disk file for saving the SourceMap
@@ -138,7 +138,6 @@ pub fn write_source_map<W: Write>(w: W, sm: &SourceMap) {
 /// allows for the decoupling of serialization and deserialization from the compiler
 /// code and the UI code; meaning that serde logic can be written without ever
 /// making changes to the Compiler's types.
-#[derive(Serialize)]
 struct JsonSourceMap {
     map: Vec<JsonSourceMapEntry>,
 }
@@ -165,16 +164,10 @@ struct JsonSourceMapEntry {
 }
 
 #[derive(Serialize)]
-struct JsonSpan {
-    low: u32,
-    high: u32,
-}
+struct JsonSpan(u32, u32);
 
 impl From<Span> for JsonSpan {
     fn from(s: Span) -> Self {
-        JsonSpan {
-            low: s.low().as_u32(),
-            high: s.high().as_u32(),
-        }
+        JsonSpan(s.low().as_u32(), s.high().as_u32())
     }
 }
