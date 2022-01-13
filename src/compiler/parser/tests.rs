@@ -195,8 +195,8 @@ pub mod tests {
             parser.expression(&mut stream).unwrap()
         {
             assert_eq!(ctx, new_ctx(0, 11));
-            match left {
-                box Expression::BinaryOp(ctx, BinaryOperator::Add, ll, lr) => {
+            match *left {
+                Expression::BinaryOp(ctx, BinaryOperator::Add, ll, lr) => {
                     assert_eq!(ctx, new_ctx(0, 7));
                     assert_eq!(*ll, Expression::I64(new_ctx(1, 2), 2));
                     assert_eq!(*lr, Expression::I64(new_ctx(5, 6), 4));
@@ -382,7 +382,7 @@ pub mod tests {
         let stm = parser.statement(&mut stream).unwrap().unwrap();
         assert_eq!(*stm.context(), new_ctx(0, 15));
         match stm {
-            Statement::Bind(box b) => {
+            Statement::Bind(b) => {
                 assert_eq!(*b.context(), new_ctx(0, 15));
                 assert_eq!(b.get_id(), x);
                 assert_eq!(b.get_type(), Type::I64);
@@ -414,7 +414,7 @@ pub mod tests {
         let stm = parser.statement(&mut stream).unwrap().unwrap();
         assert_eq!(*stm.context(), new_ctx(0, 19));
         match stm {
-            Statement::Bind(box b) => {
+            Statement::Bind(b) => {
                 assert_eq!(b.get_id(), x);
                 assert_eq!(b.get_type(), Type::I64);
                 assert_eq!(b.is_mutable(), true);
@@ -469,7 +469,7 @@ pub mod tests {
             assert_eq!(*stm.context(), new_ctx(0, text.len() as u32));
 
             match stm {
-                Statement::Bind(box b) => {
+                Statement::Bind(b) => {
                     assert_eq!(b.get_id(), x, "{}", text);
                     assert_eq!(b.get_type(), expected_ty, "{}", text);
                     assert_eq!(b.is_mutable(), false, "{}", text);
@@ -501,7 +501,7 @@ pub mod tests {
         let stm = parser.statement(&mut stream).unwrap().unwrap();
         assert_eq!(*stm.context(), new_ctx(0, text.len() as u32));
         match stm {
-            Statement::Mutate(box m) => {
+            Statement::Mutate(m) => {
                 assert_eq!(m.get_id(), x);
                 assert_eq!(*m.get_rhs(), Expression::I64(new_ctx(9, 10), 5));
             }
@@ -598,7 +598,7 @@ pub mod tests {
                 assert_eq!(ty, &Type::Unit);
                 assert_eq!(body.len(), 1);
                 match &body[0] {
-                    Statement::Return(box r) => assert_eq!(*r.get_value(), None),
+                    Statement::Return(r) => assert_eq!(*r.get_value(), None),
                     _ => panic!("Wrong body, expected unit return"),
                 }
             } else {
@@ -662,7 +662,7 @@ pub mod tests {
                 assert_eq!(ty, &Type::Unit);
                 assert_eq!(body.len(), 1);
                 match &body[0] {
-                    Statement::Return(box r) => assert_eq!(*r.get_value(), None),
+                    Statement::Return(r) => assert_eq!(*r.get_value(), None),
                     _ => panic!("Wrong body, expected unit return"),
                 }
             } else {
@@ -857,7 +857,7 @@ pub mod tests {
             assert_eq!(ty, Type::Unit);
             assert_eq!(body.len(), 1);
             match &body[0] {
-                Statement::Return(box r) => assert_eq!(*r.get_value(), None),
+                Statement::Return(r) => assert_eq!(*r.get_value(), None),
                 _ => panic!("Wrong body, expected unit return"),
             }
         } else {
@@ -900,7 +900,7 @@ pub mod tests {
             assert_eq!(ty, Type::Bool);
             assert_eq!(body.len(), 1);
             match &body[0] {
-                Statement::Return(box r) => {
+                Statement::Return(r) => {
                     assert_eq!(
                         *r.get_value(),
                         Some(Expression::Boolean(new_ctx(31, 35), true))
@@ -1057,7 +1057,7 @@ pub mod tests {
                 assert_eq!(ty, &Type::Bool);
                 assert_eq!(body.len(), 1);
                 match &body[0] {
-                    Statement::Return(box r) => {
+                    Statement::Return(r) => {
                         assert_eq!(
                             *r.get_value(),
                             Some(Expression::Boolean(new_ctx(31, 35), true))
@@ -1093,7 +1093,7 @@ pub mod tests {
         let parser = Parser::new(&logger);
         let stm = parser.statement(&mut stream).unwrap().unwrap();
         match stm {
-            Statement::Bind(box b) => {
+            Statement::Bind(b) => {
                 assert_eq!(b.get_id(), x);
                 assert_eq!(b.get_type(), Type::Coroutine(Box::new(Type::I64)));
                 assert_eq!(
@@ -1138,7 +1138,7 @@ pub mod tests {
         let parser = Parser::new(&logger);
         let stm = parser.statement(&mut stream).unwrap().unwrap();
         match stm {
-            Statement::Bind(box bind) => {
+            Statement::Bind(bind) => {
                 assert_eq!(bind.get_id(), x);
                 assert_eq!(bind.get_type(), Type::Coroutine(Box::new(Type::I64)));
                 assert_eq!(
@@ -1195,7 +1195,7 @@ pub mod tests {
             assert_eq!(ty, Type::Bool);
             assert_eq!(body.len(), 1);
             match &body[0] {
-                Statement::Return(box r) => {
+                Statement::Return(r) => {
                     assert_eq!(
                         *r.get_value(),
                         Some(Expression::Yield(
@@ -1246,7 +1246,7 @@ pub mod tests {
                 panic!("Expected Expression block");
             }
 
-            if let Some(box Expression::ExpressionBlock(_l, _body, Some(final_exp))) = else_arm {
+            if let Some(Expression::ExpressionBlock(_l, _body, Some(final_exp))) = else_arm {
                 assert_eq!(*final_exp, Expression::I64(new_ctx(17, 18), 7));
             } else {
                 panic!("Expected Expression block");
@@ -1524,7 +1524,7 @@ pub mod tests {
             match module {
                 Some(m) => match &m.get_functions()[0] {
                     Item::Routine(RoutineDef { body, .. }) => match &body[0] {
-                        Statement::Return(box r) => {
+                        Statement::Return(r) => {
                             assert_eq!(
                                 *r.get_value(),
                                 Some(Expression::StringLiteral(
@@ -2033,7 +2033,7 @@ pub mod tests {
             assert_eq!(ctx, new_ctx(0, 29));
             assert_eq!(body.len(), 2);
             match &body[0] {
-                Statement::Bind(box b) => {
+                Statement::Bind(b) => {
                     assert_eq!(b.get_id(), x);
                     assert_eq!(b.get_type(), Type::I64);
                     assert_eq!(*b.get_rhs(), Expression::I64(new_ctx(14, 15), 5));

@@ -178,7 +178,7 @@ mod test_preorder {
             2,
             vec![],
             Type::Unit,
-            vec![Statement::Expression(box Expression::I64(3, 2))],
+            vec![Statement::Expression(Box::new(Expression::I64(3, 2)))],
         ))
         .unwrap();
         m.add_function(RoutineDef::new_function(
@@ -190,7 +190,7 @@ mod test_preorder {
                 ty: Type::Bool,
             }],
             Type::Unit,
-            vec![Statement::Expression(box Expression::I64(6, 2))],
+            vec![Statement::Expression(Box::new(Expression::I64(6, 2)))],
         ))
         .unwrap();
         m.add_module(Module::new(m2, 7));
@@ -212,43 +212,44 @@ mod test_preorder {
         let test = table.insert("test".into());
 
         let mut f = RoutineDef::new_function(func, 1, vec![], Type::Unit, vec![]);
-        f.body.push(Statement::Bind(box Bind::new(
+        f.body.push(Statement::Bind(Box::new(Bind::new(
             2,
             x,
             Type::I32,
             false,
             Expression::If {
                 context: 3,
-                cond: box Expression::BinaryOp(
+                cond: Box::new(Expression::BinaryOp(
                     4,
                     crate::compiler::ast::expression::BinaryOperator::Eq,
-                    box Expression::I64(5, 1),
-                    box Expression::I64(6, 1),
-                ),
-                if_arm: box Expression::Identifier(7, y),
-                else_arm: Some(box Expression::StringLiteral(8, StringId::new())),
+                    Box::new(Expression::I64(5, 1)),
+                    Box::new(Expression::I64(6, 1)),
+                )),
+                if_arm: Box::new(Expression::Identifier(7, y)),
+                else_arm: Some(Box::new(Expression::StringLiteral(8, StringId::new()))),
             },
-        )));
-        f.body.push(Statement::YieldReturn(box YieldReturn::new(
-            9,
-            Some(Expression::UnaryOp(
-                10,
-                UnaryOperator::Negate,
-                box Expression::ExpressionBlock(
-                    11,
-                    vec![Statement::Expression(box Expression::Yield(
-                        12,
-                        box Expression::Identifier(13, c),
-                    ))],
-                    Some(box Expression::RoutineCall(
-                        14,
-                        expression::RoutineCall::Function,
-                        vec![Element::Id(test)].into(),
-                        vec![Expression::Identifier(15, p)],
+        ))));
+        f.body
+            .push(Statement::YieldReturn(Box::new(YieldReturn::new(
+                9,
+                Some(Expression::UnaryOp(
+                    10,
+                    UnaryOperator::Negate,
+                    Box::new(Expression::ExpressionBlock(
+                        11,
+                        vec![Statement::Expression(Box::new(Expression::Yield(
+                            12,
+                            Box::new(Expression::Identifier(13, c)),
+                        )))],
+                        Some(Box::new(Expression::RoutineCall(
+                            14,
+                            expression::RoutineCall::Function,
+                            vec![Element::Id(test)].into(),
+                            vec![Expression::Identifier(15, p)],
+                        ))),
                     )),
-                ),
-            )),
-        )));
+                )),
+            ))));
 
         let expected = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
         let test: Vec<i64> = f.iter_preorder().map(|n| *n.context()).collect();
@@ -326,7 +327,7 @@ mod test_postorder {
             2,
             vec![],
             Type::Unit,
-            vec![Statement::Expression(box Expression::I64(3, 2))],
+            vec![Statement::Expression(Box::new(Expression::I64(3, 2)))],
         ))
         .unwrap();
         m.add_function(RoutineDef::new_function(
@@ -338,7 +339,7 @@ mod test_postorder {
                 ty: Type::Bool,
             }],
             Type::Unit,
-            vec![Statement::Expression(box Expression::I64(6, 2))],
+            vec![Statement::Expression(Box::new(Expression::I64(6, 2)))],
         ))
         .unwrap();
         m.add_module(Module::new(m2, 7));
@@ -357,44 +358,45 @@ mod test_postorder {
         let func = table.insert("func".into());
 
         let mut f = RoutineDef::new_function(func, 1, vec![], Type::Unit, vec![]);
-        f.body.push(Statement::Bind(box Bind::new(
+        f.body.push(Statement::Bind(Box::new(Bind::new(
             2,
             x,
             Type::I32,
             false,
             Expression::If {
                 context: 3,
-                cond: box Expression::BinaryOp(
+                cond: Box::new(Expression::BinaryOp(
                     4,
                     BinaryOperator::Eq,
-                    box Expression::I64(5, 1),
-                    box Expression::I64(6, 1),
-                ),
-                if_arm: box Expression::Identifier(7, y),
-                else_arm: Some(box Expression::StringLiteral(8, StringId::new())),
+                    Box::new(Expression::I64(5, 1)),
+                    Box::new(Expression::I64(6, 1)),
+                )),
+                if_arm: Box::new(Expression::Identifier(7, y)),
+                else_arm: Some(Box::new(Expression::StringLiteral(8, StringId::new()))),
             },
-        )));
+        ))));
 
-        f.body.push(Statement::YieldReturn(box YieldReturn::new(
-            9,
-            Some(Expression::UnaryOp(
-                10,
-                UnaryOperator::Negate,
-                box Expression::ExpressionBlock(
-                    11,
-                    vec![Statement::Expression(box Expression::Yield(
-                        12,
-                        box Expression::Identifier(13, x),
-                    ))],
-                    Some(box Expression::RoutineCall(
-                        14,
-                        RoutineCall::Function,
-                        vec![Element::Id(func)].into(),
-                        vec![Expression::Identifier(15, y)],
+        f.body
+            .push(Statement::YieldReturn(Box::new(YieldReturn::new(
+                9,
+                Some(Expression::UnaryOp(
+                    10,
+                    UnaryOperator::Negate,
+                    Box::new(Expression::ExpressionBlock(
+                        11,
+                        vec![Statement::Expression(Box::new(Expression::Yield(
+                            12,
+                            Box::new(Expression::Identifier(13, x)),
+                        )))],
+                        Some(Box::new(Expression::RoutineCall(
+                            14,
+                            RoutineCall::Function,
+                            vec![Element::Id(func)].into(),
+                            vec![Expression::Identifier(15, y)],
+                        ))),
                     )),
-                ),
-            )),
-        )));
+                )),
+            ))));
 
         let expected = vec![5, 6, 4, 7, 8, 3, 2, 13, 12, 15, 14, 11, 10, 9, 1];
         let test: Vec<i64> = f.iter_postorder().map(|n| *n.context()).collect();
