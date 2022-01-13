@@ -20,7 +20,7 @@ mod tests {
 
         logger.write(evt);
         assert_eq!(
-            "{stage: \"test\", source: [0,0], ok: \"Hello\", }",
+            "{id: 1, stage: \"test\", source: [0,0], ok: \"Hello\", }",
             *writer.buf.borrow()
         );
     }
@@ -54,7 +54,7 @@ mod tests {
         let evt = Event::<_, LexerError>::new("test", Span::zero(), Ok("Hello"));
         logger.write(evt);
         assert_eq!(
-            "{stage: \"test\", source: [0,0], ok: \"Hello\", }",
+            "{id: 1, stage: \"test\", source: [0,0], ok: \"Hello\", }",
             *writer.buf.borrow()
         );
     }
@@ -116,8 +116,8 @@ mod tests {
             todo!()
         }
 
-        fn write_u64(&self, _u: u64) {
-            todo!()
+        fn write_u64(&self, _: u64) {
+            self.buf.borrow_mut().push_str(&format!("{}", 1));
         }
 
         fn write_error(&self, _e: &dyn crate::compiler::CompilerDisplay) {
