@@ -18,6 +18,7 @@ mod event_id {
     use std::sync::atomic::AtomicU64;
 
     use super::{Writable, Writer};
+
     /// Threadsafe mechanism for providing unique IDs for every event
     static NEXT_EVENT_ID: AtomicU64 = AtomicU64::new(1);
 
