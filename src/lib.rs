@@ -1,5 +1,4 @@
 #![allow(dead_code)]
-#![feature(box_syntax, box_patterns)]
 
 pub mod result;
 

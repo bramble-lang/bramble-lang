@@ -195,8 +195,8 @@ pub mod tests {
             parser.expression(&mut stream).unwrap()
         {
             assert_eq!(ctx, new_ctx(0, 11));
-            match left {
-                box Expression::BinaryOp(ctx, BinaryOperator::Add, ll, lr) => {
+            match *left {
+                Expression::BinaryOp(ctx, BinaryOperator::Add, ll, lr) => {
                     assert_eq!(ctx, new_ctx(0, 7));
                     assert_eq!(*ll, Expression::I64(new_ctx(1, 2), 2));
                     assert_eq!(*lr, Expression::I64(new_ctx(5, 6), 4));
@@ -382,7 +382,7 @@ pub mod tests {
         let stm = parser.statement(&mut stream).unwrap().unwrap();
         assert_eq!(*stm.context(), new_ctx(0, 15));
         match stm {
-            Statement::Bind(box b) => {
+            Statement::Bind(b) => {
                 assert_eq!(*b.context(), new_ctx(0, 15));
                 assert_eq!(b.get_id(), x);
                 assert_eq!(b.get_type(), Type::I64);
@@ -414,7 +414,7 @@ pub mod tests {
         let stm = parser.statement(&mut stream).unwrap().unwrap();
         assert_eq!(*stm.context(), new_ctx(0, 19));
         match stm {
-            Statement::Bind(box b) => {
+            Statement::Bind(b) => {
                 assert_eq!(b.get_id(), x);
                 assert_eq!(b.get_type(), Type::I64);
                 assert_eq!(b.is_mutable(), true);
@@ -469,7 +469,7 @@ pub mod tests {
             assert_eq!(*stm.context(), new_ctx(0, text.len() as u32));
 
             match stm {
-                Statement::Bind(box b) => {
+                Statement::Bind(b) => {
                     assert_eq!(b.get_id(), x, "{}", text);
                     assert_eq!(b.get_type(), expected_ty, "{}", text);
                     assert_eq!(b.is_mutable(), false, "{}", text);
@@ -501,7 +501,7 @@ pub mod tests {
         let stm = parser.statement(&mut stream).unwrap().unwrap();
         assert_eq!(*stm.context(), new_ctx(0, text.len() as u32));
         match stm {
-            Statement::Mutate(box m) => {
+            Statement::Mutate(m) => {
                 assert_eq!(m.get_id(), x);
                 assert_eq!(*m.get_rhs(), Expression::I64(new_ctx(9, 10), 5));
             }
@@ -598,7 +598,7 @@ pub mod tests {
                 assert_eq!(ty, &Type::Unit);
                 assert_eq!(body.len(), 1);
                 match &body[0] {
-                    Statement::Return(box r) => assert_eq!(*r.get_value(), None),
+                    Statement::Return(r) => assert_eq!(*r.get_value(), None),
                     _ => panic!("Wrong body, expected unit return"),
                 }
             } else {
@@ -662,7 +662,7 @@ pub mod tests {
                 assert_eq!(ty, &Type::Unit);
                 assert_eq!(body.len(), 1);
                 match &body[0] {
-                    Statement::Return(box r) => assert_eq!(*r.get_value(), None),
+                    Statement::Return(r) => assert_eq!(*r.get_value(), None),
                     _ => panic!("Wrong body, expected unit return"),
                 }
             } else {
@@ -857,7 +857,7 @@ pub mod tests {
             assert_eq!(ty, Type::Unit);
             assert_eq!(body.len(), 1);
             match &body[0] {
-                Statement::Return(box r) => assert_eq!(*r.get_value(), None),
+                Statement::Return(r) => assert_eq!(*r.get_value(), None),
                 _ => panic!("Wrong body, expected unit return"),
             }
         } else {
@@ -900,7 +900,7 @@ pub mod tests {
             assert_eq!(ty, Type::Bool);
             assert_eq!(body.len(), 1);
             match &body[0] {
-                Statement::Return(box r) => {
+                Statement::Return(r) => {
                     assert_eq!(
                         *r.get_value(),
                         Some(Expression::Boolean(new_ctx(31, 35), true))
@@ -1057,7 +1057,7 @@ pub mod tests {
                 assert_eq!(ty, &Type::Bool);
                 assert_eq!(body.len(), 1);
                 match &body[0] {
-                    Statement::Return(box r) => {
+                    Statement::Return(r) => {
                         assert_eq!(
                             *r.get_value(),
                             Some(Expression::Boolean(new_ctx(31, 35), true))
@@ -1093,7 +1093,7 @@ pub mod tests {
         let parser = Parser::new(&logger);
         let stm = parser.statement(&mut stream).unwrap().unwrap();
         match stm {
-            Statement::Bind(box b) => {
+            Statement::Bind(b) => {
                 assert_eq!(b.get_id(), x);
                 assert_eq!(b.get_type(), Type::Coroutine(Box::new(Type::I64)));
                 assert_eq!(
@@ -1138,7 +1138,7 @@ pub mod tests {
         let parser = Parser::new(&logger);
         let stm = parser.statement(&mut stream).unwrap().unwrap();
         match stm {
-            Statement::Bind(box bind) => {
+            Statement::Bind(bind) => {
                 assert_eq!(bind.get_id(), x);
                 assert_eq!(bind.get_type(), Type::Coroutine(Box::new(Type::I64)));
                 assert_eq!(
@@ -1195,7 +1195,7 @@ pub mod tests {
             assert_eq!(ty, Type::Bool);
             assert_eq!(body.len(), 1);
             match &body[0] {
-                Statement::Return(box r) => {
+                Statement::Return(r) => {
                     assert_eq!(
                         *r.get_value(),
                         Some(Expression::Yield(
@@ -1246,8 +1246,12 @@ pub mod tests {
                 panic!("Expected Expression block");
             }
 
-            if let Some(box Expression::ExpressionBlock(_l, _body, Some(final_exp))) = else_arm {
-                assert_eq!(*final_exp, Expression::I64(new_ctx(17, 18), 7));
+            if let Some(exp) = else_arm {
+                if let Expression::ExpressionBlock(_l, _body, Some(final_exp)) = *exp {
+                    assert_eq!(*final_exp, Expression::I64(new_ctx(17, 18), 7));
+                } else {
+                    panic!("Expected Expression block");
+                }
             } else {
                 panic!("Expected Expression block");
             }
@@ -1293,34 +1297,41 @@ pub mod tests {
                 panic!("Expected Expression block");
             }
 
-            if let Some(box Expression::If {
-                cond,
-                if_arm,
-                else_arm,
-                context,
-            }) = else_arm
-            {
-                assert_eq!(context, new_ctx(16, 40));
-                assert_eq!(
-                    *cond,
-                    Expression::BinaryOp(
-                        new_ctx(20, 26),
-                        BinaryOperator::BAnd,
-                        Box::new(Expression::Identifier(new_ctx(20, 21), y)),
-                        Box::new(Expression::Identifier(new_ctx(25, 26), z))
-                    )
-                );
-                if let Expression::ExpressionBlock(_l, _body, Some(final_exp)) = *if_arm {
-                    assert_eq!(*final_exp, Expression::I64(new_ctx(29, 30), 7));
-                } else {
-                    panic!("Expected Expression block");
-                }
-
-                if let Some(box Expression::ExpressionBlock(_l, _body, Some(final_exp))) = else_arm
+            if let Some(exp) = else_arm {
+                if let Expression::If {
+                    cond,
+                    if_arm,
+                    else_arm,
+                    context,
+                } = *exp
                 {
-                    assert_eq!(*final_exp, Expression::I64(new_ctx(38, 39), 8));
+                    assert_eq!(context, new_ctx(16, 40));
+                    assert_eq!(
+                        *cond,
+                        Expression::BinaryOp(
+                            new_ctx(20, 26),
+                            BinaryOperator::BAnd,
+                            Box::new(Expression::Identifier(new_ctx(20, 21), y)),
+                            Box::new(Expression::Identifier(new_ctx(25, 26), z))
+                        )
+                    );
+                    if let Expression::ExpressionBlock(_l, _body, Some(final_exp)) = *if_arm {
+                        assert_eq!(*final_exp, Expression::I64(new_ctx(29, 30), 7));
+                    } else {
+                        panic!("Expected Expression block");
+                    }
+
+                    if let Some(exp) = else_arm {
+                        if let Expression::ExpressionBlock(_l, _body, Some(final_exp)) = *exp {
+                            assert_eq!(*final_exp, Expression::I64(new_ctx(38, 39), 8));
+                        } else {
+                            panic!("Expected Expression block");
+                        }
+                    } else {
+                        panic!("Expected expression block");
+                    }
                 } else {
-                    panic!("Expected Expression block");
+                    panic!("Expected if statement in else arm");
                 }
             } else {
                 panic!("Expected if statement in else arm");
@@ -1362,7 +1373,7 @@ pub mod tests {
             if let Expression::ExpressionBlock(_ctx, body, None) = *body {
                 assert_eq!(
                     body[0],
-                    Statement::Expression(box Expression::I64(new_ctx(11, 13), 5))
+                    Statement::Expression(Box::new(Expression::I64(new_ctx(11, 13), 5)))
                 );
             } else {
                 panic!("Expected Expression block, got {:?}", *body);
@@ -1524,7 +1535,7 @@ pub mod tests {
             match module {
                 Some(m) => match &m.get_functions()[0] {
                     Item::Routine(RoutineDef { body, .. }) => match &body[0] {
-                        Statement::Return(box r) => {
+                        Statement::Return(r) => {
                             assert_eq!(
                                 *r.get_value(),
                                 Some(Expression::StringLiteral(
@@ -1721,39 +1732,39 @@ pub mod tests {
                 "a[1]",
                 Expression::ArrayAt {
                     context: new_ctx(0, 4),
-                    array: box Expression::Identifier(new_ctx(0, 1), a),
-                    index: box Expression::I64(new_ctx(2, 3), 1),
+                    array: Box::new(Expression::Identifier(new_ctx(0, 1), a)),
+                    index: Box::new(Expression::I64(new_ctx(2, 3), 1)),
                 },
             ),
             (
                 "(a)[1]",
                 Expression::ArrayAt {
                     context: new_ctx(0, 6),
-                    array: box Expression::Identifier(new_ctx(0, 3), a),
-                    index: box Expression::I64(new_ctx(4, 5), 1),
+                    array: Box::new(Expression::Identifier(new_ctx(0, 3), a)),
+                    index: Box::new(Expression::I64(new_ctx(4, 5), 1)),
                 },
             ),
             (
                 "a.b[1]",
                 Expression::ArrayAt {
                     context: new_ctx(0, 6),
-                    array: box Expression::MemberAccess(
+                    array: Box::new(Expression::MemberAccess(
                         new_ctx(0, 3),
-                        box Expression::Identifier(new_ctx(0, 1), a),
+                        Box::new(Expression::Identifier(new_ctx(0, 1), a)),
                         b,
-                    ),
-                    index: box Expression::I64(new_ctx(4, 5), 1),
+                    )),
+                    index: Box::new(Expression::I64(new_ctx(4, 5), 1)),
                 },
             ),
             (
                 "a[1].b",
                 Expression::MemberAccess(
                     new_ctx(0, 6),
-                    box Expression::ArrayAt {
+                    Box::new(Expression::ArrayAt {
                         context: new_ctx(0, 4),
-                        array: box Expression::Identifier(new_ctx(0, 1), a),
-                        index: box Expression::I64(new_ctx(2, 3), 1),
-                    },
+                        array: Box::new(Expression::Identifier(new_ctx(0, 1), a)),
+                        index: Box::new(Expression::I64(new_ctx(2, 3), 1)),
+                    }),
                     b,
                 ),
             ),
@@ -1761,40 +1772,40 @@ pub mod tests {
                 "a[0].b[1]",
                 Expression::ArrayAt {
                     context: new_ctx(0, 9),
-                    array: box Expression::MemberAccess(
+                    array: Box::new(Expression::MemberAccess(
                         new_ctx(0, 6),
-                        box Expression::ArrayAt {
+                        Box::new(Expression::ArrayAt {
                             context: new_ctx(0, 4),
-                            array: box Expression::Identifier(new_ctx(0, 1), a),
-                            index: box Expression::I64(new_ctx(2, 3), 0),
-                        },
+                            array: Box::new(Expression::Identifier(new_ctx(0, 1), a)),
+                            index: Box::new(Expression::I64(new_ctx(2, 3), 0)),
+                        }),
                         b,
-                    ),
-                    index: box Expression::I64(new_ctx(7, 8), 1),
+                    )),
+                    index: Box::new(Expression::I64(new_ctx(7, 8), 1)),
                 },
             ),
             (
                 "a[1][2]",
                 Expression::ArrayAt {
                     context: new_ctx(0, 7),
-                    array: box Expression::ArrayAt {
+                    array: Box::new(Expression::ArrayAt {
                         context: new_ctx(0, 4),
-                        array: box Expression::Identifier(new_ctx(0, 1), a),
-                        index: box Expression::I64(new_ctx(2, 3), 1),
-                    },
-                    index: box Expression::I64(new_ctx(5, 6), 2),
+                        array: Box::new(Expression::Identifier(new_ctx(0, 1), a)),
+                        index: Box::new(Expression::I64(new_ctx(2, 3), 1)),
+                    }),
+                    index: Box::new(Expression::I64(new_ctx(5, 6), 2)),
                 },
             ),
             (
                 "((a)[1])[2]",
                 Expression::ArrayAt {
                     context: new_ctx(0, 11),
-                    array: box Expression::ArrayAt {
+                    array: Box::new(Expression::ArrayAt {
                         context: new_ctx(0, 8),
-                        array: box Expression::Identifier(new_ctx(1, 4), a),
-                        index: box Expression::I64(new_ctx(5, 6), 1),
-                    },
-                    index: box Expression::I64(new_ctx(9, 10), 2),
+                        array: Box::new(Expression::Identifier(new_ctx(1, 4), a)),
+                        index: Box::new(Expression::I64(new_ctx(5, 6), 1)),
+                    }),
+                    index: Box::new(Expression::I64(new_ctx(9, 10), 2)),
                 },
             ),
         ] {
@@ -2033,7 +2044,7 @@ pub mod tests {
             assert_eq!(ctx, new_ctx(0, 29));
             assert_eq!(body.len(), 2);
             match &body[0] {
-                Statement::Bind(box b) => {
+                Statement::Bind(b) => {
                     assert_eq!(b.get_id(), x);
                     assert_eq!(b.get_type(), Type::I64);
                     assert_eq!(*b.get_rhs(), Expression::I64(new_ctx(14, 15), 5));
@@ -2041,19 +2052,20 @@ pub mod tests {
                 _ => panic!("Not a binding statement"),
             }
             match &body[1] {
-                Statement::Expression(box Expression::RoutineCall(
-                    _,
-                    RoutineCall::Function,
-                    fn_name,
-                    params,
-                )) => {
-                    assert_eq!(*fn_name, vec![Element::Id(f)].into());
-                    assert_eq!(params[0], Expression::Identifier(new_ctx(19, 20), x));
+                Statement::Expression(exp) => {
+                    if let Expression::RoutineCall(_, RoutineCall::Function, fn_name, params) =
+                        &**exp
+                    {
+                        assert_eq!(*fn_name, vec![Element::Id(f)].into());
+                        assert_eq!(params[0], Expression::Identifier(new_ctx(19, 20), x));
+                    } else {
+                        panic!("No body");
+                    }
                 }
                 _ => panic!("No body: {:?}", &body[1]),
             }
-            match final_exp {
-                box Expression::BinaryOp(_, BinaryOperator::Mul, l, r) => {
+            match *final_exp {
+                Expression::BinaryOp(_, BinaryOperator::Mul, l, r) => {
                     assert_eq!(*l.as_ref(), Expression::Identifier(new_ctx(23, 24), x));
                     assert_eq!(*r.as_ref(), Expression::Identifier(new_ctx(27, 28), x));
                 }

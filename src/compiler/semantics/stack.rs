@@ -401,7 +401,7 @@ impl<'a> SymbolTableScopeStack {
                 if *len <= 0 {
                     Err(SemanticError::ArrayInvalidSize(*len))
                 } else {
-                    Ok(Type::Array(box self.canonize_type(el_ty)?, *len))
+                    Ok(Type::Array(Box::new(self.canonize_type(el_ty)?), *len))
                 }
             }
             _ => Ok(ty.clone()),
