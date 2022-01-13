@@ -63,8 +63,7 @@ where
     }
 
     pub fn to_compilerdisplay(&self) -> &dyn CompilerDisplay {
-        let d: &dyn CompilerDisplay = self;
-        d
+        self
     }
 }
 
