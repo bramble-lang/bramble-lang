@@ -96,4 +96,8 @@ impl<'a> Writer for ConsoleWriter<'a> {
             }
         }
     }
+
+    fn write_u64(&self, u: u64) {
+        print!("{}", u);
+    }
 }

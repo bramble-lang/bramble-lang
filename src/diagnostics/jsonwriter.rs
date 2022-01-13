@@ -80,6 +80,11 @@ impl<'a, W: Write> Writer for JsonWriter<'a, W> {
         self.writer.borrow_mut().write(js.as_bytes()).unwrap();
     }
 
+    fn write_u64(&self, u: u64) {
+        let js = format!("{}", u);
+        self.writer.borrow_mut().write(js.as_bytes()).unwrap();
+    }
+
     fn write_stringid(&self, s: crate::StringId) {
         let val = self.string_table.get(s).unwrap();
         self.writer.borrow_mut().write(val.as_bytes()).unwrap();
