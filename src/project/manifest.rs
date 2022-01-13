@@ -221,7 +221,7 @@ impl ManifestType {
             Type::I64 => Self::I64,
             Type::Bool => Self::Bool,
             Type::StringLiteral => Self::StringLiteral,
-            Type::Array(box el_ty, sz) => Self::Array(box Self::from_ty(sm, st, el_ty)?, *sz),
+            Type::Array(el_ty, sz) => Self::Array(Box::new(Self::from_ty(sm, st, el_ty)?), *sz),
             Type::Unit => Self::Unit,
             Type::Custom(p) => Self::Custom(path_to_string(sm, st, p)?),
             _ => return Err(ManifestError::CannotConvertType(ty.clone())),
@@ -242,7 +242,7 @@ impl ManifestType {
             ManifestType::I64 => Type::I64,
             ManifestType::Bool => Type::Bool,
             ManifestType::StringLiteral => Type::StringLiteral,
-            ManifestType::Array(box el_ty, sz) => Type::Array(box el_ty.to_ty(st)?, *sz),
+            ManifestType::Array(el_ty, sz) => Type::Array(Box::new(el_ty.to_ty(st)?), *sz),
             ManifestType::Unit => Type::Unit,
             ManifestType::Custom(p) => Type::Custom(string_to_path(st, p)?),
         };

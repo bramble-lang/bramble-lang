@@ -261,11 +261,11 @@ impl<'a> TypeResolver<'a> {
     ) -> SemanticResult<Statement<SemanticContext>> {
         use Statement::*;
         let inner = match stmt {
-            Bind(box b) => Bind(Box::new(self.analyze_bind(b)?)),
-            Mutate(box b) => Mutate(Box::new(self.analyze_mutate(b)?)),
-            Return(box x) => Return(Box::new(self.analyze_return(x)?)),
-            YieldReturn(box x) => YieldReturn(Box::new(self.analyze_yieldreturn(x)?)),
-            Expression(box e) => Expression(Box::new(self.analyze_expression(e)?)),
+            Bind(b) => Bind(Box::new(self.analyze_bind(b)?)),
+            Mutate(b) => Mutate(Box::new(self.analyze_mutate(b)?)),
+            Return(x) => Return(Box::new(self.analyze_return(x)?)),
+            YieldReturn(x) => YieldReturn(Box::new(self.analyze_yieldreturn(x)?)),
+            Expression(e) => Expression(Box::new(self.analyze_expression(e)?)),
         };
 
         Ok(inner)
@@ -518,7 +518,7 @@ impl<'a> TypeResolver<'a> {
                 refs.push(n_array.span());
 
                 let el_ty = match n_array.context().ty() {
-                    Type::Array(box el_ty, _) => Ok(el_ty),
+                    Type::Array(el_ty, _) => Ok(*el_ty.clone()),
                     ty => Err(CompilerError::new(
                         ctx.span(),
                         SemanticError::ArrayIndexingInvalidType(ty.clone()),
@@ -538,12 +538,12 @@ impl<'a> TypeResolver<'a> {
                     .view_err(|e| self.record_err(e));
                 }
 
-                let ctx = ctx.with_type(el_ty.clone());
+                let ctx = ctx.with_type(el_ty);
 
                 Ok(Expression::ArrayAt {
                     context: ctx,
-                    array: box n_array,
-                    index: box n_index,
+                    array: Box::new(n_array),
+                    index: Box::new(n_index),
                 })
             }
             Expression::CustomType(ctx, name) => {
@@ -630,7 +630,7 @@ impl<'a> TypeResolver<'a> {
                     let else_arm = else_arm
                         .as_ref()
                         .map(|e| self.analyze_expression(&e))
-                        .map_or(Ok(None), |r| r.map(|x| Some(box x)))?;
+                        .map_or(Ok(None), |r| r.map(|x| Some(Box::new(x))))?;
 
                     let else_arm_ty = else_arm
                         .as_ref()
@@ -641,8 +641,8 @@ impl<'a> TypeResolver<'a> {
                         let ctx = ctx.with_type(if_arm.get_type().clone());
                         Ok(Expression::If {
                             context: ctx,
-                            cond: box cond,
-                            if_arm: box if_arm,
+                            cond: Box::new(cond),
+                            if_arm: Box::new(if_arm),
                             else_arm: else_arm,
                         })
                     } else {
@@ -677,8 +677,8 @@ impl<'a> TypeResolver<'a> {
                         let ctx = ctx.with_type(Type::Unit);
                         Ok(Expression::While {
                             context: ctx,
-                            cond: box cond,
-                            body: box body,
+                            cond: Box::new( cond),
+                            body: Box::new(body),
                         })
                     } else {
                         Err(CompilerError::new(
@@ -698,7 +698,7 @@ impl<'a> TypeResolver<'a> {
             Expression::Yield(ctx, exp) => {
                 let exp = self.analyze_expression(&exp)?;
                 let ctx = match exp.get_type() {
-                    Type::Coroutine(box ret_ty) => ctx.with_type(ret_ty.clone()),
+                    Type::Coroutine(ret_ty) => ctx.with_type(*ret_ty.clone()),
                     _ => {
                         return Err(CompilerError::new(
                             ctx.span(),
@@ -993,13 +993,13 @@ impl<'a> TypeResolver<'a> {
     ) -> Result<(&'b Vec<Type>, HasVarArgs, Type), SemanticError> {
         let (expected_param_tys, has_varargs, ret_ty) = match symbol {
             Symbol {
-                ty: Type::FunctionDef(pty, box rty),
+                ty: Type::FunctionDef(pty, rty),
                 ..
-            } if *call == RoutineCall::Function => (pty, false, rty.clone()),
+            } if *call == RoutineCall::Function => (pty, false, *rty.clone()),
             Symbol {
-                ty: Type::ExternDecl(pty, has_varargs, box rty),
+                ty: Type::ExternDecl(pty, has_varargs, rty),
                 ..
-            } if *call == RoutineCall::Extern => (pty, *has_varargs, rty.clone()),
+            } if *call == RoutineCall::Extern => (pty, *has_varargs, *rty.clone()),
             Symbol {
                 ty: Type::CoroutineDef(pty, rty),
                 ..

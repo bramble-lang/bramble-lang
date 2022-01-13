@@ -334,8 +334,8 @@ impl<'a> Parser<'a> {
                                 stream.next_must_be(&Lex::RBracket).map(|rbracket| {
                                     Expression::ArrayAt {
                                         context: ma.context().join(rbracket.to_ctx()),
-                                        array: box ma,
-                                        index: box index,
+                                        array: Box::new(ma),
+                                        index: Box::new(index),
                                     }
                                 })
                             })
@@ -458,7 +458,7 @@ impl<'a> Parser<'a> {
                     context: ctx,
                     cond: Box::new(cond),
                     if_arm: Box::new(if_arm),
-                    else_arm: else_arm.map(|f| box f),
+                    else_arm: else_arm.map(|f| Box::new(f)),
                 })
             }
             _ => None,

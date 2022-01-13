@@ -144,11 +144,11 @@ where
 
     fn for_statement(&mut self, statement: &Statement<A>) -> Statement<B> {
         let s = match statement {
-            Statement::Bind(b) => Statement::Bind(box self.for_bind(b)),
-            Statement::Mutate(m) => Statement::Mutate(box self.for_mutate(m)),
-            Statement::Return(r) => Statement::Return(box self.for_return(r)),
-            Statement::YieldReturn(yr) => Statement::YieldReturn(box self.for_yieldreturn(yr)),
-            Statement::Expression(e) => Statement::Expression(box self.for_expression(e)),
+            Statement::Bind(b) => Statement::Bind(Box::new(self.for_bind(b))),
+            Statement::Mutate(m) => Statement::Mutate(Box::new(self.for_mutate(m))),
+            Statement::Return(r) => Statement::Return(Box::new(self.for_return(r))),
+            Statement::YieldReturn(yr) => Statement::YieldReturn(Box::new(self.for_yieldreturn(yr))),
+            Statement::Expression(e) => Statement::Expression(Box::new(self.for_expression(e))),
         };
         s
     }
@@ -226,7 +226,7 @@ where
                 nbody.push(self.for_statement(e));
             }
 
-            let final_exp = final_exp.as_ref().map(|fe| box self.for_expression(fe));
+            let final_exp = final_exp.as_ref().map(|fe| Box::new(self.for_expression(fe)));
             Expression::ExpressionBlock(b, nbody, final_exp)
         } else {
             panic!("Expected ExpressionBlock, but got {:?}", block)
@@ -237,7 +237,7 @@ where
         if let Expression::MemberAccess(_, src, member) = access {
             let b = self.transform(access);
             let src = self.for_expression(src);
-            Expression::MemberAccess(b, box src, member.clone())
+            Expression::MemberAccess(b, Box::new(src), member.clone())
         } else {
             panic!("Expected MemberAccess, but got {:?}", access)
         }
@@ -247,7 +247,7 @@ where
         if let Expression::UnaryOp(_, op, operand) = un_op {
             let b = self.transform(un_op);
             let operand = self.for_expression(operand);
-            Expression::UnaryOp(b, *op, box operand)
+            Expression::UnaryOp(b, *op, Box::new(operand))
         } else {
             panic!("Expected UnaryOp, but got {:?}", un_op)
         }
@@ -258,7 +258,7 @@ where
             let b = self.transform(bin_op);
             let l = self.for_expression(l);
             let r = self.for_expression(r);
-            Expression::BinaryOp(b, *op, box l, box r)
+            Expression::BinaryOp(b, *op, Box::new(l), Box::new(r))
         } else {
             panic!("Expected BinaryOp, but got {:?}", bin_op)
         }
@@ -275,11 +275,11 @@ where
             let b = self.transform(if_exp);
             let cond = self.for_expression(cond);
             let if_arm = self.for_expression(if_arm);
-            let else_arm = else_arm.as_ref().map(|ea| box self.for_expression(ea));
+            let else_arm = else_arm.as_ref().map(|ea| Box::new(self.for_expression(ea)));
             Expression::If {
                 context: b,
-                cond: box cond,
-                if_arm: box if_arm,
+                cond: Box::new(cond),
+                if_arm: Box::new(if_arm),
                 else_arm,
             }
         } else {
@@ -294,8 +294,8 @@ where
             let body = self.for_expression(body);
             Expression::While {
                 context: b,
-                cond: box cond,
-                body: box body,
+                cond: Box::new(cond),
+                body: Box::new(body),
             }
         } else {
             panic!("Expected WhileExpression, but got {:?}", while_exp)
@@ -319,7 +319,7 @@ where
         if let Expression::Yield(_, e) = yield_exp {
             let b = self.transform(yield_exp);
             let e = self.for_expression(e);
-            Expression::Yield(b, box e)
+            Expression::Yield(b, Box::new(e))
         } else {
             panic!("Expected Yield, but got {:?}", yield_exp)
         }
@@ -358,8 +358,8 @@ where
             let index = self.for_expression(index);
             Expression::ArrayAt {
                 context: b,
-                array: box array,
-                index: box index,
+                array: Box::new(array),
+                index: Box::new(index),
             }
         } else {
             panic!("Expected ArrayAt, but got {:?}", ar_at)
@@ -467,7 +467,7 @@ mod test {
             1,
             vec![],
             Type::Unit,
-            vec![Statement::Expression(box Expression::I64(1, 2))],
+            vec![Statement::Expression(Box::new(Expression::I64(1, 2)))],
         ))
         .unwrap();
         m.add_function(RoutineDef::new_function(
@@ -479,7 +479,7 @@ mod test {
                 ty: Type::Bool,
             }],
             Type::Unit,
-            vec![Statement::Expression(box Expression::I64(1, 2))],
+            vec![Statement::Expression(Box::new(Expression::I64(1, 2)))],
         ))
         .unwrap();
         m.add_module(Module::new(m2, 1));
