@@ -71,6 +71,11 @@ impl<'a> Writer for ConsoleWriter<'a> {
         print!("{}", self.string_table.get(s).unwrap());
     }
 
+    fn write_error(&self, e: &dyn crate::compiler::CompilerDisplay) {
+        let s = e.fmt(self.source_map, self.string_table).unwrap();
+        print!("{}", s);
+    }
+
     fn write_text(&self, s: &str) {
         print!("{}", s);
     }

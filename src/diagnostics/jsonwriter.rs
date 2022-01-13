@@ -16,6 +16,9 @@ pub struct JsonWriter<'a, W: Write> {
     /// Output target for the JSON Writer
     writer: RefCell<BufWriter<W>>,
 
+    /// Maps [`Span`]s to files
+    source_map: &'a SourceMap,
+
     /// Maps [`StringId`]s to string values
     string_table: &'a StringTable,
 
@@ -27,9 +30,10 @@ pub struct JsonWriter<'a, W: Write> {
 }
 
 impl<'a, W: Write> JsonWriter<'a, W> {
-    pub fn new(file: W, string_table: &'a StringTable) -> JsonWriter<'a, W> {
+    pub fn new(file: W, source_map: &'a SourceMap, string_table: &'a StringTable) -> JsonWriter<'a, W> {
         let jw = JsonWriter {
             writer: RefCell::new(BufWriter::new(file)),
+            source_map,
             string_table,
             comma_prefix: Cell::new(false),
             event_comma_prefix: Cell::new(false),
@@ -83,6 +87,11 @@ impl<'a, W: Write> Writer for JsonWriter<'a, W> {
     fn write_stringid(&self, s: crate::StringId) {
         let val = self.string_table.get(s).unwrap();
         self.writer.borrow_mut().write(val.as_bytes()).unwrap();
+    }
+
+    fn write_error(&self, e: &dyn crate::compiler::CompilerDisplay) {
+        let s = e.fmt(self.source_map, self.string_table).unwrap();
+        self.write_str(&s);
     }
 
     fn write_text(&self, s: &str) {

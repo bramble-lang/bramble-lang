@@ -61,6 +61,10 @@ where
     pub fn span(&self) -> Span {
         self.span
     }
+
+    pub fn to_compilerdisplay(&self) -> &dyn CompilerDisplay {
+        self
+    }
 }
 
 impl<IE: CompilerDisplay> SourceIr for CompilerError<IE> {

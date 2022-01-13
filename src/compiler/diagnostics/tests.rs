@@ -115,5 +115,9 @@ mod tests {
         fn write_path(&self, _: &crate::compiler::ast::Path) {
             todo!()
         }
+
+        fn write_error(&self, _e: &dyn crate::compiler::CompilerDisplay) {
+            todo!()
+        }
     }
 }
