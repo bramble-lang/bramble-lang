@@ -58,7 +58,7 @@ fn main() -> Result<(), i32> {
 
     // Setup JSON Trace writer
     let trace_file = File::create("./target/trace.json").unwrap();
-    let json_writer = JsonWriter::new(trace_file, &string_table);
+    let json_writer = JsonWriter::new(trace_file, &sourcemap, &string_table);
     if enable_json_tracing(&config) {
         tracer.add_writer(&json_writer);
 
