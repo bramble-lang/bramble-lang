@@ -117,7 +117,11 @@ mod tests {
         }
 
         fn write_u64(&self, _u: u64) {
-        todo!()
-    }
+            todo!()
+        }
+
+        fn write_error(&self, _e: &dyn crate::compiler::CompilerDisplay) {
+            todo!()
+        }
     }
 }

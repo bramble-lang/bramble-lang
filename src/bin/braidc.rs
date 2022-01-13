@@ -32,12 +32,12 @@ fn main() -> Result<(), i32> {
         .expect("Expected an input source file to compile");
     let src_path = Path::new(input);
     let project_name = get_project_name(&src_path).unwrap();
-    let sourcemap = build_source_map(&src_path, BRAID_FILE_EXT).unwrap();
+    let source_map = build_source_map(&src_path, BRAID_FILE_EXT).unwrap();
 
     let manifests: Vec<_> = match read_manifests(&config) {
         Ok(imports) => imports,
         Err(errs) => {
-            print_errs(&errs, &sourcemap, &string_table);
+            print_errs(&errs, &source_map, &string_table);
             return Err(ERR_IMPORT_ERROR);
         }
     };
@@ -51,26 +51,26 @@ fn main() -> Result<(), i32> {
     }
 
     // Setup trace console writer
-    let console_writer = ConsoleWriter::new(&sourcemap, &string_table);
+    let console_writer = ConsoleWriter::new(&source_map, &string_table);
     if enable_tracing(&config) {
         tracer.add_writer(&console_writer);
     }
 
     // Setup JSON Trace writer
     let trace_file = File::create("./target/trace.json").unwrap();
-    let json_writer = JsonWriter::new(trace_file, &string_table);
+    let json_writer = JsonWriter::new(trace_file, &source_map, &string_table);
     if enable_json_tracing(&config) {
         tracer.add_writer(&json_writer);
 
         let source_map_file = File::create("./target/sourcemap.json").unwrap();
-        write_source_map(source_map_file, &sourcemap);
+        write_source_map(source_map_file, &source_map);
     }
 
     let tokenize_time = Instant::now();
-    let token_sets = match tokenize_source_map(&sourcemap, src_path, &string_table, &tracer) {
+    let token_sets = match tokenize_source_map(&source_map, src_path, &string_table, &tracer) {
         Ok(ts) => ts,
         Err(errs) => {
-            print_errs(&errs, &sourcemap, &string_table);
+            print_errs(&errs, &source_map, &string_table);
             return Err(ERR_LEXER_ERROR);
         }
     };
@@ -86,13 +86,13 @@ fn main() -> Result<(), i32> {
     let root = match parse_project(
         project_name_id,
         token_sets,
-        &sourcemap,
+        &source_map,
         &string_table,
         &tracer,
     ) {
         Ok(root) => root,
         Err(errs) => {
-            print_errs(&errs, &sourcemap, &string_table);
+            print_errs(&errs, &source_map, &string_table);
             return Err(ERR_PARSER_ERROR);
         }
     };
@@ -112,7 +112,7 @@ fn main() -> Result<(), i32> {
     let imports = match imports {
         Ok(im) => im,
         Err(msg) => {
-            print_errs(&[msg], &sourcemap, &string_table);
+            print_errs(&[msg], &source_map, &string_table);
             return Err(ERR_IMPORT_ERROR);
         }
     };
@@ -124,7 +124,7 @@ fn main() -> Result<(), i32> {
         match resolve_types_with_imports(&root, main_mod_id, main_fn_id, &imports, &tracer) {
             Ok(ast) => ast,
             Err(msg) => {
-                print_errs(&[msg], &sourcemap, &string_table);
+                print_errs(&[msg], &source_map, &string_table);
                 return Err(ERR_TYPE_CHECK);
             }
         };
@@ -144,7 +144,7 @@ fn main() -> Result<(), i32> {
         &context,
         project_name,
         &imports,
-        &sourcemap,
+        &source_map,
         &string_table,
         &tracer,
     );
@@ -163,7 +163,7 @@ fn main() -> Result<(), i32> {
     llvm.emit_object_code(Path::new(output_target)).unwrap();
 
     if config.is_present("manifest") {
-        let manifest = Manifest::extract(&semantic_ast, &sourcemap, &string_table).unwrap();
+        let manifest = Manifest::extract(&semantic_ast, &source_map, &string_table).unwrap();
         match std::fs::File::create(format!("./target/{}.manifest", project_name))
             .map_err(|e| format!("{}", e))
             .and_then(|mut f| manifest.write(&mut f).map_err(|e| format!("{}", e)))

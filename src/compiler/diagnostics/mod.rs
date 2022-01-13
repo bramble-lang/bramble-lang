@@ -50,6 +50,9 @@ pub trait Writer {
     /// Write text to the current event
     fn write_text(&self, s: &str);
 
+    /// Writes an error message
+    fn write_error(&self, e: &dyn CompilerDisplay);
+
     /// Start writing a new compiler event.  This should emit any tokens which
     /// signal the start of an event.
     fn start_event(&self);
@@ -100,9 +103,15 @@ impl<'a, V: Writable, E: CompilerDisplay + Debug> Writable for Event<'a, V, E> {
         w.write_span("source", self.input);
         match &self.msg {
             Ok(msg) => w.write_field("ok", msg),
-            Err(err) => w.write_field("error", &format!("{:?}", err)),
+            Err(err) => w.write_field("error", err),
         }
         w.stop_event();
+    }
+}
+
+impl<E: CompilerDisplay> Writable for &CompilerError<E> {
+    fn write(&self, w: &dyn Writer) {
+        w.write_error(self.to_compilerdisplay());
     }
 }
 
