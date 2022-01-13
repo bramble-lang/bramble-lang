@@ -2052,19 +2052,20 @@ pub mod tests {
                 _ => panic!("Not a binding statement"),
             }
             match &body[1] {
-                Statement::Expression(box Expression::RoutineCall(
-                    _,
-                    RoutineCall::Function,
-                    fn_name,
-                    params,
-                )) => {
-                    assert_eq!(*fn_name, vec![Element::Id(f)].into());
-                    assert_eq!(params[0], Expression::Identifier(new_ctx(19, 20), x));
+                Statement::Expression(exp) => {
+                    if let Expression::RoutineCall(_, RoutineCall::Function, fn_name, params) =
+                        &**exp
+                    {
+                        assert_eq!(*fn_name, vec![Element::Id(f)].into());
+                        assert_eq!(params[0], Expression::Identifier(new_ctx(19, 20), x));
+                    } else {
+                        panic!("No body");
+                    }
                 }
                 _ => panic!("No body: {:?}", &body[1]),
             }
-            match final_exp {
-                box Expression::BinaryOp(_, BinaryOperator::Mul, l, r) => {
+            match *final_exp {
+                Expression::BinaryOp(_, BinaryOperator::Mul, l, r) => {
                     assert_eq!(*l.as_ref(), Expression::Identifier(new_ctx(23, 24), x));
                     assert_eq!(*r.as_ref(), Expression::Identifier(new_ctx(27, 28), x));
                 }
