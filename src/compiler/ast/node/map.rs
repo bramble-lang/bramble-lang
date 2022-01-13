@@ -147,7 +147,9 @@ where
             Statement::Bind(b) => Statement::Bind(Box::new(self.for_bind(b))),
             Statement::Mutate(m) => Statement::Mutate(Box::new(self.for_mutate(m))),
             Statement::Return(r) => Statement::Return(Box::new(self.for_return(r))),
-            Statement::YieldReturn(yr) => Statement::YieldReturn(Box::new(self.for_yieldreturn(yr))),
+            Statement::YieldReturn(yr) => {
+                Statement::YieldReturn(Box::new(self.for_yieldreturn(yr)))
+            }
             Statement::Expression(e) => Statement::Expression(Box::new(self.for_expression(e))),
         };
         s
@@ -226,7 +228,9 @@ where
                 nbody.push(self.for_statement(e));
             }
 
-            let final_exp = final_exp.as_ref().map(|fe| Box::new(self.for_expression(fe)));
+            let final_exp = final_exp
+                .as_ref()
+                .map(|fe| Box::new(self.for_expression(fe)));
             Expression::ExpressionBlock(b, nbody, final_exp)
         } else {
             panic!("Expected ExpressionBlock, but got {:?}", block)
@@ -275,7 +279,9 @@ where
             let b = self.transform(if_exp);
             let cond = self.for_expression(cond);
             let if_arm = self.for_expression(if_arm);
-            let else_arm = else_arm.as_ref().map(|ea| Box::new(self.for_expression(ea)));
+            let else_arm = else_arm
+                .as_ref()
+                .map(|ea| Box::new(self.for_expression(ea)));
             Expression::If {
                 context: b,
                 cond: Box::new(cond),

@@ -77,8 +77,12 @@ pub struct Event<'a, V: Writable, E: CompilerDisplay + Debug> {
 }
 
 impl<'a, V: Writable, E: CompilerDisplay + Debug> Event<'a, V, E> {
-    pub fn new(stage: &'a str, input: Span, msg: Result<V, &'a CompilerError<E>>) -> Event<'a, V, E> {
-        Event{stage, input, msg}
+    pub fn new(
+        stage: &'a str,
+        input: Span,
+        msg: Result<V, &'a CompilerError<E>>,
+    ) -> Event<'a, V, E> {
+        Event { stage, input, msg }
     }
 }
 

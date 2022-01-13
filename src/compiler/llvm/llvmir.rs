@@ -510,11 +510,8 @@ impl<'ctx> IrGen<'ctx> {
     }
 
     fn record<IR: Writable>(&self, span: Span, ir: IR) {
-        self.logger.write(Event::<_, ParserError>::new(
-            "llvm",
-            span,
-            Ok(ir),
-        ))
+        self.logger
+            .write(Event::<_, ParserError>::new("llvm", span, Ok(ir)))
     }
 }
 

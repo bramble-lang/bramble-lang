@@ -632,7 +632,7 @@ impl<'a> Lexer<'a> {
         })
         .map(|ok| {
             ok.as_ref().map(|token| {
-                self.logger.write(Event::<_, LexerError>::new( 
+                self.logger.write(Event::<_, LexerError>::new(
                     "lexer",
                     token.span,
                     Ok("Primitive"),
