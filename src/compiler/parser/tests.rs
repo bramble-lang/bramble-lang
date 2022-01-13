@@ -1246,8 +1246,12 @@ pub mod tests {
                 panic!("Expected Expression block");
             }
 
-            if let Some(Expression::ExpressionBlock(_l, _body, Some(final_exp))) = else_arm {
-                assert_eq!(*final_exp, Expression::I64(new_ctx(17, 18), 7));
+            if let Some(exp) = else_arm {
+                if let Expression::ExpressionBlock(_l, _body, Some(final_exp)) = *exp {
+                    assert_eq!(*final_exp, Expression::I64(new_ctx(17, 18), 7));
+                } else {
+                    panic!("Expected Expression block");
+                }
             } else {
                 panic!("Expected Expression block");
             }
@@ -1293,34 +1297,41 @@ pub mod tests {
                 panic!("Expected Expression block");
             }
 
-            if let Some(box Expression::If {
-                cond,
-                if_arm,
-                else_arm,
-                context,
-            }) = else_arm
-            {
-                assert_eq!(context, new_ctx(16, 40));
-                assert_eq!(
-                    *cond,
-                    Expression::BinaryOp(
-                        new_ctx(20, 26),
-                        BinaryOperator::BAnd,
-                        Box::new(Expression::Identifier(new_ctx(20, 21), y)),
-                        Box::new(Expression::Identifier(new_ctx(25, 26), z))
-                    )
-                );
-                if let Expression::ExpressionBlock(_l, _body, Some(final_exp)) = *if_arm {
-                    assert_eq!(*final_exp, Expression::I64(new_ctx(29, 30), 7));
-                } else {
-                    panic!("Expected Expression block");
-                }
-
-                if let Some(box Expression::ExpressionBlock(_l, _body, Some(final_exp))) = else_arm
+            if let Some(exp) = else_arm {
+                if let Expression::If {
+                    cond,
+                    if_arm,
+                    else_arm,
+                    context,
+                } = *exp
                 {
-                    assert_eq!(*final_exp, Expression::I64(new_ctx(38, 39), 8));
+                    assert_eq!(context, new_ctx(16, 40));
+                    assert_eq!(
+                        *cond,
+                        Expression::BinaryOp(
+                            new_ctx(20, 26),
+                            BinaryOperator::BAnd,
+                            Box::new(Expression::Identifier(new_ctx(20, 21), y)),
+                            Box::new(Expression::Identifier(new_ctx(25, 26), z))
+                        )
+                    );
+                    if let Expression::ExpressionBlock(_l, _body, Some(final_exp)) = *if_arm {
+                        assert_eq!(*final_exp, Expression::I64(new_ctx(29, 30), 7));
+                    } else {
+                        panic!("Expected Expression block");
+                    }
+
+                    if let Some(exp) = else_arm {
+                        if let Expression::ExpressionBlock(_l, _body, Some(final_exp)) = *exp {
+                            assert_eq!(*final_exp, Expression::I64(new_ctx(38, 39), 8));
+                        } else {
+                            panic!("Expected Expression block");
+                        }
+                    } else {
+                        panic!("Expected expression block");
+                    }
                 } else {
-                    panic!("Expected Expression block");
+                    panic!("Expected if statement in else arm");
                 }
             } else {
                 panic!("Expected if statement in else arm");
@@ -1362,7 +1373,7 @@ pub mod tests {
             if let Expression::ExpressionBlock(_ctx, body, None) = *body {
                 assert_eq!(
                     body[0],
-                    Statement::Expression(box Expression::I64(new_ctx(11, 13), 5))
+                    Statement::Expression(Box::new(Expression::I64(new_ctx(11, 13), 5)))
                 );
             } else {
                 panic!("Expected Expression block, got {:?}", *body);
