@@ -10,7 +10,7 @@ use super::{Writable, Writer};
 /// The Event ID module.  This manages the creation of new EventIds and
 /// making sure that event one is provided a value that is unique within
 /// a single execution of the compiler.
-/// 
+///
 /// The EventId is given its own module so that nothing other than the
 /// EventId system can view or interact with the values or assignments
 /// of the IDs themselves.

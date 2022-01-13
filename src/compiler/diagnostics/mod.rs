@@ -13,14 +13,14 @@ use crate::StringId;
 
 use super::{ast::Path, CompilerDisplay, CompilerError, Span};
 
+mod event;
 mod logger;
 mod tests;
 mod view;
-mod event;
 
+pub use event::Event;
 pub use logger::Logger;
 pub use view::*;
-pub use event::Event;
 
 /// Defines a way for the [`Logger`] to write events that are emitted by the
 /// Compiler to the user.
