@@ -7,8 +7,13 @@ use crate::compiler::{CompilerDisplay, CompilerError, Span};
 
 use super::{Writable, Writer};
 
-/// Module for blocking access to any event id information from any other
-/// part of the compiler
+/// The Event ID module.  This manages the creation of new EventIds and
+/// making sure that event one is provided a value that is unique within
+/// a single execution of the compiler.
+/// 
+/// The EventId is given its own module so that nothing other than the
+/// EventId system can view or interact with the values or assignments
+/// of the IDs themselves.
 mod event_id {
     use std::sync::atomic::AtomicU64;
 
