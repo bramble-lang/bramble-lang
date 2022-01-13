@@ -9,17 +9,16 @@
 //! code is being transformed into and why that is happening. The goal is to
 //! provide deep but friendly insight into how the code they write becomes what
 //! the CPU executes.
-
-use std::fmt::Debug;
-
 use crate::StringId;
 
 use super::{ast::Path, CompilerDisplay, CompilerError, Span};
 
+mod event;
 mod logger;
 mod tests;
 mod view;
 
+pub use event::Event;
 pub use logger::Logger;
 pub use view::*;
 
@@ -40,6 +39,9 @@ pub trait Writer {
 
     /// Write a [`StringId`] value to the current event
     fn write_stringid(&self, s: StringId);
+
+    /// Write a [`u64`] value to the current event
+    fn write_u64(&self, u: u64);
 
     /// Write a [`Path`] value to the current event
     fn write_path(&self, p: &Path);
@@ -64,42 +66,6 @@ pub trait Writable {
     /// Uses the given [`Writer`] to write the data in an instance of this type
     /// to an output target.
     fn write(&self, w: &dyn Writer);
-}
-
-/// An event from any stage in the Compiler caused by the given span of source
-/// code.
-pub struct Event<'a, V: Writable, E: CompilerDisplay + Debug> {
-    /// The stage of compilation that generated this event
-    pub stage: &'a str,
-
-    /// The [`Span`] of input source code that caused this event to occur
-    pub input: Span,
-
-    /// A description of the event
-    pub msg: Result<V, &'a CompilerError<E>>,
-}
-
-impl<'a, V: Writable, E: CompilerDisplay + Debug> Event<'a, V, E> {
-    pub fn new(
-        stage: &'a str,
-        input: Span,
-        msg: Result<V, &'a CompilerError<E>>,
-    ) -> Event<'a, V, E> {
-        Event { stage, input, msg }
-    }
-}
-
-impl<'a, V: Writable, E: CompilerDisplay + Debug> Writable for Event<'a, V, E> {
-    fn write(&self, w: &dyn Writer) {
-        w.start_event();
-        w.write_field("stage", &self.stage);
-        w.write_span("source", self.input);
-        match &self.msg {
-            Ok(msg) => w.write_field("ok", msg),
-            Err(err) => w.write_field("error", err),
-        }
-        w.stop_event();
-    }
 }
 
 impl<E: CompilerDisplay> Writable for &CompilerError<E> {

@@ -265,11 +265,11 @@ impl<'a> Lexer<'a> {
             }
 
             let (_, span) = branch.merge().unwrap();
-            self.logger.write(Event::<_, LexerError> {
-                stage: "lexer",
-                input: span,
-                msg: Ok("Block Comment"),
-            });
+            self.logger.write(Event::<_, LexerError>::new(
+                "lexer",
+                span,
+                Ok("Block Comment"),
+            ));
         }
     }
 

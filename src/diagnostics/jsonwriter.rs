@@ -30,7 +30,11 @@ pub struct JsonWriter<'a, W: Write> {
 }
 
 impl<'a, W: Write> JsonWriter<'a, W> {
-    pub fn new(file: W, source_map: &'a SourceMap, string_table: &'a StringTable) -> JsonWriter<'a, W> {
+    pub fn new(
+        file: W,
+        source_map: &'a SourceMap,
+        string_table: &'a StringTable,
+    ) -> JsonWriter<'a, W> {
         let jw = JsonWriter {
             writer: RefCell::new(BufWriter::new(file)),
             source_map,
@@ -81,6 +85,11 @@ impl<'a, W: Write> Writer for JsonWriter<'a, W> {
 
     fn write_str(&self, s: &str) {
         let js = format!("\"{}\"", s);
+        self.writer.borrow_mut().write(js.as_bytes()).unwrap();
+    }
+
+    fn write_u64(&self, u: u64) {
+        let js = format!("{}", u);
         self.writer.borrow_mut().write(js.as_bytes()).unwrap();
     }
 
