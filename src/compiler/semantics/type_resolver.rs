@@ -1083,19 +1083,19 @@ impl<'a> TypeResolver<'a> {
 
     fn record<N: Node<SemanticContext>>(&self, n: &N, refs: Vec<Span>) {
         let ctx = n.context();
-        self.logger.write(Event::<_, SemanticError> {
-            stage: "type-resolver",
-            input: ctx.span(),
-            msg: Ok(TypeOk { ty: ctx.ty(), refs }),
-        });
+        self.logger.write(Event::<_, SemanticError>::new(
+            "type-resolver",
+            ctx.span(),
+            Ok(TypeOk { ty: ctx.ty(), refs }),
+        ));
     }
 
     fn record_err(&self, e: &CompilerError<SemanticError>) {
-        self.logger.write(Event::<TypeOk, SemanticError> {
-            stage: "type-resolver",
-            input: e.span(),
-            msg: Err(e),
-        });
+        self.logger.write(Event::<TypeOk, SemanticError>::new(
+            "type-resolver",
+            e.span(),
+            Err(e),
+        ));
     }
 
     /// Check that the given [`Type`] is valid. If it is a custom type, such as

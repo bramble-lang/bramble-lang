@@ -76,6 +76,16 @@ pub struct Event<'a, V: Writable, E: CompilerDisplay + Debug> {
     pub msg: Result<V, &'a CompilerError<E>>,
 }
 
+impl<'a, V: Writable, E: CompilerDisplay + Debug> Event<'a, V, E> {
+    pub fn new(
+        stage: &'a str,
+        input: Span,
+        msg: Result<V, &'a CompilerError<E>>,
+    ) -> Event<'a, V, E> {
+        Event { stage, input, msg }
+    }
+}
+
 impl<'a, V: Writable, E: CompilerDisplay + Debug> Writable for Event<'a, V, E> {
     fn write(&self, w: &dyn Writer) {
         w.start_event();
