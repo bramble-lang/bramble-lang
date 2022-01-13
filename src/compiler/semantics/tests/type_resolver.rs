@@ -167,7 +167,7 @@ mod type_resolver_tests {
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
                     let ret_stm = &fn_main.get_body()[1];
                     assert_eq!(ret_stm.context().ty(), expected_ty);
-                    if let Statement::Return(box r) = ret_stm {
+                    if let Statement::Return(r) = ret_stm {
                         assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {
                         panic!("Expected a return statement")
@@ -439,7 +439,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
             let ast = parser.parse(test, &tokens).unwrap().unwrap();
             let result = resolve_types(&ast, main_mod, main_fn, &logger).unwrap();
             if let Item::Routine(RoutineDef { body, .. }) = &result.get_functions()[0] {
-                if let Statement::Bind(box b) = &body[0] {
+                if let Statement::Bind(b) = &body[0] {
                     if let Expression::StructExpression(_, struct_name, ..) = b.get_rhs() {
                         let expected: Path =
                             vec![Element::CanonicalRoot, Element::Id(test), Element::Id(test)]
@@ -876,7 +876,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
 
                     // validate that the RHS of the bind is the correct type
                     let bind_stm = &fn_main.get_body()[0];
-                    if let Statement::Bind(box b) = bind_stm {
+                    if let Statement::Bind(b) = bind_stm {
                         assert_eq!(
                             bind_stm.context().ty(),
                             expected_ty,
@@ -896,7 +896,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     // Validate that the return statement is the correct type
                     let ret_stm = &fn_main.get_body()[1];
                     assert_eq!(ret_stm.context().ty(), expected_ty);
-                    if let Statement::Return(box r) = ret_stm {
+                    if let Statement::Return(r) = ret_stm {
                         assert_eq!(
                             r.get_value().clone().unwrap().get_type(),
                             expected_ty,
@@ -1005,7 +1005,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
                     let ret_stm = &fn_main.get_body()[1];
                     assert_eq!(ret_stm.context().ty(), expected_ty);
-                    if let Statement::Return(box r) = ret_stm {
+                    if let Statement::Return(r) = ret_stm {
                         assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {
                         panic!("Expected a return statement")
@@ -1077,7 +1077,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
 
                     // validate that the RHS of the bind is the correct type
                     let bind_stm = &fn_main.get_body()[0];
-                    if let Statement::Bind(box b) = bind_stm {
+                    if let Statement::Bind(b) = bind_stm {
                         assert_eq!(bind_stm.context().ty(), Type::I64);
                         assert_eq!(b.get_rhs().get_type(), expected_ty);
                     } else {
@@ -1087,7 +1087,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     // Validate that the return statement is the correct type
                     let ret_stm = &fn_main.get_body()[1];
                     assert_eq!(ret_stm.context().ty(), expected_ty);
-                    if let Statement::Return(box r) = ret_stm {
+                    if let Statement::Return(r) = ret_stm {
                         assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {
                         panic!("Expected a return statement")
@@ -1161,7 +1161,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     assert_eq!(bind_stm.context().ty(), Type::I64);
 
                     // validate that the RHS of the bind is the correct type
-                    if let Statement::Bind(box b) = bind_stm {
+                    if let Statement::Bind(b) = bind_stm {
                         assert_eq!(b.get_rhs().get_type(), expected_ty);
                     } else {
                         panic!("Expected a bind statement");
@@ -1170,7 +1170,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     // Validate that the return statement is the correct type
                     let ret_stm = &fn_main.get_body()[1];
                     assert_eq!(ret_stm.context().ty(), expected_ty);
-                    if let Statement::Return(box r) = ret_stm {
+                    if let Statement::Return(r) = ret_stm {
                         assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {
                         panic!("Expected a return statement")
@@ -1244,7 +1244,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     assert_eq!(bind_stm.context().ty(), Type::Bool);
 
                     // validate that the RHS of the bind is the correct type
-                    if let Statement::Bind(box b) = bind_stm {
+                    if let Statement::Bind(b) = bind_stm {
                         assert_eq!(b.get_rhs().get_type(), expected_ty);
                     } else {
                         panic!("Expected a bind statement");
@@ -1253,7 +1253,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     // Validate that the return statement is the correct type
                     let ret_stm = &fn_main.get_body()[1];
                     assert_eq!(ret_stm.context().ty(), expected_ty);
-                    if let Statement::Return(box r) = ret_stm {
+                    if let Statement::Return(r) = ret_stm {
                         assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {
                         panic!("Expected a return statement")
@@ -1327,7 +1327,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     assert_eq!(bind_stm.context().ty(), Type::Bool);
 
                     // validate that the RHS of the bind is the correct type
-                    if let Statement::Bind(box b) = bind_stm {
+                    if let Statement::Bind(b) = bind_stm {
                         assert_eq!(b.get_rhs().get_type(), expected_ty);
                     } else {
                         panic!("Expected a bind statement");
@@ -1336,7 +1336,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     // Validate that the return statement is the correct type
                     let ret_stm = &fn_main.get_body()[1];
                     assert_eq!(ret_stm.context().ty(), expected_ty);
-                    if let Statement::Return(box r) = ret_stm {
+                    if let Statement::Return(r) = ret_stm {
                         assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {
                         panic!("Expected a return statement")
@@ -1413,7 +1413,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                         assert_eq!(bind_stm.get_type(), Type::Bool);
 
                         // validate that the RHS of the bind is the correct type
-                        if let Statement::Bind(box b) = bind_stm {
+                        if let Statement::Bind(b) = bind_stm {
                             assert_eq!(b.get_rhs().get_type(), expected_ty);
                         } else {
                             panic!("Expected a bind statement");
@@ -1422,7 +1422,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                         // Validate that the return statement is the correct type
                         let ret_stm = &fn_main.get_body()[1];
                         assert_eq!(ret_stm.get_type(), expected_ty);
-                        if let Statement::Return(box r) = ret_stm {
+                        if let Statement::Return(r) = ret_stm {
                             assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                         } else {
                             panic!("Expected a return statement")
@@ -1470,7 +1470,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
             let fn_main = module.get_functions()[0].to_routine().unwrap();
 
             let bind_stm = &fn_main.get_body()[0];
-            assert_eq!(bind_stm.context().ty(), Type::Array(box Type::I64, 2));
+            assert_eq!(bind_stm.context().ty(), Type::Array(Box::new(Type::I64), 2));
         }
     }
 
@@ -1556,7 +1556,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     assert_eq!(bind_stm.context().ty(), expected_ty);
 
                     // validate that the RHS of the bind is the correct type
-                    if let Statement::Bind(box b) = bind_stm {
+                    if let Statement::Bind(b) = bind_stm {
                         assert_eq!(b.get_rhs().get_type(), expected_ty);
                     } else {
                         panic!("Expected a bind statement");
@@ -1565,7 +1565,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     // Validate that the return statement is the correct type
                     let ret_stm = &fn_main.get_body()[2];
                     assert_eq!(ret_stm.context().ty(), expected_ty);
-                    if let Statement::Return(box r) = ret_stm {
+                    if let Statement::Return(r) = ret_stm {
                         assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {
                         panic!("Expected a return statement")
@@ -1675,7 +1675,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     assert_eq!(bind_stm.context().ty(), expected_ty);
 
                     // validate that the RHS of the bind is the correct type
-                    if let Statement::Bind(box b) = bind_stm {
+                    if let Statement::Bind(b) = bind_stm {
                         assert_eq!(b.get_rhs().get_type(), expected_ty);
                     } else {
                         panic!("Expected a bind statement");
@@ -1684,7 +1684,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     // Validate that the return statement is the correct type
                     let ret_stm = &fn_main.get_body()[2];
                     assert_eq!(ret_stm.context().ty(), expected_ty);
-                    if let Statement::Return(box r) = ret_stm {
+                    if let Statement::Return(r) = ret_stm {
                         assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {
                         panic!("Expected a return statement")
@@ -1876,7 +1876,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     // validate that the RHS of the bind is the correct type
                     let bind_stm = &fn_main.get_body()[0];
                     assert_eq!(bind_stm.get_type(), expected_ty, "L{}", ln);
-                    if let Statement::Bind(box b) = bind_stm {
+                    if let Statement::Bind(b) = bind_stm {
                         assert_eq!(b.get_rhs().get_type(), expected_ty);
                     } else {
                         panic!("Expected a bind statement");
@@ -1885,7 +1885,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     // validate the return statement is typed correctly
                     let ret_stm = &fn_main.get_body()[1];
                     assert_eq!(ret_stm.get_type(), expected_ty);
-                    if let Statement::Return(box r) = ret_stm {
+                    if let Statement::Return(r) = ret_stm {
                         assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {
                         panic!("Expected a return statement")
@@ -1971,7 +1971,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     assert_eq!(bind_stm.get_type(), Type::I64);
 
                     // validate that the RHS of the bind is the correct type
-                    if let Statement::Bind(box b) = bind_stm {
+                    if let Statement::Bind(b) = bind_stm {
                         assert_eq!(b.get_rhs().get_type(), expected_ty);
                     } else {
                         panic!("Expected a bind statement");
@@ -1980,7 +1980,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     // validate the mutate statement is typed correctly
                     let mut_stm = &fn_main.get_body()[1];
                     assert_eq!(mut_stm.get_type(), Type::I64);
-                    if let Statement::Mutate(box m) = mut_stm {
+                    if let Statement::Mutate(m) = mut_stm {
                         assert_eq!(m.get_rhs().get_type(), expected_ty);
                     } else {
                         panic!("Expected a return statement")
@@ -2061,7 +2061,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     // Check the return value
                     let ret_stm = &fn_main.get_body()[0];
                     assert_eq!(ret_stm.get_type(), expected_ty);
-                    if let Statement::Return(box r) = ret_stm {
+                    if let Statement::Return(r) = ret_stm {
                         let value_ty = r
                             .get_value()
                             .clone()
@@ -2177,7 +2177,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     // Check the return value
                     let ret_stm = &fn_main.get_body()[0];
                     assert_eq!(ret_stm.get_type(), expected_ty);
-                    if let Statement::Return(box r) = ret_stm {
+                    if let Statement::Return(r) = ret_stm {
                         let value_ty = r
                             .get_value()
                             .clone()
@@ -2351,7 +2351,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     // Check the return value
                     let ret_stm = &fn_main.get_body()[0];
                     assert_eq!(ret_stm.get_type(), expected_ty);
-                    if let Statement::Return(box r) = ret_stm {
+                    if let Statement::Return(r) = ret_stm {
                         let value_ty = r.get_value().clone().map(|v| v.get_type().clone()).unwrap_or(Type::Unit);
                         assert_eq!(value_ty, expected_ty);
                     } else {
@@ -2473,7 +2473,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     assert_eq!(bind_stm.get_type(), expected_ty);
 
                     // validate that the RHS of the bind is the correct type
-                    if let Statement::Bind(box b) = bind_stm {
+                    if let Statement::Bind(b) = bind_stm {
                         assert_eq!(b.get_rhs().get_type(), expected_ty);
                     } else {
                         panic!("Expected a bind statement, got {:?}", bind_stm);
@@ -2574,7 +2574,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     assert_eq!(yret_stm.get_type(), Type::I64);
 
                     // validate that the RHS of the yield return is the correct type
-                    if let Statement::YieldReturn(box yr) = yret_stm {
+                    if let Statement::YieldReturn(yr) = yret_stm {
                         match yr.get_value() {
                             None => panic!("Expected a value"),
                             Some(v) => assert_eq!(v.get_type(), expected_ty),
@@ -2662,7 +2662,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     assert_eq!(bind_stm.get_type(), Type::I64);
 
                     // validate that the RHS of the bind is the correct type
-                    if let Statement::Bind(box b) = bind_stm {
+                    if let Statement::Bind(b) = bind_stm {
                         assert_eq!(b.get_rhs().get_type(), expected_ty);
                     } else {
                         panic!("Expected a bind statement, got {:?}", bind_stm);
@@ -2735,7 +2735,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     // Check the return value
                     let ret_stm = &fn_main.get_body()[0];
                     assert_eq!(ret_stm.get_type(), expected_ty);
-                    if let Statement::Return(box r) = ret_stm {
+                    if let Statement::Return(r) = ret_stm {
                         let value_ty = r
                             .get_value()
                             .clone()
@@ -2813,7 +2813,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     // Check the return value
                     let ret_stm = &co_main.get_body()[0];
                     assert_eq!(ret_stm.get_type(), expected_ty);
-                    if let Statement::Return(box r) = ret_stm {
+                    if let Statement::Return(r) = ret_stm {
                         let value_ty = r
                             .get_value()
                             .clone()
@@ -2921,7 +2921,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
 
                     // Check the return value
                     if expected_ty != Type::Unit {
-                        if let Statement::Bind(box b) = bind_stm {
+                        if let Statement::Bind(b) = bind_stm {
                             let rhs_ty = b.get_rhs().get_type();
                             assert_eq!(rhs_ty, expected_ty);
                         } else {
@@ -3005,7 +3005,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
 
                     // Check the return value
                     if expected_ty != Type::Unit {
-                        if let Statement::Bind(box b) = bind_stm {
+                        if let Statement::Bind(b) = bind_stm {
                             let rhs_ty = b.get_rhs().get_type();
                             assert_eq!(rhs_ty, expected_ty);
                         } else {

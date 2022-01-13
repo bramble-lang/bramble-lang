@@ -1721,39 +1721,39 @@ pub mod tests {
                 "a[1]",
                 Expression::ArrayAt {
                     context: new_ctx(0, 4),
-                    array: box Expression::Identifier(new_ctx(0, 1), a),
-                    index: box Expression::I64(new_ctx(2, 3), 1),
+                    array: Box::new(Expression::Identifier(new_ctx(0, 1), a)),
+                    index: Box::new(Expression::I64(new_ctx(2, 3), 1)),
                 },
             ),
             (
                 "(a)[1]",
                 Expression::ArrayAt {
                     context: new_ctx(0, 6),
-                    array: box Expression::Identifier(new_ctx(0, 3), a),
-                    index: box Expression::I64(new_ctx(4, 5), 1),
+                    array: Box::new(Expression::Identifier(new_ctx(0, 3), a)),
+                    index: Box::new(Expression::I64(new_ctx(4, 5), 1)),
                 },
             ),
             (
                 "a.b[1]",
                 Expression::ArrayAt {
                     context: new_ctx(0, 6),
-                    array: box Expression::MemberAccess(
+                    array: Box::new(Expression::MemberAccess(
                         new_ctx(0, 3),
-                        box Expression::Identifier(new_ctx(0, 1), a),
+                        Box::new(Expression::Identifier(new_ctx(0, 1), a)),
                         b,
-                    ),
-                    index: box Expression::I64(new_ctx(4, 5), 1),
+                    )),
+                    index: Box::new(Expression::I64(new_ctx(4, 5), 1)),
                 },
             ),
             (
                 "a[1].b",
                 Expression::MemberAccess(
                     new_ctx(0, 6),
-                    box Expression::ArrayAt {
+                    Box::new(Expression::ArrayAt {
                         context: new_ctx(0, 4),
-                        array: box Expression::Identifier(new_ctx(0, 1), a),
-                        index: box Expression::I64(new_ctx(2, 3), 1),
-                    },
+                        array: Box::new(Expression::Identifier(new_ctx(0, 1), a)),
+                        index: Box::new(Expression::I64(new_ctx(2, 3), 1)),
+                    }),
                     b,
                 ),
             ),
@@ -1761,40 +1761,40 @@ pub mod tests {
                 "a[0].b[1]",
                 Expression::ArrayAt {
                     context: new_ctx(0, 9),
-                    array: box Expression::MemberAccess(
+                    array: Box::new(Expression::MemberAccess(
                         new_ctx(0, 6),
-                        box Expression::ArrayAt {
+                        Box::new(Expression::ArrayAt {
                             context: new_ctx(0, 4),
-                            array: box Expression::Identifier(new_ctx(0, 1), a),
-                            index: box Expression::I64(new_ctx(2, 3), 0),
-                        },
+                            array: Box::new(Expression::Identifier(new_ctx(0, 1), a)),
+                            index: Box::new(Expression::I64(new_ctx(2, 3), 0)),
+                        }),
                         b,
-                    ),
-                    index: box Expression::I64(new_ctx(7, 8), 1),
+                    )),
+                    index: Box::new(Expression::I64(new_ctx(7, 8), 1)),
                 },
             ),
             (
                 "a[1][2]",
                 Expression::ArrayAt {
                     context: new_ctx(0, 7),
-                    array: box Expression::ArrayAt {
+                    array: Box::new(Expression::ArrayAt {
                         context: new_ctx(0, 4),
-                        array: box Expression::Identifier(new_ctx(0, 1), a),
-                        index: box Expression::I64(new_ctx(2, 3), 1),
-                    },
-                    index: box Expression::I64(new_ctx(5, 6), 2),
+                        array: Box::new(Expression::Identifier(new_ctx(0, 1), a)),
+                        index: Box::new(Expression::I64(new_ctx(2, 3), 1)),
+                    }),
+                    index: Box::new(Expression::I64(new_ctx(5, 6), 2)),
                 },
             ),
             (
                 "((a)[1])[2]",
                 Expression::ArrayAt {
                     context: new_ctx(0, 11),
-                    array: box Expression::ArrayAt {
+                    array: Box::new(Expression::ArrayAt {
                         context: new_ctx(0, 8),
-                        array: box Expression::Identifier(new_ctx(1, 4), a),
-                        index: box Expression::I64(new_ctx(5, 6), 1),
-                    },
-                    index: box Expression::I64(new_ctx(9, 10), 2),
+                        array: Box::new(Expression::Identifier(new_ctx(1, 4), a)),
+                        index: Box::new(Expression::I64(new_ctx(5, 6), 1)),
+                    }),
+                    index: Box::new(Expression::I64(new_ctx(9, 10), 2)),
                 },
             ),
         ] {
