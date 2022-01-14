@@ -59,7 +59,6 @@ pub struct Event<'a, V: Writable, E: CompilerDisplay + Debug> {
 
     // EXPERIMENTAL STUFF
     pub parent_id: Option<event_id::EventId>,
-    dbg: bool,
     stack: Option<Rc<RefCell<Vec<event_id::EventId>>>>,
 }
 
@@ -76,7 +75,6 @@ impl<'a, V: Writable, E: CompilerDisplay + Debug> Event<'a, V, E> {
             stage,
             input,
             msg: Some(msg),
-            dbg: false,
             stack: None,
         }
     }
@@ -93,14 +91,12 @@ impl<'a, V: Writable, E: CompilerDisplay + Debug> Event<'a, V, E> {
         // Push the new event on to the stack
         (*stack).borrow_mut().push(id);
 
-        println!("Creating: {:?} [{:?}]", id, pid);
         Event {
             id,
             parent_id: pid,
             stage,
             input,
             msg: None,
-            dbg: true,
             stack: Some(stack),
         }
     }
@@ -131,10 +127,6 @@ impl<'a, V: Writable, E: CompilerDisplay + Debug> Drop for Event<'a, V, E> {
                 }
             },
             None => (),
-        }
-
-        if self.dbg {
-            println!("Dropping: {:?} [{:?}]", self.id, self.input);
         }
     }
 }
