@@ -705,6 +705,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Return<SemanticContext> {
     type Value = InstructionValue<'ctx>;
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
+        let event = llvm.new_event(self.span());
         Some(match self.get_value() {
             None => llvm.builder.build_return(None),
             Some(val) => {
@@ -728,7 +729,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Return<SemanticContext> {
                 }
             }
         })
-        .view(|ir| llvm.record(self.span(), ir))
+        .view(|ir| llvm.record2(event, ir))
     }
 }
 
@@ -995,8 +996,9 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     .unwrap()
                     .into_basic_type()
                     .unwrap();
+                let alloca_event = llvm.new_event(self.span());
                 let a_ptr = llvm.builder.build_alloca(a_llvm_ty, "");
-                llvm.record2(event, &a_ptr);
+                llvm.record2(alloca_event, &a_ptr);
 
                 // Compute the results for each element of the array value
                 let elements_llvm: Vec<_> = elements
@@ -1027,7 +1029,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 }
 
                 // The arch value of this expression is the ptr to the array
-                Some(a_ptr.into()).view(|ir| llvm.record(self.span(), ir))
+                Some(a_ptr.into()).view(|ir| llvm.record2(event, ir))
             }
             ast::Expression::ArrayAt {
                 context: meta,
