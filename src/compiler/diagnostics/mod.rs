@@ -18,8 +18,8 @@ mod logger;
 mod tests;
 mod view;
 
-pub use event::Event;
 pub use event::event_id::EventId;
+pub use event::Event;
 pub use logger::Logger;
 pub use view::*;
 
