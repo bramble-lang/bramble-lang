@@ -9,7 +9,7 @@
 use std::{
     collections::{HashMap, HashSet},
     convert::TryFrom,
-    error::Error,
+    error::Error, rc::Rc, cell::RefCell,
 };
 
 use inkwell::{
@@ -27,7 +27,7 @@ use inkwell::{
 use crate::{
     compiler::{
         ast::{Element, Parameter, StructDef},
-        diagnostics::{Event, Logger, View, Writable},
+        diagnostics::{Event, Logger, View, Writable, EventId},
         import::{Import, ImportRoutineDef, ImportStructDef},
         parser::{ParserContext, ParserError},
         source::SourceIr,
@@ -65,6 +65,7 @@ pub struct IrGen<'ctx> {
     string_table: &'ctx StringTable,
     source_map: &'ctx SourceMap,
     logger: &'ctx Logger<'ctx>,
+    event_stack: Rc<RefCell<Vec<EventId>>>,
 }
 
 impl<'ctx> IrGen<'ctx> {
@@ -88,6 +89,7 @@ impl<'ctx> IrGen<'ctx> {
             source_map,
             string_table,
             logger,
+            event_stack: Rc::new(RefCell::new(Vec::new())),
         }
     }
 
@@ -516,7 +518,7 @@ impl<'ctx> IrGen<'ctx> {
 
     /// Start an event for a span, but do not set the result of the event
     fn new_event<'a, IR: Writable>(&self, span: Span) -> Event<'a, IR, ParserError> {
-        Event::new_empty("llvm", span)
+        Event::new_empty("llvm", span, self.event_stack.clone())
     }
 
     /// Record the result of an event
