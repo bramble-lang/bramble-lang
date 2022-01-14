@@ -101,12 +101,6 @@ impl<'a, V: Writable, E: CompilerDisplay + Debug> Event<'a, V, E> {
         }
     }
 
-    /// Set the parent id of this event
-    pub fn with_parent(mut self, parent_id: event_id::EventId) -> Self {
-        self.parent_id = Some(parent_id);
-        self
-    }
-
     /// Set the Result of this event
     pub fn with_msg(mut self, msg: Result<V, &'a CompilerError<E>>) -> Self {
         self.msg = Some(msg);
