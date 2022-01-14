@@ -1,7 +1,7 @@
 //! The Events which can be created by the compiler for the purpose
 //! of tracing and visibility into what the compiler is doing.
 
-use std::{fmt::Debug, rc::Rc, cell::RefCell, borrow::BorrowMut};
+use std::{fmt::Debug, rc::Rc, cell::RefCell};
 
 use crate::compiler::{CompilerDisplay, CompilerError, Span};
 
