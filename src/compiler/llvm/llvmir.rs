@@ -570,6 +570,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::RoutineDef<SemanticContext> {
     type Value = FunctionValue<'ctx>;
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
+        let event = llvm.new_event(self.span());
         let fn_name = self
             .context
             .canonical_path()
@@ -585,7 +586,6 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::RoutineDef<SemanticContext> {
         let llvm_params = fn_value.get_params();
         let num_params = llvm_params.len();
 
-        llvm.record(self.span(), &fn_value);
 
         // If the function returns a structure, then the first parameter will
         // be the return parameter.
@@ -618,6 +618,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::RoutineDef<SemanticContext> {
         }
 
         llvm.registers.close_fn().unwrap();
+        llvm.record2(event, &fn_value);
 
         Some(fn_value)
     }
