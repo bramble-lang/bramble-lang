@@ -7,9 +7,11 @@
 /// Module. Resulting IR can then be fed into the LLVM Compiler to compile
 /// into native assembly or into a JIT.
 use std::{
+    cell::RefCell,
     collections::{HashMap, HashSet},
     convert::TryFrom,
-    error::Error, rc::Rc, cell::RefCell,
+    error::Error,
+    rc::Rc,
 };
 
 use inkwell::{
@@ -27,7 +29,7 @@ use inkwell::{
 use crate::{
     compiler::{
         ast::{Element, Parameter, StructDef},
-        diagnostics::{Event, Logger, View, Writable, EventId},
+        diagnostics::{Event, EventId, Logger, View, Writable},
         import::{Import, ImportRoutineDef, ImportStructDef},
         parser::{ParserContext, ParserError},
         source::SourceIr,
@@ -512,8 +514,12 @@ impl<'ctx> IrGen<'ctx> {
     }
 
     fn record<IR: Writable>(&self, span: Span, ir: IR) {
-        self.logger
-            .write(Event::<_, ParserError>::new("llvm", span, Ok(ir)))
+        self.logger.write(Event::<_, ParserError>::new_with_stack(
+            "llvm",
+            span,
+            Ok(ir),
+            self.event_stack.clone(),
+        ))
     }
 
     /// Start an event for a span, but do not set the result of the event
@@ -795,9 +801,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     Some(val).view(|ir| llvm.record(self.span(), ir))
                 }
             }
-            ast::Expression::UnaryOp(_, op, exp) => {
-                Some(op.to_llvm_ir(llvm, exp, self.span()))
-            }
+            ast::Expression::UnaryOp(_, op, exp) => Some(op.to_llvm_ir(llvm, exp, self.span())),
             ast::Expression::BinaryOp(_, op, l, r) => Some(op.to_llvm_ir(llvm, l, r, self.span())),
             ast::Expression::RoutineCall(meta, call, name, params) => call
                 .to_llvm_ir(llvm, name, params, self.get_type(), self.span())

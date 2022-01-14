@@ -1,7 +1,7 @@
 //! The Events which can be created by the compiler for the purpose
 //! of tracing and visibility into what the compiler is doing.
 
-use std::{fmt::Debug, rc::Rc, cell::RefCell};
+use std::{cell::RefCell, fmt::Debug, rc::Rc};
 
 use crate::compiler::{CompilerDisplay, CompilerError, Span};
 
@@ -79,7 +79,38 @@ impl<'a, V: Writable, E: CompilerDisplay + Debug> Event<'a, V, E> {
         }
     }
 
-    pub fn new_empty(stage: &'a str, input: Span, stack: Rc<RefCell<Vec<event_id::EventId>>>) -> Event<'a, V, E> {
+    pub fn new_with_stack(
+        stage: &'a str,
+        input: Span,
+        msg: Result<V, &'a CompilerError<E>>,
+        stack: Rc<RefCell<Vec<event_id::EventId>>>,
+    ) -> Event<'a, V, E> {
+        let id = event_id::EventId::new();
+
+        // If the stack is not empty, then use the top as the parent id
+        let pid = match stack.borrow().last() {
+            Some(pid) => Some(*pid),
+            None => None,
+        };
+
+        // Push the new event on to the stack
+        (*stack).borrow_mut().push(id);
+
+        Event {
+            id,
+            parent_id: pid,
+            stage,
+            input,
+            msg: Some(msg),
+            stack: Some(stack),
+        }
+    }
+
+    pub fn new_empty(
+        stage: &'a str,
+        input: Span,
+        stack: Rc<RefCell<Vec<event_id::EventId>>>,
+    ) -> Event<'a, V, E> {
         let id = event_id::EventId::new();
 
         // If the stack is not empty, then use the top as the parent id
@@ -119,7 +150,7 @@ impl<'a, V: Writable, E: CompilerDisplay + Debug> Drop for Event<'a, V, E> {
                     Some(top_id) if top_id == self.id => (),
                     _ => panic!("Event popped off stack did not match the event being dropped"),
                 }
-            },
+            }
             None => (),
         }
     }
