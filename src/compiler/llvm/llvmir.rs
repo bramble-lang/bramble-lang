@@ -514,14 +514,15 @@ impl<'ctx> IrGen<'ctx> {
             .write(Event::<_, ParserError>::new("llvm", span, Ok(ir)))
     }
 
-    fn new_event<'a, IR: Writable>() -> Event<'a, IR, ParserError> {
-        todo!()
+    /// Start an event for a span, but do not set the result of the event
+    fn new_event<'a, IR: Writable>(&self, span: Span) -> Event<'a, IR, ParserError> {
+        Event::new_empty("llvm", span)
     }
 
-    fn record2<IR: Writable>(&self, evt: Event::<IR, ParserError>, ir: IR) {
+    /// Record the result of an event
+    fn record2<IR: Writable>(&self, evt: Event<IR, ParserError>, ir: IR) {
         let event = evt.with_msg(Ok(ir));
-        self.logger
-            .write(event)
+        self.logger.write(event)
     }
 }
 
@@ -722,7 +723,6 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
         // TODO[EVENT]: Creat the Event ID here and set its parent ID and Set its Span but not its STATE (OK/ERROR)
-        // let event = llvm.new_event(self.span());
         match self {
             ast::Expression::U8(_, i) => {
                 let u8t = llvm.context.i8_type();
@@ -764,7 +764,8 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
             }
             ast::Expression::Boolean(_, b) => {
                 let bt = llvm.context.bool_type();
-                Some(bt.const_int(*b as u64, true).into()).view(|ir| llvm.record(self.span(), ir))
+                let event = llvm.new_event::<&BasicValueEnum>(self.span());
+                Some(bt.const_int(*b as u64, true).into()).view(|ir| llvm.record2(event, ir))
             }
             ast::Expression::StringLiteral(_, s) => {
                 let val = llvm.string_table.get(*s).unwrap();
@@ -792,7 +793,9 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     Some(val).view(|ir| llvm.record(self.span(), ir))
                 }
             }
-            ast::Expression::UnaryOp(_, op, exp) => Some(op.to_llvm_ir(llvm, exp, self.span())),
+            ast::Expression::UnaryOp(_, op, exp) => {
+                Some(op.to_llvm_ir(llvm, exp, self.span()))
+            }
             ast::Expression::BinaryOp(_, op, l, r) => Some(op.to_llvm_ir(llvm, l, r, self.span())),
             ast::Expression::RoutineCall(meta, call, name, params) => call
                 .to_llvm_ir(llvm, name, params, self.get_type(), self.span())
@@ -1056,6 +1059,7 @@ impl ast::UnaryOperator {
         right: &ast::Expression<SemanticContext>,
         span: Span,
     ) -> BasicValueEnum<'ctx> {
+        let event = llvm.new_event(span);
         let r = right.to_llvm_ir(llvm).expect("Expected a value");
         let rv = r.into_int_value();
         let op = match self {
@@ -1063,7 +1067,7 @@ impl ast::UnaryOperator {
             ast::UnaryOperator::Not => llvm.builder.build_not(rv, "").into(),
         };
 
-        llvm.record(span, &op);
+        llvm.record2(event, &op);
 
         op
     }

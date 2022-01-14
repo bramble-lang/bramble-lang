@@ -58,12 +58,8 @@ pub struct Event<'a, V: Writable, E: CompilerDisplay + Debug> {
 
     /// A description of the event
     pub msg: Option<Result<V, &'a CompilerError<E>>>,
-}
 
-impl<'a, V: Writable, E: CompilerDisplay + Debug> Drop for Event<'a, V, E> {
-    fn drop(&mut self) {
-        println!("Dropping: {:?}", self.id);
-    }
+    dbg: bool,
 }
 
 impl<'a, V: Writable, E: CompilerDisplay + Debug> Event<'a, V, E> {
@@ -73,13 +69,26 @@ impl<'a, V: Writable, E: CompilerDisplay + Debug> Event<'a, V, E> {
         msg: Result<V, &'a CompilerError<E>>,
     ) -> Event<'a, V, E> {
         let id = event_id::EventId::new();
-        println!("Creating: {:?}", id);
         Event {
             id,
             parent_id: None,
             stage,
             input,
             msg: Some(msg),
+            dbg: false,
+        }
+    }
+
+    pub fn new_empty(stage: &'a str, input: Span) -> Event<'a, V, E> {
+        let id = event_id::EventId::new();
+        println!("Creating: {:?}", id);
+        Event {
+            id,
+            parent_id: None,
+            stage,
+            input,
+            msg: None,
+            dbg: true,
         }
     }
 
@@ -96,6 +105,14 @@ impl<'a, V: Writable, E: CompilerDisplay + Debug> Event<'a, V, E> {
     }
 }
 
+impl<'a, V: Writable, E: CompilerDisplay + Debug> Drop for Event<'a, V, E> {
+    fn drop(&mut self) {
+        if self.dbg {
+            println!("Dropping: {:?} [{:?}]", self.id, self.input);
+        }
+    }
+}
+
 impl<'a, V: Writable, E: CompilerDisplay + Debug> Writable for Event<'a, V, E> {
     fn write(&self, w: &dyn Writer) {
         w.start_event();
@@ -109,7 +126,7 @@ impl<'a, V: Writable, E: CompilerDisplay + Debug> Writable for Event<'a, V, E> {
         match &self.msg {
             Some(Ok(msg)) => w.write_field("ok", msg),
             Some(Err(err)) => w.write_field("error", err),
-            None =>(),
+            None => (),
         }
         w.stop_event();
     }
