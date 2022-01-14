@@ -329,7 +329,7 @@ impl<'ctx> IrGen<'ctx> {
         );
 
         let llvm_fn_decl = self.module.get_function(&label).unwrap();
-        self.record(ex.span(), &llvm_fn_decl);
+        self.record_terminal(ex.span(), &llvm_fn_decl);
     }
 
     /// Takes a tuple describing the signature of an function (internal or external) to the
@@ -423,7 +423,7 @@ impl<'ctx> IrGen<'ctx> {
             .collect();
         let struct_ty = self.context.opaque_struct_type(&name);
         struct_ty.set_body(&fields_llvm, false);
-        self.record(sd.span(), &struct_ty);
+        self.record_terminal(sd.span(), &struct_ty);
     }
 
     /// Add a struct definition to the LLVM context and module.
@@ -480,7 +480,7 @@ impl<'ctx> IrGen<'ctx> {
                 dest.get_type().get_element_type().size_of().unwrap(),
             )
             .unwrap();
-        self.record(span, &mc);
+        self.record_terminal(span, &mc);
     }
 
     /// If the LLVM builder cursor is currently within a function, this will
@@ -513,7 +513,8 @@ impl<'ctx> IrGen<'ctx> {
         )
     }
 
-    fn record<IR: Writable>(&self, span: Span, ir: IR) {
+    /// Creates and records an event which does have any children.
+    fn record_terminal<IR: Writable>(&self, span: Span, ir: IR) {
         self.logger.write(Event::<_, ParserError>::new_with_stack(
             "llvm",
             span,
@@ -522,13 +523,14 @@ impl<'ctx> IrGen<'ctx> {
         ))
     }
 
-    /// Start an event for a span, but do not set the result of the event
+    /// Start a new event with no set Result. Events created after this poing and
+    /// before this [`Event`] is dropped will be descendents of this [`Event`].
     fn new_event<'a, IR: Writable>(&self, span: Span) -> Event<'a, IR, ParserError> {
         Event::new_empty("llvm", span, self.event_stack.clone())
     }
 
     /// Record the result of an event
-    fn record2<IR: Writable>(&self, evt: Event<IR, ParserError>, ir: IR) {
+    fn record<IR: Writable>(&self, evt: Event<IR, ParserError>, ir: IR) {
         let event = evt.with_msg(Ok(ir));
         self.logger.write(event)
     }
@@ -605,9 +607,9 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::RoutineDef<SemanticContext> {
             let pptr = llvm
                 .builder
                 .build_alloca(llvm_params[pi].get_type(), &pname);
-            llvm.record(param.span(), &pptr);
+            llvm.record_terminal(param.span(), &pptr);
             let st = llvm.builder.build_store(pptr, llvm_params[pi]);
-            llvm.record(param.span(), &st);
+            llvm.record_terminal(param.span(), &st);
             llvm.registers.insert(&pname, pptr.into()).unwrap();
         }
 
@@ -617,7 +619,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::RoutineDef<SemanticContext> {
         }
 
         llvm.registers.close_fn().unwrap();
-        llvm.record2(event, &fn_value);
+        llvm.record(event, &fn_value);
 
         Some(fn_value)
     }
@@ -658,7 +660,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticContext> {
 
                 let event = llvm.new_event(self.span());
                 let dest = llvm.builder.build_alloca(ty, &name);
-                llvm.record2(event, &dest);
+                llvm.record(event, &dest);
 
                 llvm.build_memcpy(dest, rhs_ptr, self.span());
 
@@ -668,18 +670,18 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticContext> {
             Ok(ty) => {
                 let event = llvm.new_event(self.span());
                 let ptr = llvm.builder.build_alloca(ty, &name);
-                llvm.record2(event, &ptr);
+                llvm.record(event, &ptr);
 
                 let event = llvm.new_event(self.span());
                 let st = llvm.builder.build_store(ptr, rhs);
-                llvm.record2(event, &st);
+                llvm.record(event, &st);
 
                 llvm.registers.insert(&name, ptr.into()).unwrap();
                 Some(ptr)
             }
             Err(msg) => panic!("Failed to convert to basic type: {}", msg),
         }
-        .view(|x| llvm.record2(event, x))
+        .view(|x| llvm.record(event, x))
     }
 }
 
@@ -695,7 +697,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Mutate<SemanticContext> {
         let v_ptr = llvm.registers.get(&name).unwrap().into_pointer_value();
 
         let st = llvm.builder.build_store(v_ptr, rhs);
-        llvm.record2(event, &st);
+        llvm.record(event, &st);
 
         Some(v_ptr)
     }
@@ -729,7 +731,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Return<SemanticContext> {
                 }
             }
         })
-        .view(|ir| llvm.record2(event, ir))
+        .view(|ir| llvm.record(event, ir))
     }
 }
 
@@ -743,44 +745,44 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 let u8t = llvm.context.i8_type();
                 // TODO[EVENT]: IN `record` the EVENT STATE is set and then the event is recorded
                 //Some(u8t.const_int(*i as u64, false).into()).view(|ir| llvm.record(event, ir))
-                Some(u8t.const_int(*i as u64, false).into()).view(|ir| llvm.record(self.span(), ir))
+                Some(u8t.const_int(*i as u64, false).into()).view(|ir| llvm.record_terminal(self.span(), ir))
                 // TODO: Is it correct to NOT sign extend for unsigned ints?
             }
             ast::Expression::U16(_, i) => {
                 let u16t = llvm.context.i16_type();
                 Some(u16t.const_int(*i as u64, false).into())
-                    .view(|ir| llvm.record(self.span(), ir)) // TODO: Is it correct to NOT sign extend for unsigned ints?
+                    .view(|ir| llvm.record_terminal(self.span(), ir)) // TODO: Is it correct to NOT sign extend for unsigned ints?
             }
             ast::Expression::U32(_, i) => {
                 let u32t = llvm.context.i32_type();
                 Some(u32t.const_int(*i as u64, false).into())
-                    .view(|ir| llvm.record(self.span(), ir)) // TODO: Is it correct to NOT sign extend for unsigned ints?
+                    .view(|ir| llvm.record_terminal(self.span(), ir)) // TODO: Is it correct to NOT sign extend for unsigned ints?
             }
             ast::Expression::U64(_, i) => {
                 let u64t = llvm.context.i64_type();
                 Some(u64t.const_int(*i as u64, false).into())
-                    .view(|ir| llvm.record(self.span(), ir)) // TODO: Is it correct to NOT sign extend for unsigned ints?
+                    .view(|ir| llvm.record_terminal(self.span(), ir)) // TODO: Is it correct to NOT sign extend for unsigned ints?
             }
             ast::Expression::I8(_, i) => {
                 let i8t = llvm.context.i8_type();
-                Some(i8t.const_int(*i as u64, true).into()).view(|ir| llvm.record(self.span(), ir))
+                Some(i8t.const_int(*i as u64, true).into()).view(|ir| llvm.record_terminal(self.span(), ir))
             }
             ast::Expression::I16(_, i) => {
                 let i16t = llvm.context.i16_type();
-                Some(i16t.const_int(*i as u64, true).into()).view(|ir| llvm.record(self.span(), ir))
+                Some(i16t.const_int(*i as u64, true).into()).view(|ir| llvm.record_terminal(self.span(), ir))
             }
             ast::Expression::I32(_, i) => {
                 let i32t = llvm.context.i32_type();
-                Some(i32t.const_int(*i as u64, true).into()).view(|ir| llvm.record(self.span(), ir))
+                Some(i32t.const_int(*i as u64, true).into()).view(|ir| llvm.record_terminal(self.span(), ir))
             }
             ast::Expression::I64(_, i) => {
                 let i64t = llvm.context.i64_type();
-                Some(i64t.const_int(*i as u64, true).into()).view(|ir| llvm.record(self.span(), ir))
+                Some(i64t.const_int(*i as u64, true).into()).view(|ir| llvm.record_terminal(self.span(), ir))
             }
             ast::Expression::Boolean(_, b) => {
                 let bt = llvm.context.bool_type();
                 let event = llvm.new_event::<&BasicValueEnum>(self.span());
-                Some(bt.const_int(*b as u64, true).into()).view(|ir| llvm.record2(event, ir))
+                Some(bt.const_int(*b as u64, true).into()).view(|ir| llvm.record(event, ir))
             }
             ast::Expression::StringLiteral(_, s) => {
                 let val = llvm.string_table.get(*s).unwrap();
@@ -795,7 +797,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                         .ptr_type(AddressSpace::Generic),
                     "",
                 );
-                Some(bitcast.into()).view(|ir| llvm.record(self.span(), ir))
+                Some(bitcast.into()).view(|ir| llvm.record_terminal(self.span(), ir))
             }
             ast::Expression::Identifier(_, id) => {
                 let name = llvm.string_table.get(*id).unwrap();
@@ -805,7 +807,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     Some(ptr.into())
                 } else {
                     let val = llvm.builder.build_load(ptr, &name);
-                    Some(val).view(|ir| llvm.record(self.span(), ir))
+                    Some(val).view(|ir| llvm.record_terminal(self.span(), ir))
                 }
             }
             ast::Expression::UnaryOp(_, op, exp) => Some(op.to_llvm_ir(llvm, exp, self.span())),
@@ -835,7 +837,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 let then_bb = llvm.context.append_basic_block(current_fn, "then");
                 let else_bb = llvm.context.insert_basic_block_after(then_bb, "else");
                 let merge_bb = llvm.context.insert_basic_block_after(else_bb, "merge");
-                llvm.record2(
+                llvm.record(
                     event,
                     &llvm
                         .builder
@@ -847,14 +849,14 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 let then_arm_val = then_arm.to_llvm_ir(llvm);
                 let then_bb = llvm.builder.get_insert_block().unwrap(); // The builders position may change after compiling the then block
                 let br = llvm.builder.build_unconditional_branch(merge_bb);
-                llvm.record2(event, &br);
+                llvm.record(event, &br);
 
                 let event = llvm.new_event(self.span());
                 llvm.builder.position_at_end(else_bb);
                 let else_arm_val = else_arm.as_ref().map(|ea| ea.to_llvm_ir(llvm)).flatten();
                 let else_bb = llvm.builder.get_insert_block().unwrap(); // The builders position may changing after compiling the else block
                 let br = llvm.builder.build_unconditional_branch(merge_bb);
-                llvm.record2(event, &br);
+                llvm.record(event, &br);
 
                 llvm.builder.position_at_end(merge_bb);
 
@@ -886,7 +888,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 let event = llvm.new_event(self.span());
                 // Emit the logic for checking the while condition
                 let br = llvm.builder.build_unconditional_branch(loop_bb);
-                llvm.record2(event, &br);
+                llvm.record(event, &br);
 
                 let event = llvm.new_event(self.span());
                 llvm.builder.position_at_end(loop_bb);
@@ -895,14 +897,14 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 let br = llvm
                     .builder
                     .build_conditional_branch(cond_val, body_bb, after_bb);
-                llvm.record2(event, &br);
+                llvm.record(event, &br);
 
                 // Emit the code that will evaluate the loop body
                 let event = llvm.new_event(self.span());
                 llvm.builder.position_at_end(body_bb);
                 body.to_llvm_ir(llvm); // The result of the body is not used for anything so ignore it
                 let br = llvm.builder.build_unconditional_branch(loop_bb);
-                llvm.record2(event, &br);
+                llvm.record(event, &br);
 
                 // Position the LLVM Builder cursor to be immediately after the loop
                 llvm.builder.position_at_end(after_bb);
@@ -930,7 +932,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     .builder
                     .build_struct_gep(val_llvm, field_idx as u32, "")
                     .unwrap();
-                llvm.record2(event, &field_ptr);
+                llvm.record(event, &field_ptr);
 
                 // check if the field_ptr element type is an aggregate, if so, return the ptr
                 let el_ty = field_ptr.get_type().get_element_type();
@@ -939,7 +941,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 } else {
                     let event = llvm.new_event(self.span());
                     let field_val = llvm.builder.build_load(field_ptr, "");
-                    Some(field_val).view(|ir| llvm.record2(event, ir))
+                    Some(field_val).view(|ir| llvm.record(event, ir))
                 }
             }
             ast::Expression::StructExpression(_, name, fields) => {
@@ -956,7 +958,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     .expect(&format!("Cannot find {} in {:?}", sname, llvm.struct_table));
                 let sdef_llvm = llvm.module.get_struct_type(&sname).unwrap();
                 let s_ptr = llvm.builder.build_alloca(sdef_llvm, "");
-                llvm.record2(event, &s_ptr);
+                llvm.record(event, &s_ptr);
 
                 // convert field names to field indexes (order of fields in expression may not
                 // be the same as in the defintion)
@@ -972,7 +974,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                         .builder
                         .build_struct_gep(s_ptr, f_idx as u32, "")
                         .unwrap();
-                    llvm.record2(event, &fld_ptr);
+                    llvm.record(event, &fld_ptr);
 
                     let el_ty = fld_ptr.get_type().get_element_type();
                     if el_ty.is_aggregate_type() {
@@ -982,7 +984,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     } else {
                         let event = llvm.new_event(self.span());
                         let st = llvm.builder.build_store(fld_ptr, val);
-                        llvm.record2(event, &st);
+                        llvm.record(event, &st);
                     }
                 }
                 Some(s_ptr.into())
@@ -998,7 +1000,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     .unwrap();
                 let alloca_event = llvm.new_event(self.span());
                 let a_ptr = llvm.builder.build_alloca(a_llvm_ty, "");
-                llvm.record2(alloca_event, &a_ptr);
+                llvm.record(alloca_event, &a_ptr);
 
                 // Compute the results for each element of the array value
                 let elements_llvm: Vec<_> = elements
@@ -1014,7 +1016,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     let llvm_idx = llvm.context.i64_type().const_int(idx, false);
                     let el_ptr =
                         unsafe { llvm.builder.build_gep(a_ptr, &[outer_idx, llvm_idx], "") };
-                    llvm.record2(event, &el_ptr);
+                    llvm.record(event, &el_ptr);
 
                     let el_ty = el_ptr.get_type().get_element_type();
 
@@ -1023,13 +1025,13 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     } else {
                         let event = llvm.new_event(e_span);
                         let st = llvm.builder.build_store(el_ptr, e);
-                        llvm.record2(event, &st);
+                        llvm.record(event, &st);
                     }
                     idx += 1;
                 }
 
                 // The arch value of this expression is the ptr to the array
-                Some(a_ptr.into()).view(|ir| llvm.record2(event, ir))
+                Some(a_ptr.into()).view(|ir| llvm.record(event, ir))
             }
             ast::Expression::ArrayAt {
                 context: meta,
@@ -1054,7 +1056,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     llvm.builder
                         .build_gep(llvm_array_ptr, &[outer_idx, llvm_index], "")
                 };
-                llvm.record2(event, &el_ptr);
+                llvm.record(event, &el_ptr);
 
                 // Load the value pointed to by GEP and return that
                 let el_ty = el_ptr.get_type().get_element_type();
@@ -1063,7 +1065,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 } else {
                     let event = llvm.new_event(self.span());
                     let ld = llvm.builder.build_load(el_ptr, "").into();
-                    llvm.record2(event, &ld);
+                    llvm.record(event, &ld);
                     ld
                 };
 
@@ -1098,7 +1100,7 @@ impl ast::UnaryOperator {
             ast::UnaryOperator::Not => llvm.builder.build_not(rv, "").into(),
         };
 
-        llvm.record2(event, &op);
+        llvm.record(event, &op);
 
         op
     }
@@ -1159,7 +1161,7 @@ impl ast::BinaryOperator {
         }
         .into();
 
-        llvm.record2(event, &op);
+        llvm.record(event, &op);
 
         op
     }
@@ -1199,7 +1201,7 @@ impl ast::RoutineCall {
             let ptr = llvm
                 .builder
                 .build_alloca(out_ty, &format!("_out_{}", target));
-            llvm.record(span, &ptr);
+            llvm.record_terminal(span, &ptr);
             Ok(Some(ptr))
         } else {
             Ok(None)
@@ -1238,7 +1240,7 @@ impl ast::RoutineCall {
                     .get_function(&fn_name)
                     .expect(&format!("Could not find function {}", fn_name));
                 let result = llvm.builder.build_call(call, &llvm_params, "result");
-                llvm.record2(event, &result);
+                llvm.record(event, &result);
                 match out_param {
                     Some(ptr) => Ok(Some(ptr.into())),
                     None => Ok(result.try_as_basic_value().left()),
