@@ -586,7 +586,6 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::RoutineDef<SemanticContext> {
         let llvm_params = fn_value.get_params();
         let num_params = llvm_params.len();
 
-
         // If the function returns a structure, then the first parameter will
         // be the return parameter.
         let start = if llvm.fn_use_out_param.contains(&fn_name) {
@@ -642,6 +641,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticContext> {
     type Value = PointerValue<'ctx>;
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
+        let event = llvm.new_event(self.span());
         let rhs = self.get_rhs().to_llvm_ir(llvm).unwrap();
         let sid = self.get_id();
         let name = llvm.string_table.get(sid).unwrap();
@@ -656,8 +656,9 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticContext> {
             Ok(ty) if ty.is_aggregate_type() => {
                 let rhs_ptr = rhs.into_pointer_value();
 
+                let event = llvm.new_event(self.span());
                 let dest = llvm.builder.build_alloca(ty, &name);
-                llvm.record(self.span(), &dest);
+                llvm.record2(event, &dest);
 
                 llvm.build_memcpy(dest, rhs_ptr, self.span());
 
@@ -665,17 +666,20 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticContext> {
                 Some(dest)
             }
             Ok(ty) => {
+                let event = llvm.new_event(self.span());
                 let ptr = llvm.builder.build_alloca(ty, &name);
-                llvm.record(self.span(), &ptr);
+                llvm.record2(event, &ptr);
 
+                let event = llvm.new_event(self.span());
                 let st = llvm.builder.build_store(ptr, rhs);
-                llvm.record(self.span(), &st);
+                llvm.record2(event, &st);
 
                 llvm.registers.insert(&name, ptr.into()).unwrap();
                 Some(ptr)
             }
             Err(msg) => panic!("Failed to convert to basic type: {}", msg),
         }
+        .view(|x| llvm.record2(event, x))
     }
 }
 
@@ -683,6 +687,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Mutate<SemanticContext> {
     type Value = PointerValue<'ctx>;
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
+        let event = llvm.new_event(self.span());
         let rhs = self.get_rhs().to_llvm_ir(llvm).unwrap();
         let sid = self.get_id();
         let name = llvm.string_table.get(sid).unwrap();
@@ -690,7 +695,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Mutate<SemanticContext> {
         let v_ptr = llvm.registers.get(&name).unwrap().into_pointer_value();
 
         let st = llvm.builder.build_store(v_ptr, rhs);
-        llvm.record(self.span(), &st);
+        llvm.record2(event, &st);
 
         Some(v_ptr)
     }
