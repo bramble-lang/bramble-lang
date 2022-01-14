@@ -644,7 +644,6 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticContext> {
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
         let event = llvm.new_event(self.span());
-        let rhs = self.get_rhs().to_llvm_ir(llvm).unwrap();
         let sid = self.get_id();
         let name = llvm.string_table.get(sid).unwrap();
 
@@ -656,27 +655,29 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Bind<SemanticContext> {
             .into_basic_type()
         {
             Ok(ty) if ty.is_aggregate_type() => {
+                let rhs = self.get_rhs().to_llvm_ir(llvm).unwrap();
                 let rhs_ptr = rhs.into_pointer_value();
 
-                let event = llvm.new_event(self.span());
+                let alloca_event = llvm.new_event(self.span());
                 let dest = llvm.builder.build_alloca(ty, &name);
-                llvm.record(event, &dest);
 
                 llvm.build_memcpy(dest, rhs_ptr, self.span());
 
                 llvm.registers.insert(&name, dest.into()).unwrap();
+                llvm.record(alloca_event, &dest);
                 Some(dest)
             }
             Ok(ty) => {
-                let event = llvm.new_event(self.span());
+                let store_event = llvm.new_event(self.span());
+                let alloca_event = llvm.new_event(self.span());
                 let ptr = llvm.builder.build_alloca(ty, &name);
-                llvm.record(event, &ptr);
 
-                let event = llvm.new_event(self.span());
+                let rhs = self.get_rhs().to_llvm_ir(llvm).unwrap();
                 let st = llvm.builder.build_store(ptr, rhs);
-                llvm.record(event, &st);
 
                 llvm.registers.insert(&name, ptr.into()).unwrap();
+                llvm.record(alloca_event, &ptr);
+                llvm.record(store_event, &st);
                 Some(ptr)
             }
             Err(msg) => panic!("Failed to convert to basic type: {}", msg),
@@ -739,13 +740,11 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
     type Value = BasicValueEnum<'ctx>;
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
-        // TODO[EVENT]: Creat the Event ID here and set its parent ID and Set its Span but not its STATE (OK/ERROR)
         match self {
             ast::Expression::U8(_, i) => {
                 let u8t = llvm.context.i8_type();
-                // TODO[EVENT]: IN `record` the EVENT STATE is set and then the event is recorded
-                //Some(u8t.const_int(*i as u64, false).into()).view(|ir| llvm.record(event, ir))
-                Some(u8t.const_int(*i as u64, false).into()).view(|ir| llvm.record_terminal(self.span(), ir))
+                Some(u8t.const_int(*i as u64, false).into())
+                    .view(|ir| llvm.record_terminal(self.span(), ir))
                 // TODO: Is it correct to NOT sign extend for unsigned ints?
             }
             ast::Expression::U16(_, i) => {
@@ -765,19 +764,23 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
             }
             ast::Expression::I8(_, i) => {
                 let i8t = llvm.context.i8_type();
-                Some(i8t.const_int(*i as u64, true).into()).view(|ir| llvm.record_terminal(self.span(), ir))
+                Some(i8t.const_int(*i as u64, true).into())
+                    .view(|ir| llvm.record_terminal(self.span(), ir))
             }
             ast::Expression::I16(_, i) => {
                 let i16t = llvm.context.i16_type();
-                Some(i16t.const_int(*i as u64, true).into()).view(|ir| llvm.record_terminal(self.span(), ir))
+                Some(i16t.const_int(*i as u64, true).into())
+                    .view(|ir| llvm.record_terminal(self.span(), ir))
             }
             ast::Expression::I32(_, i) => {
                 let i32t = llvm.context.i32_type();
-                Some(i32t.const_int(*i as u64, true).into()).view(|ir| llvm.record_terminal(self.span(), ir))
+                Some(i32t.const_int(*i as u64, true).into())
+                    .view(|ir| llvm.record_terminal(self.span(), ir))
             }
             ast::Expression::I64(_, i) => {
                 let i64t = llvm.context.i64_type();
-                Some(i64t.const_int(*i as u64, true).into()).view(|ir| llvm.record_terminal(self.span(), ir))
+                Some(i64t.const_int(*i as u64, true).into())
+                    .view(|ir| llvm.record_terminal(self.span(), ir))
             }
             ast::Expression::Boolean(_, b) => {
                 let bt = llvm.context.bool_type();
