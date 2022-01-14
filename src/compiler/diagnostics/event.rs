@@ -47,6 +47,8 @@ mod event_id {
 pub struct Event<'a, V: Writable, E: CompilerDisplay + Debug> {
     pub id: event_id::EventId,
 
+    pub parent_id: Option<event_id::EventId>,
+
     /// The stage of compilation that generated this event
     pub stage: &'a str,
 
@@ -66,10 +68,17 @@ impl<'a, V: Writable, E: CompilerDisplay + Debug> Event<'a, V, E> {
         let id = event_id::EventId::new();
         Event {
             id,
+            parent_id: None,
             stage,
             input,
             msg,
         }
+    }
+
+    /// Set the parent id of this event
+    pub fn with_parent(mut self, parent_id: event_id::EventId) -> Self {
+        self.parent_id = Some(parent_id);
+        self
     }
 }
 
@@ -77,6 +86,10 @@ impl<'a, V: Writable, E: CompilerDisplay + Debug> Writable for Event<'a, V, E> {
     fn write(&self, w: &dyn Writer) {
         w.start_event();
         w.write_field("id", &self.id);
+        match &self.parent_id {
+            Some(pid) => w.write_field("parent_id", pid),
+            None => (),
+        }
         w.write_field("stage", &self.stage);
         w.write_span("source", self.input);
         match &self.msg {
