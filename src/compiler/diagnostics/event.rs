@@ -57,7 +57,7 @@ pub struct Event<'a, V: Writable, E: CompilerDisplay + Debug> {
     pub input: Span,
 
     /// A description of the event
-    pub msg: Result<V, &'a CompilerError<E>>,
+    pub msg: Option<Result<V, &'a CompilerError<E>>>,
 }
 
 impl<'a, V: Writable, E: CompilerDisplay + Debug> Drop for Event<'a, V, E> {
@@ -79,13 +79,19 @@ impl<'a, V: Writable, E: CompilerDisplay + Debug> Event<'a, V, E> {
             parent_id: None,
             stage,
             input,
-            msg,
+            msg: Some(msg),
         }
     }
 
     /// Set the parent id of this event
     pub fn with_parent(mut self, parent_id: event_id::EventId) -> Self {
         self.parent_id = Some(parent_id);
+        self
+    }
+
+    /// Set the Result of this event
+    pub fn with_msg(mut self, msg: Result<V, &'a CompilerError<E>>) -> Self {
+        self.msg = Some(msg);
         self
     }
 }
@@ -101,8 +107,9 @@ impl<'a, V: Writable, E: CompilerDisplay + Debug> Writable for Event<'a, V, E> {
         w.write_field("stage", &self.stage);
         w.write_span("source", self.input);
         match &self.msg {
-            Ok(msg) => w.write_field("ok", msg),
-            Err(err) => w.write_field("error", err),
+            Some(Ok(msg)) => w.write_field("ok", msg),
+            Some(Err(err)) => w.write_field("error", err),
+            None =>(),
         }
         w.stop_event();
     }

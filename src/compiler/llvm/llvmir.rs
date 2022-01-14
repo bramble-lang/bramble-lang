@@ -513,6 +513,16 @@ impl<'ctx> IrGen<'ctx> {
         self.logger
             .write(Event::<_, ParserError>::new("llvm", span, Ok(ir)))
     }
+
+    fn new_event<'a, IR: Writable>() -> Event<'a, IR, ParserError> {
+        todo!()
+    }
+
+    fn record2<IR: Writable>(&self, evt: Event::<IR, ParserError>, ir: IR) {
+        let event = evt.with_msg(Ok(ir));
+        self.logger
+            .write(event)
+    }
 }
 
 trait ToLlvmIr<'ctx> {
@@ -711,9 +721,13 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
     type Value = BasicValueEnum<'ctx>;
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
+        // TODO[EVENT]: Creat the Event ID here and set its parent ID and Set its Span but not its STATE (OK/ERROR)
+        // let event = llvm.new_event(self.span());
         match self {
             ast::Expression::U8(_, i) => {
                 let u8t = llvm.context.i8_type();
+                // TODO[EVENT]: IN `record` the EVENT STATE is set and then the event is recorded
+                //Some(u8t.const_int(*i as u64, false).into()).view(|ir| llvm.record(event, ir))
                 Some(u8t.const_int(*i as u64, false).into()).view(|ir| llvm.record(self.span(), ir))
                 // TODO: Is it correct to NOT sign extend for unsigned ints?
             }
