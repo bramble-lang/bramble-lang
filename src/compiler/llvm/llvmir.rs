@@ -1087,6 +1087,7 @@ impl ast::BinaryOperator {
         right: &ast::Expression<SemanticContext>,
         span: Span,
     ) -> BasicValueEnum<'ctx> {
+        let event = llvm.new_event(span);
         let l = left.to_llvm_ir(llvm).expect("Expected a value");
         let r = right.to_llvm_ir(llvm).expect("Expected a value");
         let lv = l.into_int_value();
@@ -1133,7 +1134,7 @@ impl ast::BinaryOperator {
         }
         .into();
 
-        llvm.record(span, &op);
+        llvm.record2(event, &op);
 
         op
     }
