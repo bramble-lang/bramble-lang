@@ -807,7 +807,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 .to_llvm_ir(llvm, name, params, self.get_type(), self.span())
                 .map_err(|e| format!("S{}: {}", self.span(), e))
                 .unwrap(),
-            ast::Expression::ExpressionBlock(_, stmts, exp) => {
+            ast::Expression::ExpressionBlock(meta, stmts, exp) => {
                 llvm.registers.open_local().unwrap();
                 for stmt in stmts {
                     stmt.to_llvm_ir(llvm);
@@ -822,29 +822,32 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 else_arm,
                 ..
             } => {
+                let event = llvm.new_event(self.span());
                 let cond_val = cond.to_llvm_ir(llvm).unwrap().into_int_value();
                 let current_fn = llvm.get_current_fn().unwrap();
                 let then_bb = llvm.context.append_basic_block(current_fn, "then");
                 let else_bb = llvm.context.insert_basic_block_after(then_bb, "else");
                 let merge_bb = llvm.context.insert_basic_block_after(else_bb, "merge");
-                llvm.record(
-                    self.span(),
+                llvm.record2(
+                    event,
                     &llvm
                         .builder
                         .build_conditional_branch(cond_val, then_bb, else_bb),
                 );
 
+                let event = llvm.new_event(self.span());
                 llvm.builder.position_at_end(then_bb);
                 let then_arm_val = then_arm.to_llvm_ir(llvm);
                 let then_bb = llvm.builder.get_insert_block().unwrap(); // The builders position may change after compiling the then block
                 let br = llvm.builder.build_unconditional_branch(merge_bb);
-                llvm.record(self.span(), &br);
+                llvm.record2(event, &br);
 
+                let event = llvm.new_event(self.span());
                 llvm.builder.position_at_end(else_bb);
                 let else_arm_val = else_arm.as_ref().map(|ea| ea.to_llvm_ir(llvm)).flatten();
                 let else_bb = llvm.builder.get_insert_block().unwrap(); // The builders position may changing after compiling the else block
                 let br = llvm.builder.build_unconditional_branch(merge_bb);
-                llvm.record(self.span(), &br);
+                llvm.record2(event, &br);
 
                 llvm.builder.position_at_end(merge_bb);
 
@@ -873,22 +876,26 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 let body_bb = llvm.context.append_basic_block(current_fn, "while_body");
                 let after_bb = llvm.context.append_basic_block(current_fn, "while_end");
 
+                let event = llvm.new_event(self.span());
                 // Emit the logic for checking the while condition
                 let br = llvm.builder.build_unconditional_branch(loop_bb);
-                llvm.record(self.span(), &br);
+                llvm.record2(event, &br);
+
+                let event = llvm.new_event(self.span());
                 llvm.builder.position_at_end(loop_bb);
                 // Test the condition and determine if the loop should be terminated
                 let cond_val = cond.to_llvm_ir(llvm).unwrap().into_int_value();
                 let br = llvm
                     .builder
                     .build_conditional_branch(cond_val, body_bb, after_bb);
-                llvm.record(self.span(), &br);
+                llvm.record2(event, &br);
 
                 // Emit the code that will evaluate the loop body
+                let event = llvm.new_event(self.span());
                 llvm.builder.position_at_end(body_bb);
                 body.to_llvm_ir(llvm); // The result of the body is not used for anything so ignore it
                 let br = llvm.builder.build_unconditional_branch(loop_bb);
-                llvm.record(self.span(), &br);
+                llvm.record2(event, &br);
 
                 // Position the LLVM Builder cursor to be immediately after the loop
                 llvm.builder.position_at_end(after_bb);
@@ -896,6 +903,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 None
             }
             ast::Expression::MemberAccess(_, val, field) => {
+                let event = llvm.new_event(self.span());
                 let sdef = llvm
                     .struct_table
                     .get(
@@ -915,18 +923,20 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     .builder
                     .build_struct_gep(val_llvm, field_idx as u32, "")
                     .unwrap();
-                llvm.record(self.span(), &field_ptr);
+                llvm.record2(event, &field_ptr);
 
                 // check if the field_ptr element type is an aggregate, if so, return the ptr
                 let el_ty = field_ptr.get_type().get_element_type();
                 if el_ty.is_aggregate_type() {
                     Some(field_ptr.into())
                 } else {
+                    let event = llvm.new_event(self.span());
                     let field_val = llvm.builder.build_load(field_ptr, "");
-                    Some(field_val).view(|ir| llvm.record(self.span(), ir))
+                    Some(field_val).view(|ir| llvm.record2(event, ir))
                 }
             }
             ast::Expression::StructExpression(_, name, fields) => {
+                let event = llvm.new_event(self.span());
                 let sname = self
                     .context()
                     .ty()
@@ -939,7 +949,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     .expect(&format!("Cannot find {} in {:?}", sname, llvm.struct_table));
                 let sdef_llvm = llvm.module.get_struct_type(&sname).unwrap();
                 let s_ptr = llvm.builder.build_alloca(sdef_llvm, "");
-                llvm.record(self.span(), &s_ptr);
+                llvm.record2(event, &s_ptr);
 
                 // convert field names to field indexes (order of fields in expression may not
                 // be the same as in the defintion)
@@ -949,12 +959,13 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     .collect();
 
                 for (f_idx, e) in idx_fields {
+                    let event = llvm.new_event(e.span());
                     let val = e.to_llvm_ir(llvm).unwrap();
                     let fld_ptr = llvm
                         .builder
                         .build_struct_gep(s_ptr, f_idx as u32, "")
                         .unwrap();
-                    llvm.record(e.span(), &fld_ptr);
+                    llvm.record2(event, &fld_ptr);
 
                     let el_ty = fld_ptr.get_type().get_element_type();
                     if el_ty.is_aggregate_type() {
@@ -962,13 +973,15 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                         let val_ptr = val.into_pointer_value();
                         llvm.build_memcpy(fld_ptr, val_ptr, self.span());
                     } else {
+                        let event = llvm.new_event(self.span());
                         let st = llvm.builder.build_store(fld_ptr, val);
-                        llvm.record(self.span(), &st);
+                        llvm.record2(event, &st);
                     }
                 }
                 Some(s_ptr.into())
             }
             ast::Expression::ArrayExpression(meta, elements, len) => {
+                let event = llvm.new_event(self.span());
                 let a_ty = meta.ty();
                 let a_llvm_ty = a_ty
                     .to_llvm_ir(llvm)
@@ -977,7 +990,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     .into_basic_type()
                     .unwrap();
                 let a_ptr = llvm.builder.build_alloca(a_llvm_ty, "");
-                llvm.record(self.span(), &a_ptr);
+                llvm.record2(event, &a_ptr);
 
                 // Compute the results for each element of the array value
                 let elements_llvm: Vec<_> = elements
@@ -989,18 +1002,20 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 let mut idx = 0;
                 let outer_idx = llvm.context.i64_type().const_int(0, false);
                 for (e, e_span) in elements_llvm {
+                    let event = llvm.new_event(e_span);
                     let llvm_idx = llvm.context.i64_type().const_int(idx, false);
                     let el_ptr =
                         unsafe { llvm.builder.build_gep(a_ptr, &[outer_idx, llvm_idx], "") };
-                    llvm.record(e_span, &el_ptr);
+                    llvm.record2(event, &el_ptr);
 
                     let el_ty = el_ptr.get_type().get_element_type();
 
                     if el_ty.is_aggregate_type() {
                         llvm.build_memcpy(el_ptr, e.into_pointer_value(), self.span());
                     } else {
+                        let event = llvm.new_event(e_span);
                         let st = llvm.builder.build_store(el_ptr, e);
-                        llvm.record(e_span, &st);
+                        llvm.record2(event, &st);
                     }
                     idx += 1;
                 }
@@ -1013,6 +1028,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 array,
                 index,
             } => {
+                let event = llvm.new_event(self.span());
                 // evalute the array to get the ptr to the array
                 // Check the array type, if it's not a pointer then get the GEP
                 let llvm_array_ptr = match array.to_llvm_ir(llvm) {
@@ -1030,15 +1046,16 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     llvm.builder
                         .build_gep(llvm_array_ptr, &[outer_idx, llvm_index], "")
                 };
-                llvm.record(self.span(), &el_ptr);
+                llvm.record2(event, &el_ptr);
 
                 // Load the value pointed to by GEP and return that
                 let el_ty = el_ptr.get_type().get_element_type();
                 let el_val = if el_ty.is_aggregate_type() {
                     el_ptr.into()
                 } else {
+                    let event = llvm.new_event(self.span());
                     let ld = llvm.builder.build_load(el_ptr, "").into();
-                    llvm.record(self.span(), &ld);
+                    llvm.record2(event, &ld);
                     ld
                 };
 
@@ -1191,6 +1208,7 @@ impl ast::RoutineCall {
     ) -> Result<Option<BasicValueEnum<'ctx>>> {
         match self {
             ast::RoutineCall::Function | ast::RoutineCall::Extern => {
+                let event = llvm.new_event(span);
                 // Check if the function returns a struct, if it does then create a local struct
                 // and pass that as the first parameter
                 let fn_name = self.to_label(llvm, target);
@@ -1212,7 +1230,7 @@ impl ast::RoutineCall {
                     .get_function(&fn_name)
                     .expect(&format!("Could not find function {}", fn_name));
                 let result = llvm.builder.build_call(call, &llvm_params, "result");
-                llvm.record(span, &result);
+                llvm.record2(event, &result);
                 match out_param {
                     Some(ptr) => Ok(Some(ptr.into())),
                     None => Ok(result.try_as_basic_value().left()),
