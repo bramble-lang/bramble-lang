@@ -89,7 +89,7 @@ impl<'a, V: Writable, E: CompilerDisplay + Debug> Event<'a, V, E> {
     }
 
     /// Create a new compiler [`Event`] and assign the result.
-    pub fn new(
+    pub fn new_with_result(
         stage: &'a str,
         input: Span,
         msg: Result<V, &'a CompilerError<E>>,
@@ -117,7 +117,7 @@ impl<'a, V: Writable, E: CompilerDisplay + Debug> Event<'a, V, E> {
     }
 
     /// Create a new compiler [`Event`] without a result.
-    pub fn new_without_result(
+    pub fn new(
         stage: &'a str,
         input: Span,
         stack: Rc<RefCell<Vec<event_id::EventId>>>,
