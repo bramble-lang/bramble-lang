@@ -1,4 +1,4 @@
-use crate::compiler::diagnostics::{Event, View, ViewErr};
+use crate::compiler::diagnostics::{Event, View};
 use crate::compiler::source::SourceIr;
 use crate::compiler::Span;
 use crate::compiler::{
@@ -29,6 +29,7 @@ impl<'a> Parser<'a> {
         evt: Event<&str, ParserError>,
         r: Result<&str, &CompilerError<ParserError>>,
     ) {
+        let evt = evt.with_msg(r);
         self.logger.write(evt)
     }
 
@@ -50,32 +51,41 @@ impl<'a> Parser<'a> {
         // Create the module that represents the source code unit as a whole (usually the file)
         // give it span that covers the entire set of tokens
         let file_module_event = self.new_event(Span::zero());
-        let module_ctx = ctx_over_tokens(&tokens)
+        ctx_over_tokens(&tokens)
             .ok_or(CompilerError::new(Span::zero(), ParserError::EmptyProject))
-            .view_err(|err| self.record(file_module_event, Err(&err)))?;
-        let mut module = Module::new(name, module_ctx);
+            .and_then(|module_ctx| {
+                let mut module = Module::new(name, module_ctx);
 
-        // Create the token stream.
-        let mut stream = TokenStream::new(&tokens, self.logger)
-            .ok_or(CompilerError::new(Span::zero(), ParserError::EmptyProject))
-            .view_err(|err| self.record_terminal(err.span(), Err(&err)))?;
+                // Create the token stream.
+                let mut stream = TokenStream::new(&tokens, self.logger)
+                    .ok_or(CompilerError::new(Span::zero(), ParserError::EmptyProject))
+                    //.view_err(|err| self.record_terminal(err.span(), Err(&err)))
+                    ?;
 
-        while stream.peek().is_some() {
-            let start_index = stream.index();
-            self.parse_items_into(&mut stream, &mut module)?;
+                while stream.peek().is_some() {
+                    let start_index = stream.index();
+                    self.parse_items_into(&mut stream, &mut module)?;
 
-            if stream.index() == start_index {
-                return err!(
-                    stream.peek().unwrap().span(),
-                    ParserError::Locked(stream.peek().map(|t| t.clone()))
-                )
-                .view_err(|err| self.record_terminal(err.span(), Err(&err)));
-            }
-        }
+                    if stream.index() == start_index {
+                        return err!(
+                            stream.peek().unwrap().span(),
+                            ParserError::Locked(stream.peek().map(|t| t.clone()))
+                        );
+                        /*.view_err(|err| {
+                            self.record(file_module_event.with_span(err.span()), Err(&err))
+                        });*/
+                    }
+                }
 
-        Ok(Some(module)).map(|ok| {
-            ok.view(|v| self.record(file_module_event.with_span(v.span()), Ok("File Module")))
-        })
+                Ok(Some(module))
+                /*.map(|ok| {
+                    ok.view(|v| {
+                        self.record(file_module_event.with_span(v.span()), Ok("File Module"))
+                    })
+                })*/
+            })
+            .view(|v| self.record(file_module_event.with_span(v.span()), Ok("File Module")))
+        //.view_err(|err| self.record(file_module_event, Err(&err)))?;
     }
 
     fn module(&self, stream: &mut TokenStream) -> ParserResult<Module<ParserContext>> {
@@ -94,13 +104,13 @@ impl<'a> Parser<'a> {
                         .join(*module.context());
                     *module.get_context_mut() = ctx;
                     Ok(Some(module))
-                        .map(|ok| ok.view(|v| self.record(event.with_span(v.span()), Ok("Module"))))
+                    //.map(|ok| ok.view(|v| self.record(event.with_span(v.span()), Ok("Module"))))
                 }
-                _ => err!(module.span(), ParserError::ModExpectedName)
-                    .view_err(|err| self.record(event.with_span(err.span()), Err(&err))),
+                _ => err!(module.span(), ParserError::ModExpectedName), //.view_err(|err| self.record(event.with_span(err.span()), Err(&err))),
             },
             None => Ok(None),
         }
+        .map(|ok| ok.view(|v| self.record(event.with_span(v.span()), Ok("Module"))))
     }
 
     fn parse_items_into(
@@ -136,9 +146,6 @@ impl<'a> Parser<'a> {
             if let Some(f) = self.function_def(stream)? {
                 items.push(Item::Routine(f));
             }
-            if let Some(c) = self.coroutine_def(stream)? {
-                items.push(Item::Routine(c));
-            }
 
             if let Some(s) = self.struct_def(stream)? {
                 items.push(Item::Struct(s));
@@ -166,27 +173,28 @@ impl<'a> Parser<'a> {
             Some(extern_tok) => match self.function_decl(stream, true)? {
                 Some((fn_ctx, fn_name, params, has_varargs, fn_type)) => {
                     if has_varargs && params.len() == 0 {
-                        return err!(fn_ctx.span(), ParserError::ExternInvalidVarArgs)
-                            .view_err(|err| self.record(event.with_span(err.span()), Err(&err)));
+                        err!(fn_ctx.span(), ParserError::ExternInvalidVarArgs)
+                        //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)));
+                    } else {
+                        let ctx = stream
+                            .next_must_be(&Lex::Semicolon)?
+                            .to_ctx()
+                            .join(extern_tok.to_ctx());
+                        Ok(Some(Extern::new(
+                            fn_name,
+                            ctx,
+                            params,
+                            has_varargs,
+                            fn_type,
+                        )))
+                        //.view(|v| self.record(event.with_span(v.span()), Ok("Extern Definition")))
                     }
-                    let ctx = stream
-                        .next_must_be(&Lex::Semicolon)?
-                        .to_ctx()
-                        .join(extern_tok.to_ctx());
-                    Ok(Some(Extern::new(
-                        fn_name,
-                        ctx,
-                        params,
-                        has_varargs,
-                        fn_type,
-                    )))
-                    .view(|v| self.record(event.with_span(v.span()), Ok("Extern Definition")))
                 }
-                None => err!(extern_tok.span(), ParserError::ExternExpectedFnDecl)
-                    .view_err(|err| self.record(event.with_span(err.span()), Err(&err))),
+                None => err!(extern_tok.span(), ParserError::ExternExpectedFnDecl), //.view_err(|err| self.record(event.with_span(err.span()), Err(&err))),
             },
             None => Ok(None),
         }
+        .view(|v| self.record(event.with_span(v.span()), Ok("Extern Definition")))
     }
 
     fn struct_def(&self, stream: &mut TokenStream) -> ParserResult<StructDef<ParserContext>> {
@@ -209,45 +217,47 @@ impl<'a> Parser<'a> {
             None => Ok(None),
         }
         .map(|ok| ok.view(|v| self.record(event.with_span(v.span()), Ok("Struct Definition"))))
-        .view_err(|err| self.record(event.with_span(err.span()), Err(&err)))
+        //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))
     }
 
     fn function_def(&self, stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserContext>> {
         let event = self.new_event(Span::zero());
-        let (fn_ctx, fn_name, params, fn_type) = match self.function_decl(stream, false)? {
+        match self.function_decl(stream, false)? {
             Some((ctx, name, params, is_variadic, ret_ty)) => {
                 if is_variadic {
-                    return err!(ctx.span(), ParserError::FnVarArgsNotAllowed)
-                        .view_err(|err| self.record(event.with_span(err.span()), Err(&err)));
+                    err!(ctx.span(), ParserError::FnVarArgsNotAllowed)
+                    //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)));
+                } else {
+                    Ok((ctx, name, params, ret_ty))
                 }
-                (ctx, name, params, ret_ty)
             }
             None => return Ok(None),
-        };
-
-        stream.next_must_be(&Lex::LBrace)?;
-        let mut stmts = self.fn_body(stream)?;
-
-        match self.return_stmt(stream)? {
-            Some(ret) => stmts.push(Statement::Return(Box::new(ret))),
-            None => {
-                return err!(
-                    fn_ctx.span(),
-                    ParserError::FnExpectedReturn(stream.peek().map(|t| t.clone()))
-                )
-                .view_err(|err| self.record(event.with_span(err.span()), Err(&err)));
-            }
         }
-        let ctx = stream.next_must_be(&Lex::RBrace)?.to_ctx().join(fn_ctx);
+        .and_then(|(fn_ctx, fn_name, params, fn_type)| {
+            stream.next_must_be(&Lex::LBrace)?;
+            let mut stmts = self.fn_body(stream)?;
 
-        Ok(Some(RoutineDef {
-            context: ctx,
-            def: RoutineDefType::Function,
-            name: fn_name,
-            params,
-            ret_ty: fn_type,
-            body: stmts,
-        }))
+            match self.return_stmt(stream)? {
+                Some(ret) => stmts.push(Statement::Return(Box::new(ret))),
+                None => {
+                    return err!(
+                        fn_ctx.span(),
+                        ParserError::FnExpectedReturn(stream.peek().map(|t| t.clone()))
+                    );
+                    //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)));
+                }
+            }
+            let ctx = stream.next_must_be(&Lex::RBrace)?.to_ctx().join(fn_ctx);
+
+            Ok(Some(RoutineDef {
+                context: ctx,
+                def: RoutineDefType::Function,
+                name: fn_name,
+                params,
+                ret_ty: fn_type,
+                body: stmts,
+            }))
+        })
         .view(|v| self.record(event.with_span(v.span()), Ok("Function Definition")))
     }
 
@@ -268,94 +278,35 @@ impl<'a> Parser<'a> {
             None => return Ok(None),
         };
 
-        let (fn_name, fn_def_span) = stream
+        stream
             .next_if_id()
             .ok_or(CompilerError::new(
                 fn_ctx.span(),
                 ParserError::FnExpectedIdentifierAfterFn,
             ))
-            .view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
-        fn_ctx = fn_ctx.extend(fn_def_span);
+            //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
+            .and_then(|(fn_name, fn_def_span)| {
+                fn_ctx = fn_ctx.extend(fn_def_span);
 
-        let (params, has_varargs, params_ctx) = self.fn_def_params(stream, allow_var_args)?;
-        let fn_ctx = params_ctx.join(fn_ctx);
+                let (params, has_varargs, params_ctx) =
+                    self.fn_def_params(stream, allow_var_args)?;
+                let fn_ctx = params_ctx.join(fn_ctx);
 
-        let (fn_type, fn_type_ctx) = if stream.next_if(&Lex::LArrow).is_some() {
-            self.consume_type(stream)?
-                .ok_or(CompilerError::new(
-                    fn_ctx.span(),
-                    ParserError::FnExpectedTypeAfterArrow,
-                ))
-                .view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?
-        } else {
-            (Type::Unit, fn_ctx)
-        };
-        let fn_ctx = fn_type_ctx.join(fn_ctx);
-
-        Ok(Some((fn_ctx, fn_name, params, has_varargs, fn_type))).map(|ok| {
-            ok.view(|v| self.record(event.with_span(v.0.span()), Ok("Routine Declaration")))
-        })
-    }
-
-    fn coroutine_def(&self, stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserContext>> {
-        let event = self.new_event(Span::zero());
-        let ctx = match stream.next_if(&Lex::CoroutineDef) {
-            Some(co) => co.to_ctx(),
-            None => return Ok(None),
-        };
-
-        let (co_name, _) = stream
-            .next_if_id()
-            .ok_or(CompilerError::new(
-                ctx.span(),
-                ParserError::CoExpectedIdentifierAfterCo,
-            ))
-            .view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
-        let (params, has_varargs, _) = self.fn_def_params(stream, false)?;
-
-        if has_varargs {
-            return err!(ctx.span(), ParserError::FnVarArgsNotAllowed)
-                .view_err(|err| self.record(event.with_span(err.span()), Err(&err)));
-        }
-
-        let co_type = match stream.next_if(&Lex::LArrow) {
-            Some(t) => {
-                self.consume_type(stream)?
-                    .ok_or(CompilerError::new(
-                        t.span(),
+                let (fn_type, fn_type_ctx) = if stream.next_if(&Lex::LArrow).is_some() {
+                    self.consume_type(stream)?.ok_or(CompilerError::new(
+                        fn_ctx.span(),
                         ParserError::FnExpectedTypeAfterArrow,
-                    ))
-                    .view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?
-                    .0
-            }
-            _ => Type::Unit,
-        };
+                    ))?
+                    //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?
+                } else {
+                    (Type::Unit, fn_ctx)
+                };
+                let fn_ctx = fn_type_ctx.join(fn_ctx);
 
-        stream.next_must_be(&Lex::LBrace)?;
-        let mut stmts = self.co_block(stream)?;
-
-        match self.return_stmt(stream)? {
-            Some(ret) => stmts.push(Statement::Return(Box::new(ret))),
-            None => {
-                let span = stmts.last().map_or(ctx.span(), |s| s.context().span());
-                return err!(
-                    span,
-                    ParserError::FnExpectedReturn(stream.peek().map(|t| t.clone()))
-                )
-                .view_err(|err| self.record(event.with_span(err.span()), Err(&err)));
-            }
-        }
-        let ctx = stream.next_must_be(&Lex::RBrace)?.to_ctx().join(ctx);
-
-        Ok(Some(RoutineDef {
-            context: ctx,
-            def: RoutineDefType::Coroutine,
-            name: co_name,
-            params,
-            ret_ty: co_type,
-            body: stmts,
-        }))
-        .view(|v| self.record(event.with_span(v.span()), Ok("Coroutine Definition")))
+                Ok(Some((fn_ctx, fn_name, params, has_varargs, fn_type))).map(|ok| {
+                    ok.view(|v| self.record(event.with_span(v.0.span()), Ok("Routine Declaration")))
+                })
+            })
     }
 
     pub(super) fn fn_body(
@@ -512,8 +463,8 @@ impl<'a> Parser<'a> {
                     span
                 }
                 _ => {
-                    return err!(path_sep.span(), ParserError::PathExpectedIdentifier)
-                        .view_err(|err| self.record(event.with_span(err.span()), Err(&err)));
+                    return err!(path_sep.span(), ParserError::PathExpectedIdentifier);
+                    //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)));
                 }
             };
             ctx = ctx.extend(span);
@@ -579,40 +530,39 @@ impl<'a> Parser<'a> {
         match stream.next_if(&Lex::LBracket) {
             Some(lbracket) => {
                 let ctx = lbracket.to_ctx();
-                let (element_ty, _) = self
-                    .consume_type(stream)?
+                self.consume_type(stream)?
                     .ok_or(CompilerError::new(
                         ctx.span(),
                         ParserError::ArrayDeclExpectedType,
                     ))
-                    .view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
-                stream.next_must_be(&Lex::Semicolon)?;
+                    //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
+                    .and_then(|(element_ty, _)| {
+                        stream.next_must_be(&Lex::Semicolon)?;
 
-                let len = self
-                    .expression(stream)?
-                    .ok_or(CompilerError::new(
-                        ctx.span(),
-                        ParserError::ArrayDeclExpectedSize,
-                    ))
-                    .view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
-                let len = match len {
-                    Expression::U8(_, l) => l as usize,
-                    Expression::U16(_, l) => l as usize,
-                    Expression::U32(_, l) => l as usize,
-                    Expression::U64(_, l) => l as usize,
-                    Expression::I8(_, l) => l as usize,
-                    Expression::I16(_, l) => l as usize,
-                    Expression::I32(_, l) => l as usize,
-                    Expression::I64(_, l) => l as usize,
-                    _ => return err!(len.span(), ParserError::ArrayExpectedIntLiteral),
-                };
+                        let len = self.expression(stream)?.ok_or(CompilerError::new(
+                            ctx.span(),
+                            ParserError::ArrayDeclExpectedSize,
+                        ))?;
+                        //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
+                        let len = match len {
+                            Expression::U8(_, l) => l as usize,
+                            Expression::U16(_, l) => l as usize,
+                            Expression::U32(_, l) => l as usize,
+                            Expression::U64(_, l) => l as usize,
+                            Expression::I8(_, l) => l as usize,
+                            Expression::I16(_, l) => l as usize,
+                            Expression::I32(_, l) => l as usize,
+                            Expression::I64(_, l) => l as usize,
+                            _ => return err!(len.span(), ParserError::ArrayExpectedIntLiteral),
+                        };
 
-                let ctx = stream.next_must_be(&Lex::RBracket)?.to_ctx().join(ctx);
-                Ok(Some((Type::Array(Box::new(element_ty), len), ctx)))
-                    .view(|v| self.record(event.with_span(v.1.span()), Ok("Array Type")))
+                        let ctx = stream.next_must_be(&Lex::RBracket)?.to_ctx().join(ctx);
+                        Ok(Some((Type::Array(Box::new(element_ty), len), ctx)))
+                    })
             }
             None => Ok(None),
         }
+        .view(|v| self.record(event.with_span(v.1.span()), Ok("Array Type")))
     }
 
     pub(super) fn id_declaration(
@@ -626,18 +576,20 @@ impl<'a> Parser<'a> {
                 let id = decl_tok[0].sym.get_str().expect(
                     "CRITICAL: first token is an identifier but cannot be converted to a string",
                 );
-                let (ty, ty_ctx) = self
-                    .consume_type(stream)?
-                    .ok_or(CompilerError::new(
-                        decl_tok[0].span(),
-                        ParserError::IdDeclExpectedType,
-                    ))
-                    .view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
-                let ctx = ctx.join(ty_ctx);
-                Ok(Some(Expression::IdentifierDeclare(ctx, id, ty)))
-                    .view(|v| self.record(event.with_span(v.span()), Ok("Identifier Declaration")))
+                self.consume_type(stream)
+                    .map_err(|_| {
+                        CompilerError::new(decl_tok[0].span(), ParserError::IdDeclExpectedType)
+                    })
+                    //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
+                    .and_then(|result| {
+                        Ok(result.and_then(|(ty, ty_ctx)| {
+                            let ctx = ctx.join(ty_ctx);
+                            Some(Expression::IdentifierDeclare(ctx, id, ty))
+                        }))
+                    })
             }
             None => Ok(None),
         }
+        .view(|v| self.record(event.with_span(v.span()), Ok("Identifier Declaration")))
     }
 }
