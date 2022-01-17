@@ -187,6 +187,11 @@ impl<'a> Lexer<'a> {
         })
     }
 
+    fn record<'e>(&self, span: Span, result: Result<&'e str, &'e CompilerError<LexerError>>) {
+        let evt = Event::new_without_parent("lexer", span, result);
+        self.logger.write(evt);
+    }
+
     /// Converts the given vector of characters to a vector of tokens.
     pub fn tokenize(&mut self) -> Vec<LexerResult<Token>> {
         let mut tokens = vec![];
@@ -249,11 +254,7 @@ impl<'a> Lexer<'a> {
             }
 
             let (_, span) = branch.merge().unwrap();
-            self.logger.write(Event::<_, LexerError>::new_without_parent(
-                "lexer",
-                span,
-                Ok("Line Comment"),
-            ));
+            self.record(span, Ok("Line Comment"));
         }
     }
 
@@ -265,11 +266,7 @@ impl<'a> Lexer<'a> {
             }
 
             let (_, span) = branch.merge().unwrap();
-            self.logger.write(Event::<_, LexerError>::new_without_parent(
-                "lexer",
-                span,
-                Ok("Block Comment"),
-            ));
+            self.record(span, Ok("Block Comment"));
         }
     }
 
@@ -309,11 +306,7 @@ impl<'a> Lexer<'a> {
                                 LexerError::InvalidEscapeSequence(c)
                             )
                             .map_err(|err| {
-                                self.logger.write(Event::<&str, _>::new_without_parent(
-                                    "lexer",
-                                    err.span(),
-                                    Err(&err),
-                                ));
+                                self.record(err.span(), Err(&err));
                                 err
                             });
                         }
@@ -323,11 +316,7 @@ impl<'a> Lexer<'a> {
                                 LexerError::ExpectedEscapeCharacter
                             )
                             .map_err(|err| {
-                                self.logger.write(Event::<&str, _>::new_without_parent(
-                                    "lexer",
-                                    err.span(),
-                                    Err(&err),
-                                ));
+                                self.record(err.span(), Err(&err));
                                 err
                             });
                         }
@@ -351,11 +340,7 @@ impl<'a> Lexer<'a> {
         }
         .map(|ok| {
             ok.as_ref().map(|token| {
-                self.logger.write(Event::<_, LexerError>::new_without_parent(
-                    "lexer",
-                    token.span,
-                    Ok("String"),
-                ));
+                self.record(token.span, Ok("String"));
             });
             ok
         })
@@ -399,17 +384,12 @@ impl<'a> Lexer<'a> {
         }
         .map(|ok| {
             ok.as_ref().map(|token| {
-                self.logger.write(Event::<_, LexerError>::new_without_parent(
-                    "lexer",
-                    token.span,
-                    Ok("Integer"),
-                ));
+                self.record(token.span, Ok("Integer"));
             });
             ok
         })
         .map_err(|err| {
-            self.logger
-                .write(Event::<&str, _>::new_without_parent("lexer", err.span(), Err(&err)));
+            self.record(err.span(), Err(&err));
             err
         })
     }
@@ -482,11 +462,7 @@ impl<'a> Lexer<'a> {
         }))
         .map(|ok| {
             ok.as_ref().map(|token| {
-                self.logger.write(Event::<_, LexerError>::new_without_parent(
-                    "lexer",
-                    token.span,
-                    Ok("Operator"),
-                ));
+                self.record(token.span, Ok("Operator"));
             });
             ok
         })
@@ -515,11 +491,7 @@ impl<'a> Lexer<'a> {
         }
         .map(|ok| {
             ok.as_ref().map(|token| {
-                self.logger.write(Event::<_, LexerError>::new_without_parent(
-                    "lexer",
-                    token.span,
-                    Ok("Identifier"),
-                ));
+                self.record(token.span, Ok("Identifier"));
             });
             ok
         })
@@ -542,11 +514,7 @@ impl<'a> Lexer<'a> {
                 }
                 .map(|ok| {
                     ok.as_ref().map(|token| {
-                        self.logger.write(Event::<_, LexerError>::new_without_parent(
-                            "lexer",
-                            token.span,
-                            Ok("Boolean"),
-                        ));
+                        self.record(token.span, Ok("Boolean"));
                     });
                     ok
                 })
@@ -593,11 +561,7 @@ impl<'a> Lexer<'a> {
         })
         .map(|ok| {
             ok.as_ref().map(|token| {
-                self.logger.write(Event::<_, LexerError>::new_without_parent(
-                    "lexer",
-                    token.span,
-                    Ok("Keyword"),
-                ));
+                self.record(token.span, Ok("Keyword"));
             });
             ok
         })
@@ -632,11 +596,7 @@ impl<'a> Lexer<'a> {
         })
         .map(|ok| {
             ok.as_ref().map(|token| {
-                self.logger.write(Event::<_, LexerError>::new_without_parent(
-                    "lexer",
-                    token.span,
-                    Ok("Primitive"),
-                ));
+                self.record(token.span, Ok("Primitive"));
             });
             ok
         })
