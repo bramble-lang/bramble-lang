@@ -1,6 +1,6 @@
 // Token - a type which captures the different types of tokens and which is output
 // by tokenize
-use crate::compiler::diagnostics::{Event, Logger};
+use crate::compiler::diagnostics::{Event, Logger, EventStack};
 use crate::compiler::source::{Offset, Source};
 use crate::compiler::{SourceChar, Span};
 use crate::{StringId, StringTable};
@@ -169,6 +169,7 @@ pub struct Lexer<'a> {
     index: usize,
     string_table: &'a StringTable,
     logger: &'a Logger<'a>,
+    event_stack: EventStack,
 }
 
 impl<'a> Lexer<'a> {
@@ -184,11 +185,12 @@ impl<'a> Lexer<'a> {
             end_offset,
             string_table,
             logger,
+            event_stack: EventStack::new(),
         })
     }
 
     fn record<'e>(&self, span: Span, result: Result<&'e str, &'e CompilerError<LexerError>>) {
-        let evt = Event::new_without_parent("lexer", span, result);
+        let evt = Event::new_with_result("lexer", span, result, self.event_stack.clone());
         self.logger.write(evt);
     }
 
