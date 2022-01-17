@@ -189,6 +189,7 @@ impl<'a> Lexer<'a> {
         })
     }
 
+    /// Record a new lexer event
     fn record<'e>(&self, span: Span, result: Result<&'e str, &'e CompilerError<LexerError>>) {
         let evt = Event::new_with_result("lexer", span, result, self.event_stack.clone());
         self.logger.write(evt);
