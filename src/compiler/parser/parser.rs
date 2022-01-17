@@ -292,8 +292,9 @@ impl<'a> Parser<'a> {
         };
         let fn_ctx = fn_type_ctx.join(fn_ctx);
 
-        Ok(Some((fn_ctx, fn_name, params, has_varargs, fn_type)))
-            .map(|ok| ok.view(|v| self.record(event.with_span(v.0.span()), Ok("Routine Declaration"))))
+        Ok(Some((fn_ctx, fn_name, params, has_varargs, fn_type))).map(|ok| {
+            ok.view(|v| self.record(event.with_span(v.0.span()), Ok("Routine Declaration")))
+        })
     }
 
     fn coroutine_def(&self, stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserContext>> {
