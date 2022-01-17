@@ -1,6 +1,7 @@
 use super::{Parser, ParserResult};
 
 use super::{tokenstream::TokenStream, ParserContext, ParserError};
+use crate::compiler::Span;
 use crate::{
     compiler::{
         ast::*,
@@ -181,6 +182,7 @@ impl<'a> Parser<'a> {
     ) -> ParserResult<Expression<ParserContext>> {
         match stream.next_if(&Lex::LBrace) {
             Some(lbrace) => {
+                let event = self.new_event(Span::zero());
                 // Read the statements composing the expression block
                 let mut stmts = vec![];
                 while let Some(s) = self.statement(stream)? {
@@ -197,7 +199,7 @@ impl<'a> Parser<'a> {
                     .join(lbrace.to_ctx());
 
                 Ok(Some(Expression::ExpressionBlock(ctx, stmts, final_exp)))
-                    .view(|v| self.record(v.span(), Ok("Expression Block")))
+                    .view(|v| self.record(event.with_span(v.span()), Ok("Expression Block")))
             }
             None => Ok(None),
         }
@@ -252,17 +254,18 @@ impl<'a> Parser<'a> {
         match left_pattern(self, stream)? {
             Some(left) => match stream.next_if_one_of(test.clone()) {
                 Some(op) => {
+                    let mut event = self.new_event(Span::zero());
                     let right = self
                         .binary_op(stream, test, left_pattern)?
                         .ok_or(CompilerError::new(
                             op.span(),
                             ParserError::ExpectedExprAfter(op.sym.clone()),
                         ))
-                        .view_err(|err| self.record(err.span(), Err(&err)))?;
+                        .view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
 
                     Expression::binary_op(&op.sym, Box::new(left), Box::new(right))
-                        .view(|v| self.record(v.span(), Ok(&op.sym.to_string())))
-                        .view_err(|err| self.record(err.span(), Err(&err)))
+                        .view(|v| self.record(event.with_span(v.span()), Ok(&op.sym.to_string())))
+                        .view_err(|err| self.record(event.with_span(err.span()), Err(&err)))
                 }
                 None => Ok(Some(left)),
             },
@@ -276,13 +279,14 @@ impl<'a> Parser<'a> {
     ) -> ParserResult<Expression<ParserContext>> {
         match stream.next_if_one_of(vec![Lex::Minus, Lex::Not]) {
             Some(op) => {
+                let event = self.new_event(Span::zero());
                 let factor = self
                     .negate(stream)?
                     .ok_or(CompilerError::new(
                         op.span(),
                         ParserError::ExpectedTermAfter(op.sym.clone()),
                     ))
-                    .view_err(|err| self.record(err.span(), Err(&err)))?;
+                    .view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
                 Expression::unary_op(op.to_ctx(), &op.sym, Box::new(factor))
                     .view(|v| {
                         let msg = if op.sym == Lex::Minus {
@@ -290,9 +294,9 @@ impl<'a> Parser<'a> {
                         } else {
                             "Boolean Negate"
                         };
-                        self.record(v.span(), Ok(msg))
+                        self.record(event.with_span(v.span()), Ok(msg))
                     })
-                    .view_err(|err| self.record(err.span(), Err(&err)))
+                    .view_err(|err| self.record(event.with_span(err.span()), Err(&err)))
             }
             None => self.member_access(stream),
         }
@@ -304,6 +308,7 @@ impl<'a> Parser<'a> {
     ) -> ParserResult<Expression<ParserContext>> {
         match self.factor(stream)? {
             Some(f) => {
+                let event = self.new_event(Span::zero());
                 let mut ma = f;
                 while let Some(token) =
                     stream.next_if_one_of(vec![Lex::MemberAccess, Lex::LBracket])
@@ -318,12 +323,12 @@ impl<'a> Parser<'a> {
                                     member,
                                 )
                             })
-                            .view(|v| self.record(v.span(), Ok("Member Access")))
+                            .view(|v| self.record(event.with_span(v.span()), Ok("Member Access")))
                             .ok_or(CompilerError::new(
                                 token.span(),
                                 ParserError::MemberAccessExpectedField,
                             ))
-                            .view_err(|err| self.record(err.span(), Err(&err)))?,
+                            .view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?,
                         Lex::LBracket => self
                             .expression(stream)?
                             .ok_or(CompilerError::new(
@@ -341,10 +346,10 @@ impl<'a> Parser<'a> {
                             })
                             .map(|v| {
                                 // TODO: can I make this a view?
-                                self.record(v.span(), Ok("Array At"));
+                                self.record(event.with_span(v.span()), Ok("Array At"));
                                 v
                             })
-                            .view_err(|err| self.record(err.span(), Err(&err)))?,
+                            .view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?,
                         _ => {
                             return err!(
                                 token.span(),
@@ -353,7 +358,7 @@ impl<'a> Parser<'a> {
                                     Some(token.sym.clone())
                                 )
                             )
-                            .view_err(|err| self.record(err.span(), Err(&err)));
+                            .view_err(|err| self.record(event.with_span(err.span()), Err(&err)));
                         }
                     };
                 }
@@ -370,6 +375,7 @@ impl<'a> Parser<'a> {
     ) -> ParserResult<Expression<ParserContext>> {
         match stream.peek() {
             Some(lparen) if lparen.sym == Lex::LParen => {
+                let event = self.new_event(Span::zero());
                 let ctx = lparen.to_ctx();
                 stream.next();
                 let mut exp = self.expression(stream)?;
@@ -382,7 +388,7 @@ impl<'a> Parser<'a> {
                     *exp.get_context_mut() = ctx;
                 });
 
-                Ok(exp).view(|v| self.record(v.span(), Ok("Expression")))
+                Ok(exp).view(|v| self.record(event.with_span(v.span()), Ok("Expression")))
             }
             _ => self
                 .if_expression(stream)
@@ -399,6 +405,7 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
+        let event = self.new_event(Span::zero());
         Ok(match stream.next_if(&Lex::If) {
             Some(if_tok) => {
                 stream.next_must_be(&Lex::LParen)?;
@@ -408,7 +415,7 @@ impl<'a> Parser<'a> {
                         if_tok.span(),
                         ParserError::IfExpectedConditional,
                     ))
-                    .view_err(|err| self.record(err.span(), Err(&err)))?;
+                    .view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
                 stream.next_must_be(&Lex::RParen)?;
 
                 let if_arm = self
@@ -417,7 +424,7 @@ impl<'a> Parser<'a> {
                         if_tok.span(),
                         ParserError::IfTrueArmMissingExpr,
                     ))
-                    .view_err(|err| self.record(err.span(), Err(&err)))?;
+                    .view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
 
                 // check for `else if`
                 let else_arm = match stream.next_if(&Lex::Else) {
@@ -432,7 +439,7 @@ impl<'a> Parser<'a> {
                                         span,
                                         ParserError::IfElseExpectedIfExpr,
                                     ))
-                                    .view_err(|err| self.record(err.span(), Err(&err)))?,
+                                    .view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?,
                             )
                         }
                         _ => {
@@ -442,7 +449,7 @@ impl<'a> Parser<'a> {
                                     if_tok.span(),
                                     ParserError::IfFalseArmMissingExpr,
                                 ))
-                                .view_err(|err| self.record(err.span(), Err(&err)))?;
+                                .view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
                             Some(false_arm)
                         }
                     },
@@ -463,13 +470,14 @@ impl<'a> Parser<'a> {
             }
             _ => None,
         })
-        .view(|v| self.record(v.span(), Ok("If Expression")))
+        .view(|v| self.record(event.with_span(v.span()), Ok("If Expression")))
     }
 
     pub(super) fn while_expression(
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
+        let event = self.new_event(Span::zero());
         match stream.next_if(&Lex::While) {
             Some(whl) => {
                 stream.next_must_be(&Lex::LParen)?;
@@ -479,7 +487,7 @@ impl<'a> Parser<'a> {
                         whl.span(),
                         ParserError::WhileExpectedConditional,
                     ))
-                    .view_err(|err| self.record(err.span(), Err(&err)))?;
+                    .view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
                 stream.next_must_be(&Lex::RParen)?;
 
                 self.expression_block(stream)?
@@ -494,14 +502,15 @@ impl<'a> Parser<'a> {
             }
             _ => Ok(None),
         }
-        .view(|v| self.record(v.span(), Ok("While")))
-        .view_err(|err| self.record(err.span(), Err(&err)))
+        .view(|v| self.record(event.with_span(v.span()), Ok("While")))
+        .view_err(|err| self.record(event.with_span(err.span()), Err(&err)))
     }
 
     pub(super) fn function_call_or_variable(
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
+        let event = self.new_event(Span::zero());
         match self.path(stream)? {
             Some((path, call_ctx)) => match self.routine_call_params(stream)? {
                 Some((params, params_ctx)) => Ok(Some(Expression::RoutineCall(
@@ -539,15 +548,16 @@ impl<'a> Parser<'a> {
                 Expression::RoutineCall(..) => "Routine Call",
                 _ => panic!("Unexpected Expression variant"),
             };
-            self.record(v.span(), Ok(msg))
+            self.record(event.with_span(v.span()), Ok(msg))
         })
-        .view_err(|err| self.record(err.span(), Err(&err)))
+        .view_err(|err| self.record(event.with_span(err.span()), Err(&err)))
     }
 
     pub(super) fn co_yield(
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
+        let event = self.new_event(Span::zero());
         match stream.next_if(&Lex::Yield) {
             Some(yield_tok) => {
                 let ctx = yield_tok.to_ctx();
@@ -563,14 +573,15 @@ impl<'a> Parser<'a> {
             }
             None => Ok(None),
         }
-        .view(|v| self.record(v.span(), Ok("Yield")))
-        .view_err(|err| self.record(err.span(), Err(&err)))
+        .view(|v| self.record(event.with_span(v.span()), Ok("Yield")))
+        .view_err(|err| self.record(event.with_span(err.span()), Err(&err)))
     }
 
     pub(super) fn struct_expression_params(
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<(Vec<(StringId, Expression<ParserContext>)>, ParserContext)> {
+        let event = self.new_event(Span::zero());
         match stream.next_if(&Lex::LBrace) {
             Some(lbrace) => {
                 let mut params = vec![];
@@ -582,7 +593,7 @@ impl<'a> Parser<'a> {
                             span,
                             ParserError::StructExpectedFieldExpr(field_name),
                         ))
-                        .view_err(|err| self.record(err.span(), Err(&err)))?;
+                        .view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
                     params.push((field_name, field_value));
                     match stream.next_if(&Lex::Comma) {
                         Some(_) => {}
@@ -598,7 +609,7 @@ impl<'a> Parser<'a> {
             }
             _ => Ok(None),
         }
-        .view(|v| self.record(v.1.span(), Ok("Struct Expression Parameters")))
+        .view(|v| self.record(event.with_span(v.1.span()), Ok("Struct Expression Parameters")))
     }
 
     pub(super) fn array_expression(
@@ -607,6 +618,7 @@ impl<'a> Parser<'a> {
     ) -> ParserResult<Expression<ParserContext>> {
         match stream.next_if(&Lex::LBracket) {
             Some(lbracket) => {
+                let event = self.new_event(Span::zero());
                 let mut elements = vec![];
                 // loop through comma separated list of expressions
                 while let Some(element) = self.expression(stream)? {
@@ -623,7 +635,7 @@ impl<'a> Parser<'a> {
 
                 let len = elements.len();
                 Ok(Some(Expression::ArrayExpression(ctx, elements, len)))
-                    .view(|v| self.record(v.span(), Ok("Array Expression")))
+                    .view(|v| self.record(event.with_span(v.span()), Ok("Array Expression")))
             }
             None => Ok(None),
         }
@@ -642,6 +654,7 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
+        let event = self.new_event(Span::zero());
         match stream.next_if_one_of(vec![
             Lex::U8(0),
             Lex::U16(0),
@@ -695,13 +708,14 @@ impl<'a> Parser<'a> {
             Some(t) => panic!("Unexpected token: {:?}", t),
             None => Ok(None),
         }
-        .view(|v| self.record(v.span(), Ok("Number")))
+        .view(|v| self.record(event.with_span(v.span()), Ok("Number")))
     }
 
     pub(super) fn boolean(
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
+        let event = self.new_event(Span::zero());
         match stream.next_if(&Lex::Bool(true)) {
             Some(Token {
                 span,
@@ -710,13 +724,14 @@ impl<'a> Parser<'a> {
             }) => Ok(Some(Expression::Boolean(ParserContext::new(span), b))),
             _ => Ok(None),
         }
-        .view(|v| self.record(v.span(), Ok("Boolean")))
+        .view(|v| self.record(event.with_span(v.span()), Ok("Boolean")))
     }
 
     pub(super) fn string_literal(
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
+        let event = self.new_event(Span::zero());
         match stream.next_if(&Lex::StringLiteral(StringId::new())) {
             Some(Token {
                 span,
@@ -725,6 +740,6 @@ impl<'a> Parser<'a> {
             }) => Ok(Some(Expression::StringLiteral(ParserContext::new(span), s))),
             _ => Ok(None),
         }
-        .view(|v| self.record(v.span(), Ok("String")))
+        .view(|v| self.record(event.with_span(v.span()), Ok("String")))
     }
 }
