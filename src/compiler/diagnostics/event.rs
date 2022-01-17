@@ -46,7 +46,11 @@ pub mod event_id {
 /// An event from any stage in the Compiler caused by the given span of source
 /// code.
 pub struct Event<'a, V: Writable, E: CompilerDisplay + Debug> {
+    /// Unique identifer for this compiler event
     pub id: event_id::EventId,
+
+    /// The ID of the [`Event`] which caused this event
+    pub parent_id: Option<event_id::EventId>,
 
     /// The stage of compilation that generated this event
     pub stage: &'a str,
@@ -57,8 +61,9 @@ pub struct Event<'a, V: Writable, E: CompilerDisplay + Debug> {
     /// A description of the event
     pub msg: Option<Result<V, &'a CompilerError<E>>>,
 
-    // EXPERIMENTAL STUFF
-    pub parent_id: Option<event_id::EventId>,
+    /// A stack of currently live [`Event`]s which are being executed by the compiler.
+    /// When a new event is created, the top of this stack is the parent. New events
+    /// are pushed onto this stack upon creation, and popped off this stack on destruction.
     stack: Option<Rc<RefCell<Vec<event_id::EventId>>>>,
 }
 
