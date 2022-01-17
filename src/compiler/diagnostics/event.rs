@@ -1,7 +1,7 @@
 //! The Events which can be created by the compiler for the purpose
 //! of tracing and visibility into what the compiler is doing.
 
-use std::{cell::RefCell, fmt::Debug, rc::Rc};
+use std::fmt::Debug;
 
 use crate::compiler::{CompilerDisplay, CompilerError, Span};
 
@@ -15,7 +15,7 @@ use super::{Writable, Writer};
 /// EventId system can view or interact with the values or assignments
 /// of the IDs themselves.
 pub mod event_id {
-    use std::sync::atomic::AtomicU64;
+    use std::{cell::RefCell, rc::Rc, sync::atomic::AtomicU64};
 
     use super::{Writable, Writer};
 
@@ -41,6 +41,26 @@ pub mod event_id {
             w.write_u64(self.0);
         }
     }
+
+    /// Tracks all the currently active compiler events
+    #[derive(Clone)]
+    pub struct EventStack(Rc<RefCell<Vec<EventId>>>);
+
+    impl EventStack {
+        /// Create a new, empty, EventStack for tracking live
+        /// events within a compiler stage
+        pub fn new() -> EventStack {
+            EventStack(Rc::new(RefCell::new(Vec::new())))
+        }
+    }
+
+    impl std::ops::Deref for EventStack {
+        type Target = RefCell<Vec<EventId>>;
+
+        fn deref(&self) -> &Self::Target {
+            &*self.0
+        }
+    }
 }
 
 /// An event from any stage in the Compiler caused by the given span of source
@@ -64,7 +84,7 @@ pub struct Event<'a, V: Writable, E: CompilerDisplay + Debug> {
     /// A stack of currently live [`Event`]s which are being executed by the compiler.
     /// When a new event is created, the top of this stack is the parent. New events
     /// are pushed onto this stack upon creation, and popped off this stack on destruction.
-    stack: Option<Rc<RefCell<Vec<event_id::EventId>>>>,
+    stack: Option<event_id::EventStack>,
 }
 
 impl<'a, V: Writable, E: CompilerDisplay + Debug> Event<'a, V, E> {
@@ -93,7 +113,7 @@ impl<'a, V: Writable, E: CompilerDisplay + Debug> Event<'a, V, E> {
         stage: &'a str,
         input: Span,
         msg: Result<V, &'a CompilerError<E>>,
-        stack: Rc<RefCell<Vec<event_id::EventId>>>,
+        stack: event_id::EventStack,
     ) -> Event<'a, V, E> {
         let id = event_id::EventId::new();
 
@@ -120,7 +140,7 @@ impl<'a, V: Writable, E: CompilerDisplay + Debug> Event<'a, V, E> {
     pub fn new(
         stage: &'a str,
         input: Span,
-        stack: Rc<RefCell<Vec<event_id::EventId>>>,
+        stack: event_id::EventStack,
     ) -> Event<'a, V, E> {
         let id = event_id::EventId::new();
 

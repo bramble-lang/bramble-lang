@@ -29,7 +29,7 @@ use inkwell::{
 use crate::{
     compiler::{
         ast::{Element, Parameter, StructDef},
-        diagnostics::{Event, EventId, Logger, View, Writable},
+        diagnostics::{Event, EventId, Logger, View, Writable, EventStack},
         import::{Import, ImportRoutineDef, ImportStructDef},
         parser::{ParserContext, ParserError},
         source::SourceIr,
@@ -67,7 +67,7 @@ pub struct IrGen<'ctx> {
     string_table: &'ctx StringTable,
     source_map: &'ctx SourceMap,
     logger: &'ctx Logger<'ctx>,
-    event_stack: Rc<RefCell<Vec<EventId>>>,
+    event_stack: EventStack,
 }
 
 impl<'ctx> IrGen<'ctx> {
@@ -91,7 +91,7 @@ impl<'ctx> IrGen<'ctx> {
             source_map,
             string_table,
             logger,
-            event_stack: Rc::new(RefCell::new(Vec::new())),
+            event_stack: EventStack::new(),
         }
     }
 
