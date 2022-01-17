@@ -515,7 +515,7 @@ impl<'ctx> IrGen<'ctx> {
 
     /// Creates and records an event which does have any children.
     fn record_terminal<IR: Writable>(&self, span: Span, ir: IR) {
-        self.logger.write(Event::<_, ParserError>::new_with_stack(
+        self.logger.write(Event::<_, ParserError>::new(
             "llvm",
             span,
             Ok(ir),
@@ -526,7 +526,7 @@ impl<'ctx> IrGen<'ctx> {
     /// Start a new event with no set Result. Events created after this poing and
     /// before this [`Event`] is dropped will be descendents of this [`Event`].
     fn new_event<'a, IR: Writable>(&self, span: Span) -> Event<'a, IR, ParserError> {
-        Event::new_empty("llvm", span, self.event_stack.clone())
+        Event::new_without_result("llvm", span, self.event_stack.clone())
     }
 
     /// Record the result of an event

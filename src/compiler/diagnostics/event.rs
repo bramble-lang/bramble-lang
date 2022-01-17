@@ -68,7 +68,11 @@ pub struct Event<'a, V: Writable, E: CompilerDisplay + Debug> {
 }
 
 impl<'a, V: Writable, E: CompilerDisplay + Debug> Event<'a, V, E> {
-    pub fn new(
+    /// Create a new event that does not track event heritage and will not
+    /// have a parent ID assigned to it.  This is to support compiler stages
+    /// which have not migrated to the new event system and will be deleted
+    /// after migration.
+    pub fn new_without_parent(
         stage: &'a str,
         input: Span,
         msg: Result<V, &'a CompilerError<E>>,
@@ -84,7 +88,8 @@ impl<'a, V: Writable, E: CompilerDisplay + Debug> Event<'a, V, E> {
         }
     }
 
-    pub fn new_with_stack(
+    /// Create a new compiler [`Event`] and assign the result.
+    pub fn new(
         stage: &'a str,
         input: Span,
         msg: Result<V, &'a CompilerError<E>>,
@@ -111,7 +116,8 @@ impl<'a, V: Writable, E: CompilerDisplay + Debug> Event<'a, V, E> {
         }
     }
 
-    pub fn new_empty(
+    /// Create a new compiler [`Event`] without a result.
+    pub fn new_without_result(
         stage: &'a str,
         input: Span,
         stack: Rc<RefCell<Vec<event_id::EventId>>>,

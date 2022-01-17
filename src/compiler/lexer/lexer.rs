@@ -249,7 +249,7 @@ impl<'a> Lexer<'a> {
             }
 
             let (_, span) = branch.merge().unwrap();
-            self.logger.write(Event::<_, LexerError>::new(
+            self.logger.write(Event::<_, LexerError>::new_without_parent(
                 "lexer",
                 span,
                 Ok("Line Comment"),
@@ -265,7 +265,7 @@ impl<'a> Lexer<'a> {
             }
 
             let (_, span) = branch.merge().unwrap();
-            self.logger.write(Event::<_, LexerError>::new(
+            self.logger.write(Event::<_, LexerError>::new_without_parent(
                 "lexer",
                 span,
                 Ok("Block Comment"),
@@ -309,7 +309,7 @@ impl<'a> Lexer<'a> {
                                 LexerError::InvalidEscapeSequence(c)
                             )
                             .map_err(|err| {
-                                self.logger.write(Event::<&str, _>::new(
+                                self.logger.write(Event::<&str, _>::new_without_parent(
                                     "lexer",
                                     err.span(),
                                     Err(&err),
@@ -323,7 +323,7 @@ impl<'a> Lexer<'a> {
                                 LexerError::ExpectedEscapeCharacter
                             )
                             .map_err(|err| {
-                                self.logger.write(Event::<&str, _>::new(
+                                self.logger.write(Event::<&str, _>::new_without_parent(
                                     "lexer",
                                     err.span(),
                                     Err(&err),
@@ -351,7 +351,7 @@ impl<'a> Lexer<'a> {
         }
         .map(|ok| {
             ok.as_ref().map(|token| {
-                self.logger.write(Event::<_, LexerError>::new(
+                self.logger.write(Event::<_, LexerError>::new_without_parent(
                     "lexer",
                     token.span,
                     Ok("String"),
@@ -399,7 +399,7 @@ impl<'a> Lexer<'a> {
         }
         .map(|ok| {
             ok.as_ref().map(|token| {
-                self.logger.write(Event::<_, LexerError>::new(
+                self.logger.write(Event::<_, LexerError>::new_without_parent(
                     "lexer",
                     token.span,
                     Ok("Integer"),
@@ -409,7 +409,7 @@ impl<'a> Lexer<'a> {
         })
         .map_err(|err| {
             self.logger
-                .write(Event::<&str, _>::new("lexer", err.span(), Err(&err)));
+                .write(Event::<&str, _>::new_without_parent("lexer", err.span(), Err(&err)));
             err
         })
     }
@@ -482,7 +482,7 @@ impl<'a> Lexer<'a> {
         }))
         .map(|ok| {
             ok.as_ref().map(|token| {
-                self.logger.write(Event::<_, LexerError>::new(
+                self.logger.write(Event::<_, LexerError>::new_without_parent(
                     "lexer",
                     token.span,
                     Ok("Operator"),
@@ -515,7 +515,7 @@ impl<'a> Lexer<'a> {
         }
         .map(|ok| {
             ok.as_ref().map(|token| {
-                self.logger.write(Event::<_, LexerError>::new(
+                self.logger.write(Event::<_, LexerError>::new_without_parent(
                     "lexer",
                     token.span,
                     Ok("Identifier"),
@@ -542,7 +542,7 @@ impl<'a> Lexer<'a> {
                 }
                 .map(|ok| {
                     ok.as_ref().map(|token| {
-                        self.logger.write(Event::<_, LexerError>::new(
+                        self.logger.write(Event::<_, LexerError>::new_without_parent(
                             "lexer",
                             token.span,
                             Ok("Boolean"),
@@ -593,7 +593,7 @@ impl<'a> Lexer<'a> {
         })
         .map(|ok| {
             ok.as_ref().map(|token| {
-                self.logger.write(Event::<_, LexerError>::new(
+                self.logger.write(Event::<_, LexerError>::new_without_parent(
                     "lexer",
                     token.span,
                     Ok("Keyword"),
@@ -632,7 +632,7 @@ impl<'a> Lexer<'a> {
         })
         .map(|ok| {
             ok.as_ref().map(|token| {
-                self.logger.write(Event::<_, LexerError>::new(
+                self.logger.write(Event::<_, LexerError>::new_without_parent(
                     "lexer",
                     token.span,
                     Ok("Primitive"),
