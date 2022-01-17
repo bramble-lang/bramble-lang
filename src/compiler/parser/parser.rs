@@ -21,7 +21,7 @@ type HasVarArgs = bool;
 impl<'a> Parser<'a> {
     /// Support function which records parser events to the tracing system
     pub(super) fn record(&self, span: Span, r: Result<&str, &CompilerError<ParserError>>) {
-        self.logger.write(Event::new_without_parent("parser", span, r))
+        self.logger.write(Event::new_with_result("parser", span, r, self.event_stack.clone()))
     }
 
     pub fn parse(
