@@ -1083,7 +1083,7 @@ impl<'a> TypeResolver<'a> {
 
     fn record<N: Node<SemanticContext>>(&self, n: &N, refs: Vec<Span>) {
         let ctx = n.context();
-        self.logger.write(Event::<_, SemanticError>::new(
+        self.logger.write(Event::<_, SemanticError>::new_without_parent(
             "type-resolver",
             ctx.span(),
             Ok(TypeOk { ty: ctx.ty(), refs }),
@@ -1091,7 +1091,7 @@ impl<'a> TypeResolver<'a> {
     }
 
     fn record_err(&self, e: &CompilerError<SemanticError>) {
-        self.logger.write(Event::<TypeOk, SemanticError>::new(
+        self.logger.write(Event::<TypeOk, SemanticError>::new_without_parent(
             "type-resolver",
             e.span(),
             Err(e),
