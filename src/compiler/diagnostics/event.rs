@@ -52,6 +52,7 @@ pub mod event_id {
         pub fn new() -> EventStack {
             EventStack(Rc::new(RefCell::new(Vec::new())))
         }
+
     }
 
     impl std::ops::Deref for EventStack {
@@ -166,6 +167,12 @@ impl<'a, V: Writable, E: CompilerDisplay + Debug> Event<'a, V, E> {
     /// Set the Result of this event
     pub fn with_msg(mut self, msg: Result<V, &'a CompilerError<E>>) -> Self {
         self.msg = Some(msg);
+        self
+    }
+   
+    /// Updates the span of this event
+    pub fn with_span(mut self, span: Span) -> Self {
+        self.input = span;
         self
     }
 }
