@@ -83,7 +83,7 @@ impl<'a> Parser<'a> {
             };
             self.record(event.with_span(v.span()), Ok(msg))
         })
-        .view_err(|err| self.record(event.with_span(err.span()), Err(&err)))
+        //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))
     }
 
     fn let_bind(&self, stream: &mut TokenStream) -> ParserResult<Bind<ParserContext>> {
@@ -91,38 +91,39 @@ impl<'a> Parser<'a> {
         match stream.next_if(&Lex::Let) {
             Some(let_tok) => {
                 let is_mutable = stream.next_if(&Lex::Mut).is_some();
-                let id_decl = self
-                    .id_declaration(stream)?
+                self.id_declaration(stream)?
                     .ok_or(CompilerError::new(
                         let_tok.span(),
                         ParserError::ExpectedIdDeclAfterLet,
                     ))
-                    .view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
-                stream.next_must_be(&Lex::Assign)?;
+                    //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
+                    .and_then(|id_decl| {
+                        stream.next_must_be(&Lex::Assign)?;
 
-                let exp = match self.co_init(stream)? {
-                    Some(co_init) => co_init,
-                    None => self
-                        .expression(stream)?
-                        .ok_or(CompilerError::new(
-                            let_tok.span(),
-                            ParserError::ExpectedExpressionOnRhs,
-                        ))
-                        .view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?,
-                };
+                        let exp = match self.co_init(stream)? {
+                            Some(co_init) => co_init,
+                            None => self.expression(stream)?.ok_or(CompilerError::new(
+                                let_tok.span(),
+                                ParserError::ExpectedExpressionOnRhs,
+                            ))?,
+                            /*.view_err(|err| {
+                                self.record(event.with_span(err.span()), Err(&err))
+                            })?, */
+                        };
 
-                match id_decl {
-                    Expression::IdentifierDeclare(_, id, ty) => {
-                        let ctx = exp.context().join(let_tok.to_ctx());
-                        Ok(Some(Bind::new(ctx, id, ty.clone(), is_mutable, exp)))
-                    }
-                    _ => Err(CompilerError::new(
-                        let_tok.span(),
-                        ParserError::ExpectedTypeInIdDecl,
-                    )),
-                }
-                .view(|v| self.record(event.with_span(v.span()), Ok("Let Binding")))
-                .view_err(|err| self.record(event.with_span(err.span()), Err(&err)))
+                        match id_decl {
+                            Expression::IdentifierDeclare(_, id, ty) => {
+                                let ctx = exp.context().join(let_tok.to_ctx());
+                                Ok(Some(Bind::new(ctx, id, ty.clone(), is_mutable, exp)))
+                            }
+                            _ => Err(CompilerError::new(
+                                let_tok.span(),
+                                ParserError::ExpectedTypeInIdDecl,
+                            )),
+                        }
+                    })
+                    .view(|v| self.record(event.with_span(v.span()), Ok("Let Binding")))
+                //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))
             }
             None => Ok(None),
         }
@@ -141,17 +142,19 @@ impl<'a> Parser<'a> {
                     .sym
                     .get_str()
                     .expect("CRITICAL: identifier token cannot be converted to string");
-                let exp = self
-                    .expression(stream)?
+                self.expression(stream)?
                     .ok_or(CompilerError::new(
                         tokens[2].span(),
                         ParserError::ExpectedExpressionOnRhs,
                     ))
-                    .view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
-                let ctx = tokens[0].to_ctx().join(*exp.context());
-                Ok(Some(Mutate::new(ctx, id, exp))).view(|v| self.record(event.with_span(v.span()), Ok("Mutate")))
+                    //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
+                    .and_then(|exp| {
+                        let ctx = tokens[0].to_ctx().join(*exp.context());
+                        Ok(Some(Mutate::new(ctx, id, exp)))
+                    })
             }
         }
+        .view(|v| self.record(event.with_span(v.span()), Ok("Mutate")))
     }
 
     fn co_init(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
@@ -180,7 +183,7 @@ impl<'a> Parser<'a> {
             _ => Ok(None),
         }
         .view(|v| self.record(event.with_span(v.span()), Ok("Coroutine Init")))
-        .view_err(|err| self.record(event.with_span(err.span()), Err(&err)))
+        //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))
     }
 
     pub(super) fn return_stmt(
