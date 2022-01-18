@@ -1,4 +1,4 @@
-use crate::compiler::diagnostics::{Event, View, View2, Writable};
+use crate::compiler::diagnostics::{Event, View2, Writable};
 use crate::compiler::source::SourceIr;
 use crate::compiler::Span;
 use crate::compiler::{
@@ -164,33 +164,31 @@ impl<'a> Parser<'a> {
     }
 
     fn extern_def(&self, stream: &mut TokenStream) -> ParserResult<Extern<ParserContext>> {
-        let (event, result) = self.new_event(Span::zero()).and_then(|| {
-            match stream.next_if(&Lex::Extern) {
-                Some(extern_tok) => match self.function_decl(stream, true)? {
-                    Some((fn_ctx, fn_name, params, has_varargs, fn_type)) => {
-                        if has_varargs && params.len() == 0 {
-                            err!(fn_ctx.span(), ParserError::ExternInvalidVarArgs)
-                            //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)));
-                        } else {
-                            let ctx = stream
-                                .next_must_be(&Lex::Semicolon)?
-                                .to_ctx()
-                                .join(extern_tok.to_ctx());
-                            Ok(Some(Extern::new(
-                                fn_name,
-                                ctx,
-                                params,
-                                has_varargs,
-                                fn_type,
-                            )))
-                            //.view(|v| self.record(event.with_span(v.span()), Ok("Extern Definition")))
+        let (event, result) =
+            self.new_event(Span::zero())
+                .and_then(|| match stream.next_if(&Lex::Extern) {
+                    Some(extern_tok) => match self.function_decl(stream, true)? {
+                        Some((fn_ctx, fn_name, params, has_varargs, fn_type)) => {
+                            if has_varargs && params.len() == 0 {
+                                err!(fn_ctx.span(), ParserError::ExternInvalidVarArgs)
+                            } else {
+                                let ctx = stream
+                                    .next_must_be(&Lex::Semicolon)?
+                                    .to_ctx()
+                                    .join(extern_tok.to_ctx());
+                                Ok(Some(Extern::new(
+                                    fn_name,
+                                    ctx,
+                                    params,
+                                    has_varargs,
+                                    fn_type,
+                                )))
+                            }
                         }
-                    }
-                    None => err!(extern_tok.span(), ParserError::ExternExpectedFnDecl), //.view_err(|err| self.record(event.with_span(err.span()), Err(&err))),
-                },
-                None => Ok(None),
-            }
-        });
+                        None => err!(extern_tok.span(), ParserError::ExternExpectedFnDecl),
+                    },
+                    None => Ok(None),
+                });
         result.view3(|v| {
             let msg = v.map(|_| "Extern Definition");
             self.record(event.with_span(v.span()), msg)
@@ -559,43 +557,46 @@ impl<'a> Parser<'a> {
     }
 
     fn array_type(&self, stream: &mut TokenStream) -> ParserResult<(Type, ParserContext)> {
-        let (event, result) = self.new_event(Span::zero()).and_then(|| {
-            match stream.next_if(&Lex::LBracket) {
-                Some(lbracket) => {
-                    let ctx = lbracket.to_ctx();
-                    self.consume_type(stream)?
-                        .ok_or(CompilerError::new(
-                            ctx.span(),
-                            ParserError::ArrayDeclExpectedType,
-                        ))
-                        //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
-                        .and_then(|(element_ty, _)| {
-                            stream.next_must_be(&Lex::Semicolon)?;
-
-                            let len = self.expression(stream)?.ok_or(CompilerError::new(
+        let (event, result) =
+            self.new_event(Span::zero())
+                .and_then(|| match stream.next_if(&Lex::LBracket) {
+                    Some(lbracket) => {
+                        let ctx = lbracket.to_ctx();
+                        self.consume_type(stream)?
+                            .ok_or(CompilerError::new(
                                 ctx.span(),
-                                ParserError::ArrayDeclExpectedSize,
-                            ))?;
-                            //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
-                            let len = match len {
-                                Expression::U8(_, l) => l as usize,
-                                Expression::U16(_, l) => l as usize,
-                                Expression::U32(_, l) => l as usize,
-                                Expression::U64(_, l) => l as usize,
-                                Expression::I8(_, l) => l as usize,
-                                Expression::I16(_, l) => l as usize,
-                                Expression::I32(_, l) => l as usize,
-                                Expression::I64(_, l) => l as usize,
-                                _ => return err!(len.span(), ParserError::ArrayExpectedIntLiteral),
-                            };
+                                ParserError::ArrayDeclExpectedType,
+                            ))
+                            .and_then(|(element_ty, _)| {
+                                stream.next_must_be(&Lex::Semicolon)?;
 
-                            let ctx = stream.next_must_be(&Lex::RBracket)?.to_ctx().join(ctx);
-                            Ok(Some((Type::Array(Box::new(element_ty), len), ctx)))
-                        })
-                }
-                None => Ok(None),
-            }
-        });
+                                let len = self.expression(stream)?.ok_or(CompilerError::new(
+                                    ctx.span(),
+                                    ParserError::ArrayDeclExpectedSize,
+                                ))?;
+                                let len = match len {
+                                    Expression::U8(_, l) => l as usize,
+                                    Expression::U16(_, l) => l as usize,
+                                    Expression::U32(_, l) => l as usize,
+                                    Expression::U64(_, l) => l as usize,
+                                    Expression::I8(_, l) => l as usize,
+                                    Expression::I16(_, l) => l as usize,
+                                    Expression::I32(_, l) => l as usize,
+                                    Expression::I64(_, l) => l as usize,
+                                    _ => {
+                                        return err!(
+                                            len.span(),
+                                            ParserError::ArrayExpectedIntLiteral
+                                        )
+                                    }
+                                };
+
+                                let ctx = stream.next_must_be(&Lex::RBracket)?.to_ctx().join(ctx);
+                                Ok(Some((Type::Array(Box::new(element_ty), len), ctx)))
+                            })
+                    }
+                    None => Ok(None),
+                });
         result.view3(|v| {
             let msg = v.map(|_| "Array Type");
             let span = match v {
@@ -621,7 +622,6 @@ impl<'a> Parser<'a> {
                         .map_err(|_| {
                             CompilerError::new(decl_tok[0].span(), ParserError::IdDeclExpectedType)
                         })
-                        //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
                         .and_then(|result| {
                             Ok(result.and_then(|(ty, ty_ctx)| {
                                 let ctx = ctx.join(ty_ctx);
