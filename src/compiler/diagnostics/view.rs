@@ -1,7 +1,5 @@
 use crate::compiler::{CompilerDisplay, CompilerError};
 
-use super::{Event, Writable};
-
 /// Let's a function "view" but not modify the contents of any container type.
 pub trait View<V> {
     fn view<F: FnOnce(&V)>(self, f: F) -> Self;

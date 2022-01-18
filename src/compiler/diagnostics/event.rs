@@ -176,7 +176,7 @@ impl<'a, V: Writable, E: CompilerDisplay + Debug> Event<'a, V, E> {
         self
     }
 
-    pub fn and_then<R, F: FnOnce() -> R>(mut self, mut f: F) -> (Self, R) {
+    pub fn and_then<R, F: FnOnce() -> R>(self, f: F) -> (Self, R) {
         let r = f();
         (self, r)
     }
