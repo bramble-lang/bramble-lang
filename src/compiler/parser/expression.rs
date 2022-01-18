@@ -200,7 +200,10 @@ impl<'a> Parser<'a> {
 
                     Ok(Some(Expression::ExpressionBlock(ctx, stmts, final_exp)))
                 });
-                result.view(|v| self.record(event.with_span(v.span()), Ok("Expression Block")))
+                result.view3(|v| {
+                    let msg = v.map(|_| "Expression Block");
+                    self.record(event.with_span(v.span()), msg)
+                })
             }
             None => Ok(None),
         }
@@ -292,7 +295,7 @@ impl<'a> Parser<'a> {
                     //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
                     .and_then(|factor| Expression::unary_op(op.to_ctx(), &op.sym, Box::new(factor)))
                     // TODO: Can I make view2: Result<Option<V, E>> -> F(Result<V,E>) then not have to have the double lambdas?
-                    .view3(event, |event, v| {
+                    .view3(|v| {
                         let msg = v.map(|_| {
                             if op.sym == Lex::Minus {
                                 "Arithmetic Negate"
