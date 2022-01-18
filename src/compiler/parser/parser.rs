@@ -277,41 +277,46 @@ impl<'a> Parser<'a> {
         HasVarArgs,
         Type,
     )> {
-        let event = self.new_event(Span::zero());
-        let mut fn_ctx = match stream.next_if(&Lex::FunctionDef) {
-            Some(co) => co.to_ctx(),
-            None => return Ok(None),
-        };
+        let (event, result) = self.new_event(Span::zero()).and_then(|| {
+            let mut fn_ctx = match stream.next_if(&Lex::FunctionDef) {
+                Some(co) => co.to_ctx(),
+                None => return Ok(None),
+            };
 
-        stream
-            .next_if_id()
-            .ok_or(CompilerError::new(
-                fn_ctx.span(),
-                ParserError::FnExpectedIdentifierAfterFn,
-            ))
-            //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
-            .and_then(|(fn_name, fn_def_span)| {
-                fn_ctx = fn_ctx.extend(fn_def_span);
+            stream
+                .next_if_id()
+                .ok_or(CompilerError::new(
+                    fn_ctx.span(),
+                    ParserError::FnExpectedIdentifierAfterFn,
+                ))
+                .and_then(|(fn_name, fn_def_span)| {
+                    fn_ctx = fn_ctx.extend(fn_def_span);
 
-                let (params, has_varargs, params_ctx) =
-                    self.fn_def_params(stream, allow_var_args)?;
-                let fn_ctx = params_ctx.join(fn_ctx);
+                    let (params, has_varargs, params_ctx) =
+                        self.fn_def_params(stream, allow_var_args)?;
+                    let fn_ctx = params_ctx.join(fn_ctx);
 
-                let (fn_type, fn_type_ctx) = if stream.next_if(&Lex::LArrow).is_some() {
-                    self.consume_type(stream)?.ok_or(CompilerError::new(
-                        fn_ctx.span(),
-                        ParserError::FnExpectedTypeAfterArrow,
-                    ))?
-                    //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?
-                } else {
-                    (Type::Unit, fn_ctx)
-                };
-                let fn_ctx = fn_type_ctx.join(fn_ctx);
+                    let (fn_type, fn_type_ctx) = if stream.next_if(&Lex::LArrow).is_some() {
+                        self.consume_type(stream)?.ok_or(CompilerError::new(
+                            fn_ctx.span(),
+                            ParserError::FnExpectedTypeAfterArrow,
+                        ))?
+                    } else {
+                        (Type::Unit, fn_ctx)
+                    };
+                    let fn_ctx = fn_type_ctx.join(fn_ctx);
 
-                Ok(Some((fn_ctx, fn_name, params, has_varargs, fn_type))).map(|ok| {
-                    ok.view(|v| self.record(event.with_span(v.0.span()), Ok("Routine Declaration")))
+                    Ok(Some((fn_ctx, fn_name, params, has_varargs, fn_type)))
                 })
-            })
+        });
+        result.view3(|v| {
+            let msg = v.map(|_| "Routine Declaration");
+            let span = match v {
+                Ok(v) => v.0.span(),
+                Err(err) => err.span(),
+            };
+            self.record(event.with_span(span), msg)
+        })
     }
 
     pub(super) fn fn_body(
@@ -426,175 +431,210 @@ impl<'a> Parser<'a> {
     }
 
     pub(super) fn path(&self, stream: &mut TokenStream) -> ParserResult<(Path, ParserContext)> {
-        let event = self.new_event(Span::zero());
-        let mut path = vec![];
+        let (event, result) = self.new_event(Span::zero()).and_then(|| {
+            let mut path = vec![];
 
-        let mut ctx = stream.peek().map(|t| t.to_ctx()).unwrap();
-        // The path "::a" is equivalent to "root::a"; it is a short way of starting an absolute path
-        if stream.test_if(&Lex::PathSeparator) {
-            path.push(Element::FileRoot);
-        } else if stream.next_if(&Lex::PathProjectRoot).is_some() {
-            path.push(Element::CanonicalRoot);
-        } else if stream.next_if(&Lex::PathFileRoot).is_some() {
-            path.push(Element::FileRoot);
-        } else if stream.next_if(&Lex::PathSelf).is_some() {
-            path.push(Element::Selph);
-        } else if stream.next_if(&Lex::PathSuper).is_some() {
-            path.push(Element::Super);
-        } else if let Some((id, _)) = stream.next_if_id() {
-            path.push(Element::Id(id));
-        } else {
-            return Ok(None);
-        }
+            let mut ctx = stream.peek().map(|t| t.to_ctx()).unwrap();
+            // The path "::a" is equivalent to "root::a"; it is a short way of starting an absolute path
+            if stream.test_if(&Lex::PathSeparator) {
+                path.push(Element::FileRoot);
+            } else if stream.next_if(&Lex::PathProjectRoot).is_some() {
+                path.push(Element::CanonicalRoot);
+            } else if stream.next_if(&Lex::PathFileRoot).is_some() {
+                path.push(Element::FileRoot);
+            } else if stream.next_if(&Lex::PathSelf).is_some() {
+                path.push(Element::Selph);
+            } else if stream.next_if(&Lex::PathSuper).is_some() {
+                path.push(Element::Super);
+            } else if let Some((id, _)) = stream.next_if_id() {
+                path.push(Element::Id(id));
+            } else {
+                return Ok(None);
+            }
 
-        while let Some(path_sep) = stream.next_if(&Lex::PathSeparator) {
-            let span = match stream
-                .next_if_one_of(vec![Lex::Identifier(StringId::new()), Lex::PathSuper])
-            {
-                Some(Token {
-                    sym: Lex::PathSuper,
-                    span,
-                    ..
-                }) => {
-                    path.push(Element::Super);
-                    span
-                }
-                Some(Token {
-                    sym: Lex::Identifier(id),
-                    span,
-                    ..
-                }) => {
-                    path.push(Element::Id(id));
-                    span
-                }
-                _ => {
-                    return err!(path_sep.span(), ParserError::PathExpectedIdentifier);
-                    //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)));
-                }
+            while let Some(path_sep) = stream.next_if(&Lex::PathSeparator) {
+                let span = match stream
+                    .next_if_one_of(vec![Lex::Identifier(StringId::new()), Lex::PathSuper])
+                {
+                    Some(Token {
+                        sym: Lex::PathSuper,
+                        span,
+                        ..
+                    }) => {
+                        path.push(Element::Super);
+                        span
+                    }
+                    Some(Token {
+                        sym: Lex::Identifier(id),
+                        span,
+                        ..
+                    }) => {
+                        path.push(Element::Id(id));
+                        span
+                    }
+                    _ => {
+                        return err!(path_sep.span(), ParserError::PathExpectedIdentifier);
+                    }
+                };
+                ctx = ctx.extend(span);
+            }
+
+            Ok(Some((path.into(), ctx)))
+        });
+        result.view3(|v| {
+            let msg = v.map(|_| "Path");
+            let span = match v {
+                Ok(v) => v.1.span(),
+                Err(err) => err.span(),
             };
-            ctx = ctx.extend(span);
-        }
-
-        Ok(Some((path.into(), ctx))).view(|v| self.record(event.with_span(v.1.span()), Ok("Path")))
+            self.record(event.with_span(span), msg)
+        })
     }
 
     fn identifier(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
-        let event = self.new_event(Span::zero());
-        match stream.next_if_id() {
-            Some((id, span)) => Ok(Some(Expression::Identifier(ParserContext::new(span), id))),
-            _ => Ok(None),
-        }
-        .view(|v| self.record(event.with_span(v.span()), Ok("Identifier")))
+        let (event, result) = self
+            .new_event(Span::zero())
+            .and_then(|| match stream.next_if_id() {
+                Some((id, span)) => Ok(Some(Expression::Identifier(ParserContext::new(span), id))),
+                _ => Ok(None),
+            });
+        result.view3(|v| {
+            let msg = v.map(|_| "Identifier");
+            self.record(event.with_span(v.span()), msg)
+        })
     }
 
     fn consume_type(&self, stream: &mut TokenStream) -> ParserResult<(Type, ParserContext)> {
-        let event = self.new_event(Span::zero());
-        let is_coroutine = stream.next_if(&Lex::CoroutineDef).is_some();
-        let ty = match stream.next_if(&Lex::Primitive(Primitive::U8)) {
-            Some(Token {
-                sym: Lex::Primitive(prim_ty),
-                span,
-            }) => {
-                let ty = match prim_ty {
-                    Primitive::U8 => Some(Type::U8),
-                    Primitive::U16 => Some(Type::U16),
-                    Primitive::U32 => Some(Type::U32),
-                    Primitive::U64 => Some(Type::U64),
-                    Primitive::I8 => Some(Type::I8),
-                    Primitive::I16 => Some(Type::I16),
-                    Primitive::I32 => Some(Type::I32),
-                    Primitive::I64 => Some(Type::I64),
-                    Primitive::Bool => Some(Type::Bool),
-                    Primitive::StringLiteral => Some(Type::StringLiteral),
-                };
-                let ctx = ParserContext::new(span);
-                ty.map(|ty| (ty, ctx))
-                    .view(|v| self.record(event.with_span(v.1.span()), Ok("Primitive Type")))
-            }
-            _ => match self.path(stream)? {
-                Some((path, path_ctx)) => Some((Type::Custom(path), path_ctx))
-                    .view(|v| self.record(event.with_span(v.1.span()), Ok("Custom Type"))),
-                _ => match self.array_type(stream)? {
-                    Some((ty, ctx)) => Some((ty, ctx)),
-                    None => None,
+        let (event, result) = self.new_event(Span::zero()).and_then(|| {
+            let is_coroutine = stream.next_if(&Lex::CoroutineDef).is_some();
+            let ty = match stream.next_if(&Lex::Primitive(Primitive::U8)) {
+                Some(Token {
+                    sym: Lex::Primitive(prim_ty),
+                    span,
+                }) => {
+                    let ty = match prim_ty {
+                        Primitive::U8 => Some(Type::U8),
+                        Primitive::U16 => Some(Type::U16),
+                        Primitive::U32 => Some(Type::U32),
+                        Primitive::U64 => Some(Type::U64),
+                        Primitive::I8 => Some(Type::I8),
+                        Primitive::I16 => Some(Type::I16),
+                        Primitive::I32 => Some(Type::I32),
+                        Primitive::I64 => Some(Type::I64),
+                        Primitive::Bool => Some(Type::Bool),
+                        Primitive::StringLiteral => Some(Type::StringLiteral),
+                    };
+                    let ctx = ParserContext::new(span);
+                    ty.map(|ty| (ty, ctx))
+                }
+                _ => match self.path(stream)? {
+                    Some((path, path_ctx)) => Some((Type::Custom(path), path_ctx)),
+                    _ => match self.array_type(stream)? {
+                        Some((ty, ctx)) => Some((ty, ctx)),
+                        None => None,
+                    },
                 },
-            },
-        }
-        .map(|(ty, ctx)| {
-            if is_coroutine {
-                (Type::Coroutine(Box::new(ty)), ctx)
-            } else {
-                (ty, ctx)
             }
+            .map(|(ty, ctx)| {
+                if is_coroutine {
+                    (Type::Coroutine(Box::new(ty)), ctx)
+                } else {
+                    (ty, ctx)
+                }
+            });
+            Ok(ty)
         });
-        Ok(ty)
+        result.view3(|v| {
+            let msg = v.map(|v| match v.0 {
+                Type::Custom(_) => "Custom Type",
+                Type::Array(..) => "Array Type",
+                _ => "Primitive Type",
+            });
+            let span = match v {
+                Ok(ok) => ok.1.span(),
+                Err(err) => err.span(),
+            };
+            self.record(event.with_span(span), msg)
+        })
     }
 
     fn array_type(&self, stream: &mut TokenStream) -> ParserResult<(Type, ParserContext)> {
-        let event = self.new_event(Span::zero());
-        match stream.next_if(&Lex::LBracket) {
-            Some(lbracket) => {
-                let ctx = lbracket.to_ctx();
-                self.consume_type(stream)?
-                    .ok_or(CompilerError::new(
-                        ctx.span(),
-                        ParserError::ArrayDeclExpectedType,
-                    ))
-                    //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
-                    .and_then(|(element_ty, _)| {
-                        stream.next_must_be(&Lex::Semicolon)?;
-
-                        let len = self.expression(stream)?.ok_or(CompilerError::new(
+        let (event, result) = self.new_event(Span::zero()).and_then(|| {
+            match stream.next_if(&Lex::LBracket) {
+                Some(lbracket) => {
+                    let ctx = lbracket.to_ctx();
+                    self.consume_type(stream)?
+                        .ok_or(CompilerError::new(
                             ctx.span(),
-                            ParserError::ArrayDeclExpectedSize,
-                        ))?;
+                            ParserError::ArrayDeclExpectedType,
+                        ))
                         //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
-                        let len = match len {
-                            Expression::U8(_, l) => l as usize,
-                            Expression::U16(_, l) => l as usize,
-                            Expression::U32(_, l) => l as usize,
-                            Expression::U64(_, l) => l as usize,
-                            Expression::I8(_, l) => l as usize,
-                            Expression::I16(_, l) => l as usize,
-                            Expression::I32(_, l) => l as usize,
-                            Expression::I64(_, l) => l as usize,
-                            _ => return err!(len.span(), ParserError::ArrayExpectedIntLiteral),
-                        };
+                        .and_then(|(element_ty, _)| {
+                            stream.next_must_be(&Lex::Semicolon)?;
 
-                        let ctx = stream.next_must_be(&Lex::RBracket)?.to_ctx().join(ctx);
-                        Ok(Some((Type::Array(Box::new(element_ty), len), ctx)))
-                    })
+                            let len = self.expression(stream)?.ok_or(CompilerError::new(
+                                ctx.span(),
+                                ParserError::ArrayDeclExpectedSize,
+                            ))?;
+                            //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
+                            let len = match len {
+                                Expression::U8(_, l) => l as usize,
+                                Expression::U16(_, l) => l as usize,
+                                Expression::U32(_, l) => l as usize,
+                                Expression::U64(_, l) => l as usize,
+                                Expression::I8(_, l) => l as usize,
+                                Expression::I16(_, l) => l as usize,
+                                Expression::I32(_, l) => l as usize,
+                                Expression::I64(_, l) => l as usize,
+                                _ => return err!(len.span(), ParserError::ArrayExpectedIntLiteral),
+                            };
+
+                            let ctx = stream.next_must_be(&Lex::RBracket)?.to_ctx().join(ctx);
+                            Ok(Some((Type::Array(Box::new(element_ty), len), ctx)))
+                        })
+                }
+                None => Ok(None),
             }
-            None => Ok(None),
-        }
-        .view(|v| self.record(event.with_span(v.1.span()), Ok("Array Type")))
+        });
+        result.view3(|v| {
+            let msg = v.map(|_| "Array Type");
+            let span = match v {
+                Ok(ok) => ok.1.span(),
+                Err(err) => err.span(),
+            };
+            self.record(event.with_span(span), msg)
+        })
     }
 
     pub(super) fn id_declaration(
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        let event = self.new_event(Span::zero());
-        match stream.next_ifn(vec![Lex::Identifier(StringId::new()), Lex::Colon]) {
-            Some(decl_tok) => {
-                let ctx = decl_tok[0].to_ctx().join(decl_tok[1].to_ctx());
-                let id = decl_tok[0].sym.get_str().expect(
+        let (event, result) = self.new_event(Span::zero()).and_then(|| {
+            match stream.next_ifn(vec![Lex::Identifier(StringId::new()), Lex::Colon]) {
+                Some(decl_tok) => {
+                    let ctx = decl_tok[0].to_ctx().join(decl_tok[1].to_ctx());
+                    let id = decl_tok[0].sym.get_str().expect(
                     "CRITICAL: first token is an identifier but cannot be converted to a string",
                 );
-                self.consume_type(stream)
-                    .map_err(|_| {
-                        CompilerError::new(decl_tok[0].span(), ParserError::IdDeclExpectedType)
-                    })
-                    //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
-                    .and_then(|result| {
-                        Ok(result.and_then(|(ty, ty_ctx)| {
-                            let ctx = ctx.join(ty_ctx);
-                            Some(Expression::IdentifierDeclare(ctx, id, ty))
-                        }))
-                    })
+                    self.consume_type(stream)
+                        .map_err(|_| {
+                            CompilerError::new(decl_tok[0].span(), ParserError::IdDeclExpectedType)
+                        })
+                        //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
+                        .and_then(|result| {
+                            Ok(result.and_then(|(ty, ty_ctx)| {
+                                let ctx = ctx.join(ty_ctx);
+                                Some(Expression::IdentifierDeclare(ctx, id, ty))
+                            }))
+                        })
+                }
+                None => Ok(None),
             }
-            None => Ok(None),
-        }
-        .view(|v| self.record(event.with_span(v.span()), Ok("Identifier Declaration")))
+        });
+        result.view3(|v| {
+            let msg = v.map(|_| "Identifier Declaration");
+            self.record(event.with_span(v.span()), msg)
+        })
     }
 }
