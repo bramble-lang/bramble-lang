@@ -175,6 +175,11 @@ impl<'a, V: Writable, E: CompilerDisplay + Debug> Event<'a, V, E> {
         self.input = span;
         self
     }
+
+    pub fn and_then<R, F: FnMut(&mut Self) -> R>(mut self, mut f: F) -> (Self, R) {
+        let r = f(&mut self);
+        (self, r)
+    }
 }
 
 impl<'a, V: Writable, E: CompilerDisplay + Debug> Drop for Event<'a, V, E> {
