@@ -287,7 +287,7 @@ impl<'a> Parser<'a> {
     ) -> ParserResult<Expression<ParserContext>> {
         match stream.next_if_one_of(vec![Lex::Minus, Lex::Not]) {
             Some(op) => {
-                let event = self.new_event(Span::zero());
+                let (event, result) = self.new_event(Span::zero()).and_then(|| {
                 self.negate(stream)
                     .and_then(|o| {
                         // TODO: I could create an if_none_then combinator that takes a Result<Option> and does this: if_none_then: Result<Option> -> Result<>
@@ -297,9 +297,13 @@ impl<'a> Parser<'a> {
                         ))
                     })
                     //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
-                    .and_then(|factor| Expression::unary_op(op.to_ctx(), &op.sym, Box::new(factor)))
+                        .and_then(|factor| {
+                            Expression::unary_op(op.to_ctx(), &op.sym, Box::new(factor))
+                        })
+                });
+
                     // TODO: Can I make view2: Result<Option<V, E>> -> F(Result<V,E>) then not have to have the double lambdas?
-                    .view3(|v| {
+                result.view3(|v| {
                         let msg = v.map(|_| {
                             if op.sym == Lex::Minus {
                                 "Arithmetic Negate"
@@ -309,7 +313,6 @@ impl<'a> Parser<'a> {
                         });
                         self.record(event.with_span(v.span()), msg)
                     })
-                //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))
             }
             None => self.member_access(stream),
         }
