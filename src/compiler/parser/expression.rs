@@ -1,12 +1,11 @@
 use super::{Parser, ParserResult};
 
 use super::{tokenstream::TokenStream, ParserContext, ParserError};
-use crate::compiler::diagnostics::View2;
 use crate::compiler::Span;
 use crate::{
     compiler::{
         ast::*,
-        diagnostics::{View, ViewErr},
+        diagnostics::{View, View2},
         lexer::tokens::{Lex, Token},
         source::SourceIr,
         CompilerError,
@@ -183,24 +182,25 @@ impl<'a> Parser<'a> {
     ) -> ParserResult<Expression<ParserContext>> {
         match stream.next_if(&Lex::LBrace) {
             Some(lbrace) => {
-                let event = self.new_event(Span::zero());
-                // Read the statements composing the expression block
-                let mut stmts = vec![];
-                while let Some(s) = self.statement(stream)? {
-                    stmts.push(s);
-                }
+                let (event, result) = self.new_event(Span::zero()).and_then(|event| {
+                    // Read the statements composing the expression block
+                    let mut stmts = vec![];
+                    while let Some(s) = self.statement(stream)? {
+                        stmts.push(s);
+                    }
 
-                // Check if the block ends in an expression rather than a statement (no semicolon post fix)
-                let final_exp = self.expression(stream)?.map(|e| Box::new(e));
+                    // Check if the block ends in an expression rather than a statement (no semicolon post fix)
+                    let final_exp = self.expression(stream)?.map(|e| Box::new(e));
 
-                // Compute the span that goes from the `{` to the `}`
-                let ctx = stream
-                    .next_must_be(&Lex::RBrace)?
-                    .to_ctx()
-                    .join(lbrace.to_ctx());
+                    // Compute the span that goes from the `{` to the `}`
+                    let ctx = stream
+                        .next_must_be(&Lex::RBrace)?
+                        .to_ctx()
+                        .join(lbrace.to_ctx());
 
-                Ok(Some(Expression::ExpressionBlock(ctx, stmts, final_exp)))
-                    .view(|v| self.record(event.with_span(v.span()), Ok("Expression Block")))
+                    Ok(Some(Expression::ExpressionBlock(ctx, stmts, final_exp)))
+                });
+                result.view(|v| self.record(event.with_span(v.span()), Ok("Expression Block")))
             }
             None => Ok(None),
         }
@@ -282,7 +282,8 @@ impl<'a> Parser<'a> {
             Some(op) => {
                 let event = self.new_event(Span::zero());
                 self.negate(stream)
-                    .and_then(|o| {     // TODO: I could create an if_none_then combinator that takes a Result<Option> and does this: if_none_then: Result<Option> -> Result<>
+                    .and_then(|o| {
+                        // TODO: I could create an if_none_then combinator that takes a Result<Option> and does this: if_none_then: Result<Option> -> Result<>
                         o.ok_or(CompilerError::new(
                             op.span(),
                             ParserError::ExpectedTermAfter(op.sym.clone()),
@@ -291,18 +292,16 @@ impl<'a> Parser<'a> {
                     //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
                     .and_then(|factor| Expression::unary_op(op.to_ctx(), &op.sym, Box::new(factor)))
                     // TODO: Can I make view2: Result<Option<V, E>> -> F(Result<V,E>) then not have to have the double lambdas?
-                    .view2(
-                        event,
-                        |event, v| {
-                            let msg = if op.sym == Lex::Minus {
+                    .view3(event, |event, v| {
+                        let msg = v.map(|_| {
+                            if op.sym == Lex::Minus {
                                 "Arithmetic Negate"
                             } else {
                                 "Boolean Negate"
-                            };
-                            self.record(event.with_span(v.span()), Ok(msg))
-                        },
-                        |event, err| self.record(event.with_span(err.span()), Err(&err)),
-                    )
+                            }
+                        });
+                        self.record(event.with_span(v.span()), msg)
+                    })
                 //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))
             }
             None => self.member_access(stream),
