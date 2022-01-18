@@ -83,11 +83,12 @@ impl<'a> TokenStream<'a> {
             }
         }
         .map_err(|err| {
-            self.logger.write(Event::<&str, ParserError>::new_without_parent(
-                "parser",
-                err.span(),
-                Err(&err),
-            ));
+            self.logger
+                .write(Event::<&str, ParserError>::new_without_parent(
+                    "parser",
+                    err.span(),
+                    Err(&err),
+                ));
             err
         })
     }
