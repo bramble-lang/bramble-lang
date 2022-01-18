@@ -5,7 +5,7 @@ use crate::compiler::Span;
 use crate::{
     compiler::{
         ast::*,
-        diagnostics::{View, View2},
+        diagnostics::View2,
         lexer::tokens::{Lex, Token},
         source::SourceIr,
         CompilerError,
