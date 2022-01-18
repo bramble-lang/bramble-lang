@@ -490,10 +490,10 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        let (event, result) = self.new_event(Span::zero()).and_then(|| {
-            match stream.next_if(&Lex::While) {
-                Some(whl) => {
-                    stream.next_must_be(&Lex::LParen).and_then(|_| {
+        let (event, result) =
+            self.new_event(Span::zero())
+                .and_then(|| match stream.next_if(&Lex::While) {
+                    Some(whl) => stream.next_must_be(&Lex::LParen).and_then(|_| {
                         let cond = self.expression(stream)?.ok_or(CompilerError::new(
                             whl.span(),
                             ParserError::WhileExpectedConditional,
@@ -509,11 +509,9 @@ impl<'a> Parser<'a> {
                                     body: Box::new(body),
                                 })
                             })
-                    })
-                }
-                _ => Ok(None),
-            }
-        });
+                    }),
+                    _ => Ok(None),
+                });
         result.view(|v| {
             let msg = v.map(|_| "While");
             self.record(event.with_span(v.span()), msg)
@@ -719,18 +717,16 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        let (event, result) = self.new_event(Span::zero())
-        .and_then(||{
-
-        match stream.next_if(&Lex::Bool(true)) {
-            Some(Token {
-                span,
-                sym: Lex::Bool(b),
-                ..
-            }) => Ok(Some(Expression::Boolean(ParserContext::new(span), b))),
-            _ => Ok(None),
-        }
-        });
+        let (event, result) =
+            self.new_event(Span::zero())
+                .and_then(|| match stream.next_if(&Lex::Bool(true)) {
+                    Some(Token {
+                        span,
+                        sym: Lex::Bool(b),
+                        ..
+                    }) => Ok(Some(Expression::Boolean(ParserContext::new(span), b))),
+                    _ => Ok(None),
+                });
         result.view(|v| {
             let msg = v.map(|_| "Boolean");
             self.record(event.with_span(v.span()), msg)
@@ -741,16 +737,15 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        let (event, result) = self.new_event(Span::zero())
-        .and_then(||{
-        match stream.next_if(&Lex::StringLiteral(StringId::new())) {
-            Some(Token {
-                span,
-                sym: Lex::StringLiteral(s),
-                ..
-            }) => Ok(Some(Expression::StringLiteral(ParserContext::new(span), s))),
-            _ => Ok(None),
-        }
+        let (event, result) = self.new_event(Span::zero()).and_then(|| {
+            match stream.next_if(&Lex::StringLiteral(StringId::new())) {
+                Some(Token {
+                    span,
+                    sym: Lex::StringLiteral(s),
+                    ..
+                }) => Ok(Some(Expression::StringLiteral(ParserContext::new(span), s))),
+                _ => Ok(None),
+            }
         });
         result.view(|v| {
             let msg = v.map(|_| "String");

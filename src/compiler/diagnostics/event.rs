@@ -52,7 +52,6 @@ pub mod event_id {
         pub fn new() -> EventStack {
             EventStack(Rc::new(RefCell::new(Vec::new())))
         }
-
     }
 
     impl std::ops::Deref for EventStack {
@@ -138,11 +137,7 @@ impl<'a, V: Writable, E: CompilerDisplay + Debug> Event<'a, V, E> {
     }
 
     /// Create a new compiler [`Event`] without a result.
-    pub fn new(
-        stage: &'a str,
-        input: Span,
-        stack: event_id::EventStack,
-    ) -> Event<'a, V, E> {
+    pub fn new(stage: &'a str, input: Span, stack: event_id::EventStack) -> Event<'a, V, E> {
         let id = event_id::EventId::new();
 
         // If the stack is not empty, then use the top as the parent id
@@ -169,7 +164,7 @@ impl<'a, V: Writable, E: CompilerDisplay + Debug> Event<'a, V, E> {
         self.msg = Some(msg);
         self
     }
-   
+
     /// Updates the span of this event
     pub fn with_span(mut self, span: Span) -> Self {
         self.input = span;

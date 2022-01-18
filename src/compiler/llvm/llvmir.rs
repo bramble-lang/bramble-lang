@@ -29,7 +29,7 @@ use inkwell::{
 use crate::{
     compiler::{
         ast::{Element, Parameter, StructDef},
-        diagnostics::{Event, EventId, Logger, View, Writable, EventStack},
+        diagnostics::{Event, EventId, EventStack, Logger, View, Writable},
         import::{Import, ImportRoutineDef, ImportStructDef},
         parser::{ParserContext, ParserError},
         source::SourceIr,

@@ -1,6 +1,6 @@
 // Token - a type which captures the different types of tokens and which is output
 // by tokenize
-use crate::compiler::diagnostics::{Event, Logger, EventStack};
+use crate::compiler::diagnostics::{Event, EventStack, Logger};
 use crate::compiler::source::{Offset, Source};
 use crate::compiler::{SourceChar, Span};
 use crate::{StringId, StringTable};
