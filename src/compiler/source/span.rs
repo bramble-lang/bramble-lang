@@ -83,3 +83,12 @@ impl std::fmt::Display for Span {
         f.write_fmt(format_args!("[{}, {}]", self.low, self.high))
     }
 }
+
+impl<V: SourceIr, E: SourceIr> SourceIr for Result<&V, &E> {
+    fn span(&self) -> Span {
+        match self {
+            Ok(ok) => ok.span(),
+            Err(err) => err.span(),
+        }
+    }
+}
