@@ -1,4 +1,4 @@
-use crate::compiler::diagnostics::{Event, View, Writable};
+use crate::compiler::diagnostics::{Event, View, View2, Writable};
 use crate::compiler::source::SourceIr;
 use crate::compiler::Span;
 use crate::compiler::{
@@ -50,67 +50,63 @@ impl<'a> Parser<'a> {
     ) -> ParserResult<Module<ParserContext>> {
         // Create the module that represents the source code unit as a whole (usually the file)
         // give it span that covers the entire set of tokens
-        let file_module_event = self.new_event(Span::zero());
-        ctx_over_tokens(&tokens)
-            .ok_or(CompilerError::new(Span::zero(), ParserError::EmptyProject))
-            .and_then(|module_ctx| {
-                let mut module = Module::new(name, module_ctx);
+        let (file_module_event, result) = self.new_event(Span::zero()).and_then(|| {
+            ctx_over_tokens(&tokens)
+                .ok_or(CompilerError::new(Span::zero(), ParserError::EmptyProject))
+                .and_then(|module_ctx| {
+                    let mut module = Module::new(name, module_ctx);
 
-                // Create the token stream.
-                let mut stream = TokenStream::new(&tokens, self.logger)
-                    .ok_or(CompilerError::new(Span::zero(), ParserError::EmptyProject))
-                    //.view_err(|err| self.record_terminal(err.span(), Err(&err)))
-                    ?;
+                    // Create the token stream.
+                    let mut stream = TokenStream::new(&tokens, self.logger)
+                        .ok_or(CompilerError::new(Span::zero(), ParserError::EmptyProject))?;
 
-                while stream.peek().is_some() {
-                    let start_index = stream.index();
-                    self.parse_items_into(&mut stream, &mut module)?;
+                    while stream.peek().is_some() {
+                        let start_index = stream.index();
+                        self.parse_items_into(&mut stream, &mut module)?;
 
-                    if stream.index() == start_index {
-                        return err!(
-                            stream.peek().unwrap().span(),
-                            ParserError::Locked(stream.peek().map(|t| t.clone()))
-                        );
-                        /*.view_err(|err| {
-                            self.record(file_module_event.with_span(err.span()), Err(&err))
-                        });*/
+                        if stream.index() == start_index {
+                            return err!(
+                                stream.peek().unwrap().span(),
+                                ParserError::Locked(stream.peek().map(|t| t.clone()))
+                            );
+                        }
                     }
-                }
 
-                Ok(Some(module))
-                /*.map(|ok| {
-                    ok.view(|v| {
-                        self.record(file_module_event.with_span(v.span()), Ok("File Module"))
-                    })
-                })*/
-            })
-            .view(|v| self.record(file_module_event.with_span(v.span()), Ok("File Module")))
-        //.view_err(|err| self.record(file_module_event, Err(&err)))?;
+                    Ok(Some(module))
+                })
+        });
+        result.view3(|v| {
+            let msg = v.map(|_| "File Module");
+            self.record(file_module_event.with_span(v.span()), msg)
+        })
     }
 
     fn module(&self, stream: &mut TokenStream) -> ParserResult<Module<ParserContext>> {
-        let event = self.new_event(Span::zero());
-        match stream.next_if(&Lex::ModuleDef) {
-            Some(module) => match stream.next_if_id() {
-                Some((module_name, _)) => {
-                    let mut module = Module::new(module_name, module.to_ctx());
-                    stream.next_must_be(&Lex::LBrace)?;
+        let (event, result) =
+            self.new_event(Span::zero())
+                .and_then(|| match stream.next_if(&Lex::ModuleDef) {
+                    Some(module) => match stream.next_if_id() {
+                        Some((module_name, _)) => {
+                            let mut module = Module::new(module_name, module.to_ctx());
+                            stream.next_must_be(&Lex::LBrace)?;
 
-                    self.parse_items_into(stream, &mut module)?;
+                            self.parse_items_into(stream, &mut module)?;
 
-                    let ctx = stream
-                        .next_must_be(&Lex::RBrace)?
-                        .to_ctx()
-                        .join(*module.context());
-                    *module.get_context_mut() = ctx;
-                    Ok(Some(module))
-                    //.map(|ok| ok.view(|v| self.record(event.with_span(v.span()), Ok("Module"))))
-                }
-                _ => err!(module.span(), ParserError::ModExpectedName), //.view_err(|err| self.record(event.with_span(err.span()), Err(&err))),
-            },
-            None => Ok(None),
-        }
-        .map(|ok| ok.view(|v| self.record(event.with_span(v.span()), Ok("Module"))))
+                            let ctx = stream
+                                .next_must_be(&Lex::RBrace)?
+                                .to_ctx()
+                                .join(*module.context());
+                            *module.get_context_mut() = ctx;
+                            Ok(Some(module))
+                        }
+                        _ => err!(module.span(), ParserError::ModExpectedName),
+                    },
+                    None => Ok(None),
+                });
+        result.view3(|v| {
+            let msg = v.map(|_| "Module");
+            self.record(event.with_span(v.span()), msg)
+        })
     }
 
     fn parse_items_into(
@@ -168,97 +164,106 @@ impl<'a> Parser<'a> {
     }
 
     fn extern_def(&self, stream: &mut TokenStream) -> ParserResult<Extern<ParserContext>> {
-        let event = self.new_event(Span::zero());
-        match stream.next_if(&Lex::Extern) {
-            Some(extern_tok) => match self.function_decl(stream, true)? {
-                Some((fn_ctx, fn_name, params, has_varargs, fn_type)) => {
-                    if has_varargs && params.len() == 0 {
-                        err!(fn_ctx.span(), ParserError::ExternInvalidVarArgs)
-                        //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)));
-                    } else {
-                        let ctx = stream
-                            .next_must_be(&Lex::Semicolon)?
-                            .to_ctx()
-                            .join(extern_tok.to_ctx());
-                        Ok(Some(Extern::new(
-                            fn_name,
-                            ctx,
-                            params,
-                            has_varargs,
-                            fn_type,
-                        )))
-                        //.view(|v| self.record(event.with_span(v.span()), Ok("Extern Definition")))
+        let (event, result) = self.new_event(Span::zero()).and_then(|| {
+            match stream.next_if(&Lex::Extern) {
+                Some(extern_tok) => match self.function_decl(stream, true)? {
+                    Some((fn_ctx, fn_name, params, has_varargs, fn_type)) => {
+                        if has_varargs && params.len() == 0 {
+                            err!(fn_ctx.span(), ParserError::ExternInvalidVarArgs)
+                            //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)));
+                        } else {
+                            let ctx = stream
+                                .next_must_be(&Lex::Semicolon)?
+                                .to_ctx()
+                                .join(extern_tok.to_ctx());
+                            Ok(Some(Extern::new(
+                                fn_name,
+                                ctx,
+                                params,
+                                has_varargs,
+                                fn_type,
+                            )))
+                            //.view(|v| self.record(event.with_span(v.span()), Ok("Extern Definition")))
+                        }
                     }
-                }
-                None => err!(extern_tok.span(), ParserError::ExternExpectedFnDecl), //.view_err(|err| self.record(event.with_span(err.span()), Err(&err))),
-            },
-            None => Ok(None),
-        }
-        .view(|v| self.record(event.with_span(v.span()), Ok("Extern Definition")))
+                    None => err!(extern_tok.span(), ParserError::ExternExpectedFnDecl), //.view_err(|err| self.record(event.with_span(err.span()), Err(&err))),
+                },
+                None => Ok(None),
+            }
+        });
+        result.view3(|v| {
+            let msg = v.map(|_| "Extern Definition");
+            self.record(event.with_span(v.span()), msg)
+        })
     }
 
     fn struct_def(&self, stream: &mut TokenStream) -> ParserResult<StructDef<ParserContext>> {
-        let event = self.new_event(Span::zero());
-        match stream.next_if(&Lex::Struct) {
-            Some(st_def) => match stream.next_if_id() {
-                Some((id, _)) => {
-                    stream.next_must_be(&Lex::LBrace)?;
-                    let fields = self.parameter_list(stream)?;
-                    let ctx = stream
-                        .next_must_be(&Lex::RBrace)?
-                        .to_ctx()
-                        .join(st_def.to_ctx());
-                    Ok(Some(StructDef::new(id, ctx, fields)))
-                }
-                None => {
-                    err!(st_def.span(), ParserError::StructExpectedIdentifier)
-                }
-            },
-            None => Ok(None),
-        }
-        .map(|ok| ok.view(|v| self.record(event.with_span(v.span()), Ok("Struct Definition"))))
-        //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))
+        let (event, result) =
+            self.new_event(Span::zero())
+                .and_then(|| match stream.next_if(&Lex::Struct) {
+                    Some(st_def) => match stream.next_if_id() {
+                        Some((id, _)) => {
+                            stream.next_must_be(&Lex::LBrace)?;
+                            let fields = self.parameter_list(stream)?;
+                            let ctx = stream
+                                .next_must_be(&Lex::RBrace)?
+                                .to_ctx()
+                                .join(st_def.to_ctx());
+                            Ok(Some(StructDef::new(id, ctx, fields)))
+                        }
+                        None => {
+                            err!(st_def.span(), ParserError::StructExpectedIdentifier)
+                        }
+                    },
+                    None => Ok(None),
+                });
+        result.view3(|v| {
+            let msg = v.map(|_| "Struct Definition");
+            self.record(event.with_span(v.span()), msg)
+        })
     }
 
     fn function_def(&self, stream: &mut TokenStream) -> ParserResult<RoutineDef<ParserContext>> {
-        let event = self.new_event(Span::zero());
-        match self.function_decl(stream, false)? {
-            Some((ctx, name, params, is_variadic, ret_ty)) => {
-                if is_variadic {
-                    err!(ctx.span(), ParserError::FnVarArgsNotAllowed)
-                    //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)));
-                } else {
-                    Ok((ctx, name, params, ret_ty))
+        let (event, result) = self.new_event(Span::zero()).and_then(|| {
+            match self.function_decl(stream, false)? {
+                Some((ctx, name, params, is_variadic, ret_ty)) => {
+                    if is_variadic {
+                        err!(ctx.span(), ParserError::FnVarArgsNotAllowed)
+                    } else {
+                        Ok((ctx, name, params, ret_ty))
+                    }
                 }
+                None => return Ok(None),
             }
-            None => return Ok(None),
-        }
-        .and_then(|(fn_ctx, fn_name, params, fn_type)| {
-            stream.next_must_be(&Lex::LBrace)?;
-            let mut stmts = self.fn_body(stream)?;
+            .and_then(|(fn_ctx, fn_name, params, fn_type)| {
+                stream.next_must_be(&Lex::LBrace)?;
+                let mut stmts = self.fn_body(stream)?;
 
-            match self.return_stmt(stream)? {
-                Some(ret) => stmts.push(Statement::Return(Box::new(ret))),
-                None => {
-                    return err!(
-                        fn_ctx.span(),
-                        ParserError::FnExpectedReturn(stream.peek().map(|t| t.clone()))
-                    );
-                    //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)));
+                match self.return_stmt(stream)? {
+                    Some(ret) => stmts.push(Statement::Return(Box::new(ret))),
+                    None => {
+                        return err!(
+                            fn_ctx.span(),
+                            ParserError::FnExpectedReturn(stream.peek().map(|t| t.clone()))
+                        );
+                    }
                 }
-            }
-            let ctx = stream.next_must_be(&Lex::RBrace)?.to_ctx().join(fn_ctx);
+                let ctx = stream.next_must_be(&Lex::RBrace)?.to_ctx().join(fn_ctx);
 
-            Ok(Some(RoutineDef {
-                context: ctx,
-                def: RoutineDefType::Function,
-                name: fn_name,
-                params,
-                ret_ty: fn_type,
-                body: stmts,
-            }))
+                Ok(Some(RoutineDef {
+                    context: ctx,
+                    def: RoutineDefType::Function,
+                    name: fn_name,
+                    params,
+                    ret_ty: fn_type,
+                    body: stmts,
+                }))
+            })
+        });
+        result.view3(|v| {
+            let msg = v.map(|_| "Funtion Definition");
+            self.record(event.with_span(v.span()), msg)
         })
-        .view(|v| self.record(event.with_span(v.span()), Ok("Function Definition")))
     }
 
     fn function_decl(
