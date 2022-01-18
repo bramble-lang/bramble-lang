@@ -428,70 +428,68 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        let event = self.new_event(Span::zero());
         match stream.next_if(&Lex::If) {
             Some(if_tok) => {
-                stream.next_must_be(&Lex::LParen).and_then(|_| {
-                    let cond = self.expression(stream)?.ok_or(CompilerError::new(
-                        if_tok.span(),
-                        ParserError::IfExpectedConditional,
-                    ))?;
-                    //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
-                    stream.next_must_be(&Lex::RParen)?;
+                let (event, result) = self.new_event(Span::zero()).and_then(|| {
+                    stream.next_must_be(&Lex::LParen).and_then(|_| {
+                        let cond = self.expression(stream)?.ok_or(CompilerError::new(
+                            if_tok.span(),
+                            ParserError::IfExpectedConditional,
+                        ))?;
+                        stream.next_must_be(&Lex::RParen)?;
 
-                    let if_arm = self.expression_block(stream)?.ok_or(CompilerError::new(
-                        if_tok.span(),
-                        ParserError::IfTrueArmMissingExpr,
-                    ))?;
-                    //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
+                        let if_arm = self.expression_block(stream)?.ok_or(CompilerError::new(
+                            if_tok.span(),
+                            ParserError::IfTrueArmMissingExpr,
+                        ))?;
 
-                    // check for `else if`
-                    let else_arm = match stream.next_if(&Lex::Else) {
-                        Some(_) => match stream.peek() {
-                            Some(Token {
-                                sym: Lex::If, span, ..
-                            }) => {
-                                let span = *span;
-                                Some(
-                                    self.if_expression(stream)?.ok_or(CompilerError::new(
-                                        span,
-                                        ParserError::IfElseExpectedIfExpr,
-                                    ))?, /*.view_err(|err| {
-                                             self.record(event.with_span(err.span()), Err(&err))
-                                         })?,*/
-                                )
-                            }
-                            _ => {
-                                let false_arm =
-                                    self.expression_block(stream)?.ok_or(CompilerError::new(
-                                        if_tok.span(),
-                                        ParserError::IfFalseArmMissingExpr,
-                                    ))?;
-                                /* .view_err(|err| {
-                                    self.record(event.with_span(err.span()), Err(&err))
-                                })?;*/
-                                Some(false_arm)
-                            }
-                        },
-                        None => None,
-                    };
+                        // check for `else if`
+                        let else_arm = match stream.next_if(&Lex::Else) {
+                            Some(_) => match stream.peek() {
+                                Some(Token {
+                                    sym: Lex::If, span, ..
+                                }) => {
+                                    let span = *span;
+                                    Some(
+                                        self.if_expression(stream)?.ok_or(CompilerError::new(
+                                            span,
+                                            ParserError::IfElseExpectedIfExpr,
+                                        ))?, 
+                                    )
+                                }
+                                _ => {
+                                    let false_arm = self.expression_block(stream)?.ok_or(
+                                        CompilerError::new(
+                                            if_tok.span(),
+                                            ParserError::IfFalseArmMissingExpr,
+                                        ),
+                                    )?;
+                                    Some(false_arm)
+                                }
+                            },
+                            None => None,
+                        };
 
-                    let ctx = else_arm.as_ref().map_or_else(
-                        || if_tok.to_ctx().join(*if_arm.context()),
-                        |ea| if_tok.to_ctx().join(*ea.context()),
-                    );
+                        let ctx = else_arm.as_ref().map_or_else(
+                            || if_tok.to_ctx().join(*if_arm.context()),
+                            |ea| if_tok.to_ctx().join(*ea.context()),
+                        );
 
-                    Ok(Some(Expression::If {
-                        context: ctx,
-                        cond: Box::new(cond),
-                        if_arm: Box::new(if_arm),
-                        else_arm: else_arm.map(|f| Box::new(f)),
-                    }))
+                        Ok(Some(Expression::If {
+                            context: ctx,
+                            cond: Box::new(cond),
+                            if_arm: Box::new(if_arm),
+                            else_arm: else_arm.map(|f| Box::new(f)),
+                        }))
+                    })
+                });
+                result.view3(|v| {
+                    let msg = v.map(|_| "If Expression");
+                    self.record(event.with_span(v.span()), msg)
                 })
             }
             _ => Ok(None),
         }
-        .view(|v| self.record(event.with_span(v.span()), Ok("If Expression")))
     }
 
     pub(super) fn while_expression(
