@@ -392,20 +392,26 @@ impl<'a> Parser<'a> {
     ) -> ParserResult<Expression<ParserContext>> {
         match stream.peek() {
             Some(lparen) if lparen.sym == Lex::LParen => {
-                let event = self.new_event(Span::zero());
-                let ctx = lparen.to_ctx();
-                stream.next();
-                let mut exp = self.expression(stream)?;
-                let rparen = stream.next_must_be(&Lex::RParen)?;
-                let ctx = ctx.join(rparen.to_ctx());
+                let lparen = *lparen;
+                let (event, result) = self.new_event(Span::zero()).and_then(|| {
+                    let ctx = lparen.to_ctx();
+                    stream.next();
+                    let mut exp = self.expression(stream)?;
+                    let rparen = stream.next_must_be(&Lex::RParen)?;
+                    let ctx = ctx.join(rparen.to_ctx());
 
-                // Extend the Span of exp to cover the left paren and the right
-                exp.as_mut().map(|exp| {
-                    let ctx = exp.context().join(ctx);
-                    *exp.get_context_mut() = ctx;
+                    // Extend the Span of exp to cover the left paren and the right
+                    exp.as_mut().map(|exp| {
+                        let ctx = exp.context().join(ctx);
+                        *exp.get_context_mut() = ctx;
+                    });
+
+                    Ok(exp)
                 });
-
-                Ok(exp).view(|v| self.record(event.with_span(v.span()), Ok("Expression")))
+                result.view3(|v| {
+                    let msg = v.map(|_| "Expression");
+                    self.record(event.with_span(v.span()), msg)
+                })
             }
             _ => self
                 .if_expression(stream)
