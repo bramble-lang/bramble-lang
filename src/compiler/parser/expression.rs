@@ -658,68 +658,74 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        let event = self.new_event(Span::zero());
-        match stream.next_if_one_of(vec![
-            Lex::U8(0),
-            Lex::U16(0),
-            Lex::U32(0),
-            Lex::U64(0),
-            Lex::I8(0),
-            Lex::I16(0),
-            Lex::I32(0),
-            Lex::I64(0),
-        ]) {
-            Some(Token {
-                span,
-                sym: Lex::U8(i),
-                ..
-            }) => Ok(Some(Expression::U8(ParserContext::new(span), i))),
-            Some(Token {
-                span,
-                sym: Lex::U16(i),
-                ..
-            }) => Ok(Some(Expression::U16(ParserContext::new(span), i))),
-            Some(Token {
-                span,
-                sym: Lex::U32(i),
-                ..
-            }) => Ok(Some(Expression::U32(ParserContext::new(span), i))),
-            Some(Token {
-                span,
-                sym: Lex::U64(i),
-                ..
-            }) => Ok(Some(Expression::U64(ParserContext::new(span), i))),
-            Some(Token {
-                span,
-                sym: Lex::I8(i),
-                ..
-            }) => Ok(Some(Expression::I8(ParserContext::new(span), i))),
-            Some(Token {
-                span,
-                sym: Lex::I16(i),
-                ..
-            }) => Ok(Some(Expression::I16(ParserContext::new(span), i))),
-            Some(Token {
-                span,
-                sym: Lex::I32(i),
-                ..
-            }) => Ok(Some(Expression::I32(ParserContext::new(span), i))),
-            Some(Token {
-                span,
-                sym: Lex::I64(i),
-                ..
-            }) => Ok(Some(Expression::I64(ParserContext::new(span), i))),
-            Some(t) => panic!("Unexpected token: {:?}", t),
-            None => Ok(None),
-        }
-        .view(|v| self.record(event.with_span(v.span()), Ok("Number")))
+        let (event, result) = self.new_event(Span::zero()).and_then(|| {
+            match stream.next_if_one_of(vec![
+                Lex::U8(0),
+                Lex::U16(0),
+                Lex::U32(0),
+                Lex::U64(0),
+                Lex::I8(0),
+                Lex::I16(0),
+                Lex::I32(0),
+                Lex::I64(0),
+            ]) {
+                Some(Token {
+                    span,
+                    sym: Lex::U8(i),
+                    ..
+                }) => Ok(Some(Expression::U8(ParserContext::new(span), i))),
+                Some(Token {
+                    span,
+                    sym: Lex::U16(i),
+                    ..
+                }) => Ok(Some(Expression::U16(ParserContext::new(span), i))),
+                Some(Token {
+                    span,
+                    sym: Lex::U32(i),
+                    ..
+                }) => Ok(Some(Expression::U32(ParserContext::new(span), i))),
+                Some(Token {
+                    span,
+                    sym: Lex::U64(i),
+                    ..
+                }) => Ok(Some(Expression::U64(ParserContext::new(span), i))),
+                Some(Token {
+                    span,
+                    sym: Lex::I8(i),
+                    ..
+                }) => Ok(Some(Expression::I8(ParserContext::new(span), i))),
+                Some(Token {
+                    span,
+                    sym: Lex::I16(i),
+                    ..
+                }) => Ok(Some(Expression::I16(ParserContext::new(span), i))),
+                Some(Token {
+                    span,
+                    sym: Lex::I32(i),
+                    ..
+                }) => Ok(Some(Expression::I32(ParserContext::new(span), i))),
+                Some(Token {
+                    span,
+                    sym: Lex::I64(i),
+                    ..
+                }) => Ok(Some(Expression::I64(ParserContext::new(span), i))),
+                Some(t) => panic!("Unexpected token: {:?}", t),
+                None => Ok(None),
+            }
+        });
+        result.view3(|v| {
+            let msg = v.map(|_| "Number");
+            self.record(event.with_span(v.span()), msg)
+        })
     }
 
     pub(super) fn boolean(
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        let event = self.new_event(Span::zero());
+        let (event, result) = self.new_event(Span::zero())
+        .and_then(||{
+
         match stream.next_if(&Lex::Bool(true)) {
             Some(Token {
                 span,
@@ -728,14 +734,19 @@ impl<'a> Parser<'a> {
             }) => Ok(Some(Expression::Boolean(ParserContext::new(span), b))),
             _ => Ok(None),
         }
-        .view(|v| self.record(event.with_span(v.span()), Ok("Boolean")))
+        });
+        result.view3(|v| {
+            let msg = v.map(|_| "Boolean");
+            self.record(event.with_span(v.span()), msg)
+        })
     }
 
     pub(super) fn string_literal(
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        let event = self.new_event(Span::zero());
+        let (event, result) = self.new_event(Span::zero())
+        .and_then(||{
         match stream.next_if(&Lex::StringLiteral(StringId::new())) {
             Some(Token {
                 span,
@@ -744,6 +755,10 @@ impl<'a> Parser<'a> {
             }) => Ok(Some(Expression::StringLiteral(ParserContext::new(span), s))),
             _ => Ok(None),
         }
-        .view(|v| self.record(event.with_span(v.span()), Ok("String")))
+        });
+        result.view3(|v| {
+            let msg = v.map(|_| "String");
+            self.record(event.with_span(v.span()), msg)
+        })
     }
 }
