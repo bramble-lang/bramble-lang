@@ -579,7 +579,9 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<(Vec<(StringId, Expression<ParserContext>)>, ParserContext)> {
-        let event = self.new_event(Span::zero());
+        let (event, result) = self.new_event(Span::zero())
+        .and_then(||{
+
         match stream.next_if(&Lex::LBrace) {
             Some(lbrace) => {
                 let mut params = vec![];
@@ -589,7 +591,6 @@ impl<'a> Parser<'a> {
                         span,
                         ParserError::StructExpectedFieldExpr(field_name),
                     ))?;
-                    //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
                     params.push((field_name, field_value));
                     match stream.next_if(&Lex::Comma) {
                         Some(_) => {}
@@ -605,10 +606,16 @@ impl<'a> Parser<'a> {
             }
             _ => Ok(None),
         }
-        .view(|v| {
+        });
+        result.view3(|v| {
+            let msg = v.map(|_| "Struct Exprssion Parameters");
+            let span = match v {
+                Ok(ok) => ok.1.span(),
+                Err(err) => err.span(),
+            };
             self.record(
-                event.with_span(v.1.span()),
-                Ok("Struct Expression Parameters"),
+                event.with_span(span),
+                msg,
             )
         })
     }
