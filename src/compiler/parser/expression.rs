@@ -531,7 +531,9 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        let event = self.new_event(Span::zero());
+        let (event, result) = self.new_event(Span::zero())
+        .and_then(||{
+
         match self.path(stream)? {
             Some((path, call_ctx)) => match self.routine_call_params(stream)? {
                 Some((params, params_ctx)) => Ok(Some(Expression::RoutineCall(
@@ -561,17 +563,17 @@ impl<'a> Parser<'a> {
             },
             _ => Ok(None),
         }
-        .view(|v| {
-            let msg = match &v {
+        });
+        result.view3(|v| {
+            let msg = v.map(|v| match &v {
                 Expression::Identifier(..) => "Identifier",
                 Expression::Path(..) => "Path",
                 Expression::StructExpression(..) => "Struct Expression",
                 Expression::RoutineCall(..) => "Routine Call",
                 _ => panic!("Unexpected Expression variant"),
-            };
-            self.record(event.with_span(v.span()), Ok(msg))
+            });
+            self.record(event.with_span(v.span()), msg)
         })
-        //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))
     }
 
     pub(super) fn co_yield(
