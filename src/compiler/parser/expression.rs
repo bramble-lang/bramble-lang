@@ -259,14 +259,14 @@ impl<'a> Parser<'a> {
             Some(left) => match stream.next_if_one_of(test.clone()) {
                 Some(op) => {
                     let (event, result) = self.new_event(Span::zero()).and_then(|| {
-                    self.binary_op(stream, test, left_pattern)?
-                        .ok_or(CompilerError::new(
-                            op.span(),
-                            ParserError::ExpectedExprAfter(op.sym.clone()),
-                        ))
-                        .and_then(|right| {
-                            Expression::binary_op(&op.sym, Box::new(left), Box::new(right))
-                        })
+                        self.binary_op(stream, test, left_pattern)?
+                            .ok_or(CompilerError::new(
+                                op.span(),
+                                ParserError::ExpectedExprAfter(op.sym.clone()),
+                            ))
+                            .and_then(|right| {
+                                Expression::binary_op(&op.sym, Box::new(left), Box::new(right))
+                            })
                     });
 
                     result.view3(|v| {
@@ -288,31 +288,31 @@ impl<'a> Parser<'a> {
         match stream.next_if_one_of(vec![Lex::Minus, Lex::Not]) {
             Some(op) => {
                 let (event, result) = self.new_event(Span::zero()).and_then(|| {
-                self.negate(stream)
-                    .and_then(|o| {
-                        // TODO: I could create an if_none_then combinator that takes a Result<Option> and does this: if_none_then: Result<Option> -> Result<>
-                        o.ok_or(CompilerError::new(
-                            op.span(),
-                            ParserError::ExpectedTermAfter(op.sym.clone()),
-                        ))
-                    })
-                    //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
+                    self.negate(stream)
+                        .and_then(|o| {
+                            // TODO: I could create an if_none_then combinator that takes a Result<Option> and does this: if_none_then: Result<Option> -> Result<>
+                            o.ok_or(CompilerError::new(
+                                op.span(),
+                                ParserError::ExpectedTermAfter(op.sym.clone()),
+                            ))
+                        })
+                        //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
                         .and_then(|factor| {
                             Expression::unary_op(op.to_ctx(), &op.sym, Box::new(factor))
                         })
                 });
 
-                    // TODO: Can I make view2: Result<Option<V, E>> -> F(Result<V,E>) then not have to have the double lambdas?
+                // TODO: Can I make view2: Result<Option<V, E>> -> F(Result<V,E>) then not have to have the double lambdas?
                 result.view3(|v| {
-                        let msg = v.map(|_| {
-                            if op.sym == Lex::Minus {
-                                "Arithmetic Negate"
-                            } else {
-                                "Boolean Negate"
-                            }
-                        });
-                        self.record(event.with_span(v.span()), msg)
-                    })
+                    let msg = v.map(|_| {
+                        if op.sym == Lex::Minus {
+                            "Arithmetic Negate"
+                        } else {
+                            "Boolean Negate"
+                        }
+                    });
+                    self.record(event.with_span(v.span()), msg)
+                })
             }
             None => self.member_access(stream),
         }
@@ -324,69 +324,63 @@ impl<'a> Parser<'a> {
     ) -> ParserResult<Expression<ParserContext>> {
         match self.factor(stream)? {
             Some(f) => {
-                let event = self.new_event(Span::zero());
-                let mut ma = f;
-                while let Some(token) =
-                    stream.next_if_one_of(vec![Lex::MemberAccess, Lex::LBracket])
-                {
-                    ma = match token.sym {
-                        Lex::MemberAccess => stream
-                            .next_if_id()
-                            .map(|(member, member_span)| {
-                                Expression::MemberAccess(
-                                    ma.context().extend(member_span),
-                                    Box::new(ma),
-                                    member,
-                                )
-                            })
-                            //.view(|v| self.record(event.with_span(v.span()), Ok("Member Access")))
-                            .ok_or(CompilerError::new(
-                                token.span(),
-                                ParserError::MemberAccessExpectedField,
-                            )),
-                            //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?,
-                        Lex::LBracket => self
-                            .expression(stream)?
-                            .ok_or(CompilerError::new(
-                                token.span(),
-                                ParserError::IndexOpInvalidExpr,
-                            ))
-                            .and_then(|index| {
-                                stream.next_must_be(&Lex::RBracket).map(|rbracket| {
-                                    Expression::ArrayAt {
-                                        context: ma.context().join(rbracket.to_ctx()),
-                                        array: Box::new(ma),
-                                        index: Box::new(index),
-                                    }
+                let (event, result) = self.new_event(Span::zero()).and_then(|| {
+                    let mut ma = f;
+                    while let Some(token) =
+                        stream.next_if_one_of(vec![Lex::MemberAccess, Lex::LBracket])
+                    {
+                        ma = match token.sym {
+                            Lex::MemberAccess => stream
+                                .next_if_id()
+                                .map(|(member, member_span)| {
+                                    Expression::MemberAccess(
+                                        ma.context().extend(member_span),
+                                        Box::new(ma),
+                                        member,
+                                    )
                                 })
-                            }),
-                            /*
-                            .map(|v| {
-                                // TODO: can I make this a view?
-                                self.record(event.with_span(v.span()), Ok("Array At"));
-                                v
-                            })
-                            .view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?,*/
-                        _ => {
-                            return err!(
-                                token.span(),
-                                ParserError::ExpectedButFound(
-                                    vec![Lex::LBracket, Lex::MemberAccess],
-                                    Some(token.sym.clone())
+                                .ok_or(CompilerError::new(
+                                    token.span(),
+                                    ParserError::MemberAccessExpectedField,
+                                )),
+                            Lex::LBracket => self
+                                .expression(stream)?
+                                .ok_or(CompilerError::new(
+                                    token.span(),
+                                    ParserError::IndexOpInvalidExpr,
+                                ))
+                                .and_then(|index| {
+                                    stream.next_must_be(&Lex::RBracket).map(|rbracket| {
+                                        Expression::ArrayAt {
+                                            context: ma.context().join(rbracket.to_ctx()),
+                                            array: Box::new(ma),
+                                            index: Box::new(index),
+                                        }
+                                    })
+                                }),
+                            _ => {
+                                return err!(
+                                    token.span(),
+                                    ParserError::ExpectedButFound(
+                                        vec![Lex::LBracket, Lex::MemberAccess],
+                                        Some(token.sym.clone())
+                                    )
                                 )
-                            )
-                            //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)));
-                        }
+                            }
+                        }?;
                     }
-                            /*.map(|v| {
-                                // TODO: can I make this a view?
-                                self.record(event.with_span(v.span()), Ok("Array At"));
-                                v
-                            })*/
-                            ?;
-                }
 
-                Ok(Some(ma))
+                    Ok(Some(ma))
+                });
+                result.view3(|v| {
+                    let msg = match v {
+                        Ok(Expression::MemberAccess(..)) => Ok("Member Access"),
+                        Ok(Expression::ArrayAt { .. }) => Ok("Array At"),
+                        Ok(_) => return,
+                        Err(e) => Err(e),
+                    };
+                    self.record(event.with_span(v.span()), msg)
+                })
             }
             None => Ok(None),
         }
