@@ -1,4 +1,4 @@
-use crate::compiler::diagnostics::{Event, EventStack, Logger, View, ViewErr};
+use crate::compiler::diagnostics::{Event, EventStack, Logger, View, View2, ViewErr};
 use crate::compiler::source::SourceIr;
 use crate::compiler::Span;
 use crate::{
@@ -137,97 +137,102 @@ impl<'a> TypeResolver<'a> {
         &mut self,
         routine: &RoutineDef<SemanticContext>,
     ) -> SemanticResult<RoutineDef<SemanticContext>> {
-        let RoutineDef {
-            context,
-            name,
-            def,
-            params,
-            body,
-            ret_ty,
-            ..
-        } = routine;
+        let (event, result) = self.new_event().and_then(|| {
+            let RoutineDef {
+                context,
+                name,
+                def,
+                params,
+                body,
+                ret_ty,
+                ..
+            } = routine;
 
-        // If routine is root::my_main it must be a function type and have type () -> i64
-        if context.canonical_path() == &self.main_fn {
-            Self::validate_main_fn(routine).view_err(|e| self.record_err(e))?;
-        }
+            // If routine is root::my_main it must be a function type and have type () -> i64
+            if context.canonical_path() == &self.main_fn {
+                Self::validate_main_fn(routine).view_err(|e| self.record_err(e))?;
+            }
 
-        let mut ctx = context.with_type(ret_ty.clone());
+            let mut ctx = context.with_type(ret_ty.clone());
 
-        // Add parameters to symbol table
-        let mut resolved_params = vec![];
-        for p in params.iter() {
-            // Check that the type exists
-            self.valid_type(&p.ty, ctx.span())?;
+            // Add parameters to symbol table
+            let mut resolved_params = vec![];
+            for p in params.iter() {
+                // Check that the type exists
+                self.valid_type(&p.ty, ctx.span())?;
 
-            // Set the resolved type of the parameter node
-            let mut resolved_param = p.clone();
-            let param_ctx = p.context().with_type(p.ty.clone());
-            resolved_param.context = param_ctx;
+                // Set the resolved type of the parameter node
+                let mut resolved_param = p.clone();
+                let param_ctx = p.context().with_type(p.ty.clone());
+                resolved_param.context = param_ctx;
 
-            // Add parameter to the routines symbol table
-            ctx.add_symbol(
-                resolved_param.name,
-                resolved_param.ty.clone(),
-                false,
-                false,
-                resolved_param.span(),
-            )
-            .map_err(|e| CompilerError::new(p.span(), e))
-            .view_err(|e| self.record_err(e))?;
+                // Add parameter to the routines symbol table
+                ctx.add_symbol(
+                    resolved_param.name,
+                    resolved_param.ty.clone(),
+                    false,
+                    false,
+                    resolved_param.span(),
+                )
+                .map_err(|e| CompilerError::new(p.span(), e))
+                .view_err(|e| self.record_err(e))?;
 
-            self.record(&resolved_param, vec![]);
-            resolved_params.push(resolved_param);
-        }
+                self.record(&resolved_param, vec![]);
+                resolved_params.push(resolved_param);
+            }
 
-        self.symbols.enter_scope(ctx.sym().clone());
+            self.symbols.enter_scope(ctx.sym().clone());
 
-        let mut resolved_body = vec![];
-        for stmt in body.iter() {
-            let exp = self.analyze_statement(stmt)?;
-            resolved_body.push(exp);
-        }
+            let mut resolved_body = vec![];
+            for stmt in body.iter() {
+                let exp = self.analyze_statement(stmt)?;
+                resolved_body.push(exp);
+            }
 
-        let sym = self.symbols.leave_scope();
+            let sym = self.symbols.leave_scope();
 
-        Ok(RoutineDef {
-            context: ctx.with_sym(sym),
-            def: def.clone(),
-            name: name.clone(),
-            params: resolved_params,
-            ret_ty: ret_ty.clone(),
-            body: resolved_body,
-        })
-        .view(|e| self.record(e, vec![]))
+            Ok(RoutineDef {
+                context: ctx.with_sym(sym),
+                def: def.clone(),
+                name: name.clone(),
+                params: resolved_params,
+                ret_ty: ret_ty.clone(),
+                body: resolved_body,
+            })
+        });
+
+        result.view2(|v| self.record2(event, v, vec![]))
     }
 
     fn analyze_structdef(
         &mut self,
         struct_def: &StructDef<SemanticContext>,
     ) -> SemanticResult<StructDef<SemanticContext>> {
-        // Check the type of each member
-        let mut resolved_fields = vec![];
-        let fields = struct_def.get_fields();
-        for f in fields.iter() {
-            self.valid_type(&f.ty, f.context().span())?;
+        let (event, result) = self.new_event().and_then(|| {
+            // Check the type of each member
+            let mut resolved_fields = vec![];
+            let fields = struct_def.get_fields();
+            for f in fields.iter() {
+                self.valid_type(&f.ty, f.context().span())?;
 
-            let ctx = f.context().with_type(f.ty.clone());
-            let mut resolved_field = f.clone();
-            resolved_field.context = ctx;
+                let ctx = f.context().with_type(f.ty.clone());
+                let mut resolved_field = f.clone();
+                resolved_field.context = ctx;
 
-            self.record(&resolved_field, vec![]);
-            resolved_fields.push(resolved_field);
-        }
+                self.record(&resolved_field, vec![]);
+                resolved_fields.push(resolved_field);
+            }
 
-        // Update the context with canonical path information and set the type to Type::Unit
-        let ctx = struct_def.context().with_type(Type::Unit);
+            // Update the context with canonical path information and set the type to Type::Unit
+            let ctx = struct_def.context().with_type(Type::Unit);
 
-        Ok(StructDef::new(
-            struct_def.get_name().clone(),
-            ctx,
-            resolved_fields,
-        ))
-        .view(|e| self.record(e, vec![]))
+            Ok(StructDef::new(
+                struct_def.get_name().clone(),
+                ctx,
+                resolved_fields,
+            ))
+        });
+        result.view2(|e| self.record2(event, e, vec![]))
     }
 
     fn analyze_extern(
@@ -235,26 +240,28 @@ impl<'a> TypeResolver<'a> {
         ex: &Extern<SemanticContext>,
     ) -> SemanticResult<Extern<SemanticContext>> {
         // Check the type of each member
-        let params = ex.get_params();
-        for Parameter { ty: field_type, .. } in params.iter() {
-            if let Type::Custom(_) = field_type {
-                panic!("Custom types are not supported for extern function declarations")
+        let (event, result) = self.new_event().and_then(|| {
+            let params = ex.get_params();
+            for Parameter { ty: field_type, .. } in params.iter() {
+                if let Type::Custom(_) = field_type {
+                    panic!("Custom types are not supported for extern function declarations")
+                }
             }
-        }
 
-        // Update the context with canonical path information and set the type to Type::Unit
-        let name = ex.name().expect("Externs must have a name");
-        let ctx = ex.context().with_type(ex.get_return_type().clone());
-        let ret_ty = ctx.ty().clone();
+            // Update the context with canonical path information and set the type to Type::Unit
+            let name = ex.name().expect("Externs must have a name");
+            let ctx = ex.context().with_type(ex.get_return_type().clone());
+            let ret_ty = ctx.ty().clone();
 
-        Ok(Extern::new(
-            name,
-            ctx,
-            params.clone(),
-            ex.has_varargs,
-            ret_ty,
-        ))
-        .view(|e| self.record(e, vec![]))
+            Ok(Extern::new(
+                name,
+                ctx,
+                params.clone(),
+                ex.has_varargs,
+                ret_ty,
+            ))
+        });
+        result.view2(|e| self.record2(event, e, vec![]))
     }
 
     fn analyze_statement(
@@ -279,63 +286,64 @@ impl<'a> TypeResolver<'a> {
     ) -> SemanticResult<Bind<SemanticContext>> {
         let ctx = bind.context();
         let rhs = bind.get_rhs();
-        let result = {
-            let ctx = ctx.with_type(bind.get_type().clone());
-            let rhs = self.analyze_expression(rhs)?;
-            if ctx.ty() == rhs.get_type() {
-                match self.symbols.add(
-                    bind.get_id(),
-                    ctx.ty().clone(),
-                    bind.is_mutable(),
-                    false,
-                    bind.span(),
-                ) {
-                    Ok(()) => {
-                        let ty = ctx.ty().clone();
-                        Ok(Bind::new(ctx, bind.get_id(), ty, bind.is_mutable(), rhs))
+        let (event, result) = self.new_event().and_then(|| {
+            {
+                let ctx = ctx.with_type(bind.get_type().clone());
+                let rhs = self.analyze_expression(rhs)?;
+                if ctx.ty() == rhs.get_type() {
+                    match self.symbols.add(
+                        bind.get_id(),
+                        ctx.ty().clone(),
+                        bind.is_mutable(),
+                        false,
+                        bind.span(),
+                    ) {
+                        Ok(()) => {
+                            let ty = ctx.ty().clone();
+                            Ok(Bind::new(ctx, bind.get_id(), ty, bind.is_mutable(), rhs))
+                        }
+                        Err(e) => Err(e),
                     }
-                    Err(e) => Err(e),
+                } else {
+                    Err(SemanticError::BindExpected(
+                        ctx.ty().clone(),
+                        rhs.get_type().clone(),
+                    ))
                 }
-            } else {
-                Err(SemanticError::BindExpected(
-                    ctx.ty().clone(),
-                    rhs.get_type().clone(),
-                ))
             }
-        };
-        result
             .map_err(|e| CompilerError::new(ctx.span(), e))
-            .view(|e| self.record(e, vec![]))
-            .view_err(|e| self.record_err(e))
+        });
+        result.view2(|e| self.record2(event, e, vec![]))
     }
 
     fn analyze_mutate(
         &mut self,
         mutate: &Mutate<SemanticContext>,
     ) -> SemanticResult<Mutate<SemanticContext>> {
-        let rhs = self.analyze_expression(mutate.get_rhs())?;
-        let result = match self.symbols.lookup_var(mutate.get_id()) {
-            Ok(symbol) => {
-                if symbol.mutable {
-                    if symbol.ty == rhs.get_type() {
-                        let ctx = mutate.context().with_type(rhs.get_type().clone());
-                        Ok(Mutate::new(ctx, mutate.get_id(), rhs))
+        let (event, result) = self.new_event().and_then(|| {
+            let rhs = self.analyze_expression(mutate.get_rhs())?;
+            match self.symbols.lookup_var(mutate.get_id()) {
+                Ok(symbol) => {
+                    if symbol.mutable {
+                        if symbol.ty == rhs.get_type() {
+                            let ctx = mutate.context().with_type(rhs.get_type().clone());
+                            Ok(Mutate::new(ctx, mutate.get_id(), rhs))
+                        } else {
+                            Err(SemanticError::BindMismatch(
+                                mutate.get_id(),
+                                symbol.ty.clone(),
+                                rhs.get_type().clone(),
+                            ))
+                        }
                     } else {
-                        Err(SemanticError::BindMismatch(
-                            mutate.get_id(),
-                            symbol.ty.clone(),
-                            rhs.get_type().clone(),
-                        ))
+                        Err(SemanticError::VariableNotMutable(mutate.get_id()))
                     }
-                } else {
-                    Err(SemanticError::VariableNotMutable(mutate.get_id()))
                 }
+                Err(e) => Err(e),
             }
-            Err(e) => Err(e),
-        };
-        result
             .map_err(|e| CompilerError::new(mutate.span(), e))
-            .view(|e| self.record(e, vec![]))
+        });
+        result.view2(|e| self.record2(event, e, vec![]))
     }
 
     fn analyze_yieldreturn(
@@ -1083,7 +1091,7 @@ impl<'a> TypeResolver<'a> {
         Ok(())
     }
 
-    fn new_event<'e, N: Node<SemanticContext>>(&self) -> Event<'e, TypeOk, SemanticError> {
+    fn new_event<'e>(&self) -> Event<'e, TypeOk<'e>, SemanticError> {
         Event::new("type-resolver", Span::zero(), self.event_stack.clone())
     }
 

@@ -70,7 +70,7 @@ impl<'a> Parser<'a> {
                 }
             }
         });
-        result.view(|v| {
+        result.view2(|v| {
             let msg = v.map(|v| match &v {
                 Statement::Bind(..) => "Statement Bind",
                 Statement::Expression(..) => "Statement Expression",
@@ -118,7 +118,7 @@ impl<'a> Parser<'a> {
                     }
                     None => Ok(None),
                 });
-        result.view(|v| {
+        result.view2(|v| {
             let msg = v.map(|_| "Let Binding");
             self.record(event.with_span(v.span()), msg)
         })
@@ -149,7 +149,7 @@ impl<'a> Parser<'a> {
                 }
             }
         });
-        result.view(|v| {
+        result.view2(|v| {
             let msg = v.map(|_| "Mutate");
             self.record(event.with_span(v.span()), msg)
         })
@@ -181,7 +181,7 @@ impl<'a> Parser<'a> {
                     },
                     _ => Ok(None),
                 });
-        result.view(|v| {
+        result.view2(|v| {
             let msg = v.map(|_| "Coroutine Init");
             self.record(event.with_span(v.span()), msg)
         })
@@ -207,7 +207,7 @@ impl<'a> Parser<'a> {
                 _ => None,
             })
         });
-        result.view(|v| {
+        result.view2(|v| {
             let msg = v.map(|_| "Return");
             self.record(event.with_span(v.span()), msg)
         })
@@ -234,7 +234,7 @@ impl<'a> Parser<'a> {
                 _ => None,
             })
         });
-        result.view(|v| {
+        result.view2(|v| {
             let msg = v.map(|_| "Yield Return");
             self.record(event.with_span(v.span()), msg)
         })

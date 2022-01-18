@@ -1,8 +1,8 @@
 use self::semanticnode::SemanticContext;
 
 use super::{
-    ast::Type,
-    diagnostics::{View, Writable},
+    ast::{Type, Node},
+    diagnostics::{View, Writable, View2},
     CompilerError,
 };
 
@@ -31,6 +31,17 @@ use error::SemanticError;
 /// Which will, if it fails, result in a [`SemanticError`] wrapped
 /// in a [`CompilerError`]
 type SemanticResult<T> = Result<T, CompilerError<SemanticError>>;
+
+impl<T: Node<SemanticContext>> View2<T, SemanticError> for SemanticResult<T> {
+    fn view2<F: FnOnce(Result<&T, &CompilerError<SemanticError>>)>(self, f: F) -> Self {
+        match &self {
+            Ok(v) => f(Ok(v)),
+            Err(err) => f(Err(err)),
+        }
+
+        self
+    }
+}
 
 struct TypeOk<'a> {
     ty: &'a super::ast::Type,
