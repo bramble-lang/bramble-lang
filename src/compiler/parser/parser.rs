@@ -1,4 +1,4 @@
-use crate::compiler::diagnostics::{Event, View};
+use crate::compiler::diagnostics::{Event, View, Writable};
 use crate::compiler::source::SourceIr;
 use crate::compiler::Span;
 use crate::compiler::{
@@ -24,10 +24,10 @@ impl<'a> Parser<'a> {
     }
 
     /// Support function which records parser events to the tracing system
-    pub(super) fn record(
+    pub(super) fn record<V: Writable>(
         &self,
-        evt: Event<&str, ParserError>,
-        r: Result<&str, &CompilerError<ParserError>>,
+        evt: Event<V, ParserError>,
+        r: Result<V, &CompilerError<ParserError>>,
     ) {
         let evt = evt.with_msg(r);
         self.logger.write(evt)
