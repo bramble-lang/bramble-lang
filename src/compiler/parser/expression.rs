@@ -290,19 +290,16 @@ impl<'a> Parser<'a> {
                 let (event, result) = self.new_event(Span::zero()).and_then(|| {
                     self.negate(stream)
                         .and_then(|o| {
-                            // TODO: I could create an if_none_then combinator that takes a Result<Option> and does this: if_none_then: Result<Option> -> Result<>
                             o.ok_or(CompilerError::new(
                                 op.span(),
                                 ParserError::ExpectedTermAfter(op.sym.clone()),
                             ))
                         })
-                        //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
                         .and_then(|factor| {
                             Expression::unary_op(op.to_ctx(), &op.sym, Box::new(factor))
                         })
                 });
 
-                // TODO: Can I make view2: Result<Option<V, E>> -> F(Result<V,E>) then not have to have the double lambdas?
                 result.view(|v| {
                     let msg = v.map(|_| {
                         if op.sym == Lex::Minus {
@@ -501,7 +498,6 @@ impl<'a> Parser<'a> {
                             whl.span(),
                             ParserError::WhileExpectedConditional,
                         ))?;
-                        //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
                         stream.next_must_be(&Lex::RParen)?;
 
                         self.expression_block(stream)?
