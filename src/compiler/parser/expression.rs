@@ -418,7 +418,6 @@ impl<'a> Parser<'a> {
                 .por(|ts| self.while_expression(ts), stream)
                 .por(|ts| self.expression_block(ts), stream)
                 .por(|ts| self.function_call_or_variable(ts), stream)
-                .por(|ts| self.co_yield(ts), stream)
                 .por(|ts| self.constant(ts), stream)
                 .por(|ts| self.array_expression(ts), stream),
         }
@@ -574,30 +573,6 @@ impl<'a> Parser<'a> {
             });
             self.record(event.with_span(v.span()), msg)
         })
-    }
-
-    pub(super) fn co_yield(
-        &self,
-        stream: &mut TokenStream,
-    ) -> ParserResult<Expression<ParserContext>> {
-        let event = self.new_event(Span::zero());
-        match stream.next_if(&Lex::Yield) {
-            Some(yield_tok) => {
-                let ctx = yield_tok.to_ctx();
-                match self.expression(stream)? {
-                    Some(coroutine) => {
-                        let ctx = ctx.join(*coroutine.context());
-                        Expression::new_yield(ctx, Box::new(coroutine))
-                    }
-                    None => {
-                        err!(ctx.span(), ParserError::YieldExpectedIdentifier)
-                    }
-                }
-            }
-            None => Ok(None),
-        }
-        .view(|v| self.record(event.with_span(v.span()), Ok("Yield")))
-        //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))
     }
 
     pub(super) fn struct_expression_params(
