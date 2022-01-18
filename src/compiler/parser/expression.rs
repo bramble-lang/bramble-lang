@@ -449,12 +449,10 @@ impl<'a> Parser<'a> {
                                     sym: Lex::If, span, ..
                                 }) => {
                                     let span = *span;
-                                    Some(
-                                        self.if_expression(stream)?.ok_or(CompilerError::new(
-                                            span,
-                                            ParserError::IfElseExpectedIfExpr,
-                                        ))?, 
-                                    )
+                                    Some(self.if_expression(stream)?.ok_or(CompilerError::new(
+                                        span,
+                                        ParserError::IfElseExpectedIfExpr,
+                                    ))?)
                                 }
                                 _ => {
                                     let false_arm = self.expression_block(stream)?.ok_or(
@@ -495,74 +493,72 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        let (event, result) = self.new_event(Span::zero())
-        .and_then(|| {
-        match stream.next_if(&Lex::While) {
-            Some(whl) => {
-                stream.next_must_be(&Lex::LParen).and_then(|_| {
-                    let cond = self.expression(stream)?.ok_or(CompilerError::new(
-                        whl.span(),
-                        ParserError::WhileExpectedConditional,
-                    ))?;
-                    //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
-                    stream.next_must_be(&Lex::RParen)?;
+        let (event, result) = self.new_event(Span::zero()).and_then(|| {
+            match stream.next_if(&Lex::While) {
+                Some(whl) => {
+                    stream.next_must_be(&Lex::LParen).and_then(|_| {
+                        let cond = self.expression(stream)?.ok_or(CompilerError::new(
+                            whl.span(),
+                            ParserError::WhileExpectedConditional,
+                        ))?;
+                        //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
+                        stream.next_must_be(&Lex::RParen)?;
 
-                    self.expression_block(stream)?
-                        .ok_or(CompilerError::new(whl.span, ParserError::WhileMissingBody))
-                        .map(|body| {
-                            Some(Expression::While {
-                                context: whl.to_ctx().join(*body.context()),
-                                cond: Box::new(cond),
-                                body: Box::new(body),
+                        self.expression_block(stream)?
+                            .ok_or(CompilerError::new(whl.span, ParserError::WhileMissingBody))
+                            .map(|body| {
+                                Some(Expression::While {
+                                    context: whl.to_ctx().join(*body.context()),
+                                    cond: Box::new(cond),
+                                    body: Box::new(body),
+                                })
                             })
-                        })
-                })
+                    })
+                }
+                _ => Ok(None),
             }
-            _ => Ok(None),
-        }
         });
         result.view3(|v| {
             let msg = v.map(|_| "While");
-            self.record(event.with_span(v.span()), msg)})
+            self.record(event.with_span(v.span()), msg)
+        })
     }
 
     pub(super) fn function_call_or_variable(
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        let (event, result) = self.new_event(Span::zero())
-        .and_then(||{
-
-        match self.path(stream)? {
-            Some((path, call_ctx)) => match self.routine_call_params(stream)? {
-                Some((params, params_ctx)) => Ok(Some(Expression::RoutineCall(
-                    call_ctx.join(params_ctx),
-                    RoutineCall::Function,
-                    path,
-                    params.clone(),
-                ))),
-                None => match self.struct_expression_params(stream)? {
-                    Some((params, params_ctx)) => Ok(Some(Expression::StructExpression(
-                        call_ctx.join(params_ctx),
-                        path,
-                        params.clone(),
-                    ))),
-                    None => {
-                        if path.len() > 1 {
-                            Ok(Some(Expression::Path(call_ctx, path)))
-                        } else {
-                            if let Element::Id(sid) = path.last().unwrap() {
-                                Ok(Some(Expression::Identifier(call_ctx, *sid)))
-                            } else {
-                                err!(call_ctx.span(), ParserError::PathExpectedIdentifier)
+        let (event, result) =
+            self.new_event(Span::zero())
+                .and_then(|| match self.path(stream)? {
+                    Some((path, call_ctx)) => match self.routine_call_params(stream)? {
+                        Some((params, params_ctx)) => Ok(Some(Expression::RoutineCall(
+                            call_ctx.join(params_ctx),
+                            RoutineCall::Function,
+                            path,
+                            params.clone(),
+                        ))),
+                        None => match self.struct_expression_params(stream)? {
+                            Some((params, params_ctx)) => Ok(Some(Expression::StructExpression(
+                                call_ctx.join(params_ctx),
+                                path,
+                                params.clone(),
+                            ))),
+                            None => {
+                                if path.len() > 1 {
+                                    Ok(Some(Expression::Path(call_ctx, path)))
+                                } else {
+                                    if let Element::Id(sid) = path.last().unwrap() {
+                                        Ok(Some(Expression::Identifier(call_ctx, *sid)))
+                                    } else {
+                                        err!(call_ctx.span(), ParserError::PathExpectedIdentifier)
+                                    }
+                                }
                             }
-                        }
-                    }
-                },
-            },
-            _ => Ok(None),
-        }
-        });
+                        },
+                    },
+                    _ => Ok(None),
+                });
         result.view3(|v| {
             let msg = v.map(|v| match &v {
                 Expression::Identifier(..) => "Identifier",
@@ -579,44 +575,40 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<(Vec<(StringId, Expression<ParserContext>)>, ParserContext)> {
-        let (event, result) = self.new_event(Span::zero())
-        .and_then(||{
+        let (event, result) =
+            self.new_event(Span::zero())
+                .and_then(|| match stream.next_if(&Lex::LBrace) {
+                    Some(lbrace) => {
+                        let mut params = vec![];
+                        while let Some((field_name, span)) = stream.next_if_id() {
+                            stream.next_must_be(&Lex::Colon)?;
+                            let field_value =
+                                self.expression(stream)?.ok_or(CompilerError::new(
+                                    span,
+                                    ParserError::StructExpectedFieldExpr(field_name),
+                                ))?;
+                            params.push((field_name, field_value));
+                            match stream.next_if(&Lex::Comma) {
+                                Some(_) => {}
+                                None => break,
+                            };
+                        }
 
-        match stream.next_if(&Lex::LBrace) {
-            Some(lbrace) => {
-                let mut params = vec![];
-                while let Some((field_name, span)) = stream.next_if_id() {
-                    stream.next_must_be(&Lex::Colon)?;
-                    let field_value = self.expression(stream)?.ok_or(CompilerError::new(
-                        span,
-                        ParserError::StructExpectedFieldExpr(field_name),
-                    ))?;
-                    params.push((field_name, field_value));
-                    match stream.next_if(&Lex::Comma) {
-                        Some(_) => {}
-                        None => break,
-                    };
-                }
-
-                let ctx = stream
-                    .next_must_be(&Lex::RBrace)?
-                    .to_ctx()
-                    .join(lbrace.to_ctx());
-                Ok(Some((params, ctx)))
-            }
-            _ => Ok(None),
-        }
-        });
+                        let ctx = stream
+                            .next_must_be(&Lex::RBrace)?
+                            .to_ctx()
+                            .join(lbrace.to_ctx());
+                        Ok(Some((params, ctx)))
+                    }
+                    _ => Ok(None),
+                });
         result.view3(|v| {
             let msg = v.map(|_| "Struct Exprssion Parameters");
             let span = match v {
                 Ok(ok) => ok.1.span(),
                 Err(err) => err.span(),
             };
-            self.record(
-                event.with_span(span),
-                msg,
-            )
+            self.record(event.with_span(span), msg)
         })
     }
 
@@ -626,24 +618,28 @@ impl<'a> Parser<'a> {
     ) -> ParserResult<Expression<ParserContext>> {
         match stream.next_if(&Lex::LBracket) {
             Some(lbracket) => {
-                let event = self.new_event(Span::zero());
-                let mut elements = vec![];
-                // loop through comma separated list of expressions
-                while let Some(element) = self.expression(stream)? {
-                    elements.push(element);
-                    match stream.next_if(&Lex::Comma) {
-                        Some(_) => {}
-                        None => break,
-                    };
-                }
-                let rbracket = stream.next_must_be(&Lex::RBracket)?;
+                let (event, result) = self.new_event(Span::zero()).and_then(|| {
+                    let mut elements = vec![];
+                    // loop through comma separated list of expressions
+                    while let Some(element) = self.expression(stream)? {
+                        elements.push(element);
+                        match stream.next_if(&Lex::Comma) {
+                            Some(_) => {}
+                            None => break,
+                        };
+                    }
+                    let rbracket = stream.next_must_be(&Lex::RBracket)?;
 
-                // Compute the new span
-                let ctx = lbracket.to_ctx().join(rbracket.to_ctx());
+                    // Compute the new span
+                    let ctx = lbracket.to_ctx().join(rbracket.to_ctx());
 
-                let len = elements.len();
-                Ok(Some(Expression::ArrayExpression(ctx, elements, len)))
-                    .view(|v| self.record(event.with_span(v.span()), Ok("Array Expression")))
+                    let len = elements.len();
+                    Ok(Some(Expression::ArrayExpression(ctx, elements, len)))
+                });
+                result.view3(|v| {
+                    let msg = v.map(|_| "Array Expression");
+                    self.record(event.with_span(v.span()), msg)
+                })
             }
             None => Ok(None),
         }
