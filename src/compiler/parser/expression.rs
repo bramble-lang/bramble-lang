@@ -182,7 +182,7 @@ impl<'a> Parser<'a> {
     ) -> ParserResult<Expression<ParserContext>> {
         match stream.next_if(&Lex::LBrace) {
             Some(lbrace) => {
-                let (event, result) = self.new_event(Span::zero()).and_then(|event| {
+                let (event, result) = self.new_event(Span::zero()).and_then(|| {
                     // Read the statements composing the expression block
                     let mut stmts = vec![];
                     while let Some(s) = self.statement(stream)? {

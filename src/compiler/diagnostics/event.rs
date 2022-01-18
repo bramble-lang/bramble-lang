@@ -176,8 +176,8 @@ impl<'a, V: Writable, E: CompilerDisplay + Debug> Event<'a, V, E> {
         self
     }
 
-    pub fn and_then<R, F: FnMut(&mut Self) -> R>(mut self, mut f: F) -> (Self, R) {
-        let r = f(&mut self);
+    pub fn and_then<R, F: FnMut() -> R>(mut self, mut f: F) -> (Self, R) {
+        let r = f();
         (self, r)
     }
 }
