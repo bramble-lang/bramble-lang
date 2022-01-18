@@ -1,4 +1,4 @@
-use crate::compiler::diagnostics::{Event, Logger, View, ViewErr};
+use crate::compiler::diagnostics::{Event, EventStack, Logger, View, ViewErr};
 use crate::compiler::source::SourceIr;
 use crate::compiler::Span;
 use crate::{
@@ -52,6 +52,7 @@ pub struct TypeResolver<'a> {
     imported_symbols: HashMap<String, Symbol>,
     main_fn: Path,
     logger: &'a Logger<'a>,
+    event_stack: EventStack,
 }
 
 impl<'a> TypeResolver<'a> {
@@ -72,6 +73,7 @@ impl<'a> TypeResolver<'a> {
             ]
             .into(), // TODO: should get rid of this,
             logger,
+            event_stack: EventStack::new(),
         }
     }
 
@@ -1079,6 +1081,27 @@ impl<'a> TypeResolver<'a> {
         }
 
         Ok(())
+    }
+
+    fn new_event<'e, N: Node<SemanticContext>>(&self) -> Event<'e, TypeOk, SemanticError> {
+        Event::new("type-resolver", Span::zero(), self.event_stack.clone())
+    }
+
+    fn record2<'e, N: Node<SemanticContext>>(
+        &self,
+        event: Event<'e, TypeOk, SemanticError>,
+        r: Result<&N, &CompilerError<SemanticError>>,
+        refs: Vec<Span>,
+    ) {
+        let msg = r.map(|v| {
+            let ctx = v.context();
+            TypeOk { ty: ctx.ty(), refs }
+        });
+        let span = match r {
+            Ok(ok) => ok.span(),
+            Err(err) => err.span(),
+        };
+        self.logger.write(event.with_span(span).with_msg(msg))
     }
 
     fn record<N: Node<SemanticContext>>(&self, n: &N, refs: Vec<Span>) {
