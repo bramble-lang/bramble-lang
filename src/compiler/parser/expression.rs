@@ -200,7 +200,7 @@ impl<'a> Parser<'a> {
 
                     Ok(Some(Expression::ExpressionBlock(ctx, stmts, final_exp)))
                 });
-                result.view3(|v| {
+                result.view(|v| {
                     let msg = v.map(|_| "Expression Block");
                     self.record(event.with_span(v.span()), msg)
                 })
@@ -269,7 +269,7 @@ impl<'a> Parser<'a> {
                             })
                     });
 
-                    result.view3(|v| {
+                    result.view(|v| {
                         let op = op.sym.to_string();
                         let msg = v.map(|_| op.as_str());
                         self.record(event.with_span(v.span()), msg)
@@ -303,7 +303,7 @@ impl<'a> Parser<'a> {
                 });
 
                 // TODO: Can I make view2: Result<Option<V, E>> -> F(Result<V,E>) then not have to have the double lambdas?
-                result.view3(|v| {
+                result.view(|v| {
                     let msg = v.map(|_| {
                         if op.sym == Lex::Minus {
                             "Arithmetic Negate"
@@ -372,7 +372,7 @@ impl<'a> Parser<'a> {
 
                     Ok(Some(ma))
                 });
-                result.view3(|v| {
+                result.view(|v| {
                     let msg = match v {
                         Ok(Expression::MemberAccess(..)) => Ok("Member Access"),
                         Ok(Expression::ArrayAt { .. }) => Ok("Array At"),
@@ -408,7 +408,7 @@ impl<'a> Parser<'a> {
 
                     Ok(exp)
                 });
-                result.view3(|v| {
+                result.view(|v| {
                     let msg = v.map(|_| "Expression");
                     self.record(event.with_span(v.span()), msg)
                 })
@@ -480,7 +480,7 @@ impl<'a> Parser<'a> {
                         }))
                     })
                 });
-                result.view3(|v| {
+                result.view(|v| {
                     let msg = v.map(|_| "If Expression");
                     self.record(event.with_span(v.span()), msg)
                 })
@@ -518,7 +518,7 @@ impl<'a> Parser<'a> {
                 _ => Ok(None),
             }
         });
-        result.view3(|v| {
+        result.view(|v| {
             let msg = v.map(|_| "While");
             self.record(event.with_span(v.span()), msg)
         })
@@ -559,7 +559,7 @@ impl<'a> Parser<'a> {
                     },
                     _ => Ok(None),
                 });
-        result.view3(|v| {
+        result.view(|v| {
             let msg = v.map(|v| match &v {
                 Expression::Identifier(..) => "Identifier",
                 Expression::Path(..) => "Path",
@@ -602,7 +602,7 @@ impl<'a> Parser<'a> {
                     }
                     _ => Ok(None),
                 });
-        result.view3(|v| {
+        result.view(|v| {
             let msg = v.map(|_| "Struct Exprssion Parameters");
             let span = match v {
                 Ok(ok) => ok.1.span(),
@@ -636,7 +636,7 @@ impl<'a> Parser<'a> {
                     let len = elements.len();
                     Ok(Some(Expression::ArrayExpression(ctx, elements, len)))
                 });
-                result.view3(|v| {
+                result.view(|v| {
                     let msg = v.map(|_| "Array Expression");
                     self.record(event.with_span(v.span()), msg)
                 })
@@ -713,7 +713,7 @@ impl<'a> Parser<'a> {
                 None => Ok(None),
             }
         });
-        result.view3(|v| {
+        result.view(|v| {
             let msg = v.map(|_| "Number");
             self.record(event.with_span(v.span()), msg)
         })
@@ -735,7 +735,7 @@ impl<'a> Parser<'a> {
             _ => Ok(None),
         }
         });
-        result.view3(|v| {
+        result.view(|v| {
             let msg = v.map(|_| "Boolean");
             self.record(event.with_span(v.span()), msg)
         })
@@ -756,7 +756,7 @@ impl<'a> Parser<'a> {
             _ => Ok(None),
         }
         });
-        result.view3(|v| {
+        result.view(|v| {
             let msg = v.map(|_| "String");
             self.record(event.with_span(v.span()), msg)
         })
