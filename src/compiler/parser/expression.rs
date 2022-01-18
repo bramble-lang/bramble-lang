@@ -496,7 +496,8 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        let event = self.new_event(Span::zero());
+        let (event, result) = self.new_event(Span::zero())
+        .and_then(|| {
         match stream.next_if(&Lex::While) {
             Some(whl) => {
                 stream.next_must_be(&Lex::LParen).and_then(|_| {
@@ -520,8 +521,10 @@ impl<'a> Parser<'a> {
             }
             _ => Ok(None),
         }
-        .view(|v| self.record(event.with_span(v.span()), Ok("While")))
-        //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))
+        });
+        result.view3(|v| {
+            let msg = v.map(|_| "While");
+            self.record(event.with_span(v.span()), msg)})
     }
 
     pub(super) fn function_call_or_variable(
