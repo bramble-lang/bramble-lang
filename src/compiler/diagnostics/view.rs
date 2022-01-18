@@ -1,6 +1,15 @@
+use crate::compiler::{CompilerDisplay, CompilerError};
+
+use super::{Event, Writable};
+
 /// Let's a function "view" but not modify the contents of any container type.
 pub trait View<V> {
     fn view<F: FnOnce(&V)>(self, f: F) -> Self;
+}
+
+/// Let's a function "view" but not modify the contents of any container type.
+pub trait View2<V, M: Writable, E: CompilerDisplay + std::fmt::Debug> {
+    fn view2<F: FnOnce(Event<M,E>, &V), G: FnOnce(Event<M, E>, &CompilerError<E>)>(self, e: Event<M, E>, f: F, g: G) -> Self;
 }
 
 /// Let's a function "view" but not modify the Error variant of a type.
@@ -18,6 +27,29 @@ impl<V, E> View<V> for Result<Option<V>, E> {
         self
     }
 }
+
+impl<V, M: Writable, E: CompilerDisplay + std::fmt::Debug> View2<V, M, E> for Result<Option<V>, CompilerError<E>> {
+    fn view2<F: FnOnce(Event<M,E>, &V), G: FnOnce(Event<M, E>, &CompilerError<E>)>(self, e: Event<M, E>, f: F, g: G) -> Self {
+        match &self {
+            Ok(Some(v)) => f(e, v),
+            Ok(None) => (),
+            Err(err) => g(e, err),
+        }
+
+        self
+    }
+}
+
+/*impl<V, M: Writable, E: CompilerDisplay + std::fmt::Debug> View2<V, M, E> for Result<V, E> {
+    fn view2<F: FnOnce(Event<M,E>, &V), G: FnOnce(Event<M, E>, &E)>(self, e: Event<M, E>, f: F, g: G) -> Self {
+        match &self {
+            Ok(v) => f(e, v),
+            Err(err) => g(e, err),
+        }
+
+        self
+    }
+}*/
 
 impl<V, E> ViewErr<E> for Result<V, E> {
     fn view_err<F: Fn(&E)>(self, f: F) -> Self {

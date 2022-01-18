@@ -1,6 +1,7 @@
 use super::{Parser, ParserResult};
 
 use super::{tokenstream::TokenStream, ParserContext, ParserError};
+use crate::compiler::diagnostics::View2;
 use crate::compiler::Span;
 use crate::{
     compiler::{
@@ -280,21 +281,28 @@ impl<'a> Parser<'a> {
         match stream.next_if_one_of(vec![Lex::Minus, Lex::Not]) {
             Some(op) => {
                 let event = self.new_event(Span::zero());
-                self.negate(stream)?
-                    .ok_or(CompilerError::new(
-                        op.span(),
-                        ParserError::ExpectedTermAfter(op.sym.clone()),
-                    ))
+                self.negate(stream)
+                    .and_then(|o| {     // TODO: I could create an if_none_then combinator that takes a Result<Option> and does this: if_none_then: Result<Option> -> Result<>
+                        o.ok_or(CompilerError::new(
+                            op.span(),
+                            ParserError::ExpectedTermAfter(op.sym.clone()),
+                        ))
+                    })
                     //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
                     .and_then(|factor| Expression::unary_op(op.to_ctx(), &op.sym, Box::new(factor)))
-                    .view(|v| {
-                        let msg = if op.sym == Lex::Minus {
-                            "Arithmetic Negate"
-                        } else {
-                            "Boolean Negate"
-                        };
-                        self.record(event.with_span(v.span()), Ok(msg))
-                    })
+                    // TODO: Can I make view2: Result<Option<V, E>> -> F(Result<V,E>) then not have to have the double lambdas?
+                    .view2(
+                        event,
+                        |event, v| {
+                            let msg = if op.sym == Lex::Minus {
+                                "Arithmetic Negate"
+                            } else {
+                                "Boolean Negate"
+                            };
+                            self.record(event.with_span(v.span()), Ok(msg))
+                        },
+                        |event, err| self.record(event.with_span(err.span()), Err(&err)),
+                    )
                 //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))
             }
             None => self.member_access(stream),
@@ -366,8 +374,7 @@ impl<'a> Parser<'a> {
                                 self.record(event.with_span(v.span()), Ok("Array At"));
                                 v
                             })*/
-                            ?
-                    ;
+                            ?;
                 }
 
                 Ok(Some(ma))
@@ -591,13 +598,11 @@ impl<'a> Parser<'a> {
                 let mut params = vec![];
                 while let Some((field_name, span)) = stream.next_if_id() {
                     stream.next_must_be(&Lex::Colon)?;
-                    let field_value = self
-                        .expression(stream)?
-                        .ok_or(CompilerError::new(
-                            span,
-                            ParserError::StructExpectedFieldExpr(field_name),
-                        ))?;
-                        //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
+                    let field_value = self.expression(stream)?.ok_or(CompilerError::new(
+                        span,
+                        ParserError::StructExpectedFieldExpr(field_name),
+                    ))?;
+                    //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))?;
                     params.push((field_name, field_value));
                     match stream.next_if(&Lex::Comma) {
                         Some(_) => {}
