@@ -258,18 +258,22 @@ impl<'a> Parser<'a> {
         match left_pattern(self, stream)? {
             Some(left) => match stream.next_if_one_of(test.clone()) {
                 Some(op) => {
-                    let event = self.new_event(Span::zero());
+                    let (event, result) = self.new_event(Span::zero()).and_then(|| {
                     self.binary_op(stream, test, left_pattern)?
                         .ok_or(CompilerError::new(
                             op.span(),
                             ParserError::ExpectedExprAfter(op.sym.clone()),
                         ))
-                        //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))
                         .and_then(|right| {
                             Expression::binary_op(&op.sym, Box::new(left), Box::new(right))
                         })
-                        .view(|v| self.record(event.with_span(v.span()), Ok(&op.sym.to_string())))
-                    //.view_err(|err| self.record(event.with_span(err.span()), Err(&err)))
+                    });
+
+                    result.view3(|v| {
+                        let op = op.sym.to_string();
+                        let msg = v.map(|_| op.as_str());
+                        self.record(event.with_span(v.span()), msg)
+                    })
                 }
                 None => Ok(Some(left)),
             },
