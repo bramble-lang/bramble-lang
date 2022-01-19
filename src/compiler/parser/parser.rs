@@ -460,7 +460,7 @@ impl<'a> Parser<'a> {
 
             while let Some(path_sep) = stream.next_if(&Lex::PathSeparator) {
                 let span = match stream
-                    .next_if_one_of(&vec![Lex::Identifier(StringId::new()), Lex::PathSuper])
+                    .next_if_one_of(&[Lex::Identifier(StringId::new()), Lex::PathSuper])
                 {
                     Some(Token {
                         sym: Lex::PathSuper,

@@ -286,7 +286,7 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        match stream.next_if_one_of(&vec![Lex::Minus, Lex::Not]) {
+        match stream.next_if_one_of(&[Lex::Minus, Lex::Not]) {
             Some(op) => {
                 let (event, result) = self.new_event(Span::zero()).and_then(|| {
                     self.negate(stream)
@@ -353,7 +353,7 @@ impl<'a> Parser<'a> {
         is_noop: &mut bool,
     ) -> Result<Option<Expression<ParserContext>>, CompilerError<ParserError>> {
         let mut ma = factor;
-        if let Some(token) = stream.next_if_one_of(&vec![Lex::MemberAccess, Lex::LBracket]) {
+        if let Some(token) = stream.next_if_one_of(&[Lex::MemberAccess, Lex::LBracket]) {
             *is_noop = false;
             ma = match token.sym {
                 Lex::MemberAccess => self.member_access(ma, stream, token),
@@ -684,7 +684,7 @@ impl<'a> Parser<'a> {
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
         let (event, result) = self.new_event(Span::zero()).and_then(|| {
-            match stream.next_if_one_of(&vec![
+            match stream.next_if_one_of(&[
                 Lex::U8(0),
                 Lex::U16(0),
                 Lex::U32(0),

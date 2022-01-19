@@ -467,7 +467,7 @@ mod test_tokenstream {
             .unwrap();
 
         let mut ts = TokenStream::new(&tokens, &logger).unwrap();
-        let p = ts.next_if_one_of(&vec![Lex::LParen, Lex::I64(0)]).unwrap();
+        let p = ts.next_if_one_of(&[Lex::LParen, Lex::I64(0)]).unwrap();
         assert_eq!(
             p,
             Token {
@@ -484,7 +484,7 @@ mod test_tokenstream {
             }
         );
 
-        let p = ts.next_if_one_of(&vec![Lex::LParen, Lex::I64(0)]).unwrap();
+        let p = ts.next_if_one_of(&[Lex::LParen, Lex::I64(0)]).unwrap();
         assert_eq!(
             p,
             Token {
@@ -501,7 +501,7 @@ mod test_tokenstream {
             }
         );
 
-        let p = ts.next_if_one_of(&vec![Lex::LParen, Lex::I64(0)]).is_none();
+        let p = ts.next_if_one_of(&[Lex::LParen, Lex::I64(0)]).is_none();
         assert_eq!(p, true);
         let p = ts.peek().unwrap();
         assert_eq!(
