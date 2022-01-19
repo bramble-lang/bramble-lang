@@ -324,7 +324,7 @@ impl<'a> Parser<'a> {
         let (event, result) =
             self.new_event(Span::zero())
                 .and_then(|| match self.factor(stream)? {
-                    Some(f) => self.subdata_access_chain(f, stream, &mut is_noop),
+                    Some(f) => self.subdata_access_sequence(f, stream, &mut is_noop),
                     None => Ok(None),
                 });
 
@@ -346,14 +346,14 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn subdata_access_chain(
+    fn subdata_access_sequence(
         &self,
         factor: Expression<ParserContext>,
         stream: &mut TokenStream,
         is_noop: &mut bool,
     ) -> Result<Option<Expression<ParserContext>>, CompilerError<ParserError>> {
         let mut ma = factor;
-        while let Some(token) = stream.next_if_one_of(&vec![Lex::MemberAccess, Lex::LBracket]) {
+        if let Some(token) = stream.next_if_one_of(&vec![Lex::MemberAccess, Lex::LBracket]) {
             *is_noop = false;
             ma = match token.sym {
                 Lex::MemberAccess => self.member_access(ma, stream, token),
@@ -368,8 +368,10 @@ impl<'a> Parser<'a> {
                     )
                 }
             }?;
+            self.subdata_access_sequence(ma, stream, is_noop)
+        } else {
+            Ok(Some(ma))
         }
-        Ok(Some(ma))
     }
 
     fn array_access(
