@@ -354,8 +354,8 @@ impl<'a> Parser<'a> {
                 let msg = match v {
                     Ok(Expression::MemberAccess(..)) => Ok("Member Access"),
                     Ok(Expression::ArrayAt { .. }) => Ok("Array At"),
-                    Ok(_) => panic!(""),
-                    Err(e) => Err(e),
+                    Ok(exp) => panic!("Unexpected expression marked as a subdata access operatoin: {:?}", exp),
+                    Err(err) => Err(err),
                 };
                 self.record(event.with_span(v.span()), msg)
             } else {
