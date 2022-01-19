@@ -276,11 +276,9 @@ impl<'a> Parser<'a> {
                     None => Ok(None),
                 });
 
-        result.view(|v| {
-            match msg {
-                Some(msg) => self.record(event.with_span(v.span()), Ok(&msg)),
-                None => self.record_noop(event.with_span(v.span())),
-            }
+        result.view(|v| match msg {
+            Some(msg) => self.record(event.with_span(v.span()), Ok(&msg)),
+            None => self.record_noop(event.with_span(v.span())),
         })
     }
 
@@ -322,68 +320,82 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        match self.factor(stream)? {
-            Some(f) => {
-                let (event, result) = self.new_event(Span::zero()).and_then(|| {
-                    let mut ma = f;
-                    while let Some(token) =
-                        stream.next_if_one_of(&vec![Lex::MemberAccess, Lex::LBracket])
-                    {
-                        ma = match token.sym {
-                            Lex::MemberAccess => stream
-                                .next_if_id()
-                                .map(|(member, member_span)| {
-                                    Expression::MemberAccess(
-                                        ma.context().extend(member_span),
-                                        Box::new(ma),
-                                        member,
+        let mut is_noop = true;
+        let (event, result) =
+            self.new_event(Span::zero())
+                .and_then(|| match self.factor(stream)? {
+                    Some(f) => {
+                        let mut ma = f;
+                        while let Some(token) =
+                            stream.next_if_one_of(&vec![Lex::MemberAccess, Lex::LBracket])
+                        {
+                            ma = match token.sym {
+                                Lex::MemberAccess => {
+                                    is_noop = false;
+                                    stream
+                                        .next_if_id()
+                                        .map(|(member, member_span)| {
+                                            self.record_terminal(
+                                                member_span,
+                                                Ok("Structure Field"),
+                                            );
+                                            Expression::MemberAccess(
+                                                ma.context().extend(member_span),
+                                                Box::new(ma),
+                                                member,
+                                            )
+                                        })
+                                        .ok_or(CompilerError::new(
+                                            token.span(),
+                                            ParserError::MemberAccessExpectedField,
+                                        ))
+                                }
+                                Lex::LBracket => {
+                                    is_noop = false;
+                                    self.expression(stream)?
+                                        .ok_or(CompilerError::new(
+                                            token.span(),
+                                            ParserError::IndexOpInvalidExpr,
+                                        ))
+                                        .and_then(|index| {
+                                            stream.next_must_be(&Lex::RBracket).map(|rbracket| {
+                                                Expression::ArrayAt {
+                                                    context: ma.context().join(rbracket.to_ctx()),
+                                                    array: Box::new(ma),
+                                                    index: Box::new(index),
+                                                }
+                                            })
+                                        })
+                                }
+                                _ => {
+                                    return err!(
+                                        token.span(),
+                                        ParserError::ExpectedButFound(
+                                            vec![Lex::LBracket, Lex::MemberAccess],
+                                            Some(token.sym.clone())
+                                        )
                                     )
-                                })
-                                .ok_or(CompilerError::new(
-                                    token.span(),
-                                    ParserError::MemberAccessExpectedField,
-                                )),
-                            Lex::LBracket => self
-                                .expression(stream)?
-                                .ok_or(CompilerError::new(
-                                    token.span(),
-                                    ParserError::IndexOpInvalidExpr,
-                                ))
-                                .and_then(|index| {
-                                    stream.next_must_be(&Lex::RBracket).map(|rbracket| {
-                                        Expression::ArrayAt {
-                                            context: ma.context().join(rbracket.to_ctx()),
-                                            array: Box::new(ma),
-                                            index: Box::new(index),
-                                        }
-                                    })
-                                }),
-                            _ => {
-                                return err!(
-                                    token.span(),
-                                    ParserError::ExpectedButFound(
-                                        vec![Lex::LBracket, Lex::MemberAccess],
-                                        Some(token.sym.clone())
-                                    )
-                                )
-                            }
-                        }?;
-                    }
+                                }
+                            }?;
+                        }
 
-                    Ok(Some(ma))
+                        Ok(Some(ma))
+                    }
+                    None => Ok(None),
                 });
-                result.view(|v| {
-                    let msg = match v {
-                        Ok(Expression::MemberAccess(..)) => Ok("Member Access"),
-                        Ok(Expression::ArrayAt { .. }) => Ok("Array At"),
-                        Ok(_) => return,
-                        Err(e) => Err(e),
-                    };
-                    self.record(event.with_span(v.span()), msg)
-                })
+        result.view(|v| {
+            if !is_noop {
+                let msg = match v {
+                    Ok(Expression::MemberAccess(..)) => Ok("Member Access"),
+                    Ok(Expression::ArrayAt { .. }) => Ok("Array At"),
+                    Ok(_) => panic!(""),
+                    Err(e) => Err(e),
+                };
+                self.record(event.with_span(v.span()), msg)
+            } else {
+                self.record_noop(event.with_span(v.span()))
             }
-            None => Ok(None),
-        }
+        })
     }
 
     pub(super) fn factor(
