@@ -220,14 +220,14 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        self.binary_op(stream, &vec![Lex::BOr], Self::logical_and)
+        self.binary_op(stream, &[Lex::BOr], Self::logical_and)
     }
 
     pub(super) fn logical_and(
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        self.binary_op(stream, &vec![Lex::BAnd], Self::comparison)
+        self.binary_op(stream, &[Lex::BAnd], Self::comparison)
     }
 
     pub(super) fn comparison(
@@ -236,23 +236,23 @@ impl<'a> Parser<'a> {
     ) -> ParserResult<Expression<ParserContext>> {
         self.binary_op(
             stream,
-            &vec![Lex::Eq, Lex::NEq, Lex::Ls, Lex::LsEq, Lex::Gr, Lex::GrEq],
+            &[Lex::Eq, Lex::NEq, Lex::Ls, Lex::LsEq, Lex::Gr, Lex::GrEq],
             Self::sum,
         )
     }
 
     pub(super) fn sum(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
-        self.binary_op(stream, &vec![Lex::Add, Lex::Minus], Self::term)
+        self.binary_op(stream, &[Lex::Add, Lex::Minus], Self::term)
     }
 
     pub(super) fn term(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
-        self.binary_op(stream, &vec![Lex::Mul, Lex::Div], Self::negate)
+        self.binary_op(stream, &[Lex::Mul, Lex::Div], Self::negate)
     }
 
     pub(super) fn binary_op(
         &self,
         stream: &mut TokenStream,
-        test: &Vec<Lex>,
+        test: &[Lex],
         left_pattern: fn(&Self, &mut TokenStream) -> ParserResult<Expression<ParserContext>>,
     ) -> ParserResult<Expression<ParserContext>> {
         let mut msg = None;
