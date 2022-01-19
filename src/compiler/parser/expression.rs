@@ -30,7 +30,7 @@ impl ParserCombinator<ParserResult<Expression<ParserContext>>>
 
     fn pif_then(
         &self,
-        cond: Vec<Lex>,
+        cond: &[Lex],
         then: fn(
             Expression<ParserContext>,
             Token,
@@ -53,7 +53,7 @@ pub trait ParserCombinator<R> {
     fn por<F: Fn(&mut TokenStream) -> R>(&self, f: F, ts: &mut TokenStream) -> R;
     fn pif_then(
         &self,
-        cond: Vec<Lex>,
+        cond: &[Lex],
         f: fn(Expression<ParserContext>, Token, &mut TokenStream) -> R,
         ts: &mut TokenStream,
     ) -> R;
@@ -256,7 +256,7 @@ impl<'a> Parser<'a> {
         left_pattern: fn(&Self, &mut TokenStream) -> ParserResult<Expression<ParserContext>>,
     ) -> ParserResult<Expression<ParserContext>> {
         match left_pattern(self, stream)? {
-            Some(left) => match stream.next_if_one_of(test.clone()) {
+            Some(left) => match stream.next_if_one_of(test) {
                 Some(op) => {
                     let (event, result) = self.new_event(Span::zero()).and_then(|| {
                         self.binary_op(stream, test, left_pattern)?
@@ -285,7 +285,7 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        match stream.next_if_one_of(vec![Lex::Minus, Lex::Not]) {
+        match stream.next_if_one_of(&vec![Lex::Minus, Lex::Not]) {
             Some(op) => {
                 let (event, result) = self.new_event(Span::zero()).and_then(|| {
                     self.negate(stream)
@@ -324,7 +324,7 @@ impl<'a> Parser<'a> {
                 let (event, result) = self.new_event(Span::zero()).and_then(|| {
                     let mut ma = f;
                     while let Some(token) =
-                        stream.next_if_one_of(vec![Lex::MemberAccess, Lex::LBracket])
+                        stream.next_if_one_of(&vec![Lex::MemberAccess, Lex::LBracket])
                     {
                         ma = match token.sym {
                             Lex::MemberAccess => stream
@@ -653,7 +653,7 @@ impl<'a> Parser<'a> {
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
         let (event, result) = self.new_event(Span::zero()).and_then(|| {
-            match stream.next_if_one_of(vec![
+            match stream.next_if_one_of(&vec![
                 Lex::U8(0),
                 Lex::U16(0),
                 Lex::U32(0),
