@@ -324,37 +324,19 @@ impl<'a> Parser<'a> {
         let (event, result) =
             self.new_event(Span::zero())
                 .and_then(|| match self.factor(stream)? {
-                    Some(f) => {
-                        let mut ma = f;
-                        while let Some(token) =
-                            stream.next_if_one_of(&vec![Lex::MemberAccess, Lex::LBracket])
-                        {
-                            is_noop = false;
-                            ma = match token.sym {
-                                Lex::MemberAccess => self.member_access(ma, stream, token),
-                                Lex::LBracket => self.array_access(ma, stream, token),
-                                _ => {
-                                    return err!(
-                                        token.span(),
-                                        ParserError::ExpectedButFound(
-                                            vec![Lex::LBracket, Lex::MemberAccess],
-                                            Some(token.sym.clone())
-                                        )
-                                    )
-                                }
-                            }?;
-                        }
-
-                        Ok(Some(ma))
-                    }
+                    Some(f) => self.subdata_access_chain(f, stream, &mut is_noop),
                     None => Ok(None),
                 });
+
         result.view(|v| {
             if !is_noop {
                 let msg = match v {
-                    Ok(Expression::MemberAccess(..)) => Ok("Member Access"),
-                    Ok(Expression::ArrayAt { .. }) => Ok("Array At"),
-                    Ok(exp) => panic!("Unexpected expression marked as a subdata access operatoin: {:?}", exp),
+                    Ok(Expression::MemberAccess(..)) => Ok("Subdata Access: Member Access"),
+                    Ok(Expression::ArrayAt { .. }) => Ok("Subdata Access: Array At"),
+                    Ok(exp) => panic!(
+                        "Unexpected expression marked as a subdata access operatoin: {:?}",
+                        exp
+                    ),
                     Err(err) => Err(err),
                 };
                 self.record(event.with_span(v.span()), msg)
@@ -362,6 +344,32 @@ impl<'a> Parser<'a> {
                 self.record_noop(event.with_span(v.span()))
             }
         })
+    }
+
+    fn subdata_access_chain(
+        &self,
+        factor: Expression<ParserContext>,
+        stream: &mut TokenStream,
+        is_noop: &mut bool,
+    ) -> Result<Option<Expression<ParserContext>>, CompilerError<ParserError>> {
+        let mut ma = factor;
+        while let Some(token) = stream.next_if_one_of(&vec![Lex::MemberAccess, Lex::LBracket]) {
+            *is_noop = false;
+            ma = match token.sym {
+                Lex::MemberAccess => self.member_access(ma, stream, token),
+                Lex::LBracket => self.array_access(ma, stream, token),
+                _ => {
+                    return err!(
+                        token.span(),
+                        ParserError::ExpectedButFound(
+                            vec![Lex::LBracket, Lex::MemberAccess],
+                            Some(token.sym.clone())
+                        )
+                    )
+                }
+            }?;
+        }
+        Ok(Some(ma))
     }
 
     fn array_access(
