@@ -34,6 +34,14 @@ impl<'a> Parser<'a> {
     }
 
     /// Support function which records parser events to the tracing system
+    pub(super) fn record_noop<V: Writable>(
+        &self,
+        evt: Event<V, ParserError>,
+    ) {
+        self.logger.write(evt)
+    }
+
+    /// Support function which records parser events to the tracing system
     pub(super) fn record_terminal(&self, span: Span, r: Result<&str, &CompilerError<ParserError>>) {
         self.logger.write(Event::new_with_result(
             "parser",

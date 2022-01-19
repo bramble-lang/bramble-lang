@@ -255,30 +255,33 @@ impl<'a> Parser<'a> {
         test: &Vec<Lex>,
         left_pattern: fn(&Self, &mut TokenStream) -> ParserResult<Expression<ParserContext>>,
     ) -> ParserResult<Expression<ParserContext>> {
-        match left_pattern(self, stream)? {
-            Some(left) => match stream.next_if_one_of(test) {
-                Some(op) => {
-                    let (event, result) = self.new_event(Span::zero()).and_then(|| {
-                        self.binary_op(stream, test, left_pattern)?
-                            .ok_or(CompilerError::new(
-                                op.span(),
-                                ParserError::ExpectedExprAfter(op.sym.clone()),
-                            ))
-                            .and_then(|right| {
-                                Expression::binary_op(&op.sym, Box::new(left), Box::new(right))
-                            })
-                    });
+        let mut msg = None;
+        let (event, result) =
+            self.new_event(Span::zero())
+                .and_then(|| match left_pattern(self, stream)? {
+                    Some(left) => match stream.next_if_one_of(test) {
+                        Some(op) => {
+                            msg = Some(op.sym.to_string());
+                            self.binary_op(stream, test, left_pattern)?
+                                .ok_or(CompilerError::new(
+                                    op.span(),
+                                    ParserError::ExpectedExprAfter(op.sym.clone()),
+                                ))
+                                .and_then(|right| {
+                                    Expression::binary_op(&op.sym, Box::new(left), Box::new(right))
+                                })
+                        }
+                        None => Ok(Some(left)),
+                    },
+                    None => Ok(None),
+                });
 
-                    result.view(|v| {
-                        let op = op.sym.to_string();
-                        let msg = v.map(|_| op.as_str());
-                        self.record(event.with_span(v.span()), msg)
-                    })
-                }
-                None => Ok(Some(left)),
-            },
-            None => Ok(None),
-        }
+        result.view(|v| {
+            match msg {
+                Some(msg) => self.record(event.with_span(v.span()), Ok(&msg)),
+                None => self.record_noop(event.with_span(v.span())),
+            }
+        })
     }
 
     pub(super) fn negate(
