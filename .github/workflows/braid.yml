@@ -36,9 +36,6 @@ jobs:
       # Setup Rust to use nightly tool chain
       - name: rust-toolchain
         uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          override: true
 
       # Runs a single command using the runners shell
       - name: Setup NASM
