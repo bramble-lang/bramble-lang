@@ -99,7 +99,7 @@ pub fn build_source_map(
     let mut sm = SourceMap::new();
 
     let mut files = get_files(&src_path, ext)?;
-    files.sort();
+    files.sort(); // simplifies testing across platforms by making the source map consistent
     for file in files {
         sm.add_file(file)?;
     }
