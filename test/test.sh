@@ -42,9 +42,9 @@ run_test() {
     built=1
 
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        ../target/${target}/braidc --llvm -p linux --import ${std_dir}/std.manifest -i ./src/${test} -o ${build_dir}/output.obj > ${build_dir}/stdout 2> /dev/null
+        ../target/${target}/braidc --llvm -p linux --import ${std_dir}/std.manifest --json-trace -i ./src/${test} -o ${build_dir}/output.obj > ${build_dir}/stdout 2> /dev/null
     elif [[ "$OSTYPE" == "darwin"* ]]; then
-        ../target/${target}/braidc --llvm -p machos --import ${std_dir}/std.manifest -i ./src/${test} -o ${build_dir}/output.obj > ${build_dir}/stdout 2> /dev/null
+        ../target/${target}/braidc --llvm -p machos --import ${std_dir}/std.manifest --json-trace -i ./src/${test} -o ${build_dir}/output.obj > ${build_dir}/stdout 2> /dev/null
     fi
 
     # If there were no compilation errors then run the assembler and linker
@@ -78,11 +78,20 @@ run_test() {
         fi
     fi
 
+    # Test the output of the compiled binary
     result=$(diff ${build_dir}/stdout ./src/${test}.out)
     if [ $? -eq 0 ]
     then
-        ((num_pass=num_pass+1))
-        echo "${test}: Pass"
+        # Test the trace output from the compiler
+        result=$(diff ${build_dir}/../trace.json ./src/${test}.json)
+        if [ $? -eq 0 ]
+        then
+            ((num_pass=num_pass+1))
+            echo "${test} Pass"
+        else
+            echo "${test} Trace Test: Fail"
+            echo "${result}"
+        fi
     else
         echo "${test}: Fail"
         echo ${result}

@@ -16,7 +16,7 @@ mod tests {
 
         logger.enable();
 
-        let evt = Event::<_, LexerError>::new("test", Span::zero(), Ok("Hello"));
+        let evt = Event::<_, LexerError>::new_without_parent("test", Span::zero(), Ok("Hello"));
 
         logger.write(evt);
         assert_eq!(
@@ -32,7 +32,7 @@ mod tests {
         logger.add_writer(&writer);
 
         logger.disable();
-        let evt = Event::<_, LexerError>::new("test", Span::zero(), Ok("Hello"));
+        let evt = Event::<_, LexerError>::new_without_parent("test", Span::zero(), Ok("Hello"));
         logger.write(evt);
         assert_eq!("", *writer.buf.borrow());
     }
@@ -45,13 +45,13 @@ mod tests {
 
         // First disable the logger and test that writes are blocked
         logger.disable();
-        let evt = Event::<_, LexerError>::new("test", Span::zero(), Ok("Hello"));
+        let evt = Event::<_, LexerError>::new_without_parent("test", Span::zero(), Ok("Hello"));
         logger.write(evt);
         assert_eq!("", *writer.buf.borrow());
 
         // Then enable the logger and confirm that writes are now happening
         logger.enable();
-        let evt = Event::<_, LexerError>::new("test", Span::zero(), Ok("Hello"));
+        let evt = Event::<_, LexerError>::new_without_parent("test", Span::zero(), Ok("Hello"));
         logger.write(evt);
         assert_eq!(
             "{id: 1, stage: \"test\", source: [0,0], ok: \"Hello\", }",

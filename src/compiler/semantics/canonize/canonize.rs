@@ -298,7 +298,7 @@ fn record_item_path_event(
     path: Result<&Path, &CompilerError<SemanticError>>,
     logger: &Logger,
 ) {
-    logger.write(Event::<_, SemanticError>::new(
+    logger.write(Event::<_, SemanticError>::new_without_parent(
         "canonize-item-path",
         span,
         path,
@@ -310,7 +310,7 @@ fn record_type_ref_event(
     path: Result<&Path, &CompilerError<SemanticError>>,
     logger: &Logger,
 ) {
-    logger.write(Event::<_, SemanticError>::new(
+    logger.write(Event::<_, SemanticError>::new_without_parent(
         "canonize-type-ref",
         span,
         path,

@@ -185,7 +185,7 @@ impl CompilerDisplay for Lex {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Token {
     /// The value of the token
     pub sym: Lex,
