@@ -320,28 +320,24 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        let mut is_noop = true;
         let (event, result) =
             self.new_event(Span::zero())
                 .and_then(|| match self.factor(stream)? {
-                    Some(f) => self.subdata_access_sequence(f, stream, &mut is_noop),
+                    Some(f) => self.subdata_access_sequence(f, stream),
                     None => Ok(None),
                 });
 
         result.view(|v| {
-            if !is_noop {
-                let msg = match v {
-                    Ok(Expression::MemberAccess(..)) => Ok("Subdata Access: Member Access"),
-                    Ok(Expression::ArrayAt { .. }) => Ok("Subdata Access: Array At"),
-                    Ok(exp) => panic!(
-                        "Unexpected expression marked as a subdata access operatoin: {:?}",
-                        exp
-                    ),
-                    Err(err) => Err(err),
-                };
-                self.record(event.with_span(v.span()), msg)
-            } else {
-                self.record_noop(event.with_span(v.span()))
+            match v {
+                Ok(Expression::MemberAccess(..)) => self.record(
+                    event.with_span(v.span()),
+                    Ok("Subdata Access: Member Access"),
+                ),
+                Ok(Expression::ArrayAt { .. }) => {
+                    self.record(event.with_span(v.span()), Ok("Subdata Access: Array At"))
+                }
+                Ok(_) => self.record_noop(event.with_span(v.span())),
+                Err(err) => self.record(event.with_span(v.span()), Err(err)),
             }
         })
     }
@@ -350,11 +346,9 @@ impl<'a> Parser<'a> {
         &self,
         factor: Expression<ParserContext>,
         stream: &mut TokenStream,
-        is_noop: &mut bool,
     ) -> Result<Option<Expression<ParserContext>>, CompilerError<ParserError>> {
         let mut ma = factor;
         if let Some(token) = stream.next_if_one_of(&[Lex::MemberAccess, Lex::LBracket]) {
-            *is_noop = false;
             ma = match token.sym {
                 Lex::MemberAccess => self.member_access(ma, stream, token),
                 Lex::LBracket => self.array_access(ma, stream, token),
@@ -368,7 +362,7 @@ impl<'a> Parser<'a> {
                     )
                 }
             }?;
-            self.subdata_access_sequence(ma, stream, is_noop)
+            self.subdata_access_sequence(ma, stream)
         } else {
             Ok(Some(ma))
         }
