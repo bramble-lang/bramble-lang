@@ -17,7 +17,9 @@ use super::{Writable, Writer};
 pub mod event_id {
     use std::{cell::RefCell, rc::Rc, sync::atomic::AtomicU64};
 
-    use super::{Writable, Writer};
+    use crate::compiler::Span;
+
+    use super::{Writable, Writer, Event};
 
     /// Threadsafe mechanism for providing unique IDs for every event
     static NEXT_EVENT_ID: AtomicU64 = AtomicU64::new(1);
@@ -51,6 +53,10 @@ pub mod event_id {
         /// events within a compiler stage
         pub fn new() -> EventStack {
             EventStack(Rc::new(RefCell::new(Vec::new())))
+        }
+
+        pub fn new_event<V: Writable, E: crate::compiler::CompilerDisplay + std::fmt::Debug>(&self) -> Event<V, E> {
+            Event::new("blah", Span::zero(), self.clone())
         }
     }
 

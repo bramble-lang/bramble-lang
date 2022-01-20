@@ -83,7 +83,7 @@ impl<'a> Parser<'a> {
                     Ok(Some(module))
                 })
         });
-        result.view(|v| {
+        result.view2(|v| {
             let msg = v.map(|_| "File Module");
             self.record(file_module_event.with_span(v.span()), msg)
         })
@@ -111,7 +111,7 @@ impl<'a> Parser<'a> {
                     },
                     None => Ok(None),
                 });
-        result.view(|v| {
+        result.view2(|v| {
             let msg = v.map(|_| "Module");
             self.record(event.with_span(v.span()), msg)
         })
@@ -197,7 +197,7 @@ impl<'a> Parser<'a> {
                     },
                     None => Ok(None),
                 });
-        result.view(|v| {
+        result.view2(|v| {
             let msg = v.map(|_| "Extern Definition");
             self.record(event.with_span(v.span()), msg)
         })
@@ -223,7 +223,7 @@ impl<'a> Parser<'a> {
                     },
                     None => Ok(None),
                 });
-        result.view(|v| {
+        result.view2(|v| {
             let msg = v.map(|_| "Struct Definition");
             self.record(event.with_span(v.span()), msg)
         })
@@ -266,7 +266,7 @@ impl<'a> Parser<'a> {
                 }))
             })
         });
-        result.view(|v| {
+        result.view2(|v| {
             let msg = v.map(|_| "Funtion Definition");
             self.record(event.with_span(v.span()), msg)
         })
@@ -315,7 +315,7 @@ impl<'a> Parser<'a> {
                     Ok(Some((fn_ctx, fn_name, params, has_varargs, fn_type)))
                 })
         });
-        result.view(|v| {
+        result.view2(|v| {
             let msg = v.map(|_| "Routine Declaration");
             let span = match v {
                 Ok(v) => v.0.span(),
@@ -487,7 +487,7 @@ impl<'a> Parser<'a> {
 
             Ok(Some((path.into(), ctx)))
         });
-        result.view(|v| {
+        result.view2(|v| {
             let msg = v.map(|_| "Path");
             let span = match v {
                 Ok(v) => v.1.span(),
@@ -504,7 +504,7 @@ impl<'a> Parser<'a> {
                 Some((id, span)) => Ok(Some(Expression::Identifier(ParserContext::new(span), id))),
                 _ => Ok(None),
             });
-        result.view(|v| {
+        result.view2(|v| {
             let msg = v.map(|_| "Identifier");
             self.record(event.with_span(v.span()), msg)
         })
@@ -550,7 +550,7 @@ impl<'a> Parser<'a> {
             });
             Ok(ty)
         });
-        result.view(|v| {
+        result.view2(|v| {
             let msg = v.map(|v| match v.0 {
                 Type::Custom(_) => "Custom Type",
                 Type::Array(..) => "Array Type",
@@ -605,7 +605,7 @@ impl<'a> Parser<'a> {
                     }
                     None => Ok(None),
                 });
-        result.view(|v| {
+        result.view2(|v| {
             let msg = v.map(|_| "Array Type");
             let span = match v {
                 Ok(ok) => ok.1.span(),
@@ -640,7 +640,7 @@ impl<'a> Parser<'a> {
                 None => Ok(None),
             }
         });
-        result.view(|v| {
+        result.view2(|v| {
             let msg = v.map(|_| "Identifier Declaration");
             self.record(event.with_span(v.span()), msg)
         })
