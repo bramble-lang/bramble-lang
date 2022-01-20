@@ -30,7 +30,7 @@ impl ParserCombinator<ParserResult<Expression<ParserContext>>>
 
     fn pif_then(
         &self,
-        cond: Vec<Lex>,
+        cond: &[Lex],
         then: fn(
             Expression<ParserContext>,
             Token,
@@ -53,7 +53,7 @@ pub trait ParserCombinator<R> {
     fn por<F: Fn(&mut TokenStream) -> R>(&self, f: F, ts: &mut TokenStream) -> R;
     fn pif_then(
         &self,
-        cond: Vec<Lex>,
+        cond: &[Lex],
         f: fn(Expression<ParserContext>, Token, &mut TokenStream) -> R,
         ts: &mut TokenStream,
     ) -> R;
@@ -220,14 +220,14 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        self.binary_op(stream, &vec![Lex::BOr], Self::logical_and)
+        self.binary_op(stream, &[Lex::BOr], Self::logical_and)
     }
 
     pub(super) fn logical_and(
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        self.binary_op(stream, &vec![Lex::BAnd], Self::comparison)
+        self.binary_op(stream, &[Lex::BAnd], Self::comparison)
     }
 
     pub(super) fn comparison(
@@ -236,56 +236,57 @@ impl<'a> Parser<'a> {
     ) -> ParserResult<Expression<ParserContext>> {
         self.binary_op(
             stream,
-            &vec![Lex::Eq, Lex::NEq, Lex::Ls, Lex::LsEq, Lex::Gr, Lex::GrEq],
+            &[Lex::Eq, Lex::NEq, Lex::Ls, Lex::LsEq, Lex::Gr, Lex::GrEq],
             Self::sum,
         )
     }
 
     pub(super) fn sum(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
-        self.binary_op(stream, &vec![Lex::Add, Lex::Minus], Self::term)
+        self.binary_op(stream, &[Lex::Add, Lex::Minus], Self::term)
     }
 
     pub(super) fn term(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
-        self.binary_op(stream, &vec![Lex::Mul, Lex::Div], Self::negate)
+        self.binary_op(stream, &[Lex::Mul, Lex::Div], Self::negate)
     }
 
     pub(super) fn binary_op(
         &self,
         stream: &mut TokenStream,
-        test: &Vec<Lex>,
+        test: &[Lex],
         left_pattern: fn(&Self, &mut TokenStream) -> ParserResult<Expression<ParserContext>>,
     ) -> ParserResult<Expression<ParserContext>> {
-        match left_pattern(self, stream)? {
-            Some(left) => match stream.next_if_one_of(test.clone()) {
-                Some(op) => {
-                    let (event, result) = self.new_event(Span::zero()).and_then(|| {
-                        self.binary_op(stream, test, left_pattern)?
-                            .ok_or(CompilerError::new(
-                                op.span(),
-                                ParserError::ExpectedExprAfter(op.sym.clone()),
-                            ))
-                            .and_then(|right| {
-                                Expression::binary_op(&op.sym, Box::new(left), Box::new(right))
-                            })
-                    });
+        let mut msg = None;
+        let (event, result) =
+            self.new_event(Span::zero())
+                .and_then(|| match left_pattern(self, stream)? {
+                    Some(left) => match stream.next_if_one_of(test) {
+                        Some(op) => {
+                            msg = Some(op.sym.to_string());
+                            self.binary_op(stream, test, left_pattern)?
+                                .ok_or(CompilerError::new(
+                                    op.span(),
+                                    ParserError::ExpectedExprAfter(op.sym.clone()),
+                                ))
+                                .and_then(|right| {
+                                    Expression::binary_op(&op.sym, Box::new(left), Box::new(right))
+                                })
+                        }
+                        None => Ok(Some(left)),
+                    },
+                    None => Ok(None),
+                });
 
-                    result.view2(|v| {
-                        let op = op.sym.to_string();
-                        let msg = v.map(|_| op.as_str());
-                        self.record(event.with_span(v.span()), msg)
-                    })
-                }
-                None => Ok(Some(left)),
-            },
-            None => Ok(None),
-        }
+        result.view2(|v| match msg {
+            Some(msg) => self.record(event.with_span(v.span()), Ok(&msg)),
+            None => self.record_noop(event.with_span(v.span())),
+        })
     }
 
     pub(super) fn negate(
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        match stream.next_if_one_of(vec![Lex::Minus, Lex::Not]) {
+        match stream.next_if_one_of(&[Lex::Minus, Lex::Not]) {
             Some(op) => {
                 let (event, result) = self.new_event(Span::zero()).and_then(|| {
                     self.negate(stream)
@@ -311,75 +312,103 @@ impl<'a> Parser<'a> {
                     self.record(event.with_span(v.span()), msg)
                 })
             }
-            None => self.member_access(stream),
+            None => self.subdata_access(stream),
         }
     }
 
-    pub(super) fn member_access(
+    pub(super) fn subdata_access(
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        match self.factor(stream)? {
-            Some(f) => {
-                let (event, result) = self.new_event(Span::zero()).and_then(|| {
-                    let mut ma = f;
-                    while let Some(token) =
-                        stream.next_if_one_of(vec![Lex::MemberAccess, Lex::LBracket])
-                    {
-                        ma = match token.sym {
-                            Lex::MemberAccess => stream
-                                .next_if_id()
-                                .map(|(member, member_span)| {
-                                    Expression::MemberAccess(
-                                        ma.context().extend(member_span),
-                                        Box::new(ma),
-                                        member,
-                                    )
-                                })
-                                .ok_or(CompilerError::new(
-                                    token.span(),
-                                    ParserError::MemberAccessExpectedField,
-                                )),
-                            Lex::LBracket => self
-                                .expression(stream)?
-                                .ok_or(CompilerError::new(
-                                    token.span(),
-                                    ParserError::IndexOpInvalidExpr,
-                                ))
-                                .and_then(|index| {
-                                    stream.next_must_be(&Lex::RBracket).map(|rbracket| {
-                                        Expression::ArrayAt {
-                                            context: ma.context().join(rbracket.to_ctx()),
-                                            array: Box::new(ma),
-                                            index: Box::new(index),
-                                        }
-                                    })
-                                }),
-                            _ => {
-                                return err!(
-                                    token.span(),
-                                    ParserError::ExpectedButFound(
-                                        vec![Lex::LBracket, Lex::MemberAccess],
-                                        Some(token.sym.clone())
-                                    )
-                                )
-                            }
-                        }?;
-                    }
-
-                    Ok(Some(ma))
+        let (event, result) =
+            self.new_event(Span::zero())
+                .and_then(|| match self.factor(stream)? {
+                    Some(f) => self.subdata_access_sequence(f, stream),
+                    None => Ok(None),
                 });
-                result.view2(|v| {
-                    let msg = match v {
-                        Ok(Expression::MemberAccess(..)) => Ok("Member Access"),
-                        Ok(Expression::ArrayAt { .. }) => Ok("Array At"),
-                        Ok(_) => return,
-                        Err(e) => Err(e),
-                    };
-                    self.record(event.with_span(v.span()), msg)
-                })
+
+        result.view2(|v| match v {
+            Ok(Expression::MemberAccess(..)) => self.record(
+                event.with_span(v.span()),
+                Ok("Subdata Access: Member Access"),
+            ),
+            Ok(Expression::ArrayAt { .. }) => {
+                self.record(event.with_span(v.span()), Ok("Subdata Access: Array At"))
             }
-            None => Ok(None),
+            Ok(_) => self.record_noop(event.with_span(v.span())),
+            Err(err) => self.record(event.with_span(v.span()), Err(err)),
+        })
+    }
+
+    fn subdata_access_sequence(
+        &self,
+        factor: Expression<ParserContext>,
+        stream: &mut TokenStream,
+    ) -> Result<Option<Expression<ParserContext>>, CompilerError<ParserError>> {
+        match stream.peek() {
+            Some(tok) if tok.sym == Lex::MemberAccess => {
+                // This panics rather than throws an error because if we see a Member Access operator
+                // then what follows is either a valid member access or an error. So, if this returns
+                // Ok(None) then there is an unrecoverable disconnect between what this function expects
+                // and what member_access does.
+                let ma = self.member_access(factor, stream)?.expect("Member Access Failed to Parse");
+                self.subdata_access_sequence(ma, stream)
+            }
+            Some(tok) if tok.sym == Lex::LBracket => {
+                let aa = self.array_access(factor, stream)?.expect("Array Access Failed to Parse");
+                self.subdata_access_sequence(aa, stream)
+            }
+            _ => Ok(Some(factor)),
+        }
+    }
+
+    fn array_access(
+        &self,
+        ma: Expression<ParserContext>,
+        stream: &mut TokenStream,
+    ) -> Result<Option<Expression<ParserContext>>, CompilerError<ParserError>> {
+        if let Some(token) = stream.next_if(&Lex::LBracket) {
+            self.expression(stream)?
+                .ok_or(CompilerError::new(
+                    token.span(),
+                    ParserError::IndexOpInvalidExpr,
+                ))
+                .and_then(|index| {
+                    stream.next_must_be(&Lex::RBracket).map(|rbracket| {
+                        Some(Expression::ArrayAt {
+                            context: ma.context().join(rbracket.to_ctx()),
+                            array: Box::new(ma),
+                            index: Box::new(index),
+                        })
+                    })
+                })
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn member_access(
+        &self,
+        ma: Expression<ParserContext>,
+        stream: &mut TokenStream,
+    ) -> Result<Option<Expression<ParserContext>>, CompilerError<ParserError>> {
+        if let Some(token) = stream.next_if(&Lex::MemberAccess) {
+            stream
+                .next_if_id()
+                .ok_or(CompilerError::new(
+                    token.span(),
+                    ParserError::MemberAccessExpectedField,
+                ))
+                .map(|(member, member_span)| {
+                    self.record_terminal(member_span, Ok("Structure Field"));
+                    Some(Expression::MemberAccess(
+                        ma.context().extend(member_span),
+                        Box::new(ma),
+                        member,
+                    ))
+                })
+        } else {
+            Ok(None)
         }
     }
 
@@ -653,7 +682,7 @@ impl<'a> Parser<'a> {
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
         let (event, result) = self.new_event(Span::zero()).and_then(|| {
-            match stream.next_if_one_of(vec![
+            match stream.next_if_one_of(&[
                 Lex::U8(0),
                 Lex::U16(0),
                 Lex::U32(0),
