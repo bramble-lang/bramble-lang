@@ -327,18 +327,16 @@ impl<'a> Parser<'a> {
                     None => Ok(None),
                 });
 
-        result.view(|v| {
-            match v {
-                Ok(Expression::MemberAccess(..)) => self.record(
-                    event.with_span(v.span()),
-                    Ok("Subdata Access: Member Access"),
-                ),
-                Ok(Expression::ArrayAt { .. }) => {
-                    self.record(event.with_span(v.span()), Ok("Subdata Access: Array At"))
-                }
-                Ok(_) => self.record_noop(event.with_span(v.span())),
-                Err(err) => self.record(event.with_span(v.span()), Err(err)),
+        result.view(|v| match v {
+            Ok(Expression::MemberAccess(..)) => self.record(
+                event.with_span(v.span()),
+                Ok("Subdata Access: Member Access"),
+            ),
+            Ok(Expression::ArrayAt { .. }) => {
+                self.record(event.with_span(v.span()), Ok("Subdata Access: Array At"))
             }
+            Ok(_) => self.record_noop(event.with_span(v.span())),
+            Err(err) => self.record(event.with_span(v.span()), Err(err)),
         })
     }
 
@@ -347,24 +345,20 @@ impl<'a> Parser<'a> {
         factor: Expression<ParserContext>,
         stream: &mut TokenStream,
     ) -> Result<Option<Expression<ParserContext>>, CompilerError<ParserError>> {
-        let mut ma = factor;
-        if let Some(token) = stream.next_if_one_of(&[Lex::MemberAccess, Lex::LBracket]) {
-            ma = match token.sym {
-                Lex::MemberAccess => self.member_access(ma, stream, token),
-                Lex::LBracket => self.array_access(ma, stream, token),
-                _ => {
-                    return err!(
-                        token.span(),
-                        ParserError::ExpectedButFound(
-                            vec![Lex::LBracket, Lex::MemberAccess],
-                            Some(token.sym.clone())
-                        )
-                    )
-                }
-            }?;
-            self.subdata_access_sequence(ma, stream)
-        } else {
-            Ok(Some(ma))
+        match stream.peek() {
+            Some(tok) if tok.sym == Lex::MemberAccess => {
+                // This panics rather than throws an error because if we see a Member Access operator
+                // then what follows is either a valid member access or an error. So, if this returns
+                // Ok(None) then there is an unrecoverable disconnect between what this function expects
+                // and what member_access does.
+                let ma = self.member_access(factor, stream)?.expect("Member Access Failed to Parse");
+                self.subdata_access_sequence(ma, stream)
+            }
+            Some(tok) if tok.sym == Lex::LBracket => {
+                let aa = self.array_access(factor, stream)?.expect("Array Access Failed to Parse");
+                self.subdata_access_sequence(aa, stream)
+            }
+            _ => Ok(Some(factor)),
         }
     }
 
@@ -372,40 +366,50 @@ impl<'a> Parser<'a> {
         &self,
         ma: Expression<ParserContext>,
         stream: &mut TokenStream,
-        token: Token,
-    ) -> Result<Expression<ParserContext>, CompilerError<ParserError>> {
-        self.expression(stream)?
-            .ok_or(CompilerError::new(
-                token.span(),
-                ParserError::IndexOpInvalidExpr,
-            ))
-            .and_then(|index| {
-                stream
-                    .next_must_be(&Lex::RBracket)
-                    .map(|rbracket| Expression::ArrayAt {
-                        context: ma.context().join(rbracket.to_ctx()),
-                        array: Box::new(ma),
-                        index: Box::new(index),
+    ) -> Result<Option<Expression<ParserContext>>, CompilerError<ParserError>> {
+        if let Some(token) = stream.next_if(&Lex::LBracket) {
+            self.expression(stream)?
+                .ok_or(CompilerError::new(
+                    token.span(),
+                    ParserError::IndexOpInvalidExpr,
+                ))
+                .and_then(|index| {
+                    stream.next_must_be(&Lex::RBracket).map(|rbracket| {
+                        Some(Expression::ArrayAt {
+                            context: ma.context().join(rbracket.to_ctx()),
+                            array: Box::new(ma),
+                            index: Box::new(index),
+                        })
                     })
-            })
+                })
+        } else {
+            Ok(None)
+        }
     }
 
     fn member_access(
         &self,
         ma: Expression<ParserContext>,
         stream: &mut TokenStream,
-        token: Token,
-    ) -> Result<Expression<ParserContext>, CompilerError<ParserError>> {
-        stream
-            .next_if_id()
-            .map(|(member, member_span)| {
-                self.record_terminal(member_span, Ok("Structure Field"));
-                Expression::MemberAccess(ma.context().extend(member_span), Box::new(ma), member)
-            })
-            .ok_or(CompilerError::new(
-                token.span(),
-                ParserError::MemberAccessExpectedField,
-            ))
+    ) -> Result<Option<Expression<ParserContext>>, CompilerError<ParserError>> {
+        if let Some(token) = stream.next_if(&Lex::MemberAccess) {
+            stream
+                .next_if_id()
+                .ok_or(CompilerError::new(
+                    token.span(),
+                    ParserError::MemberAccessExpectedField,
+                ))
+                .map(|(member, member_span)| {
+                    self.record_terminal(member_span, Ok("Structure Field"));
+                    Some(Expression::MemberAccess(
+                        ma.context().extend(member_span),
+                        Box::new(ma),
+                        member,
+                    ))
+                })
+        } else {
+            Ok(None)
+        }
     }
 
     pub(super) fn factor(
