@@ -7,7 +7,7 @@ pub trait View<V> {
 
 /// Let's a function "view" but not modify the contents of any container type.
 pub trait View2<V, E: CompilerDisplay + std::fmt::Debug> {
-    fn view<F: FnOnce(Result<&V, &CompilerError<E>>)>(self, f: F) -> Self;
+    fn view2<F: FnOnce(Result<&V, &CompilerError<E>>)>(self, f: F) -> Self;
 }
 
 /// Let's a function "view" but not modify the Error variant of a type.
@@ -27,7 +27,7 @@ impl<V, E> View<V> for Result<Option<V>, E> {
 }
 
 impl<V, E: CompilerDisplay + std::fmt::Debug> View2<V, E> for Result<Option<V>, CompilerError<E>> {
-    fn view<F: FnOnce(Result<&V, &CompilerError<E>>)>(self, f: F) -> Self {
+    fn view2<F: FnOnce(Result<&V, &CompilerError<E>>)>(self, f: F) -> Self {
         match &self {
             Ok(Some(v)) => f(Ok(v)),
             Ok(None) => (),
