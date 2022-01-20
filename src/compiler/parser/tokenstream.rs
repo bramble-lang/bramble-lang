@@ -104,7 +104,7 @@ impl<'a> TokenStream<'a> {
         }
     }
 
-    pub fn next_if_one_of(&mut self, set: Vec<Lex>) -> Option<Token> {
+    pub fn next_if_one_of(&mut self, set: &[Lex]) -> Option<Token> {
         if self.test_if_one_of(set) {
             self.next()
         } else {
@@ -150,7 +150,7 @@ impl<'a> TokenStream<'a> {
         true
     }
 
-    pub fn test_if_one_of(&self, set: Vec<Lex>) -> bool {
+    pub fn test_if_one_of(&self, set: &[Lex]) -> bool {
         match self.peek() {
             None => false,
             Some(t) => set.iter().find(|l| t.token_eq(l)).is_some(),
@@ -442,10 +442,10 @@ mod test_tokenstream {
             .unwrap();
 
         let ts = TokenStream::new(&tokens, &logger).unwrap();
-        let p = ts.test_if_one_of(vec![Lex::LParen, Lex::I64(0)]);
+        let p = ts.test_if_one_of(&vec![Lex::LParen, Lex::I64(0)]);
         assert_eq!(p, true);
 
-        let p = ts.test_if_one_of(vec![Lex::RParen, Lex::I64(0)]);
+        let p = ts.test_if_one_of(&vec![Lex::RParen, Lex::I64(0)]);
         assert_eq!(p, false);
     }
 
@@ -467,7 +467,7 @@ mod test_tokenstream {
             .unwrap();
 
         let mut ts = TokenStream::new(&tokens, &logger).unwrap();
-        let p = ts.next_if_one_of(vec![Lex::LParen, Lex::I64(0)]).unwrap();
+        let p = ts.next_if_one_of(&[Lex::LParen, Lex::I64(0)]).unwrap();
         assert_eq!(
             p,
             Token {
@@ -484,7 +484,7 @@ mod test_tokenstream {
             }
         );
 
-        let p = ts.next_if_one_of(vec![Lex::LParen, Lex::I64(0)]).unwrap();
+        let p = ts.next_if_one_of(&[Lex::LParen, Lex::I64(0)]).unwrap();
         assert_eq!(
             p,
             Token {
@@ -501,7 +501,7 @@ mod test_tokenstream {
             }
         );
 
-        let p = ts.next_if_one_of(vec![Lex::LParen, Lex::I64(0)]).is_none();
+        let p = ts.next_if_one_of(&[Lex::LParen, Lex::I64(0)]).is_none();
         assert_eq!(p, true);
         let p = ts.peek().unwrap();
         assert_eq!(

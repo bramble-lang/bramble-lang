@@ -30,7 +30,7 @@ impl<'a> Parser<'a> {
     ) -> ParserResult<Statement<ParserContext>> {
         let (event, result) = self.new_event(Span::zero()).and_then(|| {
             let start_index = stream.index();
-            let must_have_semicolon = stream.test_if_one_of(vec![Lex::Let, Lex::Mut]);
+            let must_have_semicolon = stream.test_if_one_of(&vec![Lex::Let, Lex::Mut]);
             let stm = match self.let_bind(stream)? {
                 Some(bind) => Some(Statement::Bind(Box::new(bind))),
                 None => match self.mutate(stream)? {

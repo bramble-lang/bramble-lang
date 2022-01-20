@@ -1658,7 +1658,7 @@ pub mod tests {
             let mut stream = TokenStream::new(&tokens, &logger).unwrap();
             let logger = Logger::new();
             let parser = Parser::new(&logger);
-            match parser.member_access(&mut stream) {
+            match parser.subdata_access(&mut stream) {
                 Ok(Some(Expression::MemberAccess(_, left, right))) => {
                     assert_eq!(
                         *left,
