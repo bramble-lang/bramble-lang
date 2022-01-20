@@ -202,5 +202,8 @@
 {"id": 250, "stage": "canonize-item-path", "source": [295, 302], "ok": "$field::field::z"},
 {"id": 251, "stage": "canonize-type-ref", "source": [26, 108], "ok": "$field::field::MyStruct"},
 {"id": 252, "stage": "canonize-type-ref", "source": [45, 107], "ok": "$field::field::MyStruct"},
-{"id": 253, "stage": "type-resolver", "source": [66, 67], "ok": "i64"},
-{"id": 254, "stage": "type-resolver", "source": [81, 82], "ok": "i64"}]
+{"id": 256, "parent_id": 255, "stage": "type-resolver", "source": [66, 67], "ok": "i64"},
+{"id": 257, "parent_id": 255, "stage": "type-resolver", "source": [81, 82], "ok": "i64"},
+{"id": 255, "parent_id": 254, "stage": "type-resolver", "source": [45, 107], "error": "L2-6: member bad not found on $field::field::MyStruct"},
+{"id": 254, "parent_id": 253, "stage": "type-resolver", "source": [45, 107], "error": "L2-6: member bad not found on $field::field::MyStruct"},
+{"id": 253, "stage": "type-resolver", "source": [45, 107], "error": "L2-6: member bad not found on $field::field::MyStruct"}]

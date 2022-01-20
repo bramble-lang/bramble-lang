@@ -191,4 +191,6 @@
 {"id": 236, "stage": "canonize-item-path", "source": [278, 285], "ok": "$missing_member::missing_member::z"},
 {"id": 237, "stage": "canonize-type-ref", "source": [26, 91], "ok": "$missing_member::missing_member::MyStruct"},
 {"id": 238, "stage": "canonize-type-ref", "source": [45, 90], "ok": "$missing_member::missing_member::MyStruct"},
+{"id": 241, "parent_id": 240, "stage": "type-resolver", "source": [45, 90], "error": "L2-5: Struct expected 3 parameters but found 2"},
+{"id": 240, "parent_id": 239, "stage": "type-resolver", "source": [45, 90], "error": "L2-5: Struct expected 3 parameters but found 2"},
 {"id": 239, "stage": "type-resolver", "source": [45, 90], "error": "L2-5: Struct expected 3 parameters but found 2"}]

@@ -49,4 +49,7 @@
 {"id": 76, "stage": "canonize-item-path", "source": [0, 61], "ok": "$recursive::recursive"},
 {"id": 77, "stage": "canonize-item-path", "source": [0, 61], "ok": "$recursive::recursive::recursive"},
 {"id": 78, "stage": "canonize-item-path", "source": [0, 61], "ok": "$recursive::recursive::my_main"},
+{"id": 82, "parent_id": 81, "stage": "type-resolver", "source": [39, 40], "error": "L2: Could not find definition for x in this scope"},
+{"id": 81, "parent_id": 80, "stage": "type-resolver", "source": [39, 40], "error": "L2: Could not find definition for x in this scope"},
+{"id": 80, "parent_id": 79, "stage": "type-resolver", "source": [39, 40], "error": "L2: Could not find definition for x in this scope"},
 {"id": 79, "stage": "type-resolver", "source": [39, 40], "error": "L2: Could not find definition for x in this scope"}]

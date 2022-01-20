@@ -90,6 +90,7 @@ run_test() {
             echo "${test} Pass"
         else
             echo "${test} Trace Test: Fail"
+            echo "${result}"
         fi
     else
         echo "${test}: Fail"

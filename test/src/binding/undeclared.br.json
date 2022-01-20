@@ -52,4 +52,6 @@
 {"id": 79, "stage": "canonize-item-path", "source": [0, 74], "ok": "$undeclared::undeclared"},
 {"id": 80, "stage": "canonize-item-path", "source": [0, 74], "ok": "$undeclared::undeclared::undeclared"},
 {"id": 81, "stage": "canonize-item-path", "source": [0, 74], "ok": "$undeclared::undeclared::my_main"},
+{"id": 84, "parent_id": 83, "stage": "type-resolver", "source": [55, 56], "error": "L2: Could not find definition for x in this scope"},
+{"id": 83, "parent_id": 82, "stage": "type-resolver", "source": [55, 56], "error": "L2: Could not find definition for x in this scope"},
 {"id": 82, "stage": "type-resolver", "source": [55, 56], "error": "L2: Could not find definition for x in this scope"}]
