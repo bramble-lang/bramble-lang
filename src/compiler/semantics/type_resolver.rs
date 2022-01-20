@@ -200,7 +200,7 @@ impl<'a> TypeResolver<'a> {
             })
         });
 
-        result.view2(|v| self.record2(event, v, vec![]))
+        result.view(|v| self.record2(event, v, vec![]))
     }
 
     fn analyze_structdef(
@@ -231,7 +231,7 @@ impl<'a> TypeResolver<'a> {
                 resolved_fields,
             ))
         });
-        result.view2(|e| self.record2(event, e, vec![]))
+        result.view(|e| self.record2(event, e, vec![]))
     }
 
     fn analyze_extern(
@@ -260,7 +260,7 @@ impl<'a> TypeResolver<'a> {
                 ret_ty,
             ))
         });
-        result.view2(|e| self.record2(event, e, vec![]))
+        result.view(|e| self.record2(event, e, vec![]))
     }
 
     fn analyze_statement(
@@ -312,7 +312,7 @@ impl<'a> TypeResolver<'a> {
             }
             .map_err(|e| CompilerError::new(ctx.span(), e))
         });
-        result.view2(|e| self.record2(event, e, vec![]))
+        result.view(|e| self.record2(event, e, vec![]))
     }
 
     fn analyze_mutate(
@@ -342,7 +342,7 @@ impl<'a> TypeResolver<'a> {
             }
             .map_err(|e| CompilerError::new(mutate.span(), e))
         });
-        result.view2(|e| self.record2(event, e, vec![]))
+        result.view(|e| self.record2(event, e, vec![]))
     }
 
     fn analyze_yieldreturn(
@@ -386,7 +386,7 @@ impl<'a> TypeResolver<'a> {
             }
             .map_err(|e| CompilerError::new(yr.span(), e))
         });
-        result.view2(|e| self.record2(event, e, vec![]))
+        result.view(|e| self.record2(event, e, vec![]))
     }
 
     fn analyze_return(
@@ -430,7 +430,7 @@ impl<'a> TypeResolver<'a> {
             }
             .map_err(|e| CompilerError::new(r.span(), e))
         });
-        result.view2(|e| self.record2(event, e, vec![]))
+        result.view(|e| self.record2(event, e, vec![]))
     }
 
     /// Recursively resolve every child of the given expression and check that every
@@ -854,7 +854,7 @@ impl<'a> TypeResolver<'a> {
             }
         }
         });
-        result.view2(|e| self.record2(event, e, refs))
+        result.view(|e| self.record2(event, e, refs))
     }
 
     /// Check that the operand has the correct type for the given unary

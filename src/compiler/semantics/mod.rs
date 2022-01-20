@@ -33,7 +33,7 @@ use error::SemanticError;
 type SemanticResult<T> = Result<T, CompilerError<SemanticError>>;
 
 impl<T: Node<SemanticContext>> View2<T, SemanticError> for SemanticResult<T> {
-    fn view2<F: FnOnce(Result<&T, &CompilerError<SemanticError>>)>(self, f: F) -> Self {
+    fn view<F: FnOnce(Result<&T, &CompilerError<SemanticError>>)>(self, f: F) -> Self {
         match &self {
             Ok(v) => f(Ok(v)),
             Err(err) => f(Err(err)),
