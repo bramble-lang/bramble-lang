@@ -46,6 +46,12 @@ assignment allowed.
 9. It is possible to get the address of any variable, no matter it's type.
 10. Function pointers are not covered in this document
 11. The design should discourage their use to only when necessary.
+12. Raw pointers can be used on uninitialized memory.
+13. When copied the address will be copied to the new location. This applies for
+pointer fields in structures.
+14. You can get the address of a field in a structure.
+15. with Raw pointers, you can have internal references: that is a field in
+a struct is a pointer to another field in the same struct.
 
 ## Design
 ### Syntax
@@ -54,7 +60,7 @@ describe variables that hold addresses, and the operators used to to create
 and use raw pointers.
 
 #### Types
-The type syntax is borrowed from Rust:
+The type syntax is inspired from Rust:
 ```
 Raw Pointer = *(const|mut) <Type>
 ```
@@ -77,7 +83,16 @@ higher than member access or array access operators.
 The Reference operator can only be applied to identifiers, as those are the
 only constructs in Stet that have physical locations in the computer. Literals,
 for example, have a location in the machine code data section but are not
-conceptually something that can be referenced.
+conceptually something that can be referenced. 
+
+`@` is chosen as the addressing
+operator rather than the traditional `&` to make `&` available for future use
+with safer reference/borrowing systems. In Rust `&` is used for both borrowing
+and raw pointers (in Rust the `&` is cast to a raw pointer and a separate
+macro must be used to explicitly get the address). For Stet, I want all interactions
+with raw addresses/pointers to be as explicit and obvious as possible so the
+addresses are gotten with `@`. Then `&` will be used for safe references which
+will be what users are encouraged to use.
 
 The Dereference operator can be applied to the result of an expression. For
 example, if a function returns a reference that can be immediately dereferenced
@@ -95,5 +110,90 @@ is also mutable.  The type of the mutable reference expression is `*mut T`.
 
 `mut` and `const` are modifiers on the `*` reference type.
 
+#### Assignment Semantics
+A variable of type `*const T` can be assigned a value of type `*const T` or
+a value of `*mut T`.
+
+A variable of type `*mut T` can only be assigned a value of type `*mut T`.
+
+```
+let x: i64 := 5;
+let mut y: i64 := 10;
+
+let cptr_x: *const i64 := @x;  // Legal
+let cptr_y: *const i64 := @y;  // Legal
+
+let mptr_x: *mut i64 := @mut x; // Illegal, cannot get mutable address to an immutable variable
+let mptr_y: *mut i64 := @mut y; // Legal
+```
+
+##### Ref Type Variable Mutability
+A variable of reference type (immutable and immutable) can itself be annotated
+as mutable: this means that the address stored in the variable can be mutated 
+it has _no_ baring on if the location the address refers to can be mutated.
+
+```
+let x: i64 := 5;
+let x2: i64 := 5;
+let mut y: i64 := 10;
+let mut y2: i64 := 10;
+
+let mut cptr_x: *const := @x;
+let mut cptr_y: *mut := @mut y;
+
+mut cptr_x := @x2;     // Legal
+mut cptr_y := @mut y2; // Legal 
+```
+
+#### Use in Expressions
 Implicit casting: a mutable reference can be cast to an immutable reference.
-An immutable reference _cannot_ be case to a mutable reference.
+An immutable reference _cannot_ be cast to a mutable reference.
+
+Examples:
+```
+fn write_to(m: *mut i64) {...};
+fn read_from(i: *const i64) {...};
+
+let x: i64 := 5;
+let mut y: i64 := 10;
+
+let cptr_x: *const i64 := @x;  // Legal
+let cptr_y: *const i64 := @y;  // Legal
+
+let mptr_x: *mut i64 := @mut x; // Illegal, cannot get mutable address to an immutable variable
+let mptr_y: *mut i64 := @mut y; // Legal
+
+write_to(@mut y); // Legal
+write_to(@y);     // Illegal, type mismatch requires *mut i64 but `@x` has type *const i64
+write_to(@mut x); // Illegal, @mut cannot be applied to an immutable variable
+
+read_from(cptr_x); // Legal
+read_from(cptr_y); // Legal
+read_from(mptr_y); // Legal
+read_from(@x);     // Legal
+read_from(@y);     // Legal
+read_from(@mut y); // Legal
+```
+
+## Insight
+The insight should focus on the physical nature of pointers and addresses, as they
+represent the actual locations in memory and deal with interacting with those physical
+realizations of the logical variables. So, when possible the visualization and Insight
+should emphasize that link to the physical resource.
+
+Recorded events:
+When the `@` operator is applied to a variable then:
+1. The lexer will emit an event for the `@` token
+2. The parser will emit an event for generating a `@` unary node in the AST.
+3. The type resolver will emit an event which includes a reference span to the definition
+for whatever is the operand of `@`, because the declaration of that variable
+is also the aquisition of the physical memory.
+- If the operand is a field of a structure, then it will reference the declaration of
+that structure variable.
+4. LLVM will emit an event with the `LLVM` get address instruction.
+
+When the `*` deref instruction is applied to an expression:
+1. The lexer will emit an event for the `*` token.
+2. The parser will emit an event for generating the `*` unary node in the AST.
+3. The type resolver will emit an event which includes a reference to
+the definition of where the operand comes from.
