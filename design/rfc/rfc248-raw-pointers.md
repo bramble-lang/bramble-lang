@@ -258,6 +258,9 @@ for whatever is the operand of `@`, because the declaration of that variable
 is also the aquisition of the physical memory.
 - If the operand is a field of a structure, then it will reference the declaration of
 that structure variable.
+- The reference type should probably be annotated to make it explicit that this
+is refering to the same physical location and not that it is using a reference for
+a compile time decision.
 4. LLVM will emit an event with the `LLVM` get address instruction.
 
 When the `*` deref instruction is applied to an expression:
