@@ -14,6 +14,17 @@ of the RFC is appended with `-accepted`. During development, if
 edge cases or changes need to be made to the design the RFC is updated
 and kept as `-accepted`.  Once all tasks are complete and merged
 the RFC suffix is changed from `-accepted` to `-final`.
+When an RFC is marked as accepted it is merged into the `dev` branch
+of the compiler. From the `dev` branch a new branch(es) is(are) created that 
+corresponds to the implementation of the RFC.  Changes to the RFC which
+are needed due to encountering unknowns will be made in this branch.
+Once the implementation is done, the RFC is renamed to `-final` and
+merged into `main`.  Some RFCs may require more than one branch to be
+created in order for the work to be manageable, those branches should
+be created off of the original implementation branch that was created
+off of `dev` and merged back into that branch.  When all work is done
+on the implementation, the RFC can be marked as `-final` and a PR
+against `dev` can be created for merging.
 
 ## RFC Requirements
 All RFCs related to the the Stet language must contain sections 
