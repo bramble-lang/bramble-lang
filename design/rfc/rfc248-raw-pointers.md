@@ -212,6 +212,30 @@ Mutable and immutable references can be compared with each other.
 #### Less/Greater
 
 ### Arithmetic
+A key part of raw pointers is being able to use them to move through large
+blocks of allocated memory: e.g. dynamic arrays and so on. On a semantic level
+this mirrors the array access operation `[n]` with the key difference being that and offset
+could be negative.
+
+A similar, but visibly different operator is provided for getting offsets
+from a given raw pointer (which addresses the need for pointer arithmetic).
+
+```
+ptr<i64> // The <> operator takes a signed 64 bit integer and returns a new address
+```
+
+The offset operator will get an offset address in terms of multiples of the size
+of the underlying type. The address it will return computes as `ptr value + size_of(T) * offset`
+where `T` is the underlying type of the ptr.
+
+So for a pointer to a `i64`, the size of the underying type is `size_of(i64) = 8`
+and the offset will move in steps of 8: `ptr<2> = ptr + 2 * 8` or
+`ptr<-3> = ptr - 3 * 8`.
+
+The `<>` characters were chosen to make the pointer offset operation visually
+distinct from the array access operation while still sharing some resemblance
+because logically they operate in identical manners with the array access being
+more restrictive in its inputs (they must be unsigned).
 
 ### Member Access on Values of Reference Type
 If a reference points to a structure then to access members of the structure you
