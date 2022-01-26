@@ -244,10 +244,12 @@ PtrOffset = IDENTIFIER<EXPRESSION>
 
 Semantics:
 ```
-P = IDENTIFIER :- *(M = const|mut) T
+T = Type                // Any valid type
+R = *(const|mut) T      // Raw Pointer Type to value of type T
+P = IDENTIFIER :- R
 O = EXPRESSION :- i64
 ----------------------
-P<O> :- *M T    // The offset of a *const is *const and the offset of a *mut is *mut
+P<O> :- R    // The offset of a *const is *const and the offset of a *mut is *mut
 ```
 
 Alternative syntax: Use this as a binary operator: `~`  e.g. `ptr ~ -5`.  I don't
