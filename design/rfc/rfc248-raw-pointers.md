@@ -253,6 +253,10 @@ P<O> :- *M T    // The offset of a *const is *const and the offset of a *mut is 
 Alternative syntax: Use this as a binary operator: `~`  e.g. `ptr ~ -5`.  I don't
 like this because it's very subtle and with some fonts could be confused with `-`.
 
+One reason to avoid using `<...>` is it's a pain to implement in the parser. 
+Perhaps `$` or `#` as binary operators.  The semantic rules for typing stay the same
+but it becomes easier to parse.
+
 ### Member Access on Values of Reference Type
 If a reference points to a structure then to access members of the structure you
 need to dereference the pointer first: `*ptr.field` or `(*ptr).field`. To dereference
