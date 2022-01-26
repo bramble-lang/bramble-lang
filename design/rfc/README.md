@@ -58,3 +58,7 @@ ought to panic.
 Viewer Changes
 1. Mocks: because the Viewer is a graphical interface all proposed changes
 should be accompanied with mocks.
+
+## Images
+Any images which are needed for your RFC can be put in the 
+`./images/rfc<number>` subdirectory.
