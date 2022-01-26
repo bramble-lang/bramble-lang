@@ -41,3 +41,7 @@ Compiler changes will require:
 1. Documentation on any Compiler Interface changes.
 1. Unrecoverable States: these are the unrecoverable states where the compiler
 ought to panic.
+
+Viewer Changes
+1. Mocks: because the Viewer is a graphical interface all proposed changes
+should be accompanied with mocks.
