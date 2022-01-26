@@ -21,13 +21,14 @@ covering the following design aspects:
 
 1. UX: A description of the User Experience goals of the new feature.
 These requirements must be met by the Syntax and Semantic sections
-1. Syntax: the actual syntax of the the language feature.
+1. Syntax: the actual syntax of the the language feature. Include how
+this satisfies the UX goals.
 1. Semantics: a description of how the semantic engine, type resolver, etc
-will analyze the new feature.
+will analyze the new feature. Include how this satisfies the UX goals.
 1. Insights: the Insight platform is a first class feature of the Stet
 compiler and all new language features must describe how they will be
 recorded by the Insight platform and how the Insight Viewer will display
-them.
+them. Include how any changes to the Viewer will satisfy the UX goals.
 1. Implementation: A description of how the feature will be implemented 
 in the compiler.
 1. Proposed Tests: a set of tests that will be done to prove that the implementatoin
