@@ -47,6 +47,8 @@ will analyze the new feature. Include how this satisfies the UX goals.
 compiler and all new language features must describe how they will be
 recorded by the Insight platform and how the Insight Viewer will display
 them. Include how any changes to the Viewer will satisfy the UX goals.
+1. Syntactic Fuzz Checker Changes: A list of changes which must be made
+to the Syntactic Fuzz Checker.
 
 Compiler changes will require:
 1. Documentation on any Compiler Interface changes.
