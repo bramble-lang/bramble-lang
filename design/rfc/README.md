@@ -3,9 +3,11 @@ This directory stores all design proposals from their first draft
 to their final state. This will help manage full documentation of
 the Stet language.
 
-RFCs are named with the following pattern `<Issue>-<title>.md`, the
+RFCs are named with the following pattern `rfc<Issue>-<title>.md`, the
 `<Issue>` is the issue number associated with the GitHub issue that
-was created to track the particular RFC document.
+was created to track the particular RFC document.  The `rfc` prefix
+is so that the `README.md` document is at the top of any directory
+listing and is easily found.
 
 When an RFC is finalized and moved into active development, the name
 of the RFC is appended with `-accepted`. During development, if 
