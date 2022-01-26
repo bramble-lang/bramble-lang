@@ -244,3 +244,56 @@ reflects the mutation.
 6. Test comparing two references compares addresses
 1. Get pointer to first element in the array, then use pointer arithmetic
 to move to each element of the array.
+
+## Implementation
+### Types
+The `const` keyword will be added to the token set and the lexer.
+
+A new `Ref` variant will be added to the `Type` enumeration. The
+`Ref` variant will have two fields. One field `is_mutable` boolean which is
+false for immutable references and true for mutable references. And a boxed value
+to the target type that the reference refers to.
+
+The Parser will be updated to parse the ref type annotations according to this
+grammatical rule:
+```
+RefType = *(const|mut) <Type>
+```
+
+`*const <Type>` will set `is_mutable` to false and the target type to `<Type>`.
+`*mut <Type>` will set `is_mutable` to true and the target type to `<Type>`.
+
+### @ Operator
+`@` will be added to the Lexer and token set as `Ampersand`.
+
+Two new variants will be added to the `Expression` enumeration: `AddressOf` and
+`AddressOfMut`.
+
+The parser will follow these rules:
+```
+AddressOf = @<Identifier>
+AddressOfMut = @mut <Identifier>
+```
+
+Semantic rules will be added of the form:
+1. For `AddressOf` the operand must be a variable.  It can be immutable or mutable.
+2. For `AddressOfMut` the operand must be a mutable variable.
+
+### * Operator
+The `*` token already exists in the Lexer and token set.
+
+A new unary rule will be added to the Parser:
+```
+Deref = *<Expression>
+DeRefAssignment = mut *<Expression> := <Expression>
+```
+
+A new variant will be added to the `Expression` enum. This variant will have a single
+child, which is the expression it is dereferencing. A new variant for mutations will
+be added for mutating a reference.
+
+Semantic Rules will be added of the form
+1. For DeRefAssignment, the `<Expression>` on the LHS must be mutable reference.
+2. For `*<Expression>` in the LHS, the type of `<Expression>` must be a Reference
+type (mutable or immutable). If the type of `<Expression> :- *(const|mut) T` then
+the type of `*<Expression> :- T`
