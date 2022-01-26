@@ -52,6 +52,11 @@ pointer fields in structures.
 14. You can get the address of a field in a structure.
 15. with Raw pointers, you can have internal references: that is a field in
 a struct is a pointer to another field in the same struct.
+16. Comparisons compare addresses
+17. A function that returns the size of any type.
+18. Be able to perform safe arithmetic on the pointer: for low level operations
+(e.g. implementation of vectors or dynamic buffers) will need to be able to 
+offset from the base pointer.
 
 ## Design
 ### Syntax
@@ -175,6 +180,24 @@ read_from(@y);     // Legal
 read_from(@mut y); // Legal
 ```
 
+### Comparisons
+Comparisons are done on the addresses stored in the reference variable.
+Mutable and immutable references can be compared with each other.
+
+#### Equality
+- `==` - returns true if the LHS and RHS have the same address value, otherwise false.
+- `!=` - returns true if the LHS and RHS have different address value, otherwise false.
+
+#### Less/Greater
+
+### Arithmetic
+
+### Member Access on Values of Reference Type
+If a reference points to a structure then to access members of the structure you
+need to dereference the pointer first: `*ptr.field` or `(*ptr).field`. To dereference
+a field in a structure that is a reference: `*(ptr.field_ptr).field` or 
+`(*(ptr.field_ptr)).field`.
+
 ## Insight
 The insight should focus on the physical nature of pointers and addresses, as they
 represent the actual locations in memory and deal with interacting with those physical
@@ -197,3 +220,27 @@ When the `*` deref instruction is applied to an expression:
 2. The parser will emit an event for generating the `*` unary node in the AST.
 3. The type resolver will emit an event which includes a reference to
 the definition of where the operand comes from.
+
+## Tests
+### Integration Tests
+1. Get Reference to each primitive type
+2. Get Reference to array
+3. Get Reference to structure
+4. Get reference to field in structure
+5. Get reference to element in array
+6. Get reference to reference
+7. Repeat all tests for mutable references
+8. Test passing a reference to a function
+9. Test passing a mutable reference to a function and function mutates value
+10. Return reference from function
+11. Test using malloc and free
+12. Copy struture with reference field => both copies point to the same value
+1. Test derefence of each of the Reference tests
+2. Test mutable dereference of each of the reference tests
+3. Reference to a mutable value, mutate the value, test that the reference 
+reflects the mutation.
+4. test initializiing a reference to null
+5. Test comparing a reference to a null
+6. Test comparing two references compares addresses
+1. Get pointer to first element in the array, then use pointer arithmetic
+to move to each element of the array.
