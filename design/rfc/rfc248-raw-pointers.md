@@ -352,3 +352,11 @@ Semantic Rules will be added of the form
 2. For `*<Expression>` in the LHS, the type of `<Expression>` must be a Reference
 type (mutable or immutable). If the type of `<Expression> :- *(const|mut) T` then
 the type of `*<Expression> :- T`
+
+### Syntactic Fuzzer Changes
+1. Add type annotations for `*const T` and `*mut T`.  This should be able to use the
+same logic as arrays.
+1. Add expression generation for taking the reference of an identifier.
+1. Add a failure test by generating a reference operator where the operand is not an identifier.
+1. Add deref generation for expressions.
+1. Add deref mutation generation for statement generators.
