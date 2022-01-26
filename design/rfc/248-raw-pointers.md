@@ -27,6 +27,27 @@ meets requirements. Finally, there will be the section describing how raw
 pointers will be handled in the Insight platform and displayed in the Stet
 Insight Viewer.
 
+## UX
+Because raw pointers are one of the most dangerous elements to work with in
+any programming language, their use should be both discouraged except in special
+cases (features which require raw pointers, FFI uses, and performance) and it
+should be immediately obvious to a reader that a raw pointer is being used.
+
+So, any use of raw pointers should be obviously different from safer uses of
+reference values (e.g. Rust borrows, smart pointers, garbage collected pointers, etc).
+This leads to several design goals:
+1. Raw pointer types should be as explicit as possible when written down.
+1. Creating a raw pointer directly to a variable should be obviously different.
+(e.g. Rust uses the [addr_of](https://doc.rust-lang.org/core/ptr/macro.addr_of.html)
+macro to just get the address and bypass any safety checks).
+1. Dereferences should also be obvious and explicit. Where dereferences of
+smarter reference types might be implicitly injected by the compiler, for raw
+pointers they must all be explicitly written.
+
+Ultimately, the goal is to wrap all uses of raw pointers within an `unsafe`
+expression block, which will allow the compiler to check for unintentional use
+of raw pointers.
+
 ## Requirements
 1. Immutability must be respected as far as it can possibly be guaranteed. It
 is impossible to guarantee it is respected on the other side of an FFI but
@@ -220,6 +241,13 @@ When the `*` deref instruction is applied to an expression:
 2. The parser will emit an event for generating the `*` unary node in the AST.
 3. The type resolver will emit an event which includes a reference to
 the definition of where the operand comes from.
+
+### Viewer
+Highlight the creation of raw pointers and the dereference of raw pointers in some
+manner to emphasize that something dangers is being done.
+
+In this case, the Cell of an `@` expression or a `*` expression will be will be colored
+a light orange as a warning sign.
 
 ## Tests
 ### Integration Tests
