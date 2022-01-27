@@ -1,37 +1,22 @@
 # Design for Representing Addresses in Stet
 ## Problem
-For any work beyond the most basic operations of a language, there needs to
-be an ability to operate not on a variable but on the address to a variable.
-This allows for efficient sharing of large or unknown blocks of data
-between interfaces and it is essential for operating on data that is allocated
-on the heap.  All heap operations are done through addresses.  In addition,
-many interactions with the host OS require addresses to a location in memory
-where large data structures can be shared. Finally, more advanced and safer
-ways to interact with sharing memory locations require a representation of
-the architecture concept of address and access to that address as a building
-block: e.g. to build smart pointers we still have to have the concept of
-a pointer to pack with the ref counter.
-
-Currently, Stet does not have a concept of raw pointer or address which limits
-the ability to use the heap, use the full set of C functions in libc, or the
-create smart pointers or a garbage collector.
+Within the Stet language there is no representation of address based operations
+or pointers. This severely limits both what can be built with Stet and
+the FFIs that Stet can call. In order for Stet to grow, there needs to be
+a representation of the most basic raw pointer concepts. These can then
+be used to build not only heap based allocations, but smart pointers, or
+garbage collectors, etc.
 
 ## Goal
-The goal of this design proposal is to lay out the syntax and semantics of
-raw pointers and address in the Stet language. Then define how these will
-be representing in the compiler. The document will start by laying out the
-requirements for raw pointers, then how they will be representing in the language,
-then how they will be implemented in the compiler. There will be
-a section describing a minimum set of tests to prove that the implementation
-meets requirements. Finally, there will be the section describing how raw
-pointers will be handled in the Insight platform and displayed in the Stet
-Insight Viewer.
+In this document is the design for how raw pointers will be represented
+in the Stet language.
 
 ## UX
-Because raw pointers are one of the most dangerous elements to work with in
-any programming language, their use should be both discouraged except in special
+Being danger, the use of raw pointers should be both discouraged except in special
 cases (features which require raw pointers, FFI uses, and performance) and it
 should be immediately obvious to a reader that a raw pointer is being used.
+And the syntax of raw pointers should reflect this discouragement for writers
+and make raw pointer use obvious for readers.
 
 So, any use of raw pointers should be obviously different from safer uses of
 reference values (e.g. Rust borrows, smart pointers, garbage collected pointers, etc).
@@ -44,40 +29,36 @@ macro to just get the address and bypass any safety checks).
 smarter reference types might be implicitly injected by the compiler, for raw
 pointers they must all be explicitly written.
 
-Ultimately, the goal is to wrap all uses of raw pointers within an `unsafe`
-expression block, which will allow the compiler to check for unintentional use
-of raw pointers.
+This document lays out the language features for supporting raw pointers
+themselves. After this feature is implemented, then the next step is to
+implement something like `unsafe` blocks in C# and Rust to further push
+raw pointers to something that a user must "buy into" and to make them
+obvious to a reader.
 
 ## Requirements
 1. Immutability must be respected as far as it can possibly be guaranteed. It
 is impossible to guarantee it is respected on the other side of an FFI but
 within Stet, if a variable is aquired as immutable then it is a compiler error
 for Stet to ever allow it to be mutated.
-2. A pointer can only ever be given an address from a declared variable. For example,
-you cannot set the address to a literal (e.g. `let ptr = 0xDEADBEEF` is illegal). I think
-this may be unavoidable, but should be covered instead by casting which is a
-feature I need to add in the future.
-3. Addresses can only be taken from a variable.
-4. Immutability is assumed.
-5. A mutable variable can be referenced as immutable or mutable.
-6. A mutable variable can only be referenced as immutable.
-7. A variable of type raw pointer can be set to `null` that is the only literal
-assignment allowed.
-8. `null` is a keyword that can be assigned to or compared with _all_ ref types.
-9. It is possible to get the address of any variable, no matter it's type.
-10. Function pointers are not covered in this document
-11. The design should discourage their use to only when necessary.
-12. Raw pointers can be used on uninitialized memory.
-13. When copied the address will be copied to the new location. This applies for
-pointer fields in structures.
-14. You can get the address of a field in a structure.
-15. with Raw pointers, you can have internal references: that is a field in
+2. A raw pointer can be assigned either the address of a declared variable or
+the `null` value.  It cannot be assigned an arbitrary integer.
+3. `null` is a keyword that can be assigned to or compared with _all_ ref types.
+4. It is possible to get the address of any variable, no matter it's type.
+5. Function pointers are not covered in this document
+6. The design should discourage their use to only when necessary.
+7. Raw pointers can be used on uninitialized memory. (Currently, Stet does not
+allow for uninitialized variables but that will come in the future.)
+8. When a raw pointer is copied it's value will be copied and there will now be
+at least two extant raw pointers to a location in memory.
+9. You can get the address of a field in a structure.
+10. with Raw pointers, you can have internal references: that is a field in
 a struct is a pointer to another field in the same struct.
-16. Comparisons compare addresses
-17. A function that returns the size of any type.
-18. Be able to perform safe arithmetic on the pointer: for low level operations
-(e.g. implementation of vectors or dynamic buffers) will need to be able to 
-offset from the base pointer.
+11. Comparisons compare addresses.  Raw pointers are equal if and only if they
+point to the same location in memory or they are both `null`.
+12. There is a way to compute offsets from a raw pointer.
+13. There is a function for getting the size of a type. This is needed for custom
+memory allocation, computing offsets, etc.
+14. Comparison operators work on raw pointers. (`<, >, <=, >=, ==, !=`)
 
 ## Design
 ### Syntax
@@ -85,7 +66,7 @@ There are two parts to implementing raw pointers: the reference types, which
 describe variables that hold addresses, and the operators used to to create
 and use raw pointers.
 
-#### Types
+#### Pointer Type
 The type syntax is inspired from Rust:
 ```
 Raw Pointer = *(const|mut) <Type>
@@ -94,36 +75,66 @@ Where `Type` is any primitive or valid custom type, including raw pointers.
 `const` and `mut` must be specified to help make raw pointers as explicit
 as possible and to discourage their use by making them tedious.
 
-#### Operators
+#### Reference Operators
 There are two operators that are needed: one to get the reference and one
 to dereference a pointer so that a user can access the target variable.
 
 ```
-Reference = @[mut] <Identifier>
-Dereference = *<Expression>
+REFERENCE = @(const|mut) (IDENTIFIER[.FIELDNAME]*)
+DEREFERECE = ^EXPRESSION
+
+Dereference assignment:
+mut ^IDENTIFIER := EXPRESSION
 ```
 
 The Reference and Dereference operators are unary operators with precedence
 higher than member access or array access operators.
 
-The Reference operator can only be applied to identifiers, as those are the
+The Reference operator can only be applied to identifiers or the fields of an
+identifier that's a structure as those are the
 only constructs in Stet that have physical locations in the computer. Literals,
 for example, have a location in the machine code data section but are not
-conceptually something that can be referenced. 
+conceptually something that can be referenced. The reference operator explicitly
+requires `const` and `mut` so that it mirrors the syntax of the raw pointer 
+type names.
 
 `@` is chosen as the addressing
 operator rather than the traditional `&` to make `&` available for future use
-with safer reference/borrowing systems. In Rust `&` is used for both borrowing
+with safer reference/borrowing systems. In `C/C++` the `&` is used to get
+the address of a variable. In Rust `&` is used for both borrowing
 and raw pointers (in Rust the `&` is cast to a raw pointer and a separate
 macro must be used to explicitly get the address). For Stet, I want all interactions
 with raw addresses/pointers to be as explicit and obvious as possible so the
 addresses are gotten with `@`. Then `&` will be used for safe references which
 will be what users are encouraged to use.
 
-The Dereference operator can be applied to the result of an expression. For
-example, if a function returns a reference that can be immediately dereferenced
-and used. Likewise, an if expression could resolve to a reference and that
-can then be dereferenced.
+The `@` operator can only be applied to lvalues (identifier or a specific field).
+This is because the raw pointer logically refers to a specific location in memory
+and all locations in memory are refered to via identifiers. This mirrors the 
+syntactic rules of C, and is carried into Stet both because it maps well to the
+core philosophies of Stet and because it provides a very strict rule which makes
+implementation easier.
+
+The Dereference operator is `^`, which differs from other languages which use
+`*` to dereference pointers. This was chosen to to make the dereferencing of
+a raw pointer explicitly different from dereferencing safer references or
+smart pointers. The `^` will probably be used for bitwise xor when that operator
+is added to Stet but I believe it will be clear which operator is being used
+by whether it is unary or binary.
+
+Unlike the reference operator, the dereference operator can, syntactically, be
+applied to any expression.  The requirement being that the expression resolve to
+a reference type. This is because dereferencing is operating on a value (the
+address) and the address is expected to have already come from a variable.
+
+This makes using dereferenced identifiers legal as the left value in mutation
+statement.
+
+Both the reference and dereference operator symbols were chosen to be uniquely
+applicable to raw pointers and distinct from future, safer, methods of handling
+references in Stet (be those GC pointers, reference counters, or a lifetime system
+a la Rust). The priority here is given to clarity for the reader of code rather
+than efficiency for the writer.
 
 ### Semantics
 #### Reference Operator
@@ -136,6 +147,32 @@ is also mutable.  The type of the mutable reference expression is `*mut T`.
 
 `mut` and `const` are modifiers on the `*` reference type.
 
+#### Deference Operator
+```
+T: Is a valid Type
+R :- *(const|mut) T
+-----------------------
+^R :- T
+```
+
+Mutating a dereference:
+If the raw pointer is to a mutable location (`*mut T`) then the value of that
+location can be mutated via the dereference operator;
+```
+let x: i64 := 1;
+let mptr: *mut i64 := @mut x;
+mut ^mptr := 5;
+```
+
+The type rules are:
+```
+T is a value Type
+--------------------------------------
+mut ^R := V iff R :- *mut T and V :- T
+```
+
+> Dereferencing `null` or a variable whose value is `null` is undefined behavior.
+
 #### Assignment Semantics
 A variable of type `*const T` can be assigned a value of type `*const T` or
 a value of `*mut T`.
@@ -146,17 +183,20 @@ A variable of type `*mut T` can only be assigned a value of type `*mut T`.
 let x: i64 := 5;
 let mut y: i64 := 10;
 
-let cptr_x: *const i64 := @x;  // Legal
-let cptr_y: *const i64 := @y;  // Legal
+let cptr_x: *const i64 := @const x;  // Legal
+let cptr_y: *const i64 := @const y;  // Legal
 
 let mptr_x: *mut i64 := @mut x; // Illegal, cannot get mutable address to an immutable variable
 let mptr_y: *mut i64 := @mut y; // Legal
+
+let mptr_x: *mut i64 := @const x; // Illegal, cannot get mutable address to an immutable variable
+let mptr_y: *mut i64 := @const y; // Illegal, cannot cast a const location to a mutable pointer
 ```
 
 ##### Ref Type Variable Mutability
 A variable of reference type (immutable and immutable) can itself be annotated
 as mutable: this means that the address stored in the variable can be mutated 
-it has _no_ baring on if the location the address refers to can be mutated.
+it has _no_ bearing on if the location the address refers to can be mutated.
 
 ```
 let x: i64 := 5;
@@ -164,16 +204,17 @@ let x2: i64 := 5;
 let mut y: i64 := 10;
 let mut y2: i64 := 10;
 
-let mut cptr_x: *const := @x;
+let mut cptr_x: *const := @const x;
 let mut cptr_y: *mut := @mut y;
 
-mut cptr_x := @x2;     // Legal
+mut cptr_x := @const x2;     // Legal
 mut cptr_y := @mut y2; // Legal 
 ```
 
-#### Use in Expressions
-Implicit casting: a mutable reference can be cast to an immutable reference.
-An immutable reference _cannot_ be cast to a mutable reference.
+#### Copying References
+Copying: a mutable reference can be copied to a variable of type `*const` or
+`*mut`, so long as the underlying type is the same. An immutable reference
+can _only_ be copied toa  variable of type `*const`.
 
 Examples:
 ```
@@ -183,21 +224,24 @@ fn read_from(i: *const i64) {...};
 let x: i64 := 5;
 let mut y: i64 := 10;
 
-let cptr_x: *const i64 := @x;  // Legal
-let cptr_y: *const i64 := @y;  // Legal
+let cptr_x: *const i64 := @const x;       // Legal
+let cptr_y: *const i64 := @const y;       // Legal
+let cptr_x2: *const i64 := cptr_x;  // Legal
+let cptr_y2: *const i64 := cptr_y;  // Legal
 
-let mptr_x: *mut i64 := @mut x; // Illegal, cannot get mutable address to an immutable variable
 let mptr_y: *mut i64 := @mut y; // Legal
+let mptr_x: *mut i64 := @mut x; // Illegal, cannot get mutable address to an immutable variable
+let mptr_x: *mut i64 := cptr_x; // Illegal, cannot get mutable address to an immutable variable
 
 write_to(@mut y); // Legal
-write_to(@y);     // Illegal, type mismatch requires *mut i64 but `@x` has type *const i64
+write_to(@const y);     // Illegal, type mismatch requires *mut i64 but `@x` has type *const i64
 write_to(@mut x); // Illegal, @mut cannot be applied to an immutable variable
 
 read_from(cptr_x); // Legal
 read_from(cptr_y); // Legal
 read_from(mptr_y); // Legal
-read_from(@x);     // Legal
-read_from(@y);     // Legal
+read_from(@const x);     // Legal
+read_from(@const y);     // Legal
 read_from(@mut y); // Legal
 ```
 
@@ -209,9 +253,11 @@ Mutable and immutable references can be compared with each other.
 - `==` - returns true if the LHS and RHS have the same address value, otherwise false.
 - `!=` - returns true if the LHS and RHS have different address value, otherwise false.
 
-#### Less/Greater
+#### Less Than/Greater Than
+Comparison operators will operate on the numerical values of the addresses as if they
+were integer types.
 
-### Arithmetic
+### Offsets
 A key part of raw pointers is being able to use them to move through large
 blocks of allocated memory: e.g. dynamic arrays and so on. On a semantic level
 this mirrors the array access operation `[n]` with the key difference being that and offset
@@ -312,14 +358,14 @@ a light orange as a warning sign.
 10. Return reference from function
 11. Test using malloc and free
 12. Copy struture with reference field => both copies point to the same value
-1. Test derefence of each of the Reference tests
-2. Test mutable dereference of each of the reference tests
-3. Reference to a mutable value, mutate the value, test that the reference 
+13. Test derefence of each of the Reference tests
+14. Test mutable dereference of each of the reference tests
+15. Reference to a mutable value, mutate the value, test that the reference 
 reflects the mutation.
-4. test initializiing a reference to null
-5. Test comparing a reference to a null
-6. Test comparing two references compares addresses
-1. Get pointer to first element in the array, then use pointer arithmetic
+16. test initializiing a reference to null
+17. Test comparing a reference to a null
+18. Test comparing two references compares addresses
+19. Get pointer to first element in the array, then use pointer arithmetic
 to move to each element of the array.
 
 ## Implementation
