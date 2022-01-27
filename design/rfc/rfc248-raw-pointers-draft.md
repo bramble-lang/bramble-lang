@@ -359,6 +359,8 @@ is refering to the same physical location and not that it is using a reference f
 a compile time decision.
 4. LLVM will emit an event with the `LLVM` get address instruction.
 5. Record if the pointer is pointing to a type which is memory aligned
+6. When a pointer is bound to a Field in a struct, the node should display the
+field name. Have a reference to the span for the field's definition.
 
 When the `*` deref instruction is applied to an expression:
 1. The lexer will emit an event for the `*` token.
