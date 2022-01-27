@@ -86,7 +86,7 @@ to dereference a pointer so that a user can access the target variable.
 
 ```
 REFERENCE = @(const|mut) (IDENTIFIER[.FIELDNAME]*)
-DEREFERECE = ^EXPRESSION
+DEREFERENCE = ^EXPRESSION
 
 MUTATE = mut LVALUE := EXPRESSION
 LVALUE = [^]IDENTIFIER             // The formal labelling of the LVALUE is new to Stet
@@ -95,7 +95,8 @@ LVALUE = [^]IDENTIFIER             // The formal labelling of the LVALUE is new 
 > Note: currently braid does not support mutations of fields in a struct. This proposal
 optimistically hopes that that language change can be fit in here. The LVALUE in Stet
 needs to be greatly matured so it can support derefs, fields, array elements, and 
-parens to control order of operations.
+parens to control order of operations.  The LVALUE presented here is still not complete
+but fully realizing it is outside the scope of this RFC.
 
 The Reference and Dereference operators are unary operators with precedence
 higher than member access or array access operators.
