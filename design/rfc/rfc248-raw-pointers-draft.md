@@ -365,6 +365,13 @@ When the `*` deref instruction is applied to an expression:
 3. The type resolver will emit an event which includes a reference to
 the definition of where the operand comes from.
 
+This is a bit outside the scope of this RFC, but because this is dealing with
+language features that surface the physical nature of how variables are stored:
+> It would be nice to record the memory layout information for all structs and
+display that in the LLVM tab for the Viewer.
+> It would also be nice to have a compiler flag to print out memory layout table
+for all types after compilation.
+
 ### Viewer
 Highlight the creation of raw pointers and the dereference of raw pointers in some
 manner to emphasize that something dangers is being done.
