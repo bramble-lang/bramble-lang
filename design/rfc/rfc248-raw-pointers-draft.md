@@ -320,6 +320,25 @@ need to dereference the pointer first: `*ptr.field` or `(*ptr).field`. To derefe
 a field in a structure that is a reference: `*(ptr.field_ptr).field` or 
 `(*(ptr.field_ptr)).field`.
 
+### size_of
+The `size_of` function takes a type and returns the number of bytes allocated to store
+a type in memory. This takes into account padding bytes that might be added for
+memory alignment purposes.
+
+Syntax:
+```
+SIZE_OF = size_of(TYPE)
+```
+
+Type:
+```
+:- size_of(T) -> u64
+```
+
+For simplicities sake, this is operating on the C notion of size where every type as a
+size. For primitive types with the bitsize in the name, the size of the type shall remain
+constant across all versions of Stet and all platforms and architectures.
+
 ## Insight
 The insight should focus on the physical nature of pointers and addresses, as they
 represent the actual locations in memory and deal with interacting with those physical
@@ -411,13 +430,13 @@ Semantic rules will be added of the form:
 1. For `AddressOf` the operand must be a variable.  It can be immutable or mutable.
 2. For `AddressOfMut` the operand must be a mutable variable.
 
-### * Operator
-The `*` token already exists in the Lexer and token set.
+### ^ Operator
+The `^` token already exists in the Lexer and token set.
 
 A new unary rule will be added to the Parser:
 ```
-Deref = *<Expression>
-DeRefAssignment = mut *<Expression> := <Expression>
+Deref = ^EXPRESSION
+DeRefAssignment = mut *EXPRESSION := EXPRESSION
 ```
 
 A new variant will be added to the `Expression` enum. This variant will have a single
@@ -429,6 +448,14 @@ Semantic Rules will be added of the form
 2. For `*<Expression>` in the LHS, the type of `<Expression>` must be a Reference
 type (mutable or immutable). If the type of `<Expression> :- *(const|mut) T` then
 the type of `*<Expression> :- T`
+
+### size_of
+The `size_of` function will be implemented using the LLVM API and computed as a static
+value during compile-time.
+
+https://stackoverflow.com/questions/14608250/how-can-i-find-the-size-of-a-type
+https://llvm.org/doxygen/classllvm_1_1DataLayout.html#aa48b3b7e554b44f4e513d5dd8d9f9343
+
 
 ### Syntactic Fuzzer Changes
 1. Add type annotations for `*const T` and `*mut T`.  This should be able to use the
