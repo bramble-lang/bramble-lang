@@ -358,6 +358,7 @@ that structure variable.
 is refering to the same physical location and not that it is using a reference for
 a compile time decision.
 4. LLVM will emit an event with the `LLVM` get address instruction.
+5. Record if the pointer is pointing to a type which is memory aligned
 
 When the `*` deref instruction is applied to an expression:
 1. The lexer will emit an event for the `*` token.
