@@ -1,4 +1,9 @@
 # Design for Representing Addresses in Stet
+
+> Note: I have used my rough understanding of how to state type rules in order
+to express the semantic rules for raw pointers. There may be mistakes in my
+statements due to lack of experience.
+
 ## Problem
 Within the Stet language there is no representation of address based operations
 or pointers. This severely limits both what can be built with Stet and
@@ -83,9 +88,14 @@ to dereference a pointer so that a user can access the target variable.
 REFERENCE = @(const|mut) (IDENTIFIER[.FIELDNAME]*)
 DEREFERECE = ^EXPRESSION
 
-Dereference assignment:
-mut ^IDENTIFIER := EXPRESSION
+MUTATE = mut LVALUE := EXPRESSION
+LVALUE = [^]IDENTIFIER             // The formal labelling of the LVALUE is new to Stet
 ```
+
+> Note: currently braid does not support mutations of fields in a struct. This proposal
+optimistically hopes that that language change can be fit in here. The LVALUE in Stet
+needs to be greatly matured so it can support derefs, fields, array elements, and 
+parens to control order of operations.
 
 The Reference and Dereference operators are unary operators with precedence
 higher than member access or array access operators.
@@ -136,6 +146,10 @@ references in Stet (be those GC pointers, reference counters, or a lifetime syst
 a la Rust). The priority here is given to clarity for the reader of code rather
 than efficiency for the writer.
 
+#### Operator Precedence
+
+1. `@` and `^` will have the same precedence as unary minus (`-`) and not (`!`)
+
 ### Semantics
 #### Reference Operator
 The reference operator can only be applied to an Identifier that is a variable
@@ -149,10 +163,9 @@ is also mutable.  The type of the mutable reference expression is `*mut T`.
 
 #### Deference Operator
 ```
-T: Is a valid Type
-R :- *(const|mut) T
+T: Is a Type :- R: *(const|mut) T
 -----------------------
-^R :- T
+:- ^R -> T
 ```
 
 Mutating a dereference:
@@ -166,9 +179,7 @@ mut ^mptr := 5;
 
 The type rules are:
 ```
-T is a value Type
---------------------------------------
-mut ^R := V iff R :- *mut T and V :- T
+mut ^R := V => T: Type :- R: *mut T, V: T
 ```
 
 > Dereferencing `null` or a variable whose value is `null` is undefined behavior.
@@ -290,12 +301,9 @@ PtrOffset = IDENTIFIER<EXPRESSION>
 
 Semantics:
 ```
-T = Type                // Any valid type
-R = *(const|mut) T      // Raw Pointer Type to value of type T
-P = IDENTIFIER :- R
-O = EXPRESSION :- i64
+T: Type :- R: *(const|mut) T
 ----------------------
-P<O> :- R    // The offset of a *const is *const and the offset of a *mut is *mut
+p: R, o: i64 :- p<o> -> R    // The offset of a *const is *const and the offset of a *mut is *mut
 ```
 
 Alternative syntax: Use this as a binary operator: `~`  e.g. `ptr ~ -5`.  I don't
@@ -425,6 +433,9 @@ the type of `*<Expression> :- T`
 1. Add type annotations for `*const T` and `*mut T`.  This should be able to use the
 same logic as arrays.
 1. Add expression generation for taking the reference of an identifier.
+1. Get a raw pointer to a field in a structure.
 1. Add a failure test by generating a reference operator where the operand is not an identifier.
 1. Add deref generation for expressions.
 1. Add deref mutation generation for statement generators.
+1. Compute raw pointer offsets
+1. Mutate dereference to a field name
