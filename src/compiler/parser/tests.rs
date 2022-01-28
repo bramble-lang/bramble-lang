@@ -446,11 +446,11 @@ pub mod tests {
             ),
             (
                 "let x: *const i32 := 0;",
-                Type::Pointer(false, Box::new(Type::I32)),
+                Type::RawPointer(false, Box::new(Type::I32)),
             ),
             (
                 "let x: *mut i32 := 0;",
-                Type::Pointer(true, Box::new(Type::I32)),
+                Type::RawPointer(true, Box::new(Type::I32)),
             ),
         ]
         .iter()
@@ -492,11 +492,11 @@ pub mod tests {
         for (text, expected_ty) in vec![
             (
                 "let x: *const i32 := 0;",
-                Type::Pointer(false, Box::new(Type::I32)),
+                Type::RawPointer(false, Box::new(Type::I32)),
             ),
             (
                 "let x: *mut i32 := 0;",
-                Type::Pointer(true, Box::new(Type::I32)),
+                Type::RawPointer(true, Box::new(Type::I32)),
             ),
         ]
         .iter()

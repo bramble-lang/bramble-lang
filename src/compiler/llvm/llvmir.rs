@@ -1276,7 +1276,7 @@ impl ast::Type {
                     .expect(&format!("Could not find struct {}", label))
                     .into()
             }
-            ast::Type::Pointer(_, ty) => {
+            ast::Type::RawPointer(_, ty) => {
                 let target_ty = ty.to_llvm_ir(llvm)?;
                 let bty = target_ty.into_basic_type().unwrap();
                 bty.ptr_type(AddressSpace::Generic).into()

@@ -241,7 +241,7 @@ impl<'a> SymbolTableScopeStack {
             | Type::I64
             | Type::Bool
             | Type::StringLiteral
-            | Type::Pointer(..)
+            | Type::RawPointer(..)
             | Type::Array(_, _)
             | Type::Unit => Ok(symbol),
             Type::FunctionDef(..)
@@ -398,8 +398,8 @@ impl<'a> SymbolTableScopeStack {
                 let cret_ty = self.canonize_type(ret_ty)?;
                 Ok(Type::ExternDecl(cparams, *has_varargs, Box::new(cret_ty)))
             }
-            Type::Pointer(is_mut, target_ty) => {
-                Ok(Type::Pointer(*is_mut, Box::new(self.canonize_type(target_ty)?)))
+            Type::RawPointer(is_mut, target_ty) => {
+                Ok(Type::RawPointer(*is_mut, Box::new(self.canonize_type(target_ty)?)))
             },
             Type::Array(el_ty, len) => {
                 if *len <= 0 {

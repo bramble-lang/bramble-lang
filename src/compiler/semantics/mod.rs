@@ -75,7 +75,7 @@ impl Writable for Type {
             Type::I64 => w.write_text("i64"),
             Type::Bool => w.write_text("bool"),
             Type::StringLiteral => w.write_text("string"),
-            Type::Pointer(is_mut, ty) => {
+            Type::RawPointer(is_mut, ty) => {
                 if *is_mut {
                     w.write_text("*mut ")
                 } else {

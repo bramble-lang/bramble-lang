@@ -554,7 +554,7 @@ impl<'a> Parser<'a> {
             let msg = v.map(|v| match v.0 {
                 Type::Custom(_) => "Custom Type",
                 Type::Array(..) => "Array Type",
-                Type::Pointer(..) => "Array Type",
+                Type::RawPointer(..) => "Array Type",
                 _ => "Primitive Type",
             });
             let span = match v {
@@ -576,7 +576,7 @@ impl<'a> Parser<'a> {
                                 ctx.span(),
                                 ParserError::RawPointerExpectedType,
                             ))?;
-                            Ok(Some((Type::Pointer(true, Box::new(ty.0)), ctx)))
+                            Ok(Some((Type::RawPointer(true, Box::new(ty.0)), ctx)))
                         }
                         Some(c) if c.sym == Lex::Const => {
                             let ctx = star.to_ctx();
@@ -584,7 +584,7 @@ impl<'a> Parser<'a> {
                                 ctx.span(),
                                 ParserError::RawPointerExpectedType,
                             ))?;
-                            Ok(Some((Type::Pointer(false, Box::new(ty.0)), ctx)))
+                            Ok(Some((Type::RawPointer(false, Box::new(ty.0)), ctx)))
                         },
                         Some(_) => Err(CompilerError::new(
                             star.span(),
