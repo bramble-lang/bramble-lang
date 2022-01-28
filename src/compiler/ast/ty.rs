@@ -23,7 +23,7 @@ pub enum Type {
     I64,
     Bool,
     StringLiteral,
-    RawPointer(bool, Box<Type>),
+    RawPointer(PointerMut, Box<Type>),
     Array(Box<Type>, usize),
     Unit,
     Custom(Path),
@@ -33,6 +33,12 @@ pub enum Type {
     Coroutine(Box<Type>),
     ExternDecl(Vec<Type>, HasVarArgs, Box<Type>),
     Unknown,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum PointerMut {
+    Mut,
+    Const,
 }
 
 impl Type {
@@ -204,7 +210,7 @@ impl std::fmt::Display for Type {
             Bool => f.write_str("bool"),
             StringLiteral => f.write_str("string"),
             RawPointer(is_mut, ty) => {
-                if *is_mut {
+                if *is_mut == PointerMut::Mut {
                     f.write_str(&format!("*mut {}", ty))
                 } else {
                     f.write_str(&format!("*const {}", ty))

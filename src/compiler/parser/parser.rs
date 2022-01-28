@@ -576,7 +576,7 @@ impl<'a> Parser<'a> {
                                 ctx.span(),
                                 ParserError::RawPointerExpectedType,
                             ))?;
-                            Ok(Some((Type::RawPointer(true, Box::new(ty.0)), ctx)))
+                            Ok(Some((Type::RawPointer(PointerMut::Mut, Box::new(ty.0)), ctx)))
                         }
                         Some(c) if c.sym == Lex::Const => {
                             let ctx = star.to_ctx();
@@ -584,7 +584,7 @@ impl<'a> Parser<'a> {
                                 ctx.span(),
                                 ParserError::RawPointerExpectedType,
                             ))?;
-                            Ok(Some((Type::RawPointer(false, Box::new(ty.0)), ctx)))
+                            Ok(Some((Type::RawPointer(PointerMut::Const, Box::new(ty.0)), ctx)))
                         },
                         Some(_) => Err(CompilerError::new(
                             star.span(),

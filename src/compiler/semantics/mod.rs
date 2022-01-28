@@ -1,7 +1,7 @@
 use self::semanticnode::SemanticContext;
 
 use super::{
-    ast::{Node, Type},
+    ast::{Node, Type, PointerMut},
     diagnostics::{View, View2, Writable},
     CompilerError,
 };
@@ -76,7 +76,7 @@ impl Writable for Type {
             Type::Bool => w.write_text("bool"),
             Type::StringLiteral => w.write_text("string"),
             Type::RawPointer(is_mut, ty) => {
-                if *is_mut {
+                if *is_mut == PointerMut::Mut {
                     w.write_text("*mut ")
                 } else {
                     w.write_text("*const ")
