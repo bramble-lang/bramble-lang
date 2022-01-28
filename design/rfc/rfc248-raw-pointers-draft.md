@@ -74,7 +74,7 @@ and use raw pointers.
 #### Pointer Type
 The type syntax is inspired from Rust:
 ```
-Raw Pointer = *(const|mut) <Type>
+Raw Pointer = *(const|mut) TYPE
 ```
 Where `Type` is any primitive or valid custom type, including raw pointers.
 `const` and `mut` must be specified to help make raw pointers as explicit
