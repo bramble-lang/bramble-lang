@@ -406,22 +406,22 @@ impl<'ctx> IrGen<'ctx> {
             .context()
             .canonical_path()
             .to_label(self.source_map, self.string_table);
+       
+        // Add structure name to LLVM context (to allow for self referencing)
+        let struct_ty = self.context.opaque_struct_type(&name);
+
         let fields_llvm: Vec<BasicTypeEnum<'ctx>> = sd
             .get_fields()
             .iter()
             .filter_map(|f| {
                 // TODO: what's going on here?  Should this fail if I cannot convert to a basic type?
-                match f.ty {
-                    ast::Type::Custom(_) => f.ty.to_llvm_ir(self),
-                    _ => f.ty.to_llvm_ir(self),
-                }
+                f.ty.to_llvm_ir(self)
                 .map_err(|e| format!("S{}: {}", f.span(), e))
                 .unwrap()
                 .into_basic_type()
                 .ok()
             })
             .collect();
-        let struct_ty = self.context.opaque_struct_type(&name);
         struct_ty.set_body(&fields_llvm, false);
         self.record_terminal(sd.span(), &struct_ty);
     }
@@ -1277,8 +1277,8 @@ impl ast::Type {
                     .into()
             }
             ast::Type::Pointer(_, ty) => {
-                let llvm_ty = ty.to_llvm_ir(llvm)?;
-                let bty = llvm_ty.into_basic_type().unwrap();
+                let target_ty = ty.to_llvm_ir(llvm)?;
+                let bty = target_ty.into_basic_type().unwrap();
                 bty.ptr_type(AddressSpace::Generic).into()
             }
             ast::Type::Array(a, len) => {
