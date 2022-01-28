@@ -31,6 +31,7 @@ pub enum Type {
     CoroutineDef(Vec<Type>, Box<Type>),
     Coroutine(Box<Type>),
     ExternDecl(Vec<Type>, HasVarArgs, Box<Type>),
+    Pointer(bool, Box<Type>),
     Unknown,
 }
 
@@ -66,6 +67,7 @@ impl Type {
             | Type::I64 => true,
             Type::Bool
             | Type::StringLiteral
+            | Type::Pointer(..)
             | Type::Array(_, _)
             | Type::Unit
             | Type::Custom(_)
@@ -95,6 +97,7 @@ impl Type {
             | Type::CoroutineDef(_, _)
             | Type::Coroutine(_)
             | Type::ExternDecl(..)
+            | Type::Pointer(..)
             | Type::Unknown => false,
         }
     }
@@ -116,6 +119,7 @@ impl Type {
             | Type::CoroutineDef(_, _)
             | Type::Coroutine(_)
             | Type::ExternDecl(..)
+            | Type::Pointer(..)
             | Type::Unknown => false,
         }
     }
@@ -199,6 +203,13 @@ impl std::fmt::Display for Type {
             I64 => f.write_str("i64"),
             Bool => f.write_str("bool"),
             StringLiteral => f.write_str("string"),
+            Pointer(is_mut, ty) => {
+                if *is_mut {
+                    f.write_str(&format!("*mut {}", ty))
+                } else {
+                    f.write_str(&format!("*const {}", ty))
+                }
+            }
             Array(ty, len) => f.write_str(&format!("[{}; {}]", ty, len)),
             Unit => f.write_str("unit"),
             Custom(path) => f.write_str(&format!("{}", path)),

@@ -241,6 +241,7 @@ impl<'a> SymbolTableScopeStack {
             | Type::I64
             | Type::Bool
             | Type::StringLiteral
+            | Type::Pointer(..)
             | Type::Array(_, _)
             | Type::Unit => Ok(symbol),
             Type::FunctionDef(..)

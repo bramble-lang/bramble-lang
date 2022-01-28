@@ -425,7 +425,7 @@ pub mod tests {
     }
 
     #[test]
-    fn parse_primitives() {
+    fn parse_types() {
         for (text, expected_ty) in vec![
             ("let x:u8 := 5u8;", Type::U8),
             ("let x:u16 := 5u16;", Type::U16),
@@ -443,6 +443,14 @@ pub mod tests {
             (
                 "let x: [i32;5] := [1, 2, 3, 4, 5];",
                 Type::Array(Box::new(Type::I32), 5),
+            ),
+            (
+                "let x: *const i32 := 0;",
+                Type::Pointer(false, Box::new(Type::I32)),
+            ),
+            (
+                "let x: *mut i32 := 0;",
+                Type::Pointer(true, Box::new(Type::I32)),
             ),
         ]
         .iter()

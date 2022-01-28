@@ -75,6 +75,7 @@ impl Writable for Type {
             Type::I64 => w.write_text("i64"),
             Type::Bool => w.write_text("bool"),
             Type::StringLiteral => w.write_text("string"),
+            Type::Pointer(..) => todo!(),
             Type::Array(ty, sz) => {
                 w.write_text("[");
                 w.write(ty.as_ref());

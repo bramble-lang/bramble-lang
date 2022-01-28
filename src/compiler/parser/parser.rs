@@ -34,10 +34,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Support function which records parser events to the tracing system
-    pub(super) fn record_noop<V: Writable>(
-        &self,
-        evt: Event<V, ParserError>,
-    ) {
+    pub(super) fn record_noop<V: Writable>(&self, evt: Event<V, ParserError>) {
         self.logger.write(evt)
     }
 
@@ -537,7 +534,10 @@ impl<'a> Parser<'a> {
                     Some((path, path_ctx)) => Some((Type::Custom(path), path_ctx)),
                     _ => match self.array_type(stream)? {
                         Some((ty, ctx)) => Some((ty, ctx)),
-                        None => None,
+                        None => match self.raw_pointer_type(stream)? {
+                            Some((ty, ctx)) => Some((ty, ctx)),
+                            None => None,
+                        },
                     },
                 },
             }
@@ -554,8 +554,52 @@ impl<'a> Parser<'a> {
             let msg = v.map(|v| match v.0 {
                 Type::Custom(_) => "Custom Type",
                 Type::Array(..) => "Array Type",
+                Type::Pointer(..) => "Array Type",
                 _ => "Primitive Type",
             });
+            let span = match v {
+                Ok(ok) => ok.1.span(),
+                Err(err) => err.span(),
+            };
+            self.record(event.with_span(span), msg)
+        })
+    }
+
+    fn raw_pointer_type(&self, stream: &mut TokenStream) -> ParserResult<(Type, ParserContext)> {
+        let (event, result) =
+            self.new_event(Span::zero())
+                .and_then(|| match stream.next_if(&Lex::Mul) {
+                    Some(star) => match stream.next_if_one_of(&[Lex::Mut, Lex::Const]) {
+                        Some(m) if m.sym == Lex::Mut => {
+                            let ctx = star.to_ctx();
+                            let ty = self.consume_type(stream)?.ok_or(CompilerError::new(
+                                ctx.span(),
+                                ParserError::RawPointerExpectedType,
+                            ))?;
+                            Ok(Some((Type::Pointer(true, Box::new(ty.0)), ctx)))
+                        }
+                        Some(c) if c.sym == Lex::Const => {
+                            let ctx = star.to_ctx();
+                            let ty = self.consume_type(stream)?.ok_or(CompilerError::new(
+                                ctx.span(),
+                                ParserError::RawPointerExpectedType,
+                            ))?;
+                            Ok(Some((Type::Pointer(false, Box::new(ty.0)), ctx)))
+                        },
+                        Some(_) => Err(CompilerError::new(
+                            star.span(),
+                            ParserError::RawPointerExpectedConstOrMut,
+                        )),
+                        None => Err(CompilerError::new(
+                            star.span(),
+                            ParserError::RawPointerExpectedConstOrMut,
+                        )),
+                    },
+                    None => Ok(None),
+                });
+
+        result.view(|v| {
+            let msg = v.map(|_| "Raw Pointer Type");
             let span = match v {
                 Ok(ok) => ok.1.span(),
                 Err(err) => err.span(),
