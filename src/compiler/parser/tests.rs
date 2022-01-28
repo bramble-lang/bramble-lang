@@ -503,6 +503,18 @@ pub mod tests {
                 Type::RawPointer(true, Box::new(Type::RawPointer(true, Box::new(Type::I32)))),
             ),
             (
+                "let x: *const *mut i32 := 0;",
+                Type::RawPointer(false, Box::new(Type::RawPointer(true, Box::new(Type::I32)))),
+            ),
+            (
+                "let x: *mut *const i32 := 0;",
+                Type::RawPointer(true, Box::new(Type::RawPointer(false, Box::new(Type::I32)))),
+            ),
+            (
+                "let x: *const *const i32 := 0;",
+                Type::RawPointer(false, Box::new(Type::RawPointer(false, Box::new(Type::I32)))),
+            ),
+            (
                 "let x: *mut [i32; 2] := 0;",
                 Type::RawPointer(true, Box::new(Type::Array(Box::new(Type::I32), 2))),
             ),
