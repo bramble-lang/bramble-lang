@@ -115,7 +115,7 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
 
     fn next_if_one_of<'s>(&mut self, words: &[&'s str]) -> Option<&'s str> {
         for w in words {
-            if self.next_if_word(w) {
+            if self.next_if_word(*w) {
                 return Some(w);
             }
         }
@@ -530,8 +530,8 @@ impl<'a> Lexer<'a> {
         let mut branch = LexerBranch::from(self);
 
         let keywords = [
-            "let", "mut", "return", "yield", "yret", "fn", "co", "mod", "struct", "extern", "init",
-            "if", "else", "while", "self", "super", "root", "project",
+            "let", "mut", "return", "yield", "yret", "fn", "const", "co", "mod", "struct", "extern", "init",
+            "if", "else", "while", "self", "super", "root", "project"
         ];
 
         Ok(match branch.next_if_one_of(&keywords) {
@@ -557,6 +557,7 @@ impl<'a> Lexer<'a> {
                     "super" => Token::new(PathSuper, span),
                     "root" => Token::new(PathFileRoot, span),
                     "project" => Token::new(PathProjectRoot, span),
+                    "const" => Token::new(Const, span),
                     _ => panic!("Matched a keyword which does not exist: {}", w),
                 })
             }
