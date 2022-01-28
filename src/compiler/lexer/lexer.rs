@@ -529,6 +529,8 @@ impl<'a> Lexer<'a> {
     fn consume_keyword(&mut self) -> LexerResult<Option<Token>> {
         let mut branch = LexerBranch::from(self);
 
+        // Ordering of these keywords matters: if one keyword is a prefix to another keyword then the
+        // longer keyword must be placed first; otherwise the shorter keyword will incorrectly match.
         let keywords = [
             "let", "mut", "return", "yield", "yret", "fn", "const", "co", "mod", "struct", "extern", "init",
             "if", "else", "while", "self", "super", "root", "project"
