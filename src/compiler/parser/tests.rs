@@ -29,8 +29,13 @@ pub mod tests {
 
     #[test]
     fn parse_unary_operators() {
-        for (text, expected) in
-            vec![("-a", UnaryOperator::Negate), ("!a", UnaryOperator::Not)].iter()
+        for (text, expected, span, id_span) in vec![
+            ("-a", UnaryOperator::Negate, (0,2), (1,2)),
+            ("!a", UnaryOperator::Not, (0,2), (1,2)),
+            ("@const a", UnaryOperator::AddressConst, (0,8), (7,8)),
+            ("@mut a", UnaryOperator::AddressMut, (0,6), (5,6)),
+        ]
+        .iter()
         {
             let mut table = StringTable::new();
             let a = table.insert("a".into());
@@ -51,8 +56,8 @@ pub mod tests {
             let exp = parser.expression(&mut stream).unwrap();
             if let Some(Expression::UnaryOp(ctx, op, operand)) = exp {
                 assert_eq!(op, *expected);
-                assert_eq!(ctx, new_ctx(0, 2));
-                assert_eq!(*operand, Expression::Identifier(new_ctx(1, 2), a));
+                assert_eq!(ctx, new_ctx(span.0, span.1));
+                assert_eq!(*operand, Expression::Identifier(new_ctx(id_span.0, id_span.1), a));
             } else {
                 panic!("No nodes returned by parser for {:?} => {:?}", text, exp)
             }
@@ -500,23 +505,38 @@ pub mod tests {
             ),
             (
                 "let x: *mut *mut i32 := 0;",
-                Type::RawPointer(PointerMut::Mut, Box::new(Type::RawPointer(PointerMut::Mut, Box::new(Type::I32)))),
+                Type::RawPointer(
+                    PointerMut::Mut,
+                    Box::new(Type::RawPointer(PointerMut::Mut, Box::new(Type::I32))),
+                ),
             ),
             (
                 "let x: *const *mut i32 := 0;",
-                Type::RawPointer(PointerMut::Const, Box::new(Type::RawPointer(PointerMut::Mut, Box::new(Type::I32)))),
+                Type::RawPointer(
+                    PointerMut::Const,
+                    Box::new(Type::RawPointer(PointerMut::Mut, Box::new(Type::I32))),
+                ),
             ),
             (
                 "let x: *mut *const i32 := 0;",
-                Type::RawPointer(PointerMut::Mut, Box::new(Type::RawPointer(PointerMut::Const, Box::new(Type::I32)))),
+                Type::RawPointer(
+                    PointerMut::Mut,
+                    Box::new(Type::RawPointer(PointerMut::Const, Box::new(Type::I32))),
+                ),
             ),
             (
                 "let x: *const *const i32 := 0;",
-                Type::RawPointer(PointerMut::Const, Box::new(Type::RawPointer(PointerMut::Const, Box::new(Type::I32)))),
+                Type::RawPointer(
+                    PointerMut::Const,
+                    Box::new(Type::RawPointer(PointerMut::Const, Box::new(Type::I32))),
+                ),
             ),
             (
                 "let x: *mut [i32; 2] := 0;",
-                Type::RawPointer(PointerMut::Mut, Box::new(Type::Array(Box::new(Type::I32), 2))),
+                Type::RawPointer(
+                    PointerMut::Mut,
+                    Box::new(Type::Array(Box::new(Type::I32), 2)),
+                ),
             ),
         ]
         .iter()

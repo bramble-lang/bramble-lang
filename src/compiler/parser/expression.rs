@@ -282,37 +282,84 @@ impl<'a> Parser<'a> {
         })
     }
 
+    fn address_of(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
+        let (event, result) =
+            self.new_event(Span::zero())
+                .and_then(|| match stream.next_if(&Lex::At) {
+                    Some(at) => {
+                        // Check for const or mut
+                        match stream.next_if_one_of(&[Lex::Const, Lex::Mut]) {
+                            Some(mutability) => {
+                                let mutability = match mutability.sym {
+                                    Lex::Const => PointerMut::Const,
+                                    Lex::Mut => PointerMut::Mut,
+                                    _ => todo!("Error Message"),
+                                };
+
+                                let (id, span) = stream.next_if_id().unwrap();
+                                let id_ctx = ParserContext::new(span);
+
+                                let ctx = at.to_ctx().join(id_ctx);
+
+                                Ok(Some(match mutability {
+                                    PointerMut::Mut => Expression::UnaryOp(
+                                        ctx,
+                                        UnaryOperator::AddressMut,
+                                        Box::new(Expression::Identifier(id_ctx, id)),
+                                    ),
+                                    PointerMut::Const => Expression::UnaryOp(
+                                        ctx,
+                                        UnaryOperator::AddressConst,
+                                        Box::new(Expression::Identifier(id_ctx, id)),
+                                    ),
+                                }))
+                            }
+                            None => todo!("Error Message"),
+                        }
+                    }
+                    None => Ok(None),
+                });
+
+        result.view(|v| {
+            let msg = v.map(|_| "Address Of");
+            self.record(event.with_span(v.span()), msg)
+        })
+    }
+
     pub(super) fn negate(
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        match stream.next_if_one_of(&[Lex::Minus, Lex::Not]) {
-            Some(op) => {
-                let (event, result) = self.new_event(Span::zero()).and_then(|| {
-                    self.negate(stream)
-                        .and_then(|o| {
-                            o.ok_or(CompilerError::new(
-                                op.span(),
-                                ParserError::ExpectedTermAfter(op.sym.clone()),
-                            ))
-                        })
-                        .and_then(|factor| {
-                            Expression::unary_op(op.to_ctx(), &op.sym, Box::new(factor))
-                        })
-                });
-
-                result.view(|v| {
-                    let msg = v.map(|_| {
-                        if op.sym == Lex::Minus {
-                            "Arithmetic Negate"
-                        } else {
-                            "Boolean Negate"
-                        }
+        match self.address_of(stream)? {
+            Some(exp) => Ok(Some(exp)),
+            None => match stream.next_if_one_of(&[Lex::Minus, Lex::Not, Lex::At]) {
+                Some(op) => {
+                    let (event, result) = self.new_event(Span::zero()).and_then(|| {
+                        self.negate(stream)
+                            .and_then(|o| {
+                                o.ok_or(CompilerError::new(
+                                    op.span(),
+                                    ParserError::ExpectedTermAfter(op.sym.clone()),
+                                ))
+                            })
+                            .and_then(|factor| {
+                                Expression::unary_op(op.to_ctx(), &op.sym, Box::new(factor))
+                            })
                     });
-                    self.record(event.with_span(v.span()), msg)
-                })
-            }
-            None => self.subdata_access(stream),
+
+                    result.view(|v| {
+                        let msg = v.map(|_| {
+                            if op.sym == Lex::Minus {
+                                "Arithmetic Negate"
+                            } else {
+                                "Boolean Negate"
+                            }
+                        });
+                        self.record(event.with_span(v.span()), msg)
+                    })
+                }
+                None => self.subdata_access(stream),
+            },
         }
     }
 
@@ -351,11 +398,15 @@ impl<'a> Parser<'a> {
                 // then what follows is either a valid member access or an error. So, if this returns
                 // Ok(None) then there is an unrecoverable disconnect between what this function expects
                 // and what member_access does.
-                let ma = self.member_access(factor, stream)?.expect("Member Access Failed to Parse");
+                let ma = self
+                    .member_access(factor, stream)?
+                    .expect("Member Access Failed to Parse");
                 self.subdata_access_sequence(ma, stream)
             }
             Some(tok) if tok.sym == Lex::LBracket => {
-                let aa = self.array_access(factor, stream)?.expect("Array Access Failed to Parse");
+                let aa = self
+                    .array_access(factor, stream)?
+                    .expect("Array Access Failed to Parse");
                 self.subdata_access_sequence(aa, stream)
             }
             _ => Ok(Some(factor)),

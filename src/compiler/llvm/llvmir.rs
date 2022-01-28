@@ -1101,6 +1101,8 @@ impl ast::UnaryOperator {
         let op = match self {
             ast::UnaryOperator::Negate => llvm.builder.build_int_neg(rv, "").into(),
             ast::UnaryOperator::Not => llvm.builder.build_not(rv, "").into(),
+            ast::UnaryOperator::AddressConst => todo!(),
+            ast::UnaryOperator::AddressMut => todo!(),
         };
 
         llvm.record(event, &op);

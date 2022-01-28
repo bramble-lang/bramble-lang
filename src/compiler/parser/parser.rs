@@ -494,7 +494,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn identifier(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
+    pub(super) fn identifier(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
         let (event, result) = self
             .new_event(Span::zero())
             .and_then(|| match stream.next_if_id() {

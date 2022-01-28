@@ -890,6 +890,8 @@ impl<'a> TypeResolver<'a> {
                     ))
                 }
             }
+            AddressConst => todo!(),
+            AddressMut => todo!(),
         }
     }
 

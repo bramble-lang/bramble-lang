@@ -297,6 +297,8 @@ impl std::fmt::Display for BinaryOperator {
 pub enum UnaryOperator {
     Negate,
     Not,
+    AddressConst,
+    AddressMut,
 }
 
 impl std::fmt::Display for UnaryOperator {
@@ -305,6 +307,8 @@ impl std::fmt::Display for UnaryOperator {
         match self {
             Negate => f.write_str("-"),
             Not => f.write_str("!"),
+            AddressConst => f.write_str("@const "),
+            AddressMut => f.write_str("@mut "),
         }
     }
 }
