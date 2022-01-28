@@ -406,7 +406,7 @@ impl<'ctx> IrGen<'ctx> {
             .context()
             .canonical_path()
             .to_label(self.source_map, self.string_table);
-       
+
         // Add structure name to LLVM context before defining the fields (to allow for self referencing)
         let struct_ty = self.context.opaque_struct_type(&name);
 
@@ -416,10 +416,10 @@ impl<'ctx> IrGen<'ctx> {
             .filter_map(|f| {
                 // TODO: what's going on here?  Should this fail if I cannot convert to a basic type?
                 f.ty.to_llvm_ir(self)
-                .map_err(|e| format!("S{}: {}", f.span(), e))
-                .unwrap()
-                .into_basic_type()
-                .ok()
+                    .map_err(|e| format!("S{}: {}", f.span(), e))
+                    .unwrap()
+                    .into_basic_type()
+                    .ok()
             })
             .collect();
         struct_ty.set_body(&fields_llvm, false);
@@ -1097,12 +1097,20 @@ impl ast::UnaryOperator {
     ) -> BasicValueEnum<'ctx> {
         let event = llvm.new_event(span);
         let r = right.to_llvm_ir(llvm).expect("Expected a value");
-        let rv = r.into_int_value();
         let op = match self {
-            ast::UnaryOperator::Negate => llvm.builder.build_int_neg(rv, "").into(),
-            ast::UnaryOperator::Not => llvm.builder.build_not(rv, "").into(),
-            ast::UnaryOperator::AddressConst => todo!(),
-            ast::UnaryOperator::AddressMut => todo!(),
+            ast::UnaryOperator::Negate => {
+                let rv = r.into_int_value();
+                llvm.builder.build_int_neg(rv, "").into()
+            }
+            ast::UnaryOperator::Not => {
+                let rv = r.into_int_value();
+                llvm.builder.build_not(rv, "").into()
+            }
+            ast::UnaryOperator::AddressConst | ast::UnaryOperator::AddressMut => {
+                // get pointer to identifier
+                let rp = r.into_pointer_value();
+                rp.into()
+            },
         };
 
         llvm.record(event, &op);
