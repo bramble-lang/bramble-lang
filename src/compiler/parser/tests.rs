@@ -498,6 +498,14 @@ pub mod tests {
                 "let x: *mut i32 := 0;",
                 Type::RawPointer(true, Box::new(Type::I32)),
             ),
+            (
+                "let x: *mut *mut i32 := 0;",
+                Type::RawPointer(true, Box::new(Type::RawPointer(true, Box::new(Type::I32)))),
+            ),
+            (
+                "let x: *mut [i32; 2] := 0;",
+                Type::RawPointer(true, Box::new(Type::Array(Box::new(Type::I32), 2))),
+            ),
         ]
         .iter()
         {
