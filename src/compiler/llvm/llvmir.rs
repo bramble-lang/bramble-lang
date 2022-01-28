@@ -407,7 +407,7 @@ impl<'ctx> IrGen<'ctx> {
             .canonical_path()
             .to_label(self.source_map, self.string_table);
        
-        // Add structure name to LLVM context (to allow for self referencing)
+        // Add structure name to LLVM context before defining the fields (to allow for self referencing)
         let struct_ty = self.context.opaque_struct_type(&name);
 
         let fields_llvm: Vec<BasicTypeEnum<'ctx>> = sd
