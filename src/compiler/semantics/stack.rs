@@ -94,7 +94,7 @@ impl<'a> SymbolTableScopeStack {
                 Symbol {
                     name: item.into(),
                     ty: Type::FunctionDef(params, Box::new(return_ty)),
-                    mutable: false,
+                    is_mutable: false,
                     is_extern: false,
                     span: None,
                 },
@@ -118,7 +118,7 @@ impl<'a> SymbolTableScopeStack {
                             .map(|(f_name, f_ty)| (f_name.clone(), f_ty.clone()))
                             .collect(),
                     ),
-                    mutable: false,
+                    is_mutable: false,
                     is_extern: false,
                     span: None,
                 },

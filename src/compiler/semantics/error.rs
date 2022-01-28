@@ -49,6 +49,7 @@ pub enum SemanticError {
     MainFnInvalidType,
     MainFnInvalidParams,
     InvalidStructure,
+    MutablePointerToImmutable,
     RoutineCallInvalidTarget(RoutineCall, Path, Type),
     InvalidIdentifierType(Type),
 }
@@ -238,6 +239,7 @@ impl CompilerDisplay for SemanticError {
                 "Invalid type used in identifier declaration: {}",
                 ty.fmt(sm, st)?
             )),
+            SemanticError::MutablePointerToImmutable => Ok(format!("Cannot make mutable pointer to immutable variable")),
         }
     }
 }

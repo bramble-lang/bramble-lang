@@ -212,7 +212,7 @@ impl SymbolTable {
             self.sym.push(Symbol {
                 name,
                 ty,
-                mutable,
+                is_mutable: mutable,
                 is_extern,
                 span: Some(span),
             });
@@ -240,7 +240,7 @@ impl std::fmt::Display for SymbolTable {
 pub struct Symbol {
     pub name: StringId,
     pub ty: Type,
-    pub mutable: bool,
+    pub is_mutable: bool,
     pub is_extern: bool,
     pub span: Option<Span>,
 }
@@ -249,7 +249,7 @@ impl std::fmt::Display for Symbol {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!(
             "{} | {} | {}",
-            self.name, self.ty, self.mutable
+            self.name, self.ty, self.is_mutable
         ))
     }
 }

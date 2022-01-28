@@ -905,6 +905,34 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 Ok(Type::Bool),
             ),
             (
+                "fn main() -> *const i64 {
+                    let k: i64 := 5;
+                    return @const k;
+                }",
+                Ok(Type::RawPointer(PointerMut::Const, Box::new(Type::I64))),
+            ),
+            (
+                "fn main() -> *mut i64 {
+                    let mut k: i64 := 5;
+                    return @mut k;
+                }",
+                Ok(Type::RawPointer(PointerMut::Mut, Box::new(Type::I64))),
+            ),
+            (
+                "fn main() -> *const i64 {
+                    let mut k: i64 := 5;
+                    return @const k;
+                }",
+                Ok(Type::RawPointer(PointerMut::Const, Box::new(Type::I64))),
+            ),
+            (
+                "fn main() -> *mut i64 {
+                    let k: i64 := 5;
+                    return @mut k;
+                }",
+                Err("L3: Cannot make mutable pointer to immutable variable"),
+            ),
+            (
                 "fn main() -> bool {
                     let k: bool := false;
                     return -k;
