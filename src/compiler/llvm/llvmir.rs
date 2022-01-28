@@ -1276,7 +1276,10 @@ impl ast::Type {
                     .expect(&format!("Could not find struct {}", label))
                     .into()
             }
-            ast::Type::Pointer(..) => todo!(),
+            ast::Type::Pointer(_, ty) => {
+                let llvm_ty = ty.to_llvm_ir(llvm)?;
+                llvm_ty.into_pointer_type().into()
+            },
             ast::Type::Array(a, len) => {
                 let el_ty = a.to_llvm_ir(llvm)?;
                 let len = *len as u32;
