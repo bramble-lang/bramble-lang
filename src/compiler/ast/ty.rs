@@ -23,6 +23,7 @@ pub enum Type {
     I64,
     Bool,
     StringLiteral,
+    RawPointer(PointerMut, Box<Type>),
     Array(Box<Type>, usize),
     Unit,
     Custom(Path),
@@ -32,6 +33,12 @@ pub enum Type {
     Coroutine(Box<Type>),
     ExternDecl(Vec<Type>, HasVarArgs, Box<Type>),
     Unknown,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum PointerMut {
+    Mut,
+    Const,
 }
 
 impl Type {
@@ -66,6 +73,7 @@ impl Type {
             | Type::I64 => true,
             Type::Bool
             | Type::StringLiteral
+            | Type::RawPointer(..)
             | Type::Array(_, _)
             | Type::Unit
             | Type::Custom(_)
@@ -95,6 +103,7 @@ impl Type {
             | Type::CoroutineDef(_, _)
             | Type::Coroutine(_)
             | Type::ExternDecl(..)
+            | Type::RawPointer(..)
             | Type::Unknown => false,
         }
     }
@@ -116,6 +125,7 @@ impl Type {
             | Type::CoroutineDef(_, _)
             | Type::Coroutine(_)
             | Type::ExternDecl(..)
+            | Type::RawPointer(..)
             | Type::Unknown => false,
         }
     }
@@ -199,6 +209,13 @@ impl std::fmt::Display for Type {
             I64 => f.write_str("i64"),
             Bool => f.write_str("bool"),
             StringLiteral => f.write_str("string"),
+            RawPointer(is_mut, ty) => {
+                if *is_mut == PointerMut::Mut {
+                    f.write_str(&format!("*mut {}", ty))
+                } else {
+                    f.write_str(&format!("*const {}", ty))
+                }
+            }
             Array(ty, len) => f.write_str(&format!("[{}; {}]", ty, len)),
             Unit => f.write_str("unit"),
             Custom(path) => f.write_str(&format!("{}", path)),

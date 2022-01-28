@@ -241,6 +241,7 @@ impl<'a> SymbolTableScopeStack {
             | Type::I64
             | Type::Bool
             | Type::StringLiteral
+            | Type::RawPointer(..)
             | Type::Array(_, _)
             | Type::Unit => Ok(symbol),
             Type::FunctionDef(..)
@@ -397,6 +398,9 @@ impl<'a> SymbolTableScopeStack {
                 let cret_ty = self.canonize_type(ret_ty)?;
                 Ok(Type::ExternDecl(cparams, *has_varargs, Box::new(cret_ty)))
             }
+            Type::RawPointer(is_mut, target_ty) => {
+                Ok(Type::RawPointer(*is_mut, Box::new(self.canonize_type(target_ty)?)))
+            },
             Type::Array(el_ty, len) => {
                 if *len <= 0 {
                     Err(SemanticError::ArrayInvalidSize(*len))
@@ -404,7 +408,18 @@ impl<'a> SymbolTableScopeStack {
                     Ok(Type::Array(Box::new(self.canonize_type(el_ty)?), *len))
                 }
             }
-            _ => Ok(ty.clone()),
+            Type::U8 
+            | Type::U16
+            | Type::U32
+            | Type::U64
+            | Type::I8 
+            | Type::I16 
+            | Type::I32 
+            | Type::I64 
+            | Type::Bool 
+            | Type::StringLiteral
+            | Type::Unit 
+            | Type::Unknown => Ok(ty.clone()),
         }
     }
 

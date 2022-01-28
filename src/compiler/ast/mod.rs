@@ -18,7 +18,7 @@ pub use self::path::{Element, Path, CANONICAL_ROOT, ROOT_PATH, SELF, SUPER};
 pub use self::routinedef::{RoutineDef, RoutineDefType};
 pub use self::statement::{Bind, Mutate, Return, Statement, YieldReturn};
 pub use self::structdef::StructDef;
-pub use self::ty::Type;
+pub use self::ty::*;
 
 use super::{CompilerDisplay, CompilerDisplayError, SourceMap};
 use crate::StringId;

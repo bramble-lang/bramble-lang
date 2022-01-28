@@ -29,6 +29,8 @@ pub enum ParserError {
     ArrayDeclExpectedType,
     ArrayDeclExpectedSize,
     IdDeclExpectedType,
+    RawPointerExpectedType,
+    RawPointerExpectedConstOrMut,
     ExpectedButFound(Vec<Lex>, Option<Lex>),
     ExpectedIdDeclAfterLet,
     ExpectedTypeInIdDecl,
@@ -163,6 +165,8 @@ impl CompilerDisplay for ParserError {
                 format!("Index operator must contain valid expression")
             }
             ParserError::EmptyProject => format!("No source code."),
+            ParserError::RawPointerExpectedType => format!("Raw Pointer expected underlying type"),
+            ParserError::RawPointerExpectedConstOrMut => format!("Expected const or mut after *"),
         };
         Ok(msg)
     }

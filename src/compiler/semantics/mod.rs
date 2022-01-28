@@ -1,8 +1,8 @@
 use self::semanticnode::SemanticContext;
 
 use super::{
-    ast::{Type, Node},
-    diagnostics::{View, Writable, View2},
+    ast::{Node, Type, PointerMut},
+    diagnostics::{View, View2, Writable},
     CompilerError,
 };
 
@@ -75,6 +75,14 @@ impl Writable for Type {
             Type::I64 => w.write_text("i64"),
             Type::Bool => w.write_text("bool"),
             Type::StringLiteral => w.write_text("string"),
+            Type::RawPointer(is_mut, ty) => {
+                if *is_mut == PointerMut::Mut {
+                    w.write_text("*mut ")
+                } else {
+                    w.write_text("*const ")
+                }
+                w.write(ty.as_ref());
+            }
             Type::Array(ty, sz) => {
                 w.write_text("[");
                 w.write(ty.as_ref());

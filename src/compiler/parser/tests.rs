@@ -425,7 +425,7 @@ pub mod tests {
     }
 
     #[test]
-    fn parse_primitives() {
+    fn parse_types() {
         for (text, expected_ty) in vec![
             ("let x:u8 := 5u8;", Type::U8),
             ("let x:u16 := 5u16;", Type::U16),
@@ -443,6 +443,14 @@ pub mod tests {
             (
                 "let x: [i32;5] := [1, 2, 3, 4, 5];",
                 Type::Array(Box::new(Type::I32), 5),
+            ),
+            (
+                "let x: *const i32 := 0;",
+                Type::RawPointer(PointerMut::Const, Box::new(Type::I32)),
+            ),
+            (
+                "let x: *mut i32 := 0;",
+                Type::RawPointer(PointerMut::Mut, Box::new(Type::I32)),
             ),
         ]
         .iter()
@@ -476,6 +484,104 @@ pub mod tests {
                 }
                 _ => panic!("Not a binding statement"),
             }
+        }
+    }
+
+    #[test]
+    fn raw_pointer_type_annotation() {
+        for (text, expected_ty) in vec![
+            (
+                "let x: *const i32 := 0;",
+                Type::RawPointer(PointerMut::Const, Box::new(Type::I32)),
+            ),
+            (
+                "let x: *mut i32 := 0;",
+                Type::RawPointer(PointerMut::Mut, Box::new(Type::I32)),
+            ),
+            (
+                "let x: *mut *mut i32 := 0;",
+                Type::RawPointer(PointerMut::Mut, Box::new(Type::RawPointer(PointerMut::Mut, Box::new(Type::I32)))),
+            ),
+            (
+                "let x: *const *mut i32 := 0;",
+                Type::RawPointer(PointerMut::Const, Box::new(Type::RawPointer(PointerMut::Mut, Box::new(Type::I32)))),
+            ),
+            (
+                "let x: *mut *const i32 := 0;",
+                Type::RawPointer(PointerMut::Mut, Box::new(Type::RawPointer(PointerMut::Const, Box::new(Type::I32)))),
+            ),
+            (
+                "let x: *const *const i32 := 0;",
+                Type::RawPointer(PointerMut::Const, Box::new(Type::RawPointer(PointerMut::Const, Box::new(Type::I32)))),
+            ),
+            (
+                "let x: *mut [i32; 2] := 0;",
+                Type::RawPointer(PointerMut::Mut, Box::new(Type::Array(Box::new(Type::I32), 2))),
+            ),
+        ]
+        .iter()
+        {
+            let mut table = StringTable::new();
+            let x = table.insert("x".into());
+
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
+                .unwrap()
+                .tokenize()
+                .into_iter()
+                .collect::<LResult>()
+                .unwrap();
+            let mut stream = TokenStream::new(&tokens, &logger).unwrap();
+            let parser = Parser::new(&logger);
+
+            let stm = parser.statement(&mut stream).unwrap().unwrap();
+
+            assert_eq!(*stm.context(), new_ctx(0, text.len() as u32));
+
+            match stm {
+                Statement::Bind(b) => {
+                    assert_eq!(b.get_id(), x, "{}", text);
+                    assert_eq!(b.get_type(), expected_ty, "{}", text);
+                    assert_eq!(b.is_mutable(), false, "{}", text);
+                }
+                _ => panic!("Not a binding statement"),
+            }
+        }
+    }
+
+    #[test]
+    fn raw_pointer_type_annotation_fails() {
+        for text in vec!["let x: *let i32 := 0;", "let x: *i32 := 0;"].iter() {
+            let mut table = StringTable::new();
+
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
+                .unwrap()
+                .tokenize()
+                .into_iter()
+                .collect::<LResult>()
+                .unwrap();
+            let mut stream = TokenStream::new(&tokens, &logger).unwrap();
+            let parser = Parser::new(&logger);
+
+            let err = parser.statement(&mut stream).unwrap_err();
+            assert_eq!(
+                err,
+                CompilerError::new(
+                    Span::new(Offset::new(7), Offset::new(8)),
+                    ParserError::RawPointerExpectedConstOrMut,
+                ),
+                "{}",
+                text
+            );
         }
     }
 
