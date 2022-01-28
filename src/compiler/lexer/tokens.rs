@@ -100,6 +100,7 @@ pub enum Lex {
     PathProjectRoot,
     PathFileRoot,
     Const,
+    At,
 }
 
 impl Lex {
@@ -173,6 +174,7 @@ impl std::fmt::Display for Lex {
             PathFileRoot => f.write_str("root"),
             PathProjectRoot => f.write_str("project"),
             Const => f.write_str("const"),
+            At => f.write_str("@"),
         }
     }
 }
@@ -314,6 +316,7 @@ impl Token {
             | Lex::PathFileRoot
             | Lex::PathProjectRoot
             | Lex::Const
+            | Lex::At
             | Lex::LArrow => *a == self.sym,
         }
     }

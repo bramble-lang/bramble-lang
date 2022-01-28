@@ -277,6 +277,7 @@ mod tests {
             (":", Colon),
             (",", Comma),
             (";", Semicolon),
+            ("@", At),
         ]
         .iter()
         {
