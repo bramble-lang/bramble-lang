@@ -65,6 +65,11 @@ where
     pub fn to_compilerdisplay(&self) -> &dyn CompilerDisplay {
         self
     }
+
+    /// Get a reference to the inner error
+    pub fn inner(&self) -> &IE {
+        &self.inner
+    }
 }
 
 impl<IE: CompilerDisplay> SourceIr for CompilerError<IE> {

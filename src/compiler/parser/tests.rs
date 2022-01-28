@@ -488,6 +488,84 @@ pub mod tests {
     }
 
     #[test]
+    fn raw_pointer_type_annotation() {
+        for (text, expected_ty) in vec![
+            (
+                "let x: *const i32 := 0;",
+                Type::Pointer(false, Box::new(Type::I32)),
+            ),
+            (
+                "let x: *mut i32 := 0;",
+                Type::Pointer(true, Box::new(Type::I32)),
+            ),
+        ]
+        .iter()
+        {
+            let mut table = StringTable::new();
+            let x = table.insert("x".into());
+
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
+                .unwrap()
+                .tokenize()
+                .into_iter()
+                .collect::<LResult>()
+                .unwrap();
+            let mut stream = TokenStream::new(&tokens, &logger).unwrap();
+            let parser = Parser::new(&logger);
+
+            let stm = parser.statement(&mut stream).unwrap().unwrap();
+
+            assert_eq!(*stm.context(), new_ctx(0, text.len() as u32));
+
+            match stm {
+                Statement::Bind(b) => {
+                    assert_eq!(b.get_id(), x, "{}", text);
+                    assert_eq!(b.get_type(), expected_ty, "{}", text);
+                    assert_eq!(b.is_mutable(), false, "{}", text);
+                }
+                _ => panic!("Not a binding statement"),
+            }
+        }
+    }
+
+    #[test]
+    fn raw_pointer_type_annotation_fails() {
+        for text in vec!["let x: *let i32 := 0;", "let x: *i32 := 0;"].iter() {
+            let mut table = StringTable::new();
+
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
+                .unwrap()
+                .tokenize()
+                .into_iter()
+                .collect::<LResult>()
+                .unwrap();
+            let mut stream = TokenStream::new(&tokens, &logger).unwrap();
+            let parser = Parser::new(&logger);
+
+            let err = parser.statement(&mut stream).unwrap_err();
+            assert_eq!(
+                err,
+                CompilerError::new(
+                    Span::new(Offset::new(7), Offset::new(8)),
+                    ParserError::RawPointerExpectedConstOrMut,
+                ),
+                "{}",
+                text
+            );
+        }
+    }
+
+    #[test]
     fn parse_mutation() {
         let text = "mut x := 5;";
         let mut table = StringTable::new();

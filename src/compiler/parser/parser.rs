@@ -671,9 +671,6 @@ impl<'a> Parser<'a> {
                     "CRITICAL: first token is an identifier but cannot be converted to a string",
                 );
                     self.consume_type(stream)
-                        .map_err(|_| {
-                            CompilerError::new(decl_tok[0].span(), ParserError::IdDeclExpectedType)
-                        })
                         .and_then(|result| {
                             Ok(result.and_then(|(ty, ty_ctx)| {
                                 let ctx = ctx.join(ty_ctx);
