@@ -342,7 +342,7 @@ impl<'a> Parser<'a> {
     ) -> ParserResult<Expression<ParserContext>> {
         match self.address_of(stream)? {
             Some(exp) => Ok(Some(exp)),
-            None => match stream.next_if_one_of(&[Lex::Minus, Lex::Not, Lex::At]) {
+            None => match stream.next_if_one_of(&[Lex::Minus, Lex::Not]) {
                 Some(op) => {
                     let (event, result) = self.new_event(Span::zero()).and_then(|| {
                         self.negate(stream)

@@ -299,6 +299,7 @@ pub enum UnaryOperator {
     Not,
     AddressConst,
     AddressMut,
+    DerefRawPointer,
 }
 
 impl std::fmt::Display for UnaryOperator {
@@ -309,6 +310,7 @@ impl std::fmt::Display for UnaryOperator {
             Not => f.write_str("!"),
             AddressConst => f.write_str("@const "),
             AddressMut => f.write_str("@mut "),
+            DerefRawPointer => f.write_str("^"),
         }
     }
 }

@@ -1111,6 +1111,7 @@ impl ast::UnaryOperator {
                 let rp = r.into_pointer_value();
                 rp.into()
             },
+            ast::UnaryOperator::DerefRawPointer => todo!(),
         };
 
         llvm.record(event, &op);

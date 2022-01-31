@@ -927,6 +927,7 @@ impl<'a> TypeResolver<'a> {
                     operand,
                 ))
             }
+            DerefRawPointer => todo!(),
         }
     }
 
