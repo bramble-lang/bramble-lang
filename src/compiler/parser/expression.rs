@@ -83,6 +83,11 @@ impl Expression<ParserContext> {
                 UnaryOperator::Not,
                 operand,
             ))),
+            Lex::Hat => Ok(Some(Expression::UnaryOp(
+                ctx.join(*operand.context()),
+                UnaryOperator::DerefRawPointer,
+                operand,
+            ))),
             _ => {
                 err!(ctx.span(), ParserError::NotAUnaryOp(op.clone()))
             }
@@ -342,7 +347,7 @@ impl<'a> Parser<'a> {
     ) -> ParserResult<Expression<ParserContext>> {
         match self.address_of(stream)? {
             Some(exp) => Ok(Some(exp)),
-            None => match stream.next_if_one_of(&[Lex::Minus, Lex::Not]) {
+            None => match stream.next_if_one_of(&[Lex::Minus, Lex::Not, Lex::Hat]) {
                 Some(op) => {
                     let (event, result) = self.new_event(Span::zero()).and_then(|| {
                         self.negate(stream)
