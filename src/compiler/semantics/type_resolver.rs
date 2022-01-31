@@ -323,7 +323,7 @@ impl<'a> TypeResolver<'a> {
             let rhs = self.analyze_expression(mutate.get_rhs())?;
             match self.symbols.lookup_var(mutate.get_id()) {
                 Ok(symbol) => {
-                    if symbol.mutable {
+                    if symbol.is_mutable {
                         if symbol.ty == rhs.get_type() {
                             let ctx = mutate.context().with_type(rhs.get_type().clone());
                             Ok(Mutate::new(ctx, mutate.get_id(), rhs))
@@ -363,13 +363,10 @@ impl<'a> TypeResolver<'a> {
 
             // Get the expected yield return type of the coroutine that the yield return
             // occurs within.
-            let current_func = self
-                .symbols
-                .get_current_fn()
-                .ok_or(CompilerError::new(
-                    yr.span(),
-                    SemanticError::YieldInvalidLocation,
-                ))?;
+            let current_func = self.symbols.get_current_fn().ok_or(CompilerError::new(
+                yr.span(),
+                SemanticError::YieldInvalidLocation,
+            ))?;
             let (_, expected_ret_ty) = self
                 .symbols
                 .lookup_coroutine(current_func)
@@ -889,6 +886,46 @@ impl<'a> TypeResolver<'a> {
                         SemanticError::ExpectedBool(op, operand.get_type().clone()),
                     ))
                 }
+            }
+            AddressConst => {
+                // The operand must be an identifier
+                let id = match operand {
+                    Expression::Identifier(_, id) => Ok(id),
+                    _ => Err(CompilerError::new(
+                        operand.span(),
+                        SemanticError::ExpectedIdentifier(op),
+                    )),
+                }?;
+                let id = self.symbols.lookup_var(id).unwrap();
+
+                // Type is a raw pointer to the type of the operand
+                Ok((
+                    Type::RawPointer(PointerMut::Const, Box::new(id.ty.clone())),
+                    operand,
+                ))
+            }
+            AddressMut => {
+                // The operand must be an identifier
+                let id = match operand {
+                    Expression::Identifier(_, id) => Ok(id),
+                    _ => Err(CompilerError::new(
+                        operand.span(),
+                        SemanticError::ExpectedIdentifier(op),
+                    )),
+                }?;
+
+                // The identifier must be mutable
+                let id = self.symbols.lookup_var(id).unwrap();
+                if !id.is_mutable {
+                    return Err(CompilerError::new(
+                        operand.span(),
+                        SemanticError::MutablePointerToImmutable,
+                    ));
+                }
+                Ok((
+                    Type::RawPointer(PointerMut::Mut, Box::new(id.ty.clone())),
+                    operand,
+                ))
             }
         }
     }

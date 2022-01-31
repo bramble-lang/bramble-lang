@@ -406,22 +406,22 @@ impl<'ctx> IrGen<'ctx> {
             .context()
             .canonical_path()
             .to_label(self.source_map, self.string_table);
+
+        // Add structure name to LLVM context before defining the fields (to allow for self referencing)
+        let struct_ty = self.context.opaque_struct_type(&name);
+
         let fields_llvm: Vec<BasicTypeEnum<'ctx>> = sd
             .get_fields()
             .iter()
             .filter_map(|f| {
                 // TODO: what's going on here?  Should this fail if I cannot convert to a basic type?
-                match f.ty {
-                    ast::Type::Custom(_) => f.ty.to_llvm_ir(self),
-                    _ => f.ty.to_llvm_ir(self),
-                }
-                .map_err(|e| format!("S{}: {}", f.span(), e))
-                .unwrap()
-                .into_basic_type()
-                .ok()
+                f.ty.to_llvm_ir(self)
+                    .map_err(|e| format!("S{}: {}", f.span(), e))
+                    .unwrap()
+                    .into_basic_type()
+                    .ok()
             })
             .collect();
-        let struct_ty = self.context.opaque_struct_type(&name);
         struct_ty.set_body(&fields_llvm, false);
         self.record_terminal(sd.span(), &struct_ty);
     }
@@ -1097,10 +1097,20 @@ impl ast::UnaryOperator {
     ) -> BasicValueEnum<'ctx> {
         let event = llvm.new_event(span);
         let r = right.to_llvm_ir(llvm).expect("Expected a value");
-        let rv = r.into_int_value();
         let op = match self {
-            ast::UnaryOperator::Negate => llvm.builder.build_int_neg(rv, "").into(),
-            ast::UnaryOperator::Not => llvm.builder.build_not(rv, "").into(),
+            ast::UnaryOperator::Negate => {
+                let rv = r.into_int_value();
+                llvm.builder.build_int_neg(rv, "").into()
+            }
+            ast::UnaryOperator::Not => {
+                let rv = r.into_int_value();
+                llvm.builder.build_not(rv, "").into()
+            }
+            ast::UnaryOperator::AddressConst | ast::UnaryOperator::AddressMut => {
+                // get pointer to identifier
+                let rp = r.into_pointer_value();
+                rp.into()
+            },
         };
 
         llvm.record(event, &op);
@@ -1275,6 +1285,11 @@ impl ast::Type {
                     .get_struct_type(&label)
                     .expect(&format!("Could not find struct {}", label))
                     .into()
+            }
+            ast::Type::RawPointer(_, ty) => {
+                let target_ty = ty.to_llvm_ir(llvm)?;
+                let bty = target_ty.into_basic_type().unwrap();
+                bty.ptr_type(AddressSpace::Generic).into()
             }
             ast::Type::Array(a, len) => {
                 let el_ty = a.to_llvm_ir(llvm)?;

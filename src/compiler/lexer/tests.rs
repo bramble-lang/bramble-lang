@@ -277,6 +277,7 @@ mod tests {
             (":", Colon),
             (",", Comma),
             (";", Semicolon),
+            ("@", At),
         ]
         .iter()
         {
@@ -327,6 +328,7 @@ mod tests {
     #[test]
     fn test_keywords() {
         for (text, expected_symbol) in [
+            ("const", Const),
             ("let", Let),
             ("mut", Mut),
             ("return", Return),

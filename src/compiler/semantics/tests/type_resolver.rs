@@ -905,6 +905,78 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 Ok(Type::Bool),
             ),
             (
+                "fn main() -> *const i64 {
+                    let k: i64 := 5;
+                    return @const k;
+                }",
+                Ok(Type::RawPointer(PointerMut::Const, Box::new(Type::I64))),
+            ),
+            (
+                "fn main() -> *mut i64 {
+                    let mut k: i64 := 5;
+                    return @mut k;
+                }",
+                Ok(Type::RawPointer(PointerMut::Mut, Box::new(Type::I64))),
+            ),
+            (
+                "fn main() -> *const i64 {
+                    let mut k: i64 := 5;
+                    return @const k;
+                }",
+                Ok(Type::RawPointer(PointerMut::Const, Box::new(Type::I64))),
+            ),
+            (
+                "fn main() -> *const *const i64 {
+                    let k: i64 := 5;
+                    let p: *const i64 := @const k;
+                    return @const p;
+                }",
+                Ok(Type::RawPointer(
+                    PointerMut::Const,
+                    Box::new(Type::RawPointer(PointerMut::Const, Box::new(Type::I64))),
+                )),
+            ),
+            (
+                "fn main() -> *mut *const i64 {
+                    let k: i64 := 5;
+                    let mut p: *const i64 := @const k;
+                    return @mut p;
+                }",
+                Ok(Type::RawPointer(
+                    PointerMut::Mut,
+                    Box::new(Type::RawPointer(PointerMut::Const, Box::new(Type::I64))),
+                )),
+            ),
+            (
+                "fn main() -> *const *mut i64 {
+                    let mut k: i64 := 5;
+                    let p: *mut i64 := @mut k;
+                    return @const p;
+                }",
+                Ok(Type::RawPointer(
+                    PointerMut::Const,
+                    Box::new(Type::RawPointer(PointerMut::Mut, Box::new(Type::I64))),
+                )),
+            ),
+            (
+                "fn main() -> *mut *mut i64 {
+                    let mut k: i64 := 5;
+                    let mut p: *mut i64 := @mut k;
+                    return @mut p;
+                }",
+                Ok(Type::RawPointer(
+                    PointerMut::Mut,
+                    Box::new(Type::RawPointer(PointerMut::Mut, Box::new(Type::I64))),
+                )),
+            ),
+            (
+                "fn main() -> *mut i64 {
+                    let k: i64 := 5;
+                    return @mut k;
+                }",
+                Err("L3: Cannot make mutable pointer to immutable variable"),
+            ),
+            (
                 "fn main() -> bool {
                     let k: bool := false;
                     return -k;
@@ -950,8 +1022,8 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 Ok(expected_ty) => {
                     let module = module.unwrap();
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
-                    let ret_stm = &fn_main.get_body()[1];
-                    assert_eq!(ret_stm.context().ty(), expected_ty);
+                    let ret_stm = &fn_main.get_body().last().unwrap();
+                    assert_eq!(ret_stm.context().ty(), expected_ty, "Input: {}", text);
                     if let Statement::Return(r) = ret_stm {
                         assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
                     } else {

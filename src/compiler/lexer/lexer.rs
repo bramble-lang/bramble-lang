@@ -115,7 +115,7 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
 
     fn next_if_one_of<'s>(&mut self, words: &[&'s str]) -> Option<&'s str> {
         for w in words {
-            if self.next_if_word(w) {
+            if self.next_if_word(*w) {
                 return Some(w);
             }
         }
@@ -449,6 +449,7 @@ impl<'a> Lexer<'a> {
             ("<", Ls),
             ("-", Minus),
             ("!", Not),
+            ("@", At),
         ];
         operators.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
 
@@ -529,9 +530,11 @@ impl<'a> Lexer<'a> {
     fn consume_keyword(&mut self) -> LexerResult<Option<Token>> {
         let mut branch = LexerBranch::from(self);
 
+        // Ordering of these keywords matters: if one keyword is a prefix to another keyword then the
+        // longer keyword must be placed first; otherwise the shorter keyword will incorrectly match.
         let keywords = [
-            "let", "mut", "return", "yield", "yret", "fn", "co", "mod", "struct", "extern", "init",
-            "if", "else", "while", "self", "super", "root", "project",
+            "let", "mut", "return", "yield", "yret", "fn", "const", "co", "mod", "struct", "extern", "init",
+            "if", "else", "while", "self", "super", "root", "project"
         ];
 
         Ok(match branch.next_if_one_of(&keywords) {
@@ -557,6 +560,7 @@ impl<'a> Lexer<'a> {
                     "super" => Token::new(PathSuper, span),
                     "root" => Token::new(PathFileRoot, span),
                     "project" => Token::new(PathProjectRoot, span),
+                    "const" => Token::new(Const, span),
                     _ => panic!("Matched a keyword which does not exist: {}", w),
                 })
             }

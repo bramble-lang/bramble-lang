@@ -152,6 +152,28 @@ than efficiency for the writer.
 1. `@` and `^` will have the same precedence as unary minus (`-`) and not (`!`)
 
 ### Semantics
+Some notes, currently the following types and their uses are semantically legal:
+```
+x: i32, y: i32
+1. *const *const i32
+2. *mut *mut i32
+3. ptr: *const *mut i32 :- mut ^^ptr := 5
+4. *mut *const i32 :- mut ^ptr := @y
+```
+
+The latter two may seem unintuitive or that they _should_ be illegal. 
+Example 3 is legal because the outer `*const` refers to the location in
+memory that is storing the `*mut i32`, that pointer cannot be changed
+through indirect means, _but_ because that pointer is an indirect mutable
+pointer, the location it points to (the `i32`) can be changed. Example 4
+is legal, because the location that the outer pointer points to is mutable
+(it can be changed to point to a different `i32`) but the `i32` that the
+inner pointer points to cannot be mutated.
+
+It may make more sense to semantically have an occurance of a `*const` in
+a chain of nested pointers to override and turn the entire chain into
+`*const`.
+
 #### Reference Operator
 The reference operator can only be applied to an Identifier that is a variable
 in the current scope. The type of the reference expression is `*const T` where 

@@ -45,10 +45,12 @@ pub enum SemanticError {
     ExpectedSignedInteger(UnaryOperator, Type),
     ExpectedBool(UnaryOperator, Type),
     OpExpected(BinaryOperator, Type, Type, Type),
+    ExpectedIdentifier(UnaryOperator),
     RoutineParamTypeMismatch(Path, Vec<(u32, Type, Type)>),
     MainFnInvalidType,
     MainFnInvalidParams,
     InvalidStructure,
+    MutablePointerToImmutable,
     RoutineCallInvalidTarget(RoutineCall, Path, Type),
     InvalidIdentifierType(Type),
 }
@@ -238,6 +240,8 @@ impl CompilerDisplay for SemanticError {
                 "Invalid type used in identifier declaration: {}",
                 ty.fmt(sm, st)?
             )),
+            SemanticError::MutablePointerToImmutable => Ok(format!("Cannot make mutable pointer to immutable variable")),
+            SemanticError::ExpectedIdentifier(op) => Ok(format!("{} expected identifier", op)),
         }
     }
 }

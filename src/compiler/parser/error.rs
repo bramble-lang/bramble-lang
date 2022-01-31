@@ -29,6 +29,8 @@ pub enum ParserError {
     ArrayDeclExpectedType,
     ArrayDeclExpectedSize,
     IdDeclExpectedType,
+    RawPointerExpectedType,
+    RawPointerExpectedConstOrMut,
     ExpectedButFound(Vec<Lex>, Option<Lex>),
     ExpectedIdDeclAfterLet,
     ExpectedTypeInIdDecl,
@@ -48,6 +50,8 @@ pub enum ParserError {
     StructExpectedFieldExpr(StringId),
     ExpectedExprAfter(Lex),
     ExpectedTermAfter(Lex),
+    ExpectedIdentifierAfter(Lex),
+    AddressOfExpectedConstOrMut,
     MemberAccessExpectedField,
     IndexOpInvalidExpr,
 }
@@ -163,6 +167,15 @@ impl CompilerDisplay for ParserError {
                 format!("Index operator must contain valid expression")
             }
             ParserError::EmptyProject => format!("No source code."),
+            ParserError::RawPointerExpectedType => format!("Raw Pointer expected underlying type"),
+            ParserError::RawPointerExpectedConstOrMut => format!("Expected const or mut after *"),
+            ParserError::ExpectedIdentifierAfter(lex) => 
+                format!(
+                    "Expected identifier after {}",
+                    lex_to_string(sm, st, &Some(*lex))?
+                )
+            ,
+            ParserError::AddressOfExpectedConstOrMut => format!("Expected const or mut after @"),
         };
         Ok(msg)
     }
