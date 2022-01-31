@@ -209,8 +209,8 @@ impl std::fmt::Display for Type {
             I64 => f.write_str("i64"),
             Bool => f.write_str("bool"),
             StringLiteral => f.write_str("string"),
-            RawPointer(is_mut, ty) => {
-                if *is_mut == PointerMut::Mut {
+            RawPointer(mutability, ty) => {
+                if *mutability == PointerMut::Mut {
                     f.write_str(&format!("*mut {}", ty))
                 } else {
                     f.write_str(&format!("*const {}", ty))
