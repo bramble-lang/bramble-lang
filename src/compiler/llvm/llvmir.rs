@@ -1096,22 +1096,34 @@ impl ast::UnaryOperator {
         span: Span,
     ) -> BasicValueEnum<'ctx> {
         let event = llvm.new_event(span);
-        let r = right.to_llvm_ir(llvm).expect("Expected a value");
         let op = match self {
             ast::UnaryOperator::Negate => {
+                let r = right.to_llvm_ir(llvm).expect("Expected a value");
                 let rv = r.into_int_value();
                 llvm.builder.build_int_neg(rv, "").into()
             }
             ast::UnaryOperator::Not => {
+                let r = right.to_llvm_ir(llvm).expect("Expected a value");
                 let rv = r.into_int_value();
                 llvm.builder.build_not(rv, "").into()
             }
             ast::UnaryOperator::AddressConst | ast::UnaryOperator::AddressMut => {
                 // get pointer to identifier
+                //let rp = r.into_pointer_value();
+                let id = match right {
+                    ast::Expression::Identifier(_, id) => id,
+                    _ => panic!("Expected Identifier for @ operand")
+                };
+                let name = llvm.string_table.get(*id).unwrap();
+
+                let ptr = llvm.registers.get(&name).unwrap().into_pointer_value();
+                ptr.into()
+            }
+            ast::UnaryOperator::DerefRawPointer => {
+                let r = right.to_llvm_ir(llvm).expect("Expected a value");
                 let rp = r.into_pointer_value();
-                rp.into()
-            },
-            ast::UnaryOperator::DerefRawPointer => todo!(),
+                llvm.builder.build_load(rp, "").into()
+            }
         };
 
         llvm.record(event, &op);
