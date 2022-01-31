@@ -51,6 +51,7 @@ pub enum ParserError {
     ExpectedExprAfter(Lex),
     ExpectedTermAfter(Lex),
     ExpectedIdentifierAfter(Lex),
+    AddressOfExpectedConstOrMut,
     MemberAccessExpectedField,
     IndexOpInvalidExpr,
 }
@@ -174,6 +175,7 @@ impl CompilerDisplay for ParserError {
                     lex_to_string(sm, st, &Some(*lex))?
                 )
             ,
+            ParserError::AddressOfExpectedConstOrMut => format!("Expected const or mut after @"),
         };
         Ok(msg)
     }

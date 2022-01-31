@@ -292,10 +292,13 @@ impl<'a> Parser<'a> {
                             Some(mutability) => {
                                 let at_ctx = at.to_ctx().join(mutability.to_ctx());
                                 let mutability = match mutability.sym {
-                                    Lex::Const => PointerMut::Const,
-                                    Lex::Mut => PointerMut::Mut,
-                                    _ => todo!("Error Message"),
-                                };
+                                    Lex::Const => Ok(PointerMut::Const),
+                                    Lex::Mut => Ok(PointerMut::Mut),
+                                    _ => Err(CompilerError::new(
+                                        mutability.span(),
+                                        ParserError::AddressOfExpectedConstOrMut,
+                                    )),
+                                }?;
 
                                 let id = self.identifier(stream)?.ok_or(CompilerError::new(
                                     at_ctx.span(),
@@ -318,7 +321,10 @@ impl<'a> Parser<'a> {
                                     ),
                                 }))
                             }
-                            None => todo!("Error Message"),
+                            None => Err(CompilerError::new(
+                                at.span(),
+                                ParserError::AddressOfExpectedConstOrMut,
+                            )),
                         }
                     }
                     None => Ok(None),
