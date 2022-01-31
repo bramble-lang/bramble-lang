@@ -554,7 +554,7 @@ impl<'a> Parser<'a> {
             let msg = v.map(|v| match v.0 {
                 Type::Custom(_) => "Custom Type",
                 Type::Array(..) => "Array Type",
-                Type::RawPointer(..) => "Array Type",
+                Type::RawPointer(..) => "Raw Pointer Type",
                 _ => "Primitive Type",
             });
             let span = match v {
