@@ -1,0 +1,12 @@
+fn my_main() -> i64 {
+    let ms: MyStruct := MyStruct{ i: 7i32, j: 13};
+    let p: *const MyStruct := @const ms;
+    project::std::io::writei32ln((^p).i);
+    project::std::io::writei64ln((^p).j);
+    return 0;
+}
+
+struct MyStruct {
+    i: i32,
+    j: i64,
+}
