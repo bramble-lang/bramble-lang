@@ -576,6 +576,7 @@ impl<'a> Parser<'a> {
                                 ctx.span(),
                                 ParserError::RawPointerExpectedType,
                             ))?;
+                            let ctx = ctx.join(ty.1);
                             Ok(Some((Type::RawPointer(PointerMut::Mut, Box::new(ty.0)), ctx)))
                         }
                         Some(c) if c.sym == Lex::Const => {
@@ -584,6 +585,7 @@ impl<'a> Parser<'a> {
                                 ctx.span(),
                                 ParserError::RawPointerExpectedType,
                             ))?;
+                            let ctx = ctx.join(ty.1);
                             Ok(Some((Type::RawPointer(PointerMut::Const, Box::new(ty.0)), ctx)))
                         },
                         Some(_) => Err(CompilerError::new(
