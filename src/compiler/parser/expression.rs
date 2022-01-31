@@ -296,8 +296,8 @@ impl<'a> Parser<'a> {
                                     _ => todo!("Error Message"),
                                 };
 
-                                let (id, span) = stream.next_if_id().unwrap();
-                                let id_ctx = ParserContext::new(span);
+                                let id = self.identifier(stream)?.unwrap();
+                                let id_ctx = *id.context();
 
                                 let ctx = at.to_ctx().join(id_ctx);
 
@@ -305,12 +305,12 @@ impl<'a> Parser<'a> {
                                     PointerMut::Mut => Expression::UnaryOp(
                                         ctx,
                                         UnaryOperator::AddressMut,
-                                        Box::new(Expression::Identifier(id_ctx, id)),
+                                        Box::new(id),
                                     ),
                                     PointerMut::Const => Expression::UnaryOp(
                                         ctx,
                                         UnaryOperator::AddressConst,
-                                        Box::new(Expression::Identifier(id_ctx, id)),
+                                        Box::new(id),
                                     ),
                                 }))
                             }
