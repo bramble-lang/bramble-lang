@@ -1112,7 +1112,7 @@ impl ast::UnaryOperator {
                 //let rp = r.into_pointer_value();
                 let id = match right {
                     ast::Expression::Identifier(_, id) => id,
-                    _ => panic!("Expected Identifier for @ operand")
+                    _ => panic!("Expected Identifier for @ operand"),
                 };
                 let name = llvm.string_table.get(*id).unwrap();
 
@@ -1121,8 +1121,12 @@ impl ast::UnaryOperator {
             }
             ast::UnaryOperator::DerefRawPointer => {
                 let r = right.to_llvm_ir(llvm).expect("Expected a value");
-                let rp = r.into_pointer_value();
-                llvm.builder.build_load(rp, "").into()
+                let ptr = r.into_pointer_value();
+                if ptr.get_type().get_element_type().is_aggregate_type() {
+                    ptr.into()
+                } else {
+                    llvm.builder.build_load(ptr, "").into()
+                }
             }
         };
 
