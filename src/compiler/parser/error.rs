@@ -50,6 +50,7 @@ pub enum ParserError {
     StructExpectedFieldExpr(StringId),
     ExpectedExprAfter(Lex),
     ExpectedTermAfter(Lex),
+    ExpectedIdentifierAfter(Lex),
     MemberAccessExpectedField,
     IndexOpInvalidExpr,
 }
@@ -167,6 +168,12 @@ impl CompilerDisplay for ParserError {
             ParserError::EmptyProject => format!("No source code."),
             ParserError::RawPointerExpectedType => format!("Raw Pointer expected underlying type"),
             ParserError::RawPointerExpectedConstOrMut => format!("Expected const or mut after *"),
+            ParserError::ExpectedIdentifierAfter(lex) => 
+                format!(
+                    "Expected identifier after {}",
+                    lex_to_string(sm, st, &Some(*lex))?
+                )
+            ,
         };
         Ok(msg)
     }

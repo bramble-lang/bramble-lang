@@ -890,20 +890,29 @@ impl<'a> TypeResolver<'a> {
             AddressConst => {
                 // The operand must be an identifier
                 let id = match operand {
-                    Expression::Identifier(_, id) => id,
-                    _ => todo!(),
-                };
+                    Expression::Identifier(_, id) => Ok(id),
+                    _ => Err(CompilerError::new(
+                        operand.span(),
+                        SemanticError::ExpectedIdentifier(op),
+                    )),
+                }?;
                 let id = self.symbols.lookup_var(id).unwrap();
 
                 // Type is a raw pointer to the type of the operand
-                Ok((Type::RawPointer(PointerMut::Const, Box::new(id.ty.clone())), operand))
+                Ok((
+                    Type::RawPointer(PointerMut::Const, Box::new(id.ty.clone())),
+                    operand,
+                ))
             }
             AddressMut => {
                 // The operand must be an identifier
                 let id = match operand {
-                    Expression::Identifier(_, id) => id,
-                    _ => todo!(),
-                };
+                    Expression::Identifier(_, id) => Ok(id),
+                    _ => Err(CompilerError::new(
+                        operand.span(),
+                        SemanticError::ExpectedIdentifier(op),
+                    )),
+                }?;
 
                 // The identifier must be mutable
                 let id = self.symbols.lookup_var(id).unwrap();
@@ -911,9 +920,12 @@ impl<'a> TypeResolver<'a> {
                     return Err(CompilerError::new(
                         operand.span(),
                         SemanticError::MutablePointerToImmutable,
-                    ))
+                    ));
                 }
-                Ok((Type::RawPointer(PointerMut::Mut, Box::new(id.ty.clone())), operand))
+                Ok((
+                    Type::RawPointer(PointerMut::Mut, Box::new(id.ty.clone())),
+                    operand,
+                ))
             }
         }
     }

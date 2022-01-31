@@ -290,13 +290,17 @@ impl<'a> Parser<'a> {
                         // Check for const or mut
                         match stream.next_if_one_of(&[Lex::Const, Lex::Mut]) {
                             Some(mutability) => {
+                                let at_ctx = at.to_ctx().join(mutability.to_ctx());
                                 let mutability = match mutability.sym {
                                     Lex::Const => PointerMut::Const,
                                     Lex::Mut => PointerMut::Mut,
                                     _ => todo!("Error Message"),
                                 };
 
-                                let id = self.identifier(stream)?.unwrap();
+                                let id = self.identifier(stream)?.ok_or(CompilerError::new(
+                                    at_ctx.span(),
+                                    ParserError::ExpectedIdentifierAfter(at.sym.clone()),
+                                ))?;
                                 let id_ctx = *id.context();
 
                                 let ctx = at.to_ctx().join(id_ctx);
