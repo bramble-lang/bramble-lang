@@ -364,10 +364,11 @@ impl<'a> Parser<'a> {
 
                     result.view(|v| {
                         let msg = v.map(|_| {
-                            if op.sym == Lex::Minus {
-                                "Arithmetic Negate"
-                            } else {
-                                "Boolean Negate"
+                            match op.sym {
+                                Lex::Minus => "Arithmetic Negate",
+                                Lex::Not => "Boolean Negate",
+                                Lex::Hat => "Deref Raw Pointer",
+                                _ => panic!("Invalid Unary Operator"),
                             }
                         });
                         self.record(event.with_span(v.span()), msg)
