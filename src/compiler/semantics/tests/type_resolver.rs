@@ -970,11 +970,52 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 )),
             ),
             (
+                "fn main() -> i64 {
+                    let k: i64 := 5;
+                    let p: *const i64 := @const k;
+                    return ^p;
+                }",
+                Ok(Type::I64),
+            ),
+            (
+                "fn main() -> i64 {
+                    let mut k: i64 := 5;
+                    let p: *mut i64 := @mut k;
+                    return ^p;
+                }",
+                Ok(Type::I64),
+            ),
+            (
+                "fn main() -> i64 {
+                    let k: i64 := 5;
+                    let p: *const i64 := @const k;
+                    let pp: *const *const i64 := @const p;
+                    return ^^pp;
+                }",
+                Ok(Type::I64),
+            ),
+            (
+                "fn main() -> i64 {
+                    let k: i64 := 5;
+                    let mut p: *const i64 := @const k;
+                    let pp: *mut *const i64 := @mut p;
+                    return ^^pp;
+                }",
+                Ok(Type::I64),
+            ),
+            (
                 "fn main() -> *mut i64 {
                     let k: i64 := 5;
                     return @mut k;
                 }",
                 Err("L3: Cannot make mutable pointer to immutable variable"),
+            ),
+            (
+                "fn main() -> i64 {
+                    let k: i64 := 5;
+                    return ^k;
+                }",
+                Err("L3: ^ expected a *mut or *const but found i64"),
             ),
             (
                 "fn main() -> bool {

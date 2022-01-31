@@ -278,6 +278,7 @@ mod tests {
             (",", Comma),
             (";", Semicolon),
             ("@", At),
+            ("^", Hat),
         ]
         .iter()
         {

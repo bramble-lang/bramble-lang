@@ -450,6 +450,7 @@ impl<'a> Lexer<'a> {
             ("-", Minus),
             ("!", Not),
             ("@", At),
+            ("^", Hat),
         ];
         operators.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
 

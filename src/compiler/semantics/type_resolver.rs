@@ -927,6 +927,16 @@ impl<'a> TypeResolver<'a> {
                     operand,
                 ))
             }
+            DerefRawPointer => {
+                // Operand must be a *const or a *mut
+                match operand.get_type() {
+                    Type::RawPointer(_, target_ty) => Ok((*target_ty.clone(), operand)),
+                    ty => Err(CompilerError::new(
+                        operand.span(),
+                        SemanticError::ExpectedRawPointer(op, ty.clone()),
+                    )),
+                }
+            }
         }
     }
 

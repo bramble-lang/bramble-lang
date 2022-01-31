@@ -1,0 +1,6 @@
+fn my_main() -> i64 {
+    let x: i64 := 5;
+    let p: *const i64 := @const x;
+    project::std::io::writei64ln(^p);
+    return 0;
+}
