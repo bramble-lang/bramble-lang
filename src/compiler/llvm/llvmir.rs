@@ -1109,7 +1109,6 @@ impl ast::UnaryOperator {
             }
             ast::UnaryOperator::AddressConst | ast::UnaryOperator::AddressMut => {
                 // get pointer to identifier
-                //let rp = r.into_pointer_value();
                 let id = match right {
                     ast::Expression::Identifier(_, id) => id,
                     _ => panic!("Expected Identifier for @ operand"),
