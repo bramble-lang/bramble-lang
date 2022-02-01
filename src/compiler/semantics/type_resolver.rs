@@ -516,11 +516,11 @@ impl<'a> TypeResolver<'a> {
                 index,
             } => {
                 //  Check that the array value is an array type
-                let n_array = self.analyze_expression(array)?;
+                let array = self.analyze_expression(array)?;
 
-                refs.push(n_array.span());
+                refs.push(array.span());
 
-                let el_ty = match n_array.context().ty() {
+                let el_ty = match array.context().ty() {
                     Type::Array(el_ty, _) => Ok(*el_ty.clone()),
                     ty => Err(CompilerError::new(
                         ctx.span(),
@@ -539,11 +539,21 @@ impl<'a> TypeResolver<'a> {
                     ));
                 }
 
-                let ctx = ctx.with_type(el_ty);
+                // If the source expression is an addressable location or is mutable then copy that
+                // property
+                let ctx = if array.context().is_mutable() {
+                    ctx.with_type(el_ty)
+                        .with_addressable(true)
+                } else if array.context().is_addressable() {
+                    ctx.with_type(el_ty)
+                        .with_addressable(false)
+                } else {
+                    ctx.with_type(el_ty)
+                };
 
                 Ok(Expression::ArrayAt {
                     context: ctx,
-                    array: Box::new(n_array),
+                    array: Box::new(array),
                     index: Box::new(n_index),
                 })
             }

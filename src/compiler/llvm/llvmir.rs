@@ -751,6 +751,31 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 let ptr = llvm.registers.get(&name).unwrap().into_pointer_value();
                 Some(ptr)
             },
+            ast::Expression::ArrayAt{context: ctx, array, index} => {
+                // If this value is not addressable then do _not_ return a pointer
+                // The semantic analyzer should prevent this situation from happening but just in case
+                if !ctx.is_addressable() {
+                    return None
+                }
+                // evalute the array to get the ptr to the array
+                // Check the array type, if it's not a pointer then get the GEP
+                let llvm_array_ptr = match array.to_llvm_ir(llvm) {
+                    Some(a) if a.is_pointer_value() => a.into_pointer_value(),
+                    Some(a) => panic!("Unexpected type for array: {:?}", a),
+                    None => panic!("Could not convert type {} to LLVM type", array),
+                };
+
+                // evaluate the index to get the index value
+                let llvm_index = index.to_llvm_ir(llvm).unwrap().into_int_value();
+
+                // Compute the GEP
+                let outer_idx = llvm.context.i64_type().const_int(0, false);
+                let el_ptr = unsafe {
+                    llvm.builder
+                        .build_gep(llvm_array_ptr, &[outer_idx, llvm_index], "")
+                };
+                Some(el_ptr)
+            }
             ast::Expression::MemberAccess(ctx, val, field) => {
                 // If this value is not addressable then do _not_ return a pointer
                 // The semantic analyzer should prevent this situation from happening but just in case
