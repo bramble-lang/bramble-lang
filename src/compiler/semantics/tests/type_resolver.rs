@@ -1983,7 +1983,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     mut k := 3;
                     return k;
                 }",
-                Err("L3: Variable k is not mutable"),
+                Err("L3: k is not mutable"),
             ),
             (
                 "fn main() -> i64 {
@@ -1991,7 +1991,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     mut k := false;
                     return k;
                 }",
-                Err("L3: Variable k is not mutable"),
+                Err("L3: k is not mutable"),
             ),
             (
                 "fn main() -> i64 {

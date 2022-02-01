@@ -1,7 +1,7 @@
 use crate::{
     compiler::{
         ast::{BinaryOperator, Path, PathCanonizationError, RoutineCall, Type, UnaryOperator},
-        CompilerDisplay, CompilerDisplayError, SourceMap,
+        CompilerDisplay, CompilerDisplayError, SourceMap, Span,
     },
     StringId,
 };
@@ -24,8 +24,8 @@ pub enum SemanticError {
     AlreadyDeclared(StringId),
     PathTooSuper,
     BindExpected(Type, Type),
-    VariableNotMutable(StringId),
-    BindMismatch(StringId, Type, Type),
+    VariableNotMutable(Span),
+    BindMismatch(Span, Type, Type),
     YieldExpected(Type, Type),
     YieldInvalidLocation,
     ReturnExpected(Type, Type),
@@ -106,12 +106,12 @@ impl CompilerDisplay for SemanticError {
                 expected.fmt(sm, st)?,
                 actual.fmt(sm, st)?
             )),
-            SemanticError::VariableNotMutable(sid) => {
-                Ok(format!("Variable {} is not mutable", sid.fmt(sm, st)?))
+            SemanticError::VariableNotMutable(span) => {
+                Ok(format!("{} is not mutable", sm.text_in_span(*span).unwrap()))
             }
-            SemanticError::BindMismatch(sid, expected, actual) => Ok(format!(
+            SemanticError::BindMismatch(span, expected, actual) => Ok(format!(
                 "{} is of type {} but is assigned {}",
-                sid.fmt(sm, st)?,
+                sm.text_in_span(*span).unwrap(),
                 expected.fmt(sm, st)?,
                 actual.fmt(sm, st)?
             )),

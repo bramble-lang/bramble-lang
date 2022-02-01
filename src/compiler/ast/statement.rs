@@ -210,7 +210,7 @@ impl<M> Bind<M> {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Mutate<M> {
     context: M,
-    lhs: StringId,
+    lhs: Expression<M>,
     rhs: Expression<M>,
 }
 
@@ -257,12 +257,12 @@ impl<M> std::fmt::Display for Mutate<M> {
 }
 
 impl<M> Mutate<M> {
-    pub fn new(context: M, id: StringId, rhs: Expression<M>) -> Self {
-        Mutate { context, lhs: id, rhs }
+    pub fn new(context: M, lhs: Expression<M>, rhs: Expression<M>) -> Self {
+        Mutate { context, lhs, rhs }
     }
 
-    pub fn get_lhs(&self) -> StringId {
-        self.lhs
+    pub fn get_lhs(&self) -> &Expression<M> {
+        &self.lhs
     }
 
     pub fn get_rhs(&self) -> &Expression<M> {

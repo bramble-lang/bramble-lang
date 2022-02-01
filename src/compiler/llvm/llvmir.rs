@@ -696,15 +696,14 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Mutate<SemanticContext> {
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
         let event = llvm.new_event(self.span());
         let rhs = self.get_rhs().to_llvm_ir(llvm).unwrap();
-        let sid = self.get_lhs();
-        let name = llvm.string_table.get(sid).unwrap();
+        let lhs_ptr = self.get_lhs().to_llvm_ptr(llvm).unwrap();
+        //let name = llvm.string_table.get(sid).unwrap();
+        //let v_ptr = llvm.registers.get(&name).unwrap().into_pointer_value();
 
-        let v_ptr = llvm.registers.get(&name).unwrap().into_pointer_value();
-
-        let st = llvm.builder.build_store(v_ptr, rhs);
+        let st = llvm.builder.build_store(lhs_ptr, rhs);
         llvm.record(event, &st);
 
-        Some(v_ptr)
+        Some(lhs_ptr)
     }
 }
 

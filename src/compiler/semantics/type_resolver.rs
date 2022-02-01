@@ -320,26 +320,22 @@ impl<'a> TypeResolver<'a> {
         mutate: &Mutate<SemanticContext>,
     ) -> SemanticResult<Mutate<SemanticContext>> {
         let (event, result) = self.new_event().and_then(|| {
+            let lhs = self.analyze_expression(mutate.get_lhs())?;
             let rhs = self.analyze_expression(mutate.get_rhs())?;
-            match self.symbols.lookup_var(mutate.get_lhs()) {
-                Ok(symbol) => {
-                    if symbol.is_mutable {
-                        if symbol.ty == rhs.get_type() {
+                    if lhs.context().is_mutable() {
+                        if lhs.get_type() == rhs.get_type() {
                             let ctx = mutate.context().with_type(rhs.get_type().clone());
-                            Ok(Mutate::new(ctx, mutate.get_lhs(), rhs))
+                            Ok(Mutate::new(ctx, lhs, rhs))
                         } else {
                             Err(SemanticError::BindMismatch(
-                                mutate.get_lhs(),
-                                symbol.ty.clone(),
+                                lhs.span(),
+                                lhs.get_type().clone(),
                                 rhs.get_type().clone(),
                             ))
                         }
                     } else {
-                        Err(SemanticError::VariableNotMutable(mutate.get_lhs()))
+                        Err(SemanticError::VariableNotMutable(lhs.span()))
                     }
-                }
-                Err(e) => Err(e),
-            }
             .map_err(|e| CompilerError::new(mutate.span(), e))
         });
         result.view(|e| self.record2(event, e, vec![]))
