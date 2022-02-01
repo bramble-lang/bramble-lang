@@ -1,4 +1,4 @@
-use self::semanticnode::SemanticContext;
+use self::semanticnode::{SemanticContext, Addressability};
 
 use super::{
     ast::{Node, Type, PointerMut},
@@ -45,6 +45,7 @@ impl<T: Node<SemanticContext>> View2<T, SemanticError> for SemanticResult<T> {
 
 struct TypeOk<'a> {
     ty: &'a super::ast::Type,
+    addressable: Addressability,
     refs: Vec<super::Span>,
 }
 
@@ -54,10 +55,23 @@ impl<'a> Writable for TypeOk<'a> {
         w.write(self.ty);
         w.write_text("\"");
 
+        w.write_field("addressability", &self.addressable);
+
         if self.refs.len() > 0 {
             for r in &self.refs {
                 w.write_span("ref", *r);
             }
+        }
+    }
+}
+
+impl Writable for Addressability {
+    fn write(&self, w: &dyn super::diagnostics::Writer) {
+        match self {
+            Addressability::None => w.write_text("\"None\""),
+            Addressability::Value => w.write_text("\"Value\""),
+            Addressability::Addressable => w.write_text("\"Addressable\""),
+            Addressability::AddressableMutable => w.write_text("\"Mutable\""),
         }
     }
 }

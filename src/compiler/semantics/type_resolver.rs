@@ -1120,7 +1120,7 @@ impl<'a> TypeResolver<'a> {
     ) {
         let msg = r.map(|v| {
             let ctx = v.context();
-            TypeOk { ty: ctx.ty(), refs }
+            TypeOk { ty: ctx.ty(), addressable: ctx.addressability(), refs }
         });
         let span = match r {
             Ok(ok) => ok.span(),
@@ -1135,7 +1135,7 @@ impl<'a> TypeResolver<'a> {
             .write(Event::<_, SemanticError>::new_without_parent(
                 "type-resolver",
                 ctx.span(),
-                Ok(TypeOk { ty: ctx.ty(), refs }),
+                Ok(TypeOk { ty: ctx.ty(), addressable: ctx.addressability(), refs }),
             ));
     }
 

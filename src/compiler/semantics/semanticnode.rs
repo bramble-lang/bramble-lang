@@ -8,7 +8,7 @@ use super::{error::SemanticError, symbol_table::SymbolTable};
 /// not a value at all. This property is essential for determing
 /// if an expression resolves to a place which can be mutated or
 /// referenced via addresses
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Addressability {
     None,
     Value,
@@ -136,6 +136,10 @@ impl SemanticContext {
     /// Get the [`Type`] for a node in the AST
     pub fn ty(&self) -> &Type {
         &self.ty
+    }
+
+    pub fn addressability(&self) -> Addressability {
+        self.addressability
     }
 
     /// Returns true if the resolution of this expression has a location in memory and
