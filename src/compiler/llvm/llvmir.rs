@@ -805,6 +805,17 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 llvm.record(event, &field_ptr);
 
                 Some(field_ptr)
+            },
+            // Add in Deref
+            ast::Expression::UnaryOp(ctx, ast::UnaryOperator::DerefRawPointer, operand) => {
+                // If this value is not addressable then do _not_ return a pointer
+                // The semantic analyzer should prevent this situation from happening but just in case
+                if !ctx.is_addressable() {
+                    return None
+                }
+                let r = operand.to_llvm_ir(llvm).expect("Expected a value");
+                let ptr = r.into_pointer_value();
+                Some(ptr)
             }
             _ => None,
         }
