@@ -40,8 +40,16 @@ or field access or array indexing expressions.  The `is_mutable` flag will
 remain in the symbol table and a flag will be added to `SemanticContext` for
 mutability of addressable expressions.
 
+The mutability and addressability of an expression will be combined into a single
+flag with 4 possible states: `None|Value|Addressable|AddressableMutable`. An expression
+can only be mutable if it is addressable, so having two separate flags creates
+risk of accidentally marking a value expression as mutable. `None` is used
+both as a place holder for when an expression has not had it's Addressability
+computed and for nodes which are not expressions (structure defintions, etc).
+
 A new phase `ComputeAddressable` will traverse the AST and set the addressability
-flag to true or false, based upon a set of rules detailed in a following section.
+flag for every node in the AST, based upon a set of rules detailed in a following
+section.
 
 Then in LLVM Generation, a new method will be added to `Expression` called
 `to_addr -> Option<T>`, which will return the address of an Addressable
@@ -68,6 +76,9 @@ after addressability is determined, because IDENTIFIERs are always addressable
 and the result of dereferencing operation must be addressable.  Addressability
 can also be done _after_ type checking, in which case it would be combined with
 checking that the operands for place operators are addressable.
+
+All expressions are `Value` expressions unless they satisify the Addressable
+rules below. All other grammar rules are `None`.
 
 ```
 X: IDENTIFIER
@@ -123,6 +134,20 @@ IR we generate we actually allocate space in the caller stack frame for the retu
 structure value, we still logically describe it as a value expression, this is 
 because there is no label associated with it, so it would be hard for a user to
 mentally or visually track how the value is being used or mutated).
+
+### Implementation
+#### Status
+Add an enumeration that has the variants: None|Value|Addressable|AddressableMutable
+Add a field for this enumeration to `SemanticContext` with default value `None`.
+
+Can I update `canonize/foreach_mut` to support POST order execution (as a configurable
+flag)? If so, then I think I can use that foreach for the traversal? Part of
+this would be updating foreach to do the Insight event recording too.
+> It might be easier to start out by adding this into type_resolver then move to its
+own stage?
+
+Update the grammar rules so that any expression can be used on teh LHS for mutation
+and that any expression can be used as the operand for `@(const|mut)`.
 
 ## UX
 The only impact on UX will be greater flexibility in what can be mutated and
