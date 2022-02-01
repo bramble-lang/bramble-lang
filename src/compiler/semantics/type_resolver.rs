@@ -595,7 +595,16 @@ impl<'a> TypeResolver<'a> {
                             ))
                             .map_err(|e| CompilerError::new(ctx.span(), e))?;
 
-                        let ctx = ctx.with_type(member_ty.clone());
+                        // If the source expression is an addressable location or is mutable then copy that
+                        // property
+                        let ctx = if src.context().is_mutable() {
+                            ctx.with_type(member_ty.clone()).with_addressable(true)
+                        } else if src.context().is_addressable() {
+                            ctx.with_type(member_ty.clone()).with_addressable(false)
+                        } else {
+                            ctx.with_type(member_ty.clone())
+                        };
+
                         Ok(Expression::MemberAccess(ctx, Box::new(src), member.clone()))
                     }
                     _ => Err(CompilerError::new(

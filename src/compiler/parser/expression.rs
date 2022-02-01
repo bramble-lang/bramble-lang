@@ -305,7 +305,7 @@ impl<'a> Parser<'a> {
                                     )),
                                 }?;
 
-                                let id = self.identifier(stream)?.ok_or(CompilerError::new(
+                                let id = self.subdata_access(stream)?.ok_or(CompilerError::new(
                                     at_ctx.span(),
                                     ParserError::ExpectedIdentifierAfter(at.sym.clone()),
                                 ))?;

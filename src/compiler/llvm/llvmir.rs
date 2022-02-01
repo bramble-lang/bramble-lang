@@ -751,6 +751,31 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 let ptr = llvm.registers.get(&name).unwrap().into_pointer_value();
                 Some(ptr)
             },
+            ast::Expression::MemberAccess(_, val, field) => {
+                let event = llvm.new_event(self.span());
+                let sdef = llvm
+                    .struct_table
+                    .get(
+                        &val.get_type()
+                            .get_path()
+                            .unwrap()
+                            .to_label(llvm.source_map, llvm.string_table),
+                    )
+                    .unwrap();
+
+                let field_idx = sdef.get_field_idx(*field).unwrap();
+
+                let field_idx_llvm = llvm.context.i64_type().const_int(field_idx as u64, true);
+
+                let val_llvm = val.to_llvm_ir(llvm).unwrap().into_pointer_value();
+                let field_ptr = llvm
+                    .builder
+                    .build_struct_gep(val_llvm, field_idx as u32, "")
+                    .unwrap();
+                llvm.record(event, &field_ptr);
+
+                Some(field_ptr)
+            }
             _ => None,
         }
     }
