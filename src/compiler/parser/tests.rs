@@ -673,7 +673,7 @@ pub mod tests {
         assert_eq!(*stm.context(), new_ctx(0, text.len() as u32));
         match stm {
             Statement::Mutate(m) => {
-                assert_eq!(m.get_id(), x);
+                assert_eq!(m.get_lhs(), x);
                 assert_eq!(*m.get_rhs(), Expression::I64(new_ctx(9, 10), 5));
             }
             _ => panic!("Not a binding statement"),

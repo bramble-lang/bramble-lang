@@ -170,7 +170,7 @@ where
     fn for_mutate(&mut self, mutate: &Mutate<A>) -> Mutate<B> {
         let b = self.transform(mutate);
         let rhs = self.for_expression(mutate.get_rhs());
-        Mutate::new(b, mutate.get_id(), rhs)
+        Mutate::new(b, mutate.get_lhs(), rhs)
     }
 
     fn for_yieldreturn(&mut self, yr: &YieldReturn<A>) -> YieldReturn<B> {

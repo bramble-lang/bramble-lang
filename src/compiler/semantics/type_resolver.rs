@@ -321,21 +321,21 @@ impl<'a> TypeResolver<'a> {
     ) -> SemanticResult<Mutate<SemanticContext>> {
         let (event, result) = self.new_event().and_then(|| {
             let rhs = self.analyze_expression(mutate.get_rhs())?;
-            match self.symbols.lookup_var(mutate.get_id()) {
+            match self.symbols.lookup_var(mutate.get_lhs()) {
                 Ok(symbol) => {
                     if symbol.is_mutable {
                         if symbol.ty == rhs.get_type() {
                             let ctx = mutate.context().with_type(rhs.get_type().clone());
-                            Ok(Mutate::new(ctx, mutate.get_id(), rhs))
+                            Ok(Mutate::new(ctx, mutate.get_lhs(), rhs))
                         } else {
                             Err(SemanticError::BindMismatch(
-                                mutate.get_id(),
+                                mutate.get_lhs(),
                                 symbol.ty.clone(),
                                 rhs.get_type().clone(),
                             ))
                         }
                     } else {
-                        Err(SemanticError::VariableNotMutable(mutate.get_id()))
+                        Err(SemanticError::VariableNotMutable(mutate.get_lhs()))
                     }
                 }
                 Err(e) => Err(e),
