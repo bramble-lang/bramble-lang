@@ -33,6 +33,13 @@ the compiler will not only check that the types are correct, but will also
 check if an operand is addressable for the operations which require addressable
 values.
 
+In order to support mutation operations, an `is_mutable` flag will also have
+be added to the `SemanticContext`.  Currently, this flag only exists in the
+symbol table for variables, but this cannot support dereference expressions
+or field access or array indexing expressions.  The `is_mutable` flag will
+remain in the symbol table and a flag will be added to `SemanticContext` for
+mutability of addressable expressions.
+
 A new phase `ComputeAddressable` will traverse the AST and set the addressability
 flag to true or false, based upon a set of rules detailed in a following section.
 
@@ -63,15 +70,49 @@ can also be done _after_ type checking, in which case it would be combined with
 checking that the operands for place operators are addressable.
 
 ```
-IDENTIFIER -> Addressable
-^EXPRESSION -> Addressable AND EXPRESSION must be Addressable
-(EXPRESSION) -> Addressable if EXPRESSION is Addressable
-EXPRESSION_1[EXPRESSION_2] -> Addressable if EXPRESSION_1 is Addressable
-EXPRESSION.IDENTIFIER -> Addressable if EXPRESSION is Addressable
+X: IDENTIFIER
+--------------
+X :- Addressable
 
-*(const|mut) T -> ADDRESSABLE for all T
-@(const|mut) EXPRESSION -> Addressable AND  EXPRESSION must be Addressable
-mut EXPRESSION_1 := EXPRESSION_2 -> NOT Addressable AND EXPRESSION_2 must be addressable
+
+X: EXPRESSION :- Addressable
+--------------
+(X) :- Addressable
+
+
+X: EXPRESSION :- Addressable, I: EXPRESSION
+----------------
+X[I] :- Addressable
+
+
+X: EXPRESSION :- Addressable, F: IDENTIFIER
+-----------------
+X.F :- Addressable
+
+
+X: EXPRESSION :- Addressable
+----------------
+@(const|mut) X :- Addressable
+
+
+T: Type, X: *(const|mut) T
+-----------------
+^X :- Addressable
+
+
+T: Type, X: *mut T
+-----------------
+^X :- Mutable
+
+
+T: Type, X: *(const|mut) T
+-----------------
+X :- Addressable
+
+
+X: EXPRESSION :- Addressable and Mutable, Y: Expression
+----------------
+mut X := Y :- Not Addressable
 ```
 
 Array elements and structure fields are not de facto addressable. For example,
