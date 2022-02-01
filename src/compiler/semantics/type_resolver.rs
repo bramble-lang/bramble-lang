@@ -561,9 +561,9 @@ impl<'a> TypeResolver<'a> {
                     .lookup_var(*id)
                     .map_err(|e| CompilerError::new(ctx.span(), e))?
                 {
-                    Symbol { ty: p, span, .. } => {
+                    Symbol { ty: p, span, is_mutable, .. } => {
                         span.and_then(|s| Some(refs.push(s)));
-                        ctx.with_type(p.clone())
+                        ctx.with_type(p.clone()).with_addressable(*is_mutable)
                     }
                 };
                 Ok(Expression::Identifier(ctx, id.clone()))
@@ -888,42 +888,30 @@ impl<'a> TypeResolver<'a> {
                 }
             }
             AddressConst => {
-                // The operand must be an identifier
-                let id = match operand {
-                    Expression::Identifier(_, id) => Ok(id),
-                    _ => Err(CompilerError::new(
+                // The operand must be a location in memory
+                if !operand.context().is_addressable() {
+                    return Err(CompilerError::new(
                         operand.span(),
-                        SemanticError::ExpectedIdentifier(op),
-                    )),
-                }?;
-                let id = self.symbols.lookup_var(id).unwrap();
+                        SemanticError::ExpectedAddressable(op),
+                    ));
+                }
 
                 // Type is a raw pointer to the type of the operand
                 Ok((
-                    Type::RawPointer(PointerMut::Const, Box::new(id.ty.clone())),
+                    Type::RawPointer(PointerMut::Const, Box::new(operand.get_type().clone())),
                     operand,
                 ))
             }
             AddressMut => {
-                // The operand must be an identifier
-                let id = match operand {
-                    Expression::Identifier(_, id) => Ok(id),
-                    _ => Err(CompilerError::new(
-                        operand.span(),
-                        SemanticError::ExpectedIdentifier(op),
-                    )),
-                }?;
-
-                // The identifier must be mutable
-                let id = self.symbols.lookup_var(id).unwrap();
-                if !id.is_mutable {
+                // The operand must be a mutable location in memory
+                if !operand.context().is_mutable() {
                     return Err(CompilerError::new(
                         operand.span(),
                         SemanticError::MutablePointerToImmutable,
                     ));
                 }
                 Ok((
-                    Type::RawPointer(PointerMut::Mut, Box::new(id.ty.clone())),
+                    Type::RawPointer(PointerMut::Mut, Box::new(operand.get_type().clone())),
                     operand,
                 ))
             }

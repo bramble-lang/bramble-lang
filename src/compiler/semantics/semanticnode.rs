@@ -3,6 +3,19 @@ use crate::StringId;
 
 use super::{error::SemanticError, symbol_table::SymbolTable};
 
+/// Indicates if an AST node resolves to having a value, to
+/// a value in a location in memory, to a mutable location in memory, or
+/// not a value at all. This property is essential for determing
+/// if an expression resolves to a place which can be mutated or
+/// referenced via addresses
+#[derive(Clone, Debug, PartialEq)]
+pub enum Addressability {
+    None,
+    Value,
+    Addressable,
+    AddressableMutable,
+}
+
 /// Contextual data that is derived during the semantic analysis process
 /// This includes the resolved [`Type`] of a node or expression from the user
 /// input and the scoped symbol tables
@@ -16,6 +29,9 @@ pub struct SemanticContext {
 
     /// Resolved [`Type`] of this node
     ty: Type,
+
+    /// How this node can be interpreted for address operations
+    addressability: Addressability,
 
     /// Symbols which are within the scope of this node and its children
     sym: SymbolTable,
@@ -56,6 +72,7 @@ impl SemanticContext {
             id,
             span: ctx.span(),
             ty,
+            addressability: Addressability::None,
             sym: SymbolTable::new(),
             canonical_path: Path::new(),
         }
@@ -66,6 +83,7 @@ impl SemanticContext {
             id,
             span: ctx.span(),
             ty,
+            addressability: Addressability::None,
             sym: SymbolTable::new_routine(name),
             canonical_path: Path::new(),
         }
@@ -76,6 +94,7 @@ impl SemanticContext {
             id,
             span: ctx.span(),
             ty: Type::Unit,
+            addressability: Addressability::None,
             sym: SymbolTable::new_module(name),
             canonical_path: Path::new(),
         }
@@ -87,6 +106,18 @@ impl SemanticContext {
         let mut sm = self.clone();
         sm.ty = ty;
         sm
+    }
+
+    /// Updates this context to mark the node as Addressable.  If `is_mut` is
+    /// `true` then this node will also be marked as mutable (which is a subset
+    /// of Addressable).
+    pub fn with_addressable(mut self, is_mut: bool) -> SemanticContext {
+        if is_mut {
+            self.addressability = Addressability::AddressableMutable;
+        } else {
+            self.addressability = Addressability::Addressable;
+        }
+        self
     }
 
     /// Creates a copy of this instances of [`SemanticContext`] but the [`SymbolTable`]
@@ -105,6 +136,24 @@ impl SemanticContext {
     /// Get the [`Type`] for a node in the AST
     pub fn ty(&self) -> &Type {
         &self.ty
+    }
+
+    /// Returns true if the resolution of this expression has a location in memory and
+    /// therefore has an address.
+    pub fn is_addressable(&self) -> bool {
+        match self.addressability {
+            Addressability::Addressable | Addressability::AddressableMutable  => true,
+            Addressability::None | Addressability::Value => false,
+        }
+    }
+
+    /// Returns true if the resolution of this expression has a location in memory which
+    /// is mutable.
+    pub fn is_mutable(&self) -> bool {
+        match self.addressability {
+            Addressability::AddressableMutable  => true,
+            Addressability::Addressable | Addressability::None | Addressability::Value => false,
+        }
     }
 
     pub fn canonical_path(&self) -> &Path {

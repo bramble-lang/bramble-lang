@@ -47,6 +47,7 @@ pub enum SemanticError {
     ExpectedRawPointer(UnaryOperator, Type),
     OpExpected(BinaryOperator, Type, Type, Type),
     ExpectedIdentifier(UnaryOperator),
+    ExpectedAddressable(UnaryOperator),
     RoutineParamTypeMismatch(Path, Vec<(u32, Type, Type)>),
     MainFnInvalidType,
     MainFnInvalidParams,
@@ -250,6 +251,7 @@ impl CompilerDisplay for SemanticError {
                 Ok(format!("Cannot make mutable pointer to immutable variable"))
             }
             SemanticError::ExpectedIdentifier(op) => Ok(format!("{} expected identifier", op)),
+            SemanticError::ExpectedAddressable(op) => Ok(format!("{} expected an addressable operand", op)),
         }
     }
 }
