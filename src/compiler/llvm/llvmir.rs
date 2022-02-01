@@ -751,7 +751,13 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 let ptr = llvm.registers.get(&name).unwrap().into_pointer_value();
                 Some(ptr)
             },
-            ast::Expression::MemberAccess(_, val, field) => {
+            ast::Expression::MemberAccess(ctx, val, field) => {
+                // If this value is not addressable then do _not_ return a pointer
+                // The semantic analyzer should prevent this situation from happening but just in case
+                if !ctx.is_addressable() {
+                    return None
+                }
+
                 let event = llvm.new_event(self.span());
                 let sdef = llvm
                     .struct_table
