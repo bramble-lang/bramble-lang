@@ -202,9 +202,9 @@
 {"id": 262, "stage": "canonize-item-path", "source": [293, 300], "ok": "$type_mismatch::type_mismatch::z"},
 {"id": 263, "stage": "canonize-type-ref", "source": [26, 106], "ok": "$type_mismatch::type_mismatch::MyStruct"},
 {"id": 264, "stage": "canonize-type-ref", "source": [45, 105], "ok": "$type_mismatch::type_mismatch::MyStruct"},
-{"id": 268, "parent_id": 267, "stage": "type-resolver", "source": [66, 67], "ok": "i64"},
-{"id": 269, "parent_id": 267, "stage": "type-resolver", "source": [81, 82], "ok": "i64"},
-{"id": 270, "parent_id": 267, "stage": "type-resolver", "source": [96, 98], "ok": "i64"},
+{"id": 268, "parent_id": 267, "stage": "type-resolver", "source": [66, 67], "ok": "i64", "addressability": "None"},
+{"id": 269, "parent_id": 267, "stage": "type-resolver", "source": [81, 82], "ok": "i64", "addressability": "None"},
+{"id": 270, "parent_id": 267, "stage": "type-resolver", "source": [96, 98], "ok": "i64", "addressability": "None"},
 {"id": 267, "parent_id": 266, "stage": "type-resolver", "source": [45, 105], "error": "L2-6: $type_mismatch::type_mismatch::MyStruct.z expects bool but got i64"},
 {"id": 266, "parent_id": 265, "stage": "type-resolver", "source": [45, 105], "error": "L2-6: $type_mismatch::type_mismatch::MyStruct.z expects bool but got i64"},
 {"id": 265, "stage": "type-resolver", "source": [45, 105], "error": "L2-6: $type_mismatch::type_mismatch::MyStruct.z expects bool but got i64"}]

@@ -1,0 +1,19 @@
+
+fn my_main() -> i64 {
+    let mut arr: [i64; 4] := [1, 2, 3, 4];
+    project::std::io::writei64ln(arr[0]); // 1
+
+    mut arr[0] := arr[0] * 2;
+    project::std::io::writei64ln(arr[0]); // 2
+
+    mut ((arr)[1]) := arr[0] + arr[1]; // 2 + 2
+    project::std::io::writei64ln(arr[1]); // 4
+
+    mut ((arr))[2] := arr[1] * arr[2]; // 4 * 3
+    project::std::io::writei64ln(arr[2]); // 12
+    
+    
+    project::std::io::writei64ln(arr[3]); // 4
+
+    return 0;
+}
