@@ -64,10 +64,14 @@ checking that the operands for place operators are addressable.
 
 ```
 IDENTIFIER -> Addressable
-^EXPRESSION -> Addressable
+^EXPRESSION -> Addressable AND EXPRESSION must be Addressable
 (EXPRESSION) -> Addressable if EXPRESSION is Addressable
 EXPRESSION_1[EXPRESSION_2] -> Addressable if EXPRESSION_1 is Addressable
 EXPRESSION.IDENTIFIER -> Addressable if EXPRESSION is Addressable
+
+*(const|mut) T -> ADDRESSABLE for all T
+@(const|mut) EXPRESSION -> Addressable AND  EXPRESSION must be Addressable
+mut EXPRESSION_1 := EXPRESSION_2 -> NOT Addressable AND EXPRESSION_2 must be addressable
 ```
 
 Array elements and structure fields are not de facto addressable. For example,
