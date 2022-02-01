@@ -542,6 +542,10 @@ trait ToLlvmIr<'ctx> {
     /// Compile a Language unit to LLVM and return the appropriate LLVM Value
     /// if it has one (Modules don't have LLVM Values so those will return None)
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value>;
+
+    fn to_llvm_ptr(&self, llvm: &mut IrGen<'ctx>) -> Option<PointerValue<'ctx>> {
+        None
+    }
 }
 
 impl<'ctx> ToLlvmIr<'ctx> for ast::Module<SemanticContext> {
@@ -739,6 +743,18 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Return<SemanticContext> {
 impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
     type Value = BasicValueEnum<'ctx>;
 
+    fn to_llvm_ptr(&self, llvm: &mut IrGen<'ctx>) -> Option<PointerValue<'ctx>> {
+        match self {
+            ast::Expression::Identifier(_, id) => {
+                let name = llvm.string_table.get(*id).unwrap();
+
+                let ptr = llvm.registers.get(&name).unwrap().into_pointer_value();
+                Some(ptr)
+            },
+            _ => None,
+        }
+    }
+
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
         match self {
             ast::Expression::U8(_, i) => {
@@ -804,7 +820,6 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
             }
             ast::Expression::Identifier(_, id) => {
                 let name = llvm.string_table.get(*id).unwrap();
-
                 let ptr = llvm.registers.get(&name).unwrap().into_pointer_value();
                 if ptr.get_type().get_element_type().is_aggregate_type() {
                     Some(ptr.into())
@@ -1086,6 +1101,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
             ast::Expression::Yield(..) => panic!("Yield is not yet implemented for LLVM"),
         }
     }
+
 }
 
 impl ast::UnaryOperator {
@@ -1109,13 +1125,7 @@ impl ast::UnaryOperator {
             }
             ast::UnaryOperator::AddressConst | ast::UnaryOperator::AddressMut => {
                 // get pointer to identifier
-                let id = match right {
-                    ast::Expression::Identifier(_, id) => id,
-                    _ => panic!("Expected Identifier for @ operand"),
-                };
-                let name = llvm.string_table.get(*id).unwrap();
-
-                let ptr = llvm.registers.get(&name).unwrap().into_pointer_value();
+                let ptr = right.to_llvm_ptr(llvm).unwrap();
                 ptr.into()
             }
             ast::UnaryOperator::DerefRawPointer => {
