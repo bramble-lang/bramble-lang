@@ -15,6 +15,7 @@ use crate::{
 use std::collections::HashMap;
 
 use super::TypeOk;
+use super::semanticnode::Addressability;
 use super::{
     canonize::canonize_paths, semanticnode::SemanticContext, stack::SymbolTableScopeStack,
     SemanticError, SemanticResult,
@@ -625,8 +626,13 @@ impl<'a> TypeResolver<'a> {
                 Ok(Expression::BinaryOp(ctx, *op, Box::new(l), Box::new(r)))
             }
             Expression::UnaryOp(ctx, op, operand) => {
-                let (ty, operand) = self.unary_op(*op, &operand)?;
+                let (ty, addry, operand) = self.unary_op(*op, &operand)?;
                 let ctx = ctx.with_type(ty);
+                let ctx = match addry {
+                    Addressability::Addressable => ctx.with_addressable(false),
+                    Addressability::AddressableMutable => ctx.with_addressable(true),
+                    _ => ctx,
+                };
                 Ok(Expression::UnaryOp(ctx, *op, Box::new(operand)))
             }
             Expression::If {
@@ -876,7 +882,7 @@ impl<'a> TypeResolver<'a> {
         &mut self,
         op: UnaryOperator,
         operand: &SemanticNode,
-    ) -> SemanticResult<(Type, SemanticNode)> {
+    ) -> SemanticResult<(Type, Addressability, SemanticNode)> {
         use UnaryOperator::*;
 
         let operand = self.analyze_expression(operand)?;
@@ -884,7 +890,7 @@ impl<'a> TypeResolver<'a> {
         match op {
             Negate => {
                 if operand.get_type().is_signed_int() {
-                    Ok((operand.get_type().clone(), operand))
+                    Ok((operand.get_type().clone(), Addressability::Value, operand))
                 } else {
                     Err(CompilerError::new(
                         operand.span(),
@@ -894,7 +900,7 @@ impl<'a> TypeResolver<'a> {
             }
             Not => {
                 if operand.get_type() == Type::Bool {
-                    Ok((Type::Bool, operand))
+                    Ok((Type::Bool, Addressability::Value, operand))
                 } else {
                     Err(CompilerError::new(
                         operand.span(),
@@ -913,7 +919,7 @@ impl<'a> TypeResolver<'a> {
 
                 // Type is a raw pointer to the type of the operand
                 Ok((
-                    Type::RawPointer(PointerMut::Const, Box::new(operand.get_type().clone())),
+                    Type::RawPointer(PointerMut::Const, Box::new(operand.get_type().clone())), Addressability::Value,
                     operand,
                 ))
             }
@@ -926,14 +932,20 @@ impl<'a> TypeResolver<'a> {
                     ));
                 }
                 Ok((
-                    Type::RawPointer(PointerMut::Mut, Box::new(operand.get_type().clone())),
+                    Type::RawPointer(PointerMut::Mut, Box::new(operand.get_type().clone())), Addressability::Value,
                     operand,
                 ))
             }
             DerefRawPointer => {
                 // Operand must be a *const or a *mut
                 match operand.get_type() {
-                    Type::RawPointer(_, target_ty) => Ok((*target_ty.clone(), operand)),
+                    Type::RawPointer(mutability, target_ty) => {
+                        let addressability = match mutability {
+                            PointerMut::Mut => Addressability::AddressableMutable,
+                            PointerMut::Const => Addressability::Addressable,
+                        };
+                        Ok((*target_ty.clone(), addressability, operand))
+                    },
                     ty => Err(CompilerError::new(
                         operand.span(),
                         SemanticError::ExpectedRawPointer(op, ty.clone()),
