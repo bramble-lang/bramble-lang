@@ -138,6 +138,7 @@ impl SemanticContext {
         &self.ty
     }
 
+    /// Return the [`Addressability`] of this AST node
     pub fn addressability(&self) -> Addressability {
         self.addressability
     }
