@@ -5,7 +5,7 @@ pub use manifest::Manifest;
 pub use project::*;
 
 use crate::{
-    compiler::{ast::Type, CompilerDisplay, CompilerDisplayError, SourceMap, SourceError},
+    compiler::{ast::Type, CompilerDisplay, CompilerDisplayError, SourceError, SourceMap},
     StringTableError,
 };
 

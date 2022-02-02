@@ -1,7 +1,7 @@
-use self::semanticnode::{SemanticContext, Addressability};
+use self::semanticnode::{Addressability, SemanticContext};
 
 use super::{
-    ast::{Node, Type, PointerMut},
+    ast::{Node, PointerMut, Type},
     diagnostics::{View, View2, Writable},
     CompilerError,
 };

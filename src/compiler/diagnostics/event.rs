@@ -19,7 +19,7 @@ pub mod event_id {
 
     use crate::compiler::Span;
 
-    use super::{Writable, Writer, Event};
+    use super::{Event, Writable, Writer};
 
     /// Threadsafe mechanism for providing unique IDs for every event
     static NEXT_EVENT_ID: AtomicU64 = AtomicU64::new(1);
@@ -55,7 +55,9 @@ pub mod event_id {
             EventStack(Rc::new(RefCell::new(Vec::new())))
         }
 
-        pub fn new_event<V: Writable, E: crate::compiler::CompilerDisplay + std::fmt::Debug>(&self) -> Event<V, E> {
+        pub fn new_event<V: Writable, E: crate::compiler::CompilerDisplay + std::fmt::Debug>(
+            &self,
+        ) -> Event<V, E> {
             Event::new("blah", Span::zero(), self.clone())
         }
     }

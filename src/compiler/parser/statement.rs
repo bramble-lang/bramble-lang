@@ -1,8 +1,6 @@
 use super::{Parser, ParserResult};
-use crate::{
-    compiler::{
-        ast::*, diagnostics::View2, lexer::tokens::Lex, source::SourceIr, CompilerError, Span,
-    },
+use crate::compiler::{
+    ast::*, diagnostics::View2, lexer::tokens::Lex, source::SourceIr, CompilerError, Span,
 };
 
 use super::{tokenstream::TokenStream, ParserContext, ParserError};
@@ -125,17 +123,15 @@ impl<'a> Parser<'a> {
 
     fn mutate(&self, stream: &mut TokenStream) -> ParserResult<Mutate<ParserContext>> {
         let (event, result) = self.new_event(Span::zero()).and_then(|| {
-            match stream.next_ifn(vec![
-                Lex::Mut,
-            ]) {
+            match stream.next_ifn(vec![Lex::Mut]) {
                 None => Ok(None),
                 Some(tokens) => {
                     // Parse the mutable expression
                     let lhs = self.expression(stream)?.ok_or(CompilerError::new(
                         tokens[0].span(),
-                        ParserError::ExpectedExprAfter(Lex::Mut)
+                        ParserError::ExpectedExprAfter(Lex::Mut),
                     ))?;
-                    
+
                     // Check for the := operator
                     stream.next_must_be(&Lex::Assign)?;
 

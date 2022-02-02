@@ -14,8 +14,8 @@ use crate::{
 };
 use std::collections::HashMap;
 
-use super::TypeOk;
 use super::semanticnode::Addressability;
+use super::TypeOk;
 use super::{
     canonize::canonize_paths, semanticnode::SemanticContext, stack::SymbolTableScopeStack,
     SemanticError, SemanticResult,
@@ -323,20 +323,20 @@ impl<'a> TypeResolver<'a> {
         let (event, result) = self.new_event().and_then(|| {
             let lhs = self.analyze_expression(mutate.get_lhs())?;
             let rhs = self.analyze_expression(mutate.get_rhs())?;
-                    if lhs.context().is_mutable() {
-                        if lhs.get_type() == rhs.get_type() {
-                            let ctx = mutate.context().with_type(rhs.get_type().clone());
-                            Ok(Mutate::new(ctx, lhs, rhs))
-                        } else {
-                            Err(SemanticError::BindMismatch(
-                                lhs.span(),
-                                lhs.get_type().clone(),
-                                rhs.get_type().clone(),
-                            ))
-                        }
-                    } else {
-                        Err(SemanticError::ExpressionNotMutable(lhs.span()))
-                    }
+            if lhs.context().is_mutable() {
+                if lhs.get_type() == rhs.get_type() {
+                    let ctx = mutate.context().with_type(rhs.get_type().clone());
+                    Ok(Mutate::new(ctx, lhs, rhs))
+                } else {
+                    Err(SemanticError::BindMismatch(
+                        lhs.span(),
+                        lhs.get_type().clone(),
+                        rhs.get_type().clone(),
+                    ))
+                }
+            } else {
+                Err(SemanticError::ExpressionNotMutable(lhs.span()))
+            }
             .map_err(|e| CompilerError::new(mutate.span(), e))
         });
         result.view(|e| self.record2(event, e, vec![]))
@@ -919,7 +919,8 @@ impl<'a> TypeResolver<'a> {
 
                 // Type is a raw pointer to the type of the operand
                 Ok((
-                    Type::RawPointer(PointerMut::Const, Box::new(operand.get_type().clone())), Addressability::Value,
+                    Type::RawPointer(PointerMut::Const, Box::new(operand.get_type().clone())),
+                    Addressability::Value,
                     operand,
                 ))
             }
@@ -932,7 +933,8 @@ impl<'a> TypeResolver<'a> {
                     ));
                 }
                 Ok((
-                    Type::RawPointer(PointerMut::Mut, Box::new(operand.get_type().clone())), Addressability::Value,
+                    Type::RawPointer(PointerMut::Mut, Box::new(operand.get_type().clone())),
+                    Addressability::Value,
                     operand,
                 ))
             }
@@ -945,7 +947,7 @@ impl<'a> TypeResolver<'a> {
                             PointerMut::Const => Addressability::Addressable,
                         };
                         Ok((*target_ty.clone(), addressability, operand))
-                    },
+                    }
                     ty => Err(CompilerError::new(
                         operand.span(),
                         SemanticError::ExpectedRawPointer(op, ty.clone()),
@@ -1138,7 +1140,11 @@ impl<'a> TypeResolver<'a> {
     ) {
         let msg = r.map(|v| {
             let ctx = v.context();
-            TypeOk { ty: ctx.ty(), addressable: ctx.addressability(), refs }
+            TypeOk {
+                ty: ctx.ty(),
+                addressable: ctx.addressability(),
+                refs,
+            }
         });
         let span = match r {
             Ok(ok) => ok.span(),
@@ -1153,7 +1159,11 @@ impl<'a> TypeResolver<'a> {
             .write(Event::<_, SemanticError>::new_without_parent(
                 "type-resolver",
                 ctx.span(),
-                Ok(TypeOk { ty: ctx.ty(), addressable: ctx.addressability(), refs }),
+                Ok(TypeOk {
+                    ty: ctx.ty(),
+                    addressable: ctx.addressability(),
+                    refs,
+                }),
             ));
     }
 

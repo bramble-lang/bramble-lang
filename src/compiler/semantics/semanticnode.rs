@@ -147,7 +147,7 @@ impl SemanticContext {
     /// therefore has an address.
     pub fn is_addressable(&self) -> bool {
         match self.addressability {
-            Addressability::Addressable | Addressability::AddressableMutable  => true,
+            Addressability::Addressable | Addressability::AddressableMutable => true,
             Addressability::None | Addressability::Value => false,
         }
     }
@@ -156,7 +156,7 @@ impl SemanticContext {
     /// is mutable.
     pub fn is_mutable(&self) -> bool {
         match self.addressability {
-            Addressability::AddressableMutable  => true,
+            Addressability::AddressableMutable => true,
             Addressability::Addressable | Addressability::None | Addressability::Value => false,
         }
     }

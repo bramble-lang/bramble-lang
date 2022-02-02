@@ -1,7 +1,7 @@
 use crate::{
     compiler::{
         ast::{BinaryOperator, Path, PathCanonizationError, RoutineCall, Type, UnaryOperator},
-        CompilerDisplay, CompilerDisplayError, SourceMap, Span, SourceError,
+        CompilerDisplay, CompilerDisplayError, SourceError, SourceMap, Span,
     },
     StringId,
 };
@@ -251,7 +251,9 @@ impl CompilerDisplay for SemanticError {
                 Ok(format!("Cannot make mutable pointer to immutable variable"))
             }
             SemanticError::ExpectedIdentifier(op) => Ok(format!("{} expected identifier", op)),
-            SemanticError::ExpectedAddressable(op) => Ok(format!("{} expected an addressable operand", op)),
+            SemanticError::ExpectedAddressable(op) => {
+                Ok(format!("{} expected an addressable operand", op))
+            }
         }
     }
 }
