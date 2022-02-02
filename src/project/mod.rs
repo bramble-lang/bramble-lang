@@ -5,7 +5,7 @@ pub use manifest::Manifest;
 pub use project::*;
 
 use crate::{
-    compiler::{ast::Type, CompilerDisplay, CompilerDisplayError, SourceMap},
+    compiler::{ast::Type, CompilerDisplay, CompilerDisplayError, SourceMap, SourceError},
     StringTableError,
 };
 
@@ -15,6 +15,8 @@ pub enum ManifestError {
     /// When attempting to write a Compiler type to a manifest file and a [`StringId`] member
     /// cannot be found in the [`StringTable`].
     StringIdNotFound,
+
+    SourceError(SourceError),
 
     /// Some types ought not be written to a Manifest: this error is thrown when one of those
     /// types is written.
@@ -42,6 +44,7 @@ impl CompilerDisplay for ManifestError {
             ManifestError::PathElementContainsInvalidChar(c) => {
                 format!("Path contains invalid character: {}", c)
             }
+            ManifestError::SourceError(se) => format!("Source look up error: {:?}", se),
         })
     }
 }
@@ -50,6 +53,7 @@ impl From<CompilerDisplayError> for ManifestError {
     fn from(cde: CompilerDisplayError) -> Self {
         match cde {
             CompilerDisplayError::StringIdNotFound => Self::StringIdNotFound,
+            CompilerDisplayError::SourceError(se) => Self::SourceError(se),
         }
     }
 }

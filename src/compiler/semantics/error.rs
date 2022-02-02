@@ -1,7 +1,7 @@
 use crate::{
     compiler::{
         ast::{BinaryOperator, Path, PathCanonizationError, RoutineCall, Type, UnaryOperator},
-        CompilerDisplay, CompilerDisplayError, SourceMap, Span,
+        CompilerDisplay, CompilerDisplayError, SourceMap, Span, SourceError,
     },
     StringId,
 };
@@ -107,11 +107,11 @@ impl CompilerDisplay for SemanticError {
                 actual.fmt(sm, st)?
             )),
             SemanticError::ExpressionNotMutable(span) => {
-                Ok(format!("{} is not mutable", sm.text_in_span(*span).unwrap()))
+                Ok(format!("{} is not mutable", sm.text_in_span(*span)?))
             }
             SemanticError::BindMismatch(span, expected, actual) => Ok(format!(
                 "{} is of type {} but is assigned {}",
-                sm.text_in_span(*span).unwrap(),
+                sm.text_in_span(*span)?,
                 expected.fmt(sm, st)?,
                 actual.fmt(sm, st)?
             )),
@@ -261,5 +261,11 @@ impl From<PathCanonizationError> for SemanticError {
         match pe {
             PathCanonizationError::SubceedingRoot => Self::PathTooSuper, // TODO: maybe reevaluate why I get this from the AST in Semantic?
         }
+    }
+}
+
+impl From<SourceError> for CompilerDisplayError {
+    fn from(se: SourceError) -> Self {
+        Self::SourceError(se)
     }
 }
