@@ -240,6 +240,17 @@ impl From<std::io::Error> for UnicodeParsingError {
     }
 }
 
+impl std::fmt::Display for UnicodeParsingError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self{
+            UnicodeParsingError::InvalidByte(by) => f.write_fmt(format_args!("Invalid byte: {}", by)),
+            UnicodeParsingError::InvalidWord(w) => f.write_fmt(format_args!("Invalid word: {}", w)),
+            UnicodeParsingError::UnexpectedEof => f.write_str("Unexpected EOF"),
+            UnicodeParsingError::SourceError(ioe) => f.write_fmt(format_args!("IO Error: {}", ioe)),
+        }
+    }
+}
+
 /// Errors that can happen when trying to read from a source code stream.
 #[derive(Debug)]
 pub enum SourceError {
@@ -267,5 +278,19 @@ impl From<std::io::Error> for SourceError {
 impl From<std::string::FromUtf8Error> for SourceError {
     fn from(e: std::string::FromUtf8Error) -> Self {
         Self::FromUtf8Error(e)
+    }
+}
+
+impl std::fmt::Display for SourceError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self{
+            SourceError::ExceededAssignedRange => f.write_str("Assigned source map range exceeded"),
+            SourceError::OffsetExceededMaxSize => f.write_str("Exceeded max offset size"),
+            SourceError::UnexpectedEof => f.write_str("Unexpected EOF"),
+            SourceError::UnicodeError(ue) => f.write_fmt(format_args!("Unicode error: {}", ue)),
+            SourceError::Io(ioe) => f.write_fmt(format_args!("IO Error: {}", ioe)),
+            SourceError::FromUtf8Error(ue) => f.write_fmt(format_args!("UTF8 parsing error: {}", ue)),
+            SourceError::SourceNotFound(span) => f.write_fmt(format_args!("Source not found for span: {}", span)),
+        }
     }
 }
