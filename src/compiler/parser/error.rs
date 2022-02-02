@@ -169,12 +169,10 @@ impl CompilerDisplay for ParserError {
             ParserError::EmptyProject => format!("No source code."),
             ParserError::RawPointerExpectedType => format!("Raw Pointer expected underlying type"),
             ParserError::RawPointerExpectedConstOrMut => format!("Expected const or mut after *"),
-            ParserError::ExpectedIdentifierAfter(lex) => 
-                format!(
-                    "Expected identifier after {}",
-                    lex_to_string(sm, st, &Some(*lex))?
-                )
-            ,
+            ParserError::ExpectedIdentifierAfter(lex) => format!(
+                "Expected identifier after {}",
+                lex_to_string(sm, st, &Some(*lex))?
+            ),
             ParserError::AddressOfExpectedConstOrMut => format!("Expected const or mut after @"),
         };
         Ok(msg)

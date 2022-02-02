@@ -14,6 +14,7 @@ use crate::{
 };
 use std::collections::HashMap;
 
+use super::semanticnode::Addressability;
 use super::TypeOk;
 use super::{
     canonize::canonize_paths, semanticnode::SemanticContext, stack::SymbolTableScopeStack,
@@ -320,25 +321,21 @@ impl<'a> TypeResolver<'a> {
         mutate: &Mutate<SemanticContext>,
     ) -> SemanticResult<Mutate<SemanticContext>> {
         let (event, result) = self.new_event().and_then(|| {
+            let lhs = self.analyze_expression(mutate.get_lhs())?;
             let rhs = self.analyze_expression(mutate.get_rhs())?;
-            match self.symbols.lookup_var(mutate.get_id()) {
-                Ok(symbol) => {
-                    if symbol.is_mutable {
-                        if symbol.ty == rhs.get_type() {
-                            let ctx = mutate.context().with_type(rhs.get_type().clone());
-                            Ok(Mutate::new(ctx, mutate.get_id(), rhs))
-                        } else {
-                            Err(SemanticError::BindMismatch(
-                                mutate.get_id(),
-                                symbol.ty.clone(),
-                                rhs.get_type().clone(),
-                            ))
-                        }
-                    } else {
-                        Err(SemanticError::VariableNotMutable(mutate.get_id()))
-                    }
+            if lhs.context().is_mutable() {
+                if lhs.get_type() == rhs.get_type() {
+                    let ctx = mutate.context().with_type(rhs.get_type().clone());
+                    Ok(Mutate::new(ctx, lhs, rhs))
+                } else {
+                    Err(SemanticError::BindMismatch(
+                        lhs.span(),
+                        lhs.get_type().clone(),
+                        rhs.get_type().clone(),
+                    ))
                 }
-                Err(e) => Err(e),
+            } else {
+                Err(SemanticError::ExpressionNotMutable(lhs.span()))
             }
             .map_err(|e| CompilerError::new(mutate.span(), e))
         });
@@ -516,11 +513,11 @@ impl<'a> TypeResolver<'a> {
                 index,
             } => {
                 //  Check that the array value is an array type
-                let n_array = self.analyze_expression(array)?;
+                let array = self.analyze_expression(array)?;
 
-                refs.push(n_array.span());
+                refs.push(array.span());
 
-                let el_ty = match n_array.context().ty() {
+                let el_ty = match array.context().ty() {
                     Type::Array(el_ty, _) => Ok(*el_ty.clone()),
                     ty => Err(CompilerError::new(
                         ctx.span(),
@@ -539,11 +536,21 @@ impl<'a> TypeResolver<'a> {
                     ));
                 }
 
-                let ctx = ctx.with_type(el_ty);
+                // If the source expression is an addressable location or is mutable then copy that
+                // property
+                let ctx = if array.context().is_mutable() {
+                    ctx.with_type(el_ty)
+                        .with_addressable(true)
+                } else if array.context().is_addressable() {
+                    ctx.with_type(el_ty)
+                        .with_addressable(false)
+                } else {
+                    ctx.with_type(el_ty)
+                };
 
                 Ok(Expression::ArrayAt {
                     context: ctx,
-                    array: Box::new(n_array),
+                    array: Box::new(array),
                     index: Box::new(n_index),
                 })
             }
@@ -561,9 +568,9 @@ impl<'a> TypeResolver<'a> {
                     .lookup_var(*id)
                     .map_err(|e| CompilerError::new(ctx.span(), e))?
                 {
-                    Symbol { ty: p, span, .. } => {
+                    Symbol { ty: p, span, is_mutable, .. } => {
                         span.and_then(|s| Some(refs.push(s)));
-                        ctx.with_type(p.clone())
+                        ctx.with_type(p.clone()).with_addressable(*is_mutable)
                     }
                 };
                 Ok(Expression::Identifier(ctx, id.clone()))
@@ -595,7 +602,16 @@ impl<'a> TypeResolver<'a> {
                             ))
                             .map_err(|e| CompilerError::new(ctx.span(), e))?;
 
-                        let ctx = ctx.with_type(member_ty.clone());
+                        // If the source expression is an addressable location or is mutable then copy that
+                        // property
+                        let ctx = if src.context().is_mutable() {
+                            ctx.with_type(member_ty.clone()).with_addressable(true)
+                        } else if src.context().is_addressable() {
+                            ctx.with_type(member_ty.clone()).with_addressable(false)
+                        } else {
+                            ctx.with_type(member_ty.clone())
+                        };
+
                         Ok(Expression::MemberAccess(ctx, Box::new(src), member.clone()))
                     }
                     _ => Err(CompilerError::new(
@@ -610,8 +626,13 @@ impl<'a> TypeResolver<'a> {
                 Ok(Expression::BinaryOp(ctx, *op, Box::new(l), Box::new(r)))
             }
             Expression::UnaryOp(ctx, op, operand) => {
-                let (ty, operand) = self.unary_op(*op, &operand)?;
+                let (ty, addry, operand) = self.unary_op(*op, &operand)?;
                 let ctx = ctx.with_type(ty);
+                let ctx = match addry {
+                    Addressability::Addressable => ctx.with_addressable(false),
+                    Addressability::AddressableMutable => ctx.with_addressable(true),
+                    _ => ctx,
+                };
                 Ok(Expression::UnaryOp(ctx, *op, Box::new(operand)))
             }
             Expression::If {
@@ -861,7 +882,7 @@ impl<'a> TypeResolver<'a> {
         &mut self,
         op: UnaryOperator,
         operand: &SemanticNode,
-    ) -> SemanticResult<(Type, SemanticNode)> {
+    ) -> SemanticResult<(Type, Addressability, SemanticNode)> {
         use UnaryOperator::*;
 
         let operand = self.analyze_expression(operand)?;
@@ -869,7 +890,7 @@ impl<'a> TypeResolver<'a> {
         match op {
             Negate => {
                 if operand.get_type().is_signed_int() {
-                    Ok((operand.get_type().clone(), operand))
+                    Ok((operand.get_type().clone(), Addressability::Value, operand))
                 } else {
                     Err(CompilerError::new(
                         operand.span(),
@@ -879,7 +900,7 @@ impl<'a> TypeResolver<'a> {
             }
             Not => {
                 if operand.get_type() == Type::Bool {
-                    Ok((Type::Bool, operand))
+                    Ok((Type::Bool, Addressability::Value, operand))
                 } else {
                     Err(CompilerError::new(
                         operand.span(),
@@ -888,49 +909,45 @@ impl<'a> TypeResolver<'a> {
                 }
             }
             AddressConst => {
-                // The operand must be an identifier
-                let id = match operand {
-                    Expression::Identifier(_, id) => Ok(id),
-                    _ => Err(CompilerError::new(
+                // The operand must be a location in memory
+                if !operand.context().is_addressable() {
+                    return Err(CompilerError::new(
                         operand.span(),
-                        SemanticError::ExpectedIdentifier(op),
-                    )),
-                }?;
-                let id = self.symbols.lookup_var(id).unwrap();
+                        SemanticError::ExpectedAddressable(op),
+                    ));
+                }
 
                 // Type is a raw pointer to the type of the operand
                 Ok((
-                    Type::RawPointer(PointerMut::Const, Box::new(id.ty.clone())),
+                    Type::RawPointer(PointerMut::Const, Box::new(operand.get_type().clone())),
+                    Addressability::Value,
                     operand,
                 ))
             }
             AddressMut => {
-                // The operand must be an identifier
-                let id = match operand {
-                    Expression::Identifier(_, id) => Ok(id),
-                    _ => Err(CompilerError::new(
-                        operand.span(),
-                        SemanticError::ExpectedIdentifier(op),
-                    )),
-                }?;
-
-                // The identifier must be mutable
-                let id = self.symbols.lookup_var(id).unwrap();
-                if !id.is_mutable {
+                // The operand must be a mutable location in memory
+                if !operand.context().is_mutable() {
                     return Err(CompilerError::new(
                         operand.span(),
                         SemanticError::MutablePointerToImmutable,
                     ));
                 }
                 Ok((
-                    Type::RawPointer(PointerMut::Mut, Box::new(id.ty.clone())),
+                    Type::RawPointer(PointerMut::Mut, Box::new(operand.get_type().clone())),
+                    Addressability::Value,
                     operand,
                 ))
             }
             DerefRawPointer => {
                 // Operand must be a *const or a *mut
                 match operand.get_type() {
-                    Type::RawPointer(_, target_ty) => Ok((*target_ty.clone(), operand)),
+                    Type::RawPointer(mutability, target_ty) => {
+                        let addressability = match mutability {
+                            PointerMut::Mut => Addressability::AddressableMutable,
+                            PointerMut::Const => Addressability::Addressable,
+                        };
+                        Ok((*target_ty.clone(), addressability, operand))
+                    }
                     ty => Err(CompilerError::new(
                         operand.span(),
                         SemanticError::ExpectedRawPointer(op, ty.clone()),
@@ -1123,7 +1140,11 @@ impl<'a> TypeResolver<'a> {
     ) {
         let msg = r.map(|v| {
             let ctx = v.context();
-            TypeOk { ty: ctx.ty(), refs }
+            TypeOk {
+                ty: ctx.ty(),
+                addressable: ctx.addressability(),
+                refs,
+            }
         });
         let span = match r {
             Ok(ok) => ok.span(),
@@ -1138,7 +1159,11 @@ impl<'a> TypeResolver<'a> {
             .write(Event::<_, SemanticError>::new_without_parent(
                 "type-resolver",
                 ctx.span(),
-                Ok(TypeOk { ty: ctx.ty(), refs }),
+                Ok(TypeOk {
+                    ty: ctx.ty(),
+                    addressable: ctx.addressability(),
+                    refs,
+                }),
             ));
     }
 

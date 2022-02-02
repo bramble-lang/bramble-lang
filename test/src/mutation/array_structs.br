@@ -1,0 +1,41 @@
+fn my_main() -> i64 {
+    let mut arr: [MS; 2] := [MS{i: 1, j: 2}, MS{i: 100, j: 200}];
+    
+    project::std::io::writei64ln(arr[0].i); // 1
+    project::std::io::writei64ln(arr[0].j); // 2
+    project::std::io::writei64ln(arr[1].i); // 100
+    project::std::io::writei64ln(arr[1].j); // 200
+
+    mut arr[0].i := 13;
+    project::std::io::writei64ln(arr[0].i); // 13
+    project::std::io::writei64ln(arr[0].j); // 2
+    project::std::io::writei64ln(arr[1].i); // 100
+    project::std::io::writei64ln(arr[1].j); // 200
+
+    mut arr[1].j := 223;
+    project::std::io::writei64ln(arr[0].i); // 13
+    project::std::io::writei64ln(arr[0].j); // 2
+    project::std::io::writei64ln(arr[1].i); // 100
+    project::std::io::writei64ln(arr[1].j); // 223
+
+    let ptr: *mut i64 := @mut arr[1].i;
+    mut ^ptr := 133;
+    project::std::io::writei64ln(arr[0].i); // 13
+    project::std::io::writei64ln(arr[0].j); // 2
+    project::std::io::writei64ln(arr[1].i); // 133
+    project::std::io::writei64ln(arr[1].j); // 223
+
+    let ptr2: *mut MS := @mut arr[0];
+    mut (^ptr2).j := 23;
+    project::std::io::writei64ln(arr[0].i); // 13
+    project::std::io::writei64ln(arr[0].j); // 23
+    project::std::io::writei64ln(arr[1].i); // 133
+    project::std::io::writei64ln(arr[1].j); // 223
+
+    return 0;
+}
+
+struct MS {
+    i: i64,
+    j: i64,
+}

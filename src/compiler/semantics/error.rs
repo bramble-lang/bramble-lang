@@ -1,7 +1,7 @@
 use crate::{
     compiler::{
         ast::{BinaryOperator, Path, PathCanonizationError, RoutineCall, Type, UnaryOperator},
-        CompilerDisplay, CompilerDisplayError, SourceMap,
+        CompilerDisplay, CompilerDisplayError, SourceError, SourceMap, Span,
     },
     StringId,
 };
@@ -24,8 +24,8 @@ pub enum SemanticError {
     AlreadyDeclared(StringId),
     PathTooSuper,
     BindExpected(Type, Type),
-    VariableNotMutable(StringId),
-    BindMismatch(StringId, Type, Type),
+    ExpressionNotMutable(Span),
+    BindMismatch(Span, Type, Type),
     YieldExpected(Type, Type),
     YieldInvalidLocation,
     ReturnExpected(Type, Type),
@@ -47,6 +47,7 @@ pub enum SemanticError {
     ExpectedRawPointer(UnaryOperator, Type),
     OpExpected(BinaryOperator, Type, Type, Type),
     ExpectedIdentifier(UnaryOperator),
+    ExpectedAddressable(UnaryOperator),
     RoutineParamTypeMismatch(Path, Vec<(u32, Type, Type)>),
     MainFnInvalidType,
     MainFnInvalidParams,
@@ -105,12 +106,12 @@ impl CompilerDisplay for SemanticError {
                 expected.fmt(sm, st)?,
                 actual.fmt(sm, st)?
             )),
-            SemanticError::VariableNotMutable(sid) => {
-                Ok(format!("Variable {} is not mutable", sid.fmt(sm, st)?))
+            SemanticError::ExpressionNotMutable(span) => {
+                Ok(format!("{} is not mutable", sm.text_in_span(*span)?))
             }
-            SemanticError::BindMismatch(sid, expected, actual) => Ok(format!(
+            SemanticError::BindMismatch(span, expected, actual) => Ok(format!(
                 "{} is of type {} but is assigned {}",
-                sid.fmt(sm, st)?,
+                sm.text_in_span(*span)?,
                 expected.fmt(sm, st)?,
                 actual.fmt(sm, st)?
             )),
@@ -250,6 +251,9 @@ impl CompilerDisplay for SemanticError {
                 Ok(format!("Cannot make mutable pointer to immutable variable"))
             }
             SemanticError::ExpectedIdentifier(op) => Ok(format!("{} expected identifier", op)),
+            SemanticError::ExpectedAddressable(op) => {
+                Ok(format!("{} expected an addressable operand", op))
+            }
         }
     }
 }
@@ -259,5 +263,11 @@ impl From<PathCanonizationError> for SemanticError {
         match pe {
             PathCanonizationError::SubceedingRoot => Self::PathTooSuper, // TODO: maybe reevaluate why I get this from the AST in Semantic?
         }
+    }
+}
+
+impl From<SourceError> for CompilerDisplayError {
+    fn from(se: SourceError) -> Self {
+        Self::SourceError(se)
     }
 }

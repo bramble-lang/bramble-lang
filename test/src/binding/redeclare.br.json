@@ -60,8 +60,8 @@
 {"id": 94, "stage": "canonize-item-path", "source": [0, 80], "ok": "$redeclare::redeclare"},
 {"id": 95, "stage": "canonize-item-path", "source": [0, 80], "ok": "$redeclare::redeclare::redeclare"},
 {"id": 96, "stage": "canonize-item-path", "source": [0, 80], "ok": "$redeclare::redeclare::my_main"},
-{"id": 99, "parent_id": 98, "stage": "type-resolver", "source": [40, 41], "ok": "i64"},
-{"id": 98, "parent_id": 97, "stage": "type-resolver", "source": [26, 42], "ok": "i64"},
-{"id": 101, "parent_id": 100, "stage": "type-resolver", "source": [61, 63], "ok": "i64"},
+{"id": 99, "parent_id": 98, "stage": "type-resolver", "source": [40, 41], "ok": "i64", "addressability": "None"},
+{"id": 98, "parent_id": 97, "stage": "type-resolver", "source": [26, 42], "ok": "i64", "addressability": "None"},
+{"id": 101, "parent_id": 100, "stage": "type-resolver", "source": [61, 63], "ok": "i64", "addressability": "None"},
 {"id": 100, "parent_id": 97, "stage": "type-resolver", "source": [47, 64], "error": "L3: x already declared"},
 {"id": 97, "stage": "type-resolver", "source": [47, 64], "error": "L3: x already declared"}]

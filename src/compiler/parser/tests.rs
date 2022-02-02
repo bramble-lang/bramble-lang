@@ -616,8 +616,8 @@ pub mod tests {
     #[test]
     fn address_of_fails() {
         for (text, span) in vec![
-            ("let x: *const i64 := @const 5;", (21, 27)),
-            ("let y: *const i64 := @mut 7;", (21, 25)),
+            ("let x: *const i64 := @const;", (21, 27)),
+            ("let y: *const i64 := @mut *;", (21, 25)),
         ]
         .iter()
         {
@@ -654,7 +654,8 @@ pub mod tests {
     fn parse_mutation() {
         let text = "mut x := 5;";
         let mut table = StringTable::new();
-        let x = table.insert("x".into());
+        let x_sid = table.insert("x".into());
+        let x = Expression::Identifier(new_ctx(4, 5), x_sid);
 
         let mut sm = SourceMap::new();
         sm.add_string(text, "/test".into()).unwrap();
@@ -673,7 +674,7 @@ pub mod tests {
         assert_eq!(*stm.context(), new_ctx(0, text.len() as u32));
         match stm {
             Statement::Mutate(m) => {
-                assert_eq!(m.get_id(), x);
+                assert_eq!(m.get_lhs(), &x);
                 assert_eq!(*m.get_rhs(), Expression::I64(new_ctx(9, 10), 5));
             }
             _ => panic!("Not a binding statement"),

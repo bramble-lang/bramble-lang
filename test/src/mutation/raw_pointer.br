@@ -1,0 +1,39 @@
+fn my_main() -> i64 {
+    let mut x: i64 := 1;
+    let mut arr: [i64; 3] := [10, 20, 30];
+    let mut ms: MS := MS{i: 100i32, j: 200i32};
+
+    project::std::io::writei64ln(x);
+    project::std::io::writei64ln(arr[0]);
+    project::std::io::writei64ln(arr[1]);
+    project::std::io::writei64ln(arr[2]);
+    project::std::io::writei32ln(ms.i);
+    project::std::io::writei32ln(ms.j);
+
+    let p: *mut i64 := @mut x;
+    mut ^p := ^p * 2;
+    project::std::io::writei64ln(x); // 2
+
+    mutator(@mut arr[0], 13);
+    project::std::io::writei64ln(arr[0]); // 13
+    project::std::io::writei64ln(arr[1]); // 20
+    project::std::io::writei64ln(arr[2]); // 30
+
+    let pms: *mut MS := @mut ms;
+    let pmsi: *mut i32 := @mut ((^pms).i);
+    mut ^(pmsi) := 113i32;
+    project::std::io::writei32ln(ms.i); // 113
+    project::std::io::writei32ln(ms.j); // 200
+
+    return 0;
+}
+
+fn mutator(p: *mut i64, v: i64) {
+    mut ^p := v;
+    return;
+}
+
+struct MS {
+    i: i32,
+    j: i32,
+}

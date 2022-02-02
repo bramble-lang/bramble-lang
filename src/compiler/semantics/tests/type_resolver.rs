@@ -1971,6 +1971,74 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
             ),
             (
                 "fn main() -> i64 {
+                    let mut k: [i64; 2] := [1, 5];
+                    mut k[0] := 3;
+                    return k[0];
+                }",
+                Ok(Type::I64),
+            ),
+            (
+                "fn main() -> i64 {
+                    let mut k: i64 := 5;
+                    mut ^(@mut k) := 3;
+                    return k;
+                }",
+                Ok(Type::I64),
+            ),
+            (
+                "fn main() -> i64 {
+                    let mut k: MS := MS{i: 5};
+                    mut k.i := 3;
+                    return k.i;
+                }
+                struct MS{ i: i64 }",
+                Ok(Type::I64),
+            ),
+            (
+                "fn main() -> i64 {
+                    let mut k: MS := MS{i: 5};
+                    mut (^(@mut k)).i := 3;
+                    return k.i;
+                }
+                struct MS{ i: i64 }",
+                Ok(Type::I64),
+            ),
+            (
+                "fn main() -> i64 {
+                    let k: MS := MS{i: 5};
+                    mut (^(@const k)).i := 3;
+                    return k.i;
+                }
+                struct MS{ i: i64 }",
+                Err("L3: (^(@const k)).i is not mutable"),
+            ),
+            (
+                "fn main() -> i64 {
+                    let k: MS := MS{i: 5};
+                    mut k.i := 3;
+                    return k.i;
+                }
+                struct MS{ i: i64 }",
+                Err("L3: k.i is not mutable"),
+            ),
+            (
+                "fn main() -> i64 {
+                    let k: i64 := 5;
+                    mut ^(@const k) := 3;
+                    return k;
+                }",
+                Err("L3: ^(@const k) is not mutable"),
+            ),
+            (
+                "fn main() -> i64 {
+                    let mut k: i64 := 5;
+                    mut ^(@const k) := 3;
+                    return k;
+                }",
+                Err("L3: ^(@const k) is not mutable"),
+            ),
+            (
+                "fn main() -> i64 {
                     let mut k: i64 := 5;
                     mut k := false;
                     return k;
@@ -1983,7 +2051,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     mut k := 3;
                     return k;
                 }",
-                Err("L3: Variable k is not mutable"),
+                Err("L3: k is not mutable"),
             ),
             (
                 "fn main() -> i64 {
@@ -1991,7 +2059,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     mut k := false;
                     return k;
                 }",
-                Err("L3: Variable k is not mutable"),
+                Err("L3: k is not mutable"),
             ),
             (
                 "fn main() -> i64 {
@@ -2026,16 +2094,6 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 Ok(expected_ty) => {
                     let module = module.unwrap();
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
-
-                    let bind_stm = &fn_main.get_body()[0];
-                    assert_eq!(bind_stm.get_type(), Type::I64);
-
-                    // validate that the RHS of the bind is the correct type
-                    if let Statement::Bind(b) = bind_stm {
-                        assert_eq!(b.get_rhs().get_type(), expected_ty);
-                    } else {
-                        panic!("Expected a bind statement");
-                    }
 
                     // validate the mutate statement is typed correctly
                     let mut_stm = &fn_main.get_body()[1];

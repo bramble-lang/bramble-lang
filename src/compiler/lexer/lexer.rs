@@ -534,8 +534,8 @@ impl<'a> Lexer<'a> {
         // Ordering of these keywords matters: if one keyword is a prefix to another keyword then the
         // longer keyword must be placed first; otherwise the shorter keyword will incorrectly match.
         let keywords = [
-            "let", "mut", "return", "yield", "yret", "fn", "const", "co", "mod", "struct", "extern", "init",
-            "if", "else", "while", "self", "super", "root", "project"
+            "let", "mut", "return", "yield", "yret", "fn", "const", "co", "mod", "struct",
+            "extern", "init", "if", "else", "while", "self", "super", "root", "project",
         ];
 
         Ok(match branch.next_if_one_of(&keywords) {

@@ -305,7 +305,7 @@ impl<'a> Parser<'a> {
                                     )),
                                 }?;
 
-                                let id = self.identifier(stream)?.ok_or(CompilerError::new(
+                                let id = self.subdata_access(stream)?.ok_or(CompilerError::new(
                                     at_ctx.span(),
                                     ParserError::ExpectedIdentifierAfter(at.sym.clone()),
                                 ))?;
@@ -363,13 +363,11 @@ impl<'a> Parser<'a> {
                     });
 
                     result.view(|v| {
-                        let msg = v.map(|_| {
-                            match op.sym {
-                                Lex::Minus => "Arithmetic Negate",
-                                Lex::Not => "Boolean Negate",
-                                Lex::Hat => "Deref Raw Pointer",
-                                _ => panic!("Invalid Unary Operator"),
-                            }
+                        let msg = v.map(|_| match op.sym {
+                            Lex::Minus => "Arithmetic Negate",
+                            Lex::Not => "Boolean Negate",
+                            Lex::Hat => "Deref Raw Pointer",
+                            _ => panic!("Invalid Unary Operator"),
                         });
                         self.record(event.with_span(v.span()), msg)
                     })

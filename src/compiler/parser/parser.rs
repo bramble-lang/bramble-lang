@@ -494,7 +494,10 @@ impl<'a> Parser<'a> {
         })
     }
 
-    pub(super) fn identifier(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
+    pub(super) fn identifier(
+        &self,
+        stream: &mut TokenStream,
+    ) -> ParserResult<Expression<ParserContext>> {
         let (event, result) = self
             .new_event(Span::zero())
             .and_then(|| match stream.next_if_id() {
@@ -577,7 +580,10 @@ impl<'a> Parser<'a> {
                                 ParserError::RawPointerExpectedType,
                             ))?;
                             let ctx = ctx.join(ty.1);
-                            Ok(Some((Type::RawPointer(PointerMut::Mut, Box::new(ty.0)), ctx)))
+                            Ok(Some((
+                                Type::RawPointer(PointerMut::Mut, Box::new(ty.0)),
+                                ctx,
+                            )))
                         }
                         Some(c) if c.sym == Lex::Const => {
                             let ctx = star.to_ctx();
@@ -586,8 +592,11 @@ impl<'a> Parser<'a> {
                                 ParserError::RawPointerExpectedType,
                             ))?;
                             let ctx = ctx.join(ty.1);
-                            Ok(Some((Type::RawPointer(PointerMut::Const, Box::new(ty.0)), ctx)))
-                        },
+                            Ok(Some((
+                                Type::RawPointer(PointerMut::Const, Box::new(ty.0)),
+                                ctx,
+                            )))
+                        }
                         Some(_) => Err(CompilerError::new(
                             star.span(),
                             ParserError::RawPointerExpectedConstOrMut,
@@ -672,13 +681,12 @@ impl<'a> Parser<'a> {
                     let id = decl_tok[0].sym.get_str().expect(
                     "CRITICAL: first token is an identifier but cannot be converted to a string",
                 );
-                    self.consume_type(stream)
-                        .and_then(|result| {
-                            Ok(result.and_then(|(ty, ty_ctx)| {
-                                let ctx = ctx.join(ty_ctx);
-                                Some(Expression::IdentifierDeclare(ctx, id, ty))
-                            }))
-                        })
+                    self.consume_type(stream).and_then(|result| {
+                        Ok(result.and_then(|(ty, ty_ctx)| {
+                            let ctx = ctx.join(ty_ctx);
+                            Some(Expression::IdentifierDeclare(ctx, id, ty))
+                        }))
+                    })
                 }
                 None => Ok(None),
             }

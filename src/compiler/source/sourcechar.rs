@@ -228,15 +228,35 @@ impl<R: Read> Iterator for OffsetBytes<R> {
 /// byte stream.
 #[derive(Debug)]
 pub enum UnicodeParsingError {
+    /// A byte was read which is not valid for the current unicode byte sequence being read
     InvalidByte(u8),
+
+    /// Byte sequence was not a valid unicode character
     InvalidWord(u32),
+
+    /// An EOF was encountered while parsing a unicode character
     UnexpectedEof,
+
+    /// An IO error occurred while parsing unicode
     SourceError(std::io::Error),
 }
 
 impl From<std::io::Error> for UnicodeParsingError {
     fn from(ioe: std::io::Error) -> Self {
         Self::SourceError(ioe)
+    }
+}
+
+impl std::fmt::Display for UnicodeParsingError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            UnicodeParsingError::InvalidByte(by) => {
+                f.write_fmt(format_args!("Invalid byte: {}", by))
+            }
+            UnicodeParsingError::InvalidWord(w) => f.write_fmt(format_args!("Invalid word: {}", w)),
+            UnicodeParsingError::UnexpectedEof => f.write_str("Unexpected EOF"),
+            UnicodeParsingError::SourceError(ioe) => f.write_fmt(format_args!("IO Error: {}", ioe)),
+        }
     }
 }
 
@@ -267,5 +287,23 @@ impl From<std::io::Error> for SourceError {
 impl From<std::string::FromUtf8Error> for SourceError {
     fn from(e: std::string::FromUtf8Error) -> Self {
         Self::FromUtf8Error(e)
+    }
+}
+
+impl std::fmt::Display for SourceError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SourceError::ExceededAssignedRange => f.write_str("Assigned source map range exceeded"),
+            SourceError::OffsetExceededMaxSize => f.write_str("Exceeded max offset size"),
+            SourceError::UnexpectedEof => f.write_str("Unexpected EOF"),
+            SourceError::UnicodeError(ue) => f.write_fmt(format_args!("Unicode error: {}", ue)),
+            SourceError::Io(ioe) => f.write_fmt(format_args!("IO Error: {}", ioe)),
+            SourceError::FromUtf8Error(ue) => {
+                f.write_fmt(format_args!("UTF8 parsing error: {}", ue))
+            }
+            SourceError::SourceNotFound(span) => {
+                f.write_fmt(format_args!("Source not found for span: {}", span))
+            }
+        }
     }
 }
