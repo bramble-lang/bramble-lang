@@ -615,10 +615,9 @@ pub mod tests {
 
     #[test]
     fn address_of_fails() {
-        // This test is now done in the semantic stage
-        /*for (text, span) in vec![
-            ("let x: *const i64 := @const 5;", (21, 27)),
-            ("let y: *const i64 := @mut 7;", (21, 25)),
+        for (text, span) in vec![
+            ("let x: *const i64 := @const;", (21, 27)),
+            ("let y: *const i64 := @mut *;", (21, 25)),
         ]
         .iter()
         {
@@ -648,7 +647,7 @@ pub mod tests {
                 "{}",
                 text
             );
-        }*/
+        }
     }
 
     #[test]
