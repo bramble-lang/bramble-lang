@@ -131,7 +131,10 @@ impl<'a> Parser<'a> {
                 None => Ok(None),
                 Some(tokens) => {
                     // Parse the mutable expression
-                    let lhs = self.expression(stream)?.unwrap();
+                    let lhs = self.expression(stream)?.ok_or(CompilerError::new(
+                        tokens[0].span(),
+                        ParserError::ExpectedExprAfter(Lex::Mut)
+                    ))?;
                     
                     // Check for the := operator
                     stream.next_must_be(&Lex::Assign)?;
