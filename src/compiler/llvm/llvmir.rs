@@ -543,7 +543,7 @@ trait ToLlvmIr<'ctx> {
     /// if it has one (Modules don't have LLVM Values so those will return None)
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value>;
 
-    fn to_llvm_ptr(&self, llvm: &mut IrGen<'ctx>) -> Option<PointerValue<'ctx>> {
+    fn to_address(&self, llvm: &mut IrGen<'ctx>) -> Option<PointerValue<'ctx>> {
         None
     }
 }
@@ -697,7 +697,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Mutate<SemanticContext> {
         let event = llvm.new_event(self.span());
 
         let rhs = self.get_rhs().to_llvm_ir(llvm).unwrap();
-        let lhs_ptr = self.get_lhs().to_llvm_ptr(llvm).unwrap();
+        let lhs_ptr = self.get_lhs().to_address(llvm).unwrap();
 
         let st = llvm.builder.build_store(lhs_ptr, rhs);
         llvm.record(event, &st);
@@ -741,7 +741,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Return<SemanticContext> {
 impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
     type Value = BasicValueEnum<'ctx>;
 
-    fn to_llvm_ptr(&self, llvm: &mut IrGen<'ctx>) -> Option<PointerValue<'ctx>> {
+    fn to_address(&self, llvm: &mut IrGen<'ctx>) -> Option<PointerValue<'ctx>> {
         // If this value is not addressable then do _not_ return a pointer
         // The semantic analyzer should prevent this situation from happening but just in case
         if !self.context().is_addressable() {
@@ -1183,7 +1183,7 @@ impl ast::UnaryOperator {
             }
             ast::UnaryOperator::AddressConst | ast::UnaryOperator::AddressMut => {
                 // get pointer to identifier
-                let ptr = right.to_llvm_ptr(llvm).unwrap();
+                let ptr = right.to_address(llvm).unwrap();
                 ptr.into()
             }
             ast::UnaryOperator::DerefRawPointer => {
