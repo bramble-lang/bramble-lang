@@ -742,19 +742,24 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
     type Value = BasicValueEnum<'ctx>;
 
     fn to_llvm_ptr(&self, llvm: &mut IrGen<'ctx>) -> Option<PointerValue<'ctx>> {
+        // If this value is not addressable then do _not_ return a pointer
+        // The semantic analyzer should prevent this situation from happening but just in case
+        if !self.context().is_addressable() {
+            return None;
+        }
+
         match self {
             ast::Expression::Identifier(_, id) => {
                 let name = llvm.string_table.get(*id).unwrap();
 
                 let ptr = llvm.registers.get(&name).unwrap().into_pointer_value();
                 Some(ptr)
-            },
-            ast::Expression::ArrayAt{context: ctx, array, index} => {
-                // If this value is not addressable then do _not_ return a pointer
-                // The semantic analyzer should prevent this situation from happening but just in case
-                if !ctx.is_addressable() {
-                    return None
-                }
+            }
+            ast::Expression::ArrayAt {
+                context: ctx,
+                array,
+                index,
+            } => {
                 // evalute the array to get the ptr to the array
                 // Check the array type, if it's not a pointer then get the GEP
                 let llvm_array_ptr = match array.to_llvm_ir(llvm) {
@@ -775,12 +780,6 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 Some(el_ptr)
             }
             ast::Expression::MemberAccess(ctx, val, field) => {
-                // If this value is not addressable then do _not_ return a pointer
-                // The semantic analyzer should prevent this situation from happening but just in case
-                if !ctx.is_addressable() {
-                    return None
-                }
-
                 let event = llvm.new_event(self.span());
                 let sdef = llvm
                     .struct_table
@@ -804,14 +803,9 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 llvm.record(event, &field_ptr);
 
                 Some(field_ptr)
-            },
+            }
             // Add in Deref
             ast::Expression::UnaryOp(ctx, ast::UnaryOperator::DerefRawPointer, operand) => {
-                // If this value is not addressable then do _not_ return a pointer
-                // The semantic analyzer should prevent this situation from happening but just in case
-                if !ctx.is_addressable() {
-                    return None
-                }
                 let r = operand.to_llvm_ir(llvm).expect("Expected a value");
                 let ptr = r.into_pointer_value();
                 Some(ptr)
@@ -1166,7 +1160,6 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
             ast::Expression::Yield(..) => panic!("Yield is not yet implemented for LLVM"),
         }
     }
-
 }
 
 impl ast::UnaryOperator {
