@@ -24,7 +24,7 @@ pub enum SemanticError {
     AlreadyDeclared(StringId),
     PathTooSuper,
     BindExpected(Type, Type),
-    VariableNotMutable(Span),
+    ExpressionNotMutable(Span),
     BindMismatch(Span, Type, Type),
     YieldExpected(Type, Type),
     YieldInvalidLocation,
@@ -106,7 +106,7 @@ impl CompilerDisplay for SemanticError {
                 expected.fmt(sm, st)?,
                 actual.fmt(sm, st)?
             )),
-            SemanticError::VariableNotMutable(span) => {
+            SemanticError::ExpressionNotMutable(span) => {
                 Ok(format!("{} is not mutable", sm.text_in_span(*span).unwrap()))
             }
             SemanticError::BindMismatch(span, expected, actual) => Ok(format!(

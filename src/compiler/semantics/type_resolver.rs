@@ -335,7 +335,7 @@ impl<'a> TypeResolver<'a> {
                             ))
                         }
                     } else {
-                        Err(SemanticError::VariableNotMutable(lhs.span()))
+                        Err(SemanticError::ExpressionNotMutable(lhs.span()))
                     }
             .map_err(|e| CompilerError::new(mutate.span(), e))
         });
