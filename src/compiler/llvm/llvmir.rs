@@ -543,6 +543,8 @@ trait ToLlvmIr<'ctx> {
     /// if it has one (Modules don't have LLVM Values so those will return None)
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value>;
 
+    /// If an expression is addressable then this will generate LLVM IR code
+    /// which gets the address of the expression's location rather than the value.
     fn to_address(&self, llvm: &mut IrGen<'ctx>) -> Option<PointerValue<'ctx>> {
         None
     }
@@ -804,7 +806,6 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
 
                 Some(field_ptr)
             }
-            // Add in Deref
             ast::Expression::UnaryOp(ctx, ast::UnaryOperator::DerefRawPointer, operand) => {
                 let r = operand.to_llvm_ir(llvm).expect("Expected a value");
                 let ptr = r.into_pointer_value();
