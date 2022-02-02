@@ -68,10 +68,10 @@ impl<'a> Writable for TypeOk<'a> {
 impl Writable for Addressability {
     fn write(&self, w: &dyn super::diagnostics::Writer) {
         match self {
-            Addressability::None => w.write_text("\"None\""),
-            Addressability::Value => w.write_text("\"Value\""),
-            Addressability::Addressable => w.write_text("\"Addressable\""),
-            Addressability::AddressableMutable => w.write_text("\"Mutable\""),
+            Addressability::None => w.write_str("None"),
+            Addressability::Value => w.write_str("Value"),
+            Addressability::Addressable => w.write_str("Addressable"),
+            Addressability::AddressableMutable => w.write_str("Mutable"),
         }
     }
 }
