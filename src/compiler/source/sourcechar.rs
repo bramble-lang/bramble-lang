@@ -228,9 +228,16 @@ impl<R: Read> Iterator for OffsetBytes<R> {
 /// byte stream.
 #[derive(Debug)]
 pub enum UnicodeParsingError {
+    /// A byte was read which is not valid for the current unicode byte sequence being read
     InvalidByte(u8),
+
+    /// Byte sequence was not a valid unicode character
     InvalidWord(u32),
+
+    /// An EOF was encountered while parsing a unicode character
     UnexpectedEof,
+
+    /// An IO error occurred while parsing unicode
     SourceError(std::io::Error),
 }
 
