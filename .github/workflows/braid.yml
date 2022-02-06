@@ -37,12 +37,6 @@ jobs:
       - name: rust-toolchain
         uses: actions-rs/toolchain@v1
 
-      # Runs a single command using the runners shell
-      - name: Setup NASM
-        uses: ilammy/setup-nasm@v1.2.0
-        with:
-          platform: linux
-
       # Runs a set of commands using the runners shell
       - name: Run Braid Test Suite
         run: |
