@@ -155,7 +155,7 @@ impl<R: Read> UnicodeCharIterator<R> {
 
         let result: Result<_, std::io::Error> = if a & 0b1000_0000 == 0 {
             Ok(a)
-        } else if lead & 0b1110_0000 == 0b1100_0000 {
+        } else if a & 0b1110_0000 == 0b1100_0000 {
             let b = self.continuation()?;
             Ok((a & 0b0001_1111) << 6 | b)
         } else if a & 0b1111_0000 == 0b1110_0000 {
@@ -168,7 +168,7 @@ impl<R: Read> UnicodeCharIterator<R> {
             let d = self.continuation()?;
             Ok((a & 0b0000_0111) << 18 | b << 12 | c << 6 | d)
         } else {
-            panic!("Invalid byte")
+            return Err(UnicodeParsingError::InvalidWord(a))
         };
 
         result
