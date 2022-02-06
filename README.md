@@ -8,7 +8,6 @@ language moves beyond the primordial stage.
 ## Building the Compiler
 ### Locally
 1. Install LLVM: https://llvm.org/
-2. NASM needs to be installed in order to compile the Input functions.
 3. Install Rust and Cargo: https://www.rust-lang.org/tools/install
 4. Braid needs the `nightly` toolchain to build, so after Rust has been installed
 go to the Braid repo directory and run:
