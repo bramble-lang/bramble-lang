@@ -25,10 +25,8 @@ build_std() {
     mkdir -p ${std_dir}
 
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        nasm -g -f elf64 ../braid/linux/llvm/std/input.asm -l ${std_dir}/std_input.lst -o ${std_dir}/std_input.obj > ${std_dir}/assembler.log
         ../target/${target}/braidc --llvm -p linux -i ../braid/std -o ${std_dir}/std.obj --manifest > ${std_dir}/stdout 2> /dev/null
     elif [[ "$OSTYPE" == "darwin"* ]]; then
-        nasm -g -f macho64 ../braid/macho64/llvm/std/input.asm -l ${std_dir}/std_input.lst -o ${std_dir}/std_input.obj > ${std_dir}/assembler.log
         ../target/${target}/braidc --llvm -p machos -i ../braid/std -o ${std_dir}/std.obj --manifest > ${std_dir}/stdout 2> /dev/null
     fi
     mv ./target/std.manifest ./target/std/.
@@ -51,15 +49,14 @@ run_test() {
     if [ -f "${build_dir}/output.obj" ]
     then
         if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-            gcc -no-pie -fno-pie -w ${std_dir}/std.obj  ${std_dir}/std_input.obj ${build_dir}/output.obj -g -o ${build_dir}/output -m64 2>&1 > gcc.log
+            gcc -no-pie -fno-pie -w ${std_dir}/std.obj  ${build_dir}/output.obj -g -o ${build_dir}/output -m64 2>&1 > gcc.log
             built=$?
         elif [[ "$OSTYPE" == "darwin"* ]]; then
-            gcc -w ${std_dir}/std.obj ${std_dir}/std_input.obj ${build_dir}/output.obj -g -o ${build_dir}/output -m64 2> ${build_dir}/stdout
+            gcc -w ${std_dir}/std.obj ${build_dir}/output.obj -g -o ${build_dir}/output -m64 2> ${build_dir}/stdout
             built=$?
         else
             # If we can't figure out the OS, then just try the Linux build steps
-            nasm -g -f elf64 ../braid/linux/llvm/std/input.asm -l ${build_dir}/std_input.lst -o ${build_dir}/std_input.obj > assembler.log
-            gcc -no-pie -fno-pie -w ${std_dir}/std.obj  .${build_dir}/std_input.obj ${build_dir}/output.obj -g -o ${build_dir}/output -m64 2>&1 > gcc.log
+            gcc -no-pie -fno-pie -w ${std_dir}/std.obj  ${build_dir}/output.obj -g -o ${build_dir}/output -m64 2>&1 > gcc.log
             built=$?
         fi
     
@@ -123,12 +120,10 @@ run_fail_test() {
     if [ -f "./target/output.obj" ]
     then
         if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-            nasm -g -f elf64 ../braid/linux/llvm/std/input.asm -l ./target/std_input.lst -o ./target/std_input.obj > assembler.log
-            gcc -no-pie -fno-pie -w ./target/std.obj  ./target/std_input.obj ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
+            gcc -no-pie -fno-pie -w ./target/std.obj ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
             built=$?
         elif [[ "$OSTYPE" == "darwin"* ]]; then
-            nasm -g -f macho64 ../braid/macho64/llvm/std/input.asm -l ./target/std_input.lst -o ./target/std_input.obj > assembler.log
-            gcc -w ./target/std.obj ./target/std_input.obj ./target/output.obj -g -o ./target/output -m64 2> ./target/stdout
+            gcc -w ./target/std.obj ./target/output.obj -g -o ./target/output -m64 2> ./target/stdout
             built=$?
         else
             # If we can't figure out the OS, then just try the Linux build steps
