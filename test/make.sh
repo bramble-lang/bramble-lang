@@ -22,8 +22,7 @@ run() {
         cargo run $target --bin braidc -- --llvm -p linux --import ./target/std.manifest "$@" -o ./target/output.obj
         echo ""
         echo "Assembling"
-        nasm -g -f elf64 ../braid/linux/llvm/std/input.asm -l ./target/std_input.lst -o ./target/std_input.obj > assembler.log
-        gcc -no-pie -fno-pie -w ./target/std.obj ./target/std_input.obj ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
+        gcc -no-pie -fno-pie -w ./target/std.obj ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
         built=1
     elif [[ "$OSTYPE" == "darwin"* ]]; then
         echo "Compiling"
@@ -31,8 +30,7 @@ run() {
         cargo run --$target --bin braidc -- --llvm -p machos --import ./target/std.manifest "$@" -o ./target/output.obj
         echo ""
         echo "Assembling"
-        nasm -g -f macho64 ../braid/macho64/llvm/std/input.asm -l ./target/std_input.lst -o ./target/std_input.obj > assembler.log
-        gcc -w ./target/std.obj ./target/std_input.obj ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
+        gcc -w ./target/std.obj ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
         built=1
     else
         echo "Unknown OS: ${OSTYPE}"
