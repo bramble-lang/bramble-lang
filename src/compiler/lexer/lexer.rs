@@ -66,6 +66,18 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
         }
     }
 
+    /// Starting from the current position, this will move
+    /// the cursor next until it encounters a non-digit
+    /// character
+    fn consume_digit_string(&mut self) {
+        while let Some(c) = self.peek() {
+            if !c.is_digit() {
+                break;
+            }
+            self.next();
+        }
+    }
+
     /// Advances the cursor one character and returns the character that was
     /// pointed to by the cursor before the advance.  Returns None if the cursor
     /// was already at the end of the stream.
@@ -357,23 +369,13 @@ impl<'a> Lexer<'a> {
         }
 
         // read until a non-digit is hit
-        while let Some(c) = branch.peek() {
-            if !c.is_digit() {
-                break;
-            }
-            branch.next();
-        }
+        branch.consume_digit_string();
 
         // Check if number is a floating point number
         let mut is_float = false;
         if branch.next_if('.') {
             is_float = true;
-            while let Some(c) = branch.peek() {
-                if !c.is_digit() {
-                    break;
-                }
-                branch.next();
-            }
+            branch.consume_digit_string();
         }
 
         // Check if number has an exponential component
@@ -381,14 +383,7 @@ impl<'a> Lexer<'a> {
             is_float = true;
             // Check for optional minus or plus
             branch.next_if_one_of(&["-", "+"]);
-
-            // Consume the string of digits
-            while let Some(c) = branch.peek() {
-                if !c.is_digit() {
-                    break;
-                }
-                branch.next();
-            }
+            branch.consume_digit_string();
         }
 
         let (int_token, _) = branch.cut().unwrap();
@@ -402,6 +397,12 @@ impl<'a> Lexer<'a> {
         };
         let type_suffix = Self::consume_number_suffix(&mut branch).unwrap_or(number_type);
 
+        // If the type suffix is for an integer but the literal is a float then throw an error
+        if is_float && type_suffix != Primitive::F64 {
+            let span = self.current_char_span().unwrap();
+            return err!(span, LexerError::InvalidNumber)
+        }
+
         // Check that the current character at the lexer cursor position is a delimiter (we have
         // reached the end of the token); otherwise this is not a valid integer literal and an
         // error should be thrown.
@@ -414,12 +415,12 @@ impl<'a> Lexer<'a> {
             let span = self.current_char_span().unwrap();
             err!(
                 span, // Need to add a span to the branch
-                LexerError::InvalidInteger
+                LexerError::InvalidNumber
             )
         }
         .map(|ok| {
             ok.as_ref().map(|token| {
-                self.record(token.span, Ok("Integer"));
+                self.record(token.span, Ok("Number"));
             });
             ok
         })
