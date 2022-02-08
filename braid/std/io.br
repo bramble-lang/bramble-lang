@@ -5,6 +5,16 @@ fn write(s: string) {
     return;
 }
 
+fn writef64(f: f64) {
+    printf("%f", f);
+    return;
+}
+
+fn writef64ln(f: f64) {
+    printf("%f\n", f);
+    return;
+}
+
 fn writei64(i: i64) {
     printf("%ld", i);
     return;

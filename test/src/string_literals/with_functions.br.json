@@ -22,7 +22,7 @@
 {"id": 22, "stage": "lexer", "source": [92, 93], "ok": "Operator"},
 {"id": 23, "stage": "lexer", "source": [93, 94], "ok": "Operator"},
 {"id": 24, "stage": "lexer", "source": [99, 105], "ok": "Keyword"},
-{"id": 25, "stage": "lexer", "source": [106, 107], "ok": "Integer"},
+{"id": 25, "stage": "lexer", "source": [106, 107], "ok": "Number"},
 {"id": 26, "stage": "lexer", "source": [107, 108], "ok": "Operator"},
 {"id": 27, "stage": "lexer", "source": [109, 110], "ok": "Operator"},
 {"id": 28, "stage": "lexer", "source": [112, 114], "ok": "Keyword"},

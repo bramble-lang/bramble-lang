@@ -167,6 +167,47 @@ mod tests {
     }
 
     #[test]
+    fn test_f64() {
+        for (text, val, span) in &[
+            ("5f64", 5.0, (0, 4)),
+            ("5.f64", 5.0, (0, 5)),
+            ("5.0f64", 5.0, (0, 6)),
+            ("5.15f64", 5.15, (0, 7)),
+            ("0.5f64", 0.5, (0, 6)),
+            ("00.5f64", 00.5, (0, 7)),
+            ("5.0e1f64", 50.0, (0, 8)),
+            ("5.0e2f64", 500.0, (0, 8)),
+            ("5.0e+1f64", 50.0, (0, 9)),
+            ("5.0e+2f64", 500.0, (0, 9)),
+            ("5.0e-1f64", 0.5, (0, 9)),
+            ("5.0e-2f64", 0.05, (0, 9)),
+            ("5.", 5.0, (0, 2)),
+            ("5.0", 5.0, (0, 3)),
+            ("5.15", 5.15, (0, 4)),
+            ("0.5", 0.5, (0, 3)),
+            ("00.5", 00.5, (0, 4)),
+            ("5.0e1", 50.0, (0, 5)),
+            ("5.0e2", 500.0, (0, 5)),
+            ("5.0e+1", 50.0, (0, 6)),
+            ("5.0e+2", 500.0, (0, 6)),
+            ("5.0e-1", 0.5, (0, 6)),
+            ("5.0e-2", 0.05, (0, 6)),
+        ] {
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+
+            let mut table = StringTable::new();
+            let src = sm.get(0).unwrap().read().unwrap();
+            let logger = Logger::new();
+            let mut lexer = Lexer::new(src, &mut table, &logger).unwrap();
+            let tokens = lexer.tokenize();
+            assert_eq!(tokens.len(), 1, "{} => {:?}", text, tokens);
+            let token = tokens[0].clone().expect("Expected valid token");
+            assert_eq!(token, Token::new(F64(*val), new_span(span.0, span.1)));
+        }
+    }
+
+    #[test]
     fn test_string_literal() {
         let text = "\"text\"";
         let mut sm = SourceMap::new();
@@ -372,6 +413,7 @@ mod tests {
             ("i16", Primitive(Primitive::I16)),
             ("i32", Primitive(Primitive::I32)),
             ("i64", Primitive(Primitive::I64)),
+            ("f64", Primitive(Primitive::F64)),
             ("bool", Primitive(Primitive::Bool)),
             ("string", Primitive(Primitive::StringLiteral)),
         ]

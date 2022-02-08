@@ -197,6 +197,7 @@ where
             I16(_, i) => I16(self.transform(exp), *i),
             I32(_, i) => I32(self.transform(exp), *i),
             I64(_, i) => I64(self.transform(exp), *i),
+            F64(_, f) => F64(self.transform(exp), *f),
             Boolean(_, b) => Boolean(self.transform(exp), *b),
             StringLiteral(_, s) => StringLiteral(self.transform(exp), s.clone()),
             ArrayExpression(_, _, _) => self.for_array_expression(exp),

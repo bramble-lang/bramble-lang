@@ -239,6 +239,7 @@ impl<'a> SymbolTableScopeStack {
             | Type::I16
             | Type::I32
             | Type::I64
+            | Type::F64
             | Type::Bool
             | Type::StringLiteral
             | Type::RawPointer(..)
@@ -416,6 +417,7 @@ impl<'a> SymbolTableScopeStack {
             | Type::I16 
             | Type::I32 
             | Type::I64 
+            | Type::F64
             | Type::Bool 
             | Type::StringLiteral
             | Type::Unit 

@@ -1,0 +1,23 @@
+fn my_main() -> i64 {
+    let x:f64 := 4.0;
+    let y:f64 := test();
+    let z:f64 := test2(640000.0);
+    let z2:f64 := test2(92e15f64);
+    let z3:f64 := test2(18e-15);
+
+    project::std::io::writef64ln(x);
+    project::std::io::writef64ln(y);
+    project::std::io::writef64ln(z);
+    project::std::io::writef64ln(z2);
+    project::std::io::writef64ln(z3);
+    
+    return 0;
+}
+
+fn test() -> f64 {
+    return 5f64;
+}
+
+fn test2(i: f64) -> f64 {
+    return i;
+}

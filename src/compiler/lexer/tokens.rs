@@ -13,6 +13,7 @@ pub enum Primitive {
     I16,
     I32,
     I64,
+    F64,
     Bool,
     StringLiteral,
 }
@@ -28,6 +29,7 @@ impl std::fmt::Display for Primitive {
             Primitive::I16 => f.write_str("i16"),
             Primitive::I32 => f.write_str("i32"),
             Primitive::I64 => f.write_str("i64"),
+            Primitive::F64 => f.write_str("f64"),
             Primitive::Bool => f.write_str("bool"),
             Primitive::StringLiteral => f.write_str("string"),
         }
@@ -50,6 +52,7 @@ pub enum Lex {
     I16(i16),
     I32(i32),
     I64(i64),
+    F64(f64),
     Bool(bool),
     Identifier(StringId),
     StringLiteral(StringId),
@@ -124,6 +127,7 @@ impl std::fmt::Display for Lex {
             I16(i) => f.write_str(&format!("i16 literal {}", i)),
             I32(i) => f.write_str(&format!("i32 literal {}", i)),
             I64(i) => f.write_str(&format!("i64 literal {}", i)),
+            F64(v) => f.write_str(&format!("f64 literal {}", v)),
             Bool(b) => f.write_str(&format!("bool literal {}", b)),
             Identifier(id) => f.write_str(&format!("identifier {}", id)),
             StringLiteral(str) => f.write_str(&format!("literal \"{}\"", str)),
@@ -253,6 +257,10 @@ impl Token {
             },
             Lex::I64(_) => match a {
                 Lex::I64(_) => true,
+                _ => false,
+            },
+            Lex::F64(_) => match a {
+                Lex::F64(_) => true,
                 _ => false,
             },
             Lex::Bool(_) => match a {

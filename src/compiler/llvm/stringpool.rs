@@ -64,6 +64,7 @@ impl<'a> StringPool<'a> {
             I16(..) => {}
             I32(..) => {}
             I64(..) => {}
+            F64(..) => {}
             Boolean(..) => {}
             StringLiteral(_, s) => {
                 let val = self.string_table.get(*s).unwrap();

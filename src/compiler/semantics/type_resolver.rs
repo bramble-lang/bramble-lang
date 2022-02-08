@@ -471,6 +471,10 @@ impl<'a> TypeResolver<'a> {
                 let ctx = ctx.with_type(Type::I64);
                 Ok(Expression::I64(ctx, *v))
             }
+            Expression::F64(ctx, v) => {
+                let ctx = ctx.with_type(Type::F64);
+                Ok(Expression::F64(ctx, *v))
+            }
             Expression::Boolean(ctx, v) => {
                 let ctx = ctx.with_type(Type::Bool);
                 Ok(Expression::Boolean(ctx, *v))
@@ -868,7 +872,7 @@ impl<'a> TypeResolver<'a> {
 
         match op {
             Negate => {
-                if operand.get_type().is_signed_int() {
+                if operand.get_type().is_signed_int() || operand.get_type().is_float() {
                     Ok((operand.get_type().clone(), operand))
                 } else {
                     Err(CompilerError::new(
@@ -945,9 +949,10 @@ impl<'a> TypeResolver<'a> {
         let r = self.analyze_expression(r)?;
 
         match op {
-            Add | Sub | Mul | Div => {
-                if l.get_type().is_integral()
-                    && r.get_type().is_integral()
+            Add | Sub | Mul | Div
+             => {
+                if l.get_type().is_number()
+                    && r.get_type().is_number()
                     && l.get_type() == r.get_type()
                 {
                     Ok((l.get_type().clone(), l, r))

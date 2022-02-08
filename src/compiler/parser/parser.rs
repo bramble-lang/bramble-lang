@@ -524,6 +524,7 @@ impl<'a> Parser<'a> {
                         Primitive::I16 => Some(Type::I16),
                         Primitive::I32 => Some(Type::I32),
                         Primitive::I64 => Some(Type::I64),
+                        Primitive::F64 => Some(Type::F64),
                         Primitive::Bool => Some(Type::Bool),
                         Primitive::StringLiteral => Some(Type::StringLiteral),
                     };

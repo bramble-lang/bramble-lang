@@ -50,8 +50,8 @@ impl SourceChar {
         self.c.is_alphanumeric()
     }
 
-    pub fn is_numeric(&self) -> bool {
-        self.c.is_numeric()
+    pub fn is_digit(&self) -> bool {
+        self.c.is_digit(10)
     }
 
     pub fn is_whitespace(&self) -> bool {
