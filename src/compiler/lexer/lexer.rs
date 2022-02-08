@@ -274,7 +274,7 @@ impl<'a> Lexer<'a> {
     }
 
     fn consume_literal(&mut self) -> LexerResult<Option<Token>> {
-        match self.consume_integer()? {
+        match self.consume_number()? {
             Some(i) => Ok(Some(i)),
             None => match self.consume_string_literal()? {
                 Some(s) => Ok(Some(s)),
@@ -349,7 +349,7 @@ impl<'a> Lexer<'a> {
         })
     }
 
-    fn consume_integer(&mut self) -> LexerResult<Option<Token>> {
+    fn consume_number(&mut self) -> LexerResult<Option<Token>> {
         let mut branch = LexerBranch::from(self);
 
         if !branch.peek().map_or(false, |c| c.is_numeric()) {
