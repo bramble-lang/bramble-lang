@@ -23,7 +23,7 @@ use inkwell::{
     targets::{CodeModel, InitializationConfig, RelocMode, Target},
     types::*,
     values::*,
-    AddressSpace, IntPredicate, OptimizationLevel,
+    AddressSpace, FloatPredicate, IntPredicate, OptimizationLevel,
 };
 
 use crate::{
@@ -387,6 +387,7 @@ impl<'ctx> IrGen<'ctx> {
 
         let fn_type = match llvm_ty {
             AnyTypeEnum::IntType(ity) => ity.fn_type(&llvm_params, has_var_arg),
+            AnyTypeEnum::FloatType(fty) => fty.fn_type(&llvm_params, has_var_arg),
             AnyTypeEnum::PointerType(pty) => pty.fn_type(&llvm_params, has_var_arg),
             AnyTypeEnum::VoidType(vty) => vty.fn_type(&llvm_params, has_var_arg),
             _ => panic!("Unexpected type: {:?}", llvm_ty),
@@ -858,6 +859,11 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 Some(i64t.const_int(*i as u64, true).into())
                     .view(|ir| llvm.record_terminal(self.span(), ir))
             }
+            ast::Expression::F64(_, f) => {
+                let i64t = llvm.context.f64_type();
+                Some(i64t.const_float(*f as f64).into())
+                    .view(|ir| llvm.record_terminal(self.span(), ir))
+            }
             ast::Expression::Boolean(_, b) => {
                 let bt = llvm.context.bool_type();
                 let event = llvm.new_event::<&BasicValueEnum>(self.span());
@@ -1171,23 +1177,29 @@ impl ast::UnaryOperator {
         span: Span,
     ) -> BasicValueEnum<'ctx> {
         let event = llvm.new_event(span);
-        let op = match self {
-            ast::UnaryOperator::Negate => {
+        let is_float = right.get_type().is_float();
+        let op = match (self, is_float) {
+            (ast::UnaryOperator::Negate, false) => {
                 let r = right.to_llvm_ir(llvm).expect("Expected a value");
                 let rv = r.into_int_value();
                 llvm.builder.build_int_neg(rv, "").into()
             }
-            ast::UnaryOperator::Not => {
+            (ast::UnaryOperator::Negate, true) => {
+                let r = right.to_llvm_ir(llvm).expect("Expected a value");
+                let rv = r.into_float_value();
+                llvm.builder.build_float_neg(rv, "").into()
+            }
+            (ast::UnaryOperator::Not, false) => {
                 let r = right.to_llvm_ir(llvm).expect("Expected a value");
                 let rv = r.into_int_value();
                 llvm.builder.build_not(rv, "").into()
             }
-            ast::UnaryOperator::AddressConst | ast::UnaryOperator::AddressMut => {
+            (ast::UnaryOperator::AddressConst, false) | (ast::UnaryOperator::AddressMut, false) => {
                 // get pointer to identifier
                 let ptr = right.to_address(llvm).unwrap();
                 ptr.into()
             }
-            ast::UnaryOperator::DerefRawPointer => {
+            (ast::UnaryOperator::DerefRawPointer, false) => {
                 let r = right.to_llvm_ir(llvm).expect("Expected a value");
                 let ptr = r.into_pointer_value();
                 if ptr.get_type().get_element_type().is_aggregate_type() {
@@ -1196,6 +1208,7 @@ impl ast::UnaryOperator {
                     llvm.builder.build_load(ptr, "").into()
                 }
             }
+            _ => panic!("Invalid operator")
         };
 
         llvm.record(event, &op);
@@ -1213,51 +1226,89 @@ impl ast::BinaryOperator {
         span: Span,
     ) -> BasicValueEnum<'ctx> {
         let event = llvm.new_event(span);
+        let is_float = left.get_type().is_float();
         let l = left.to_llvm_ir(llvm).expect("Expected a value");
         let r = right.to_llvm_ir(llvm).expect("Expected a value");
-        let lv = l.into_int_value();
-        let rv = r.into_int_value();
-        let op = match self {
-            ast::BinaryOperator::Add => llvm.builder.build_int_add(lv, rv, ""),
-            ast::BinaryOperator::Sub => llvm.builder.build_int_sub(lv, rv, ""),
-            ast::BinaryOperator::Mul => llvm.builder.build_int_mul(lv, rv, ""),
-            ast::BinaryOperator::Div => {
-                // With the current design, the difference between signed and unsigned division is
-                // a hardware difference and falls squarely within the field of the LLVM generator
-                // module.  But this violates the precept that this module makes no decisions and only
-                // transcribes exactly what it is given.  Ultimately, I need to capture the notion
-                // of operators for each operand type in the language layer; especially when I get
-                // to implementing FP values and operations.
-                if left.get_type().is_unsigned_int() {
-                    llvm.builder.build_int_unsigned_div(lv, rv, "")
-                } else {
-                    llvm.builder.build_int_signed_div(lv, rv, "")
+        let op = if is_float {
+            // With the current design, the difference between float and integer arithmetic is
+            // a hardware difference and falls squarely within the field of the LLVM generator
+            // module.  But this violates the precept that this module makes no decisions and only
+            // transcribes exactly what it is given.  Ultimately, I need to capture the notion
+            // of operators for each operand type in the language layer.
+            let lf = l.into_float_value();
+            let rf = r.into_float_value();
+            match self {
+                ast::BinaryOperator::Add => llvm.builder.build_float_add(lf, rf, "").into(),
+                ast::BinaryOperator::Sub => llvm.builder.build_float_sub(lf, rf, "").into(),
+                ast::BinaryOperator::Mul => llvm.builder.build_float_mul(lf, rf, "").into(),
+                ast::BinaryOperator::Div => llvm.builder.build_float_div(lf, rf, "").into(),
+                ast::BinaryOperator::Ls => llvm
+                    .builder
+                    .build_float_compare(FloatPredicate::OLT, lf, rf, "")
+                    .into(),
+                ast::BinaryOperator::LsEq => llvm
+                    .builder
+                    .build_float_compare(FloatPredicate::OLE, lf, rf, "")
+                    .into(),
+                ast::BinaryOperator::Gr => llvm
+                    .builder
+                    .build_float_compare(FloatPredicate::OGT, lf, rf, "")
+                    .into(),
+                ast::BinaryOperator::GrEq => llvm
+                    .builder
+                    .build_float_compare(FloatPredicate::OGE, lf, rf, "")
+                    .into(),
+                _ => panic!("Attempting to apply invalid operators to floats"),
+            }
+        } else {
+            let lv = l.into_int_value();
+            let rv = r.into_int_value();
+            match self {
+                ast::BinaryOperator::Add => llvm.builder.build_int_add(lv, rv, "").into(),
+                ast::BinaryOperator::Sub => llvm.builder.build_int_sub(lv, rv, "").into(),
+                ast::BinaryOperator::Mul => llvm.builder.build_int_mul(lv, rv, "").into(),
+                ast::BinaryOperator::Div => {
+                    // With the current design, the difference between signed and unsigned division is
+                    // a hardware difference and falls squarely within the field of the LLVM generator
+                    // module.  But this violates the precept that this module makes no decisions and only
+                    // transcribes exactly what it is given.  Ultimately, I need to capture the notion
+                    // of operators for each operand type in the language layer; especially when I get
+                    // to implementing FP values and operations.
+                    if left.get_type().is_unsigned_int() {
+                        llvm.builder.build_int_unsigned_div(lv, rv, "")
+                    } else {
+                        llvm.builder.build_int_signed_div(lv, rv, "")
+                    }
+                    .into()
                 }
-            }
-            ast::BinaryOperator::BAnd => llvm.builder.build_and(lv, rv, ""),
-            ast::BinaryOperator::BOr => llvm.builder.build_or(lv, rv, ""),
-            ast::BinaryOperator::Eq => llvm.builder.build_int_compare(IntPredicate::EQ, lv, rv, ""),
-            ast::BinaryOperator::NEq => {
-                llvm.builder.build_int_compare(IntPredicate::NE, lv, rv, "")
-            }
-            ast::BinaryOperator::Ls => {
-                llvm.builder
+                ast::BinaryOperator::BAnd => llvm.builder.build_and(lv, rv, "").into(),
+                ast::BinaryOperator::BOr => llvm.builder.build_or(lv, rv, "").into(),
+                ast::BinaryOperator::Eq => llvm
+                    .builder
+                    .build_int_compare(IntPredicate::EQ, lv, rv, "")
+                    .into(),
+                ast::BinaryOperator::NEq => llvm
+                    .builder
+                    .build_int_compare(IntPredicate::NE, lv, rv, "")
+                    .into(),
+                ast::BinaryOperator::Ls => llvm
+                    .builder
                     .build_int_compare(IntPredicate::SLT, lv, rv, "")
-            }
-            ast::BinaryOperator::LsEq => {
-                llvm.builder
+                    .into(),
+                ast::BinaryOperator::LsEq => llvm
+                    .builder
                     .build_int_compare(IntPredicate::SLE, lv, rv, "")
-            }
-            ast::BinaryOperator::Gr => {
-                llvm.builder
+                    .into(),
+                ast::BinaryOperator::Gr => llvm
+                    .builder
                     .build_int_compare(IntPredicate::SGT, lv, rv, "")
-            }
-            ast::BinaryOperator::GrEq => {
-                llvm.builder
+                    .into(),
+                ast::BinaryOperator::GrEq => llvm
+                    .builder
                     .build_int_compare(IntPredicate::SGE, lv, rv, "")
+                    .into(),
             }
-        }
-        .into();
+        };
 
         llvm.record(event, &op);
 
@@ -1356,6 +1407,7 @@ impl ast::Type {
             ast::Type::U16 | ast::Type::I16 => llvm.context.i16_type().into(),
             ast::Type::U32 | ast::Type::I32 => llvm.context.i32_type().into(),
             ast::Type::U64 | ast::Type::I64 => llvm.context.i64_type().into(),
+            ast::Type::F64 => llvm.context.f64_type().into(),
             ast::Type::Bool => llvm.context.bool_type().into(),
             ast::Type::Unit => llvm.context.void_type().into(),
             ast::Type::StringLiteral => llvm
@@ -1457,11 +1509,12 @@ impl<'ctx> LlvmToBasicTypeEnum<'ctx> for AnyTypeEnum<'ctx> {
         match self {
             AnyTypeEnum::StructType(st_ty) => Ok(st_ty.into()),
             AnyTypeEnum::IntType(i_ty) => Ok(i_ty.into()),
+            AnyTypeEnum::FloatType(f_ty) => Ok(f_ty.into()),
             AnyTypeEnum::PointerType(ptr_ty) => Ok(ptr_ty.into()),
             AnyTypeEnum::ArrayType(a_ty) => Ok(a_ty.into()),
             AnyTypeEnum::VoidType(_) => Err("Cannot convert void to basic type".into()),
             AnyTypeEnum::FunctionType(_) => Err("Cannot convert void to basic type".into()),
-            AnyTypeEnum::FloatType(_) | AnyTypeEnum::VectorType(_) => {
+            AnyTypeEnum::VectorType(_) => {
                 todo!("Not implemented")
             }
         }

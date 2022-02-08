@@ -1,0 +1,59 @@
+fn my_main() -> i64 {
+    let x:f64 := 5f64;
+    let y:f64 := test();
+    let z:f64 := sub(x, y);
+    
+    project::std::io::writef64ln(x); // 5
+    project::std::io::writef64ln(y); // 5
+    project::std::io::writef64ln(z); // 0
+
+    let w: f64 := x + y;
+    project::std::io::writef64ln(w); // 10
+
+    let a: f64 := w + z;
+    project::std::io::writef64ln(a); // 10
+
+    let b: f64 := w * z;
+    project::std::io::writef64ln(b); // 0
+
+    let f: f64 := x/w;
+    project::std::io::writef64ln(f); // 0
+
+    let g: f64 := add(x, y);
+    project::std::io::writef64ln(g); // 10
+
+    let h: f64 := w - 11f64;
+    project::std::io::writef64ln(h); // -1
+
+    let i: f64 := w + 1.844e4;
+    project::std::io::writef64ln(i); // 0
+
+    test_udiv();
+
+    // Test exponent
+    if (500.0e-2f64 < 0.01e+3f64) {
+        project::std::io::write("5 is less than 10\n");
+    };
+    
+    return 0;
+}
+
+fn test() -> f64 {
+    return 5f64;
+}
+
+fn sub(i: f64, j: f64) -> f64 {
+    return i - j;
+}
+
+fn add(a: f64, b: f64) -> f64 {
+    return a + b;
+}
+
+fn test_udiv() {
+    let j: f64 := 18446744073709551615f64;
+    let k: f64 := 2f64 / j;
+    project::std::io::writef64ln(k); // 0
+
+    return;
+}

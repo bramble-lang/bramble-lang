@@ -11,7 +11,8 @@ pub enum LexerError {
     Locked(Option<SourceChar>),
     InvalidEscapeSequence(SourceChar),
     ExpectedEscapeCharacter,
-    InvalidInteger,
+    InvalidNumber,
+    InvalidSuffixOnFloat,
     UnexpectedSuffixType(Primitive),
     SourceError, // TODO: make this more descriptive
 }
@@ -24,10 +25,11 @@ impl CompilerDisplay for LexerError {
             Locked(Some(c)) => format!("Lexer locked on {}", c),
             InvalidEscapeSequence(c) => format!("Invalid escape sequence \\{}", c),
             ExpectedEscapeCharacter => format!("Expected an escape character after \\"),
-            InvalidInteger => format!("Invalid integer"),
+            InvalidNumber => format!("Invalid number"),
             UnexpectedSuffixType(ref prim) => format!("Invalid type suffix: {}", prim.fmt(sm, st)?),
             SourceError => format!("Error reading characters from source code"),
             UnexpectedEof => format!("Unexpected EOF"),
+            InvalidSuffixOnFloat => format!("Invalid suffix after float literal."),
         };
 
         Ok(format!("{}", msg))

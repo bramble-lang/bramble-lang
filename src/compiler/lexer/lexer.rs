@@ -66,6 +66,18 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
         }
     }
 
+    /// Starting from the current position, this will move
+    /// the cursor next until it encounters a non-digit
+    /// character
+    fn consume_digit_string(&mut self) {
+        while let Some(c) = self.peek() {
+            if !c.is_digit() {
+                break;
+            }
+            self.next();
+        }
+    }
+
     /// Advances the cursor one character and returns the character that was
     /// pointed to by the cursor before the advance.  Returns None if the cursor
     /// was already at the end of the stream.
@@ -274,7 +286,7 @@ impl<'a> Lexer<'a> {
     }
 
     fn consume_literal(&mut self) -> LexerResult<Option<Token>> {
-        match self.consume_integer()? {
+        match self.consume_number()? {
             Some(i) => Ok(Some(i)),
             None => match self.consume_string_literal()? {
                 Some(s) => Ok(Some(s)),
@@ -349,26 +361,47 @@ impl<'a> Lexer<'a> {
         })
     }
 
-    fn consume_integer(&mut self) -> LexerResult<Option<Token>> {
+    fn consume_number(&mut self) -> LexerResult<Option<Token>> {
         let mut branch = LexerBranch::from(self);
 
-        if !branch.peek().map_or(false, |c| c.is_numeric()) {
+        if !branch.peek().map_or(false, |c| c.is_digit()) {
             return Ok(None);
         }
 
         // read until a non-digit is hit
-        while let Some(c) = branch.peek() {
-            if !c.is_numeric() {
-                break;
-            }
-            branch.next();
+        branch.consume_digit_string();
+
+        // Check if number is a floating point number
+        let mut is_float = false;
+        if branch.next_if('.') {
+            is_float = true;
+            branch.consume_digit_string();
+        }
+
+        // Check if number has an exponential component
+        if let Some(_) = branch.next_if_one_of(&["e", "E"]) {
+            is_float = true;
+            // Check for optional minus or plus
+            branch.next_if_one_of(&["-", "+"]);
+            branch.consume_digit_string();
         }
 
         let (int_token, _) = branch.cut().unwrap();
 
         // Check if there is a postfix (i32, i64, etc) on the integer literal if there is
         // no suffix then default to i64
-        let type_suffix = Self::consume_int_suffix(&mut branch).unwrap_or(Primitive::I64);
+        let number_type = if is_float {
+            Primitive::F64
+        } else {
+            Primitive::I64
+        };
+        let type_suffix = Self::consume_number_suffix(&mut branch).unwrap_or(number_type);
+
+        // If the type suffix is for an integer but the literal is a float then throw an error
+        if is_float && type_suffix != Primitive::F64 {
+            let span = self.current_char_span().unwrap();
+            return err!(span, LexerError::InvalidNumber)
+        }
 
         // Check that the current character at the lexer cursor position is a delimiter (we have
         // reached the end of the token); otherwise this is not a valid integer literal and an
@@ -377,17 +410,17 @@ impl<'a> Lexer<'a> {
             let (_, span) = branch.merge().unwrap();
             let int_text = self.string_table.get(int_token).unwrap();
 
-            Self::create_int_literal(span, &int_text, type_suffix)
+            Self::create_number_literal(span, &int_text, type_suffix)
         } else {
             let span = self.current_char_span().unwrap();
             err!(
                 span, // Need to add a span to the branch
-                LexerError::InvalidInteger
+                LexerError::InvalidNumber
             )
         }
         .map(|ok| {
             ok.as_ref().map(|token| {
-                self.record(token.span, Ok("Integer"));
+                self.record(token.span, Ok("Number"));
             });
             ok
         })
@@ -397,7 +430,7 @@ impl<'a> Lexer<'a> {
         })
     }
 
-    fn consume_int_suffix(branch: &mut LexerBranch) -> Option<Primitive> {
+    fn consume_number_suffix(branch: &mut LexerBranch) -> Option<Primitive> {
         if branch.next_if_word("i8") {
             Some(Primitive::I8)
         } else if branch.next_if_word("i16") {
@@ -414,6 +447,8 @@ impl<'a> Lexer<'a> {
             Some(Primitive::U32)
         } else if branch.next_if_word("u64") {
             Some(Primitive::U64)
+        } else if branch.next_if_word("f64") {
+            Some(Primitive::F64)
         } else {
             None
         }
@@ -579,7 +614,7 @@ impl<'a> Lexer<'a> {
         let mut branch = LexerBranch::from(self);
 
         let primitives = [
-            "u8", "u16", "u32", "u64", "i8", "i16", "i32", "i64", "bool", "string",
+            "u8", "u16", "u32", "u64", "i8", "i16", "i32", "i64", "f64", "bool", "string",
         ];
 
         Ok(match branch.next_if_one_of(&primitives) {
@@ -595,6 +630,7 @@ impl<'a> Lexer<'a> {
                     "i16" => Token::new(Primitive(Primitive::I16), span),
                     "i32" => Token::new(Primitive(Primitive::I32), span),
                     "i64" => Token::new(Primitive(Primitive::I64), span),
+                    "f64" => Token::new(Primitive(Primitive::F64), span),
                     "bool" => Token::new(Primitive(Primitive::Bool), span),
                     "string" => Token::new(Primitive(Primitive::StringLiteral), span),
                     _ => panic!("Matched a primitive which does not exist: {}", w),
@@ -659,7 +695,7 @@ impl<'a> Lexer<'a> {
         c == 'n' || c == 'r' || c == 't' || c == '"' || c == '0' || c == '\\'
     }
 
-    fn create_int_literal(
+    fn create_number_literal(
         span: Span,
         int_token: &str,
         prim: Primitive,
@@ -689,6 +725,10 @@ impl<'a> Lexer<'a> {
             ))),
             Primitive::I64 => Ok(Some(Token::new(
                 I64(int_token.parse::<i64>().unwrap()),
+                span,
+            ))),
+            Primitive::F64 => Ok(Some(Token::new(
+                F64(int_token.parse::<f64>().unwrap()),
                 span,
             ))),
             Primitive::Bool | Primitive::StringLiteral => {
