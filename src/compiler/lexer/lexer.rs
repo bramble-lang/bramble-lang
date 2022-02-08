@@ -364,11 +364,43 @@ impl<'a> Lexer<'a> {
             branch.next();
         }
 
+        // Check if number is a floating point number
+        let mut is_float = false;
+        if branch.next_if('.') {
+            is_float = true;
+            while let Some(c) = branch.peek() {
+                if !c.is_digit() {
+                    break;
+                }
+                branch.next();
+            }
+        }
+
+        // Check if number has an exponential component
+        if let Some(_) = branch.next_if_one_of(&["e", "E"]) {
+            is_float = true;
+            // Check for optional minus or plus
+            branch.next_if_one_of(&["-", "+"]);
+
+            // Consume the string of digits
+            while let Some(c) = branch.peek() {
+                if !c.is_digit() {
+                    break;
+                }
+                branch.next();
+            }
+        }
+
         let (int_token, _) = branch.cut().unwrap();
 
         // Check if there is a postfix (i32, i64, etc) on the integer literal if there is
         // no suffix then default to i64
-        let type_suffix = Self::consume_number_suffix(&mut branch).unwrap_or(Primitive::I64);
+        let number_type = if is_float {
+            Primitive::F64
+        } else {
+            Primitive::I64
+        };
+        let type_suffix = Self::consume_number_suffix(&mut branch).unwrap_or(number_type);
 
         // Check that the current character at the lexer cursor position is a delimiter (we have
         // reached the end of the token); otherwise this is not a valid integer literal and an
@@ -535,8 +567,8 @@ impl<'a> Lexer<'a> {
         // Ordering of these keywords matters: if one keyword is a prefix to another keyword then the
         // longer keyword must be placed first; otherwise the shorter keyword will incorrectly match.
         let keywords = [
-            "let", "mut", "return", "yield", "yret", "fn", "const", "co", "mod", "struct", "extern", "init",
-            "if", "else", "while", "self", "super", "root", "project"
+            "let", "mut", "return", "yield", "yret", "fn", "const", "co", "mod", "struct",
+            "extern", "init", "if", "else", "while", "self", "super", "root", "project",
         ];
 
         Ok(match branch.next_if_one_of(&keywords) {

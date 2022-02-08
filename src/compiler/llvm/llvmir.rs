@@ -387,6 +387,7 @@ impl<'ctx> IrGen<'ctx> {
 
         let fn_type = match llvm_ty {
             AnyTypeEnum::IntType(ity) => ity.fn_type(&llvm_params, has_var_arg),
+            AnyTypeEnum::FloatType(fty) => fty.fn_type(&llvm_params, has_var_arg),
             AnyTypeEnum::PointerType(pty) => pty.fn_type(&llvm_params, has_var_arg),
             AnyTypeEnum::VoidType(vty) => vty.fn_type(&llvm_params, has_var_arg),
             _ => panic!("Unexpected type: {:?}", llvm_ty),
