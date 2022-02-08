@@ -352,13 +352,13 @@ impl<'a> Lexer<'a> {
     fn consume_number(&mut self) -> LexerResult<Option<Token>> {
         let mut branch = LexerBranch::from(self);
 
-        if !branch.peek().map_or(false, |c| c.is_numeric()) {
+        if !branch.peek().map_or(false, |c| c.is_digit()) {
             return Ok(None);
         }
 
         // read until a non-digit is hit
         while let Some(c) = branch.peek() {
-            if !c.is_numeric() {
+            if !c.is_digit() {
                 break;
             }
             branch.next();
