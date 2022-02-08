@@ -62,6 +62,32 @@ impl Type {
             .flatten()
     }
 
+    pub fn is_number(&self) -> bool {
+        match self {
+            Type::F32
+            | Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64
+            | Type::I8
+            | Type::I16
+            | Type::I32
+            | Type::I64 => true,
+            Type::Bool
+            | Type::StringLiteral
+            | Type::RawPointer(..)
+            | Type::Array(_, _)
+            | Type::Unit
+            | Type::Custom(_)
+            | Type::StructDef(_)
+            | Type::FunctionDef(_, _)
+            | Type::CoroutineDef(_, _)
+            | Type::Coroutine(_)
+            | Type::ExternDecl(..)
+            | Type::Unknown => false,
+        }
+    }
+
     pub fn is_integral(&self) -> bool {
         match self {
             Type::U8
@@ -74,6 +100,32 @@ impl Type {
             | Type::I64 => true,
             Type::Bool
             | Type::F32
+            | Type::StringLiteral
+            | Type::RawPointer(..)
+            | Type::Array(_, _)
+            | Type::Unit
+            | Type::Custom(_)
+            | Type::StructDef(_)
+            | Type::FunctionDef(_, _)
+            | Type::CoroutineDef(_, _)
+            | Type::Coroutine(_)
+            | Type::ExternDecl(..)
+            | Type::Unknown => false,
+        }
+    }
+
+    pub fn is_float(&self) -> bool {
+        match self {
+            | Type::F32 => true,
+            Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64
+            | Type::I8
+            | Type::I16
+            | Type::I32
+            | Type::I64
+            | Type::Bool
             | Type::StringLiteral
             | Type::RawPointer(..)
             | Type::Array(_, _)

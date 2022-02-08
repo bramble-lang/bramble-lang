@@ -471,6 +471,10 @@ impl<'a> TypeResolver<'a> {
                 let ctx = ctx.with_type(Type::I64);
                 Ok(Expression::I64(ctx, *v))
             }
+            Expression::F32(ctx, v) => {
+                let ctx = ctx.with_type(Type::F32);
+                Ok(Expression::F32(ctx, *v))
+            }
             Expression::Boolean(ctx, v) => {
                 let ctx = ctx.with_type(Type::Bool);
                 Ok(Expression::Boolean(ctx, *v))
@@ -945,9 +949,10 @@ impl<'a> TypeResolver<'a> {
         let r = self.analyze_expression(r)?;
 
         match op {
-            Add | Sub | Mul | Div => {
-                if l.get_type().is_integral()
-                    && r.get_type().is_integral()
+            Add | Sub | Mul | Div
+             => {
+                if l.get_type().is_number()
+                    && r.get_type().is_number()
                     && l.get_type() == r.get_type()
                 {
                     Ok((l.get_type().clone(), l, r))

@@ -22,6 +22,7 @@ pub enum Expression<I> {
     I16(I, i16),
     I32(I, i32),
     I64(I, i64),
+    F32(I, f32),
     Boolean(I, bool),
     StringLiteral(I, StringId),
     ArrayExpression(I, Vec<Expression<I>>, usize),
@@ -74,6 +75,7 @@ impl<M: Context> Node<M> for Expression<M> {
             | I16(m, ..)
             | I32(m, ..)
             | I64(m, ..)
+            | F32(m, ..)
             | Boolean(m, ..)
             | StringLiteral(m, ..)
             | CustomType(m, ..)
@@ -105,6 +107,7 @@ impl<M: Context> Node<M> for Expression<M> {
             | I16(m, ..)
             | I32(m, ..)
             | I64(m, ..)
+            | F32(m, ..)
             | Boolean(m, ..)
             | StringLiteral(m, ..)
             | CustomType(m, ..)
@@ -189,6 +192,7 @@ impl<M: Context> Node<M> for Expression<M> {
             | I16(..)
             | I32(..)
             | I64(..)
+            | F32(..)
             | Boolean(..)
             | StringLiteral(..)
             | ArrayExpression(_, _, _)
@@ -230,6 +234,7 @@ impl<I> Expression<I> {
             I16(_, v) => format!("i16({})", v),
             I32(_, v) => format!("i32({})", v),
             I64(_, v) => format!("i64({})", v),
+            F32(_, v) => format!("f32({})", v),
             Boolean(_, v) => format!("bool({})", v),
             StringLiteral(_, v) => format!("\"{}\"", v),
             ArrayExpression(_, v, _) => format!(
