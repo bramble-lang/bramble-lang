@@ -5,6 +5,11 @@ fn write(s: string) {
     return;
 }
 
+fn writef32ln(f: f32) {
+    printf("%f\n", f);
+    return;
+}
+
 fn writei64(i: i64) {
     printf("%ld", i);
     return;
