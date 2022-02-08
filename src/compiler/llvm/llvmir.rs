@@ -1144,6 +1144,11 @@ impl ast::BinaryOperator {
         let l = left.to_llvm_ir(llvm).expect("Expected a value");
         let r = right.to_llvm_ir(llvm).expect("Expected a value");
         let op = if is_float {
+            // With the current design, the difference between float and integer arithmetic is
+            // a hardware difference and falls squarely within the field of the LLVM generator
+            // module.  But this violates the precept that this module makes no decisions and only
+            // transcribes exactly what it is given.  Ultimately, I need to capture the notion
+            // of operators for each operand type in the language layer.
             let lf = l.into_float_value();
             let rf = r.into_float_value();
             match self {
