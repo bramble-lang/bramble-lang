@@ -167,6 +167,22 @@ mod tests {
     }
 
     #[test]
+    fn test_f32() {
+        let text = "5f32";
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+
+        let mut table = StringTable::new();
+        let src = sm.get(0).unwrap().read().unwrap();
+        let logger = Logger::new();
+        let mut lexer = Lexer::new(src, &mut table, &logger).unwrap();
+        let tokens = lexer.tokenize();
+        assert_eq!(tokens.len(), 1, "{:?}", tokens);
+        let token = tokens[0].clone().expect("Expected valid token");
+        assert_eq!(token, Token::new(F32(5.0), new_span(0, 4)));
+    }
+
+    #[test]
     fn test_string_literal() {
         let text = "\"text\"";
         let mut sm = SourceMap::new();
@@ -372,6 +388,7 @@ mod tests {
             ("i16", Primitive(Primitive::I16)),
             ("i32", Primitive(Primitive::I32)),
             ("i64", Primitive(Primitive::I64)),
+            ("f32", Primitive(Primitive::F32)),
             ("bool", Primitive(Primitive::Bool)),
             ("string", Primitive(Primitive::StringLiteral)),
         ]

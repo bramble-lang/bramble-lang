@@ -526,6 +526,7 @@ impl<'a> Parser<'a> {
                         Primitive::I64 => Some(Type::I64),
                         Primitive::Bool => Some(Type::Bool),
                         Primitive::StringLiteral => Some(Type::StringLiteral),
+                        Primitive::F32 => todo!(),
                     };
                     let ctx = ParserContext::new(span);
                     ty.map(|ty| (ty, ctx))
