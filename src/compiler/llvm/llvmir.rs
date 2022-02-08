@@ -1146,37 +1146,37 @@ impl ast::BinaryOperator {
         let op = if is_float {
             let lf = l.into_float_value();
             let rf = r.into_float_value();
-            match (self, is_float) {
-                (ast::BinaryOperator::Add, true) => llvm.builder.build_float_add(lf, rf, "").into(),
-                (ast::BinaryOperator::Sub, true) => llvm.builder.build_float_sub(lf, rf, "").into(),
-                (ast::BinaryOperator::Mul, true) => llvm.builder.build_float_mul(lf, rf, "").into(),
-                (ast::BinaryOperator::Div, true) => llvm.builder.build_float_div(lf, rf, "").into(),
-                (ast::BinaryOperator::Ls, true) => llvm
+            match self {
+                ast::BinaryOperator::Add => llvm.builder.build_float_add(lf, rf, "").into(),
+                ast::BinaryOperator::Sub => llvm.builder.build_float_sub(lf, rf, "").into(),
+                ast::BinaryOperator::Mul => llvm.builder.build_float_mul(lf, rf, "").into(),
+                ast::BinaryOperator::Div => llvm.builder.build_float_div(lf, rf, "").into(),
+                ast::BinaryOperator::Ls => llvm
                     .builder
                     .build_float_compare(FloatPredicate::OLT, lf, rf, "")
                     .into(),
-                (ast::BinaryOperator::LsEq, true) => llvm
+                ast::BinaryOperator::LsEq => llvm
                     .builder
                     .build_float_compare(FloatPredicate::OLE, lf, rf, "")
                     .into(),
-                (ast::BinaryOperator::Gr, true) => llvm
+                ast::BinaryOperator::Gr => llvm
                     .builder
                     .build_float_compare(FloatPredicate::OGT, lf, rf, "")
                     .into(),
-                (ast::BinaryOperator::GrEq, true) => llvm
+                ast::BinaryOperator::GrEq => llvm
                     .builder
                     .build_float_compare(FloatPredicate::OGE, lf, rf, "")
                     .into(),
-                _ => todo!(),
+                _ => panic!("Attempting to apply invalid operators to floats"),
             }
         } else {
             let lv = l.into_int_value();
             let rv = r.into_int_value();
-            match (self, is_float) {
-                (ast::BinaryOperator::Add, false) => llvm.builder.build_int_add(lv, rv, "").into(),
-                (ast::BinaryOperator::Sub, false) => llvm.builder.build_int_sub(lv, rv, "").into(),
-                (ast::BinaryOperator::Mul, false) => llvm.builder.build_int_mul(lv, rv, "").into(),
-                (ast::BinaryOperator::Div, false) => {
+            match self {
+                ast::BinaryOperator::Add => llvm.builder.build_int_add(lv, rv, "").into(),
+                ast::BinaryOperator::Sub => llvm.builder.build_int_sub(lv, rv, "").into(),
+                ast::BinaryOperator::Mul => llvm.builder.build_int_mul(lv, rv, "").into(),
+                ast::BinaryOperator::Div => {
                     // With the current design, the difference between signed and unsigned division is
                     // a hardware difference and falls squarely within the field of the LLVM generator
                     // module.  But this violates the precept that this module makes no decisions and only
@@ -1190,33 +1190,32 @@ impl ast::BinaryOperator {
                     }
                     .into()
                 }
-                (ast::BinaryOperator::BAnd, false) => llvm.builder.build_and(lv, rv, "").into(),
-                (ast::BinaryOperator::BOr, false) => llvm.builder.build_or(lv, rv, "").into(),
-                (ast::BinaryOperator::Eq, false) => llvm
+                ast::BinaryOperator::BAnd => llvm.builder.build_and(lv, rv, "").into(),
+                ast::BinaryOperator::BOr => llvm.builder.build_or(lv, rv, "").into(),
+                ast::BinaryOperator::Eq => llvm
                     .builder
                     .build_int_compare(IntPredicate::EQ, lv, rv, "")
                     .into(),
-                (ast::BinaryOperator::NEq, false) => llvm
+                ast::BinaryOperator::NEq => llvm
                     .builder
                     .build_int_compare(IntPredicate::NE, lv, rv, "")
                     .into(),
-                (ast::BinaryOperator::Ls, false) => llvm
+                ast::BinaryOperator::Ls => llvm
                     .builder
                     .build_int_compare(IntPredicate::SLT, lv, rv, "")
                     .into(),
-                (ast::BinaryOperator::LsEq, false) => llvm
+                ast::BinaryOperator::LsEq => llvm
                     .builder
                     .build_int_compare(IntPredicate::SLE, lv, rv, "")
                     .into(),
-                (ast::BinaryOperator::Gr, false) => llvm
+                ast::BinaryOperator::Gr => llvm
                     .builder
                     .build_int_compare(IntPredicate::SGT, lv, rv, "")
                     .into(),
-                (ast::BinaryOperator::GrEq, false) => llvm
+                ast::BinaryOperator::GrEq => llvm
                     .builder
                     .build_int_compare(IntPredicate::SGE, lv, rv, "")
                     .into(),
-                _ => todo!(),
             }
         };
 
