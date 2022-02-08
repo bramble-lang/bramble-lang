@@ -75,7 +75,7 @@
 {"id": 75, "stage": "lexer", "source": [258, 259], "ok": "Operator"},
 {"id": 76, "stage": "lexer", "source": [259, 260], "ok": "Operator"},
 {"id": 77, "stage": "lexer", "source": [270, 276], "ok": "Keyword"},
-{"id": 78, "stage": "lexer", "source": [277, 278], "ok": "Integer"},
+{"id": 78, "stage": "lexer", "source": [277, 278], "ok": "Number"},
 {"id": 79, "stage": "lexer", "source": [278, 279], "ok": "Operator"},
 {"id": 80, "stage": "lexer", "source": [280, 281], "ok": "Operator"},
 {"id": 81, "stage": "lexer", "source": [283, 285], "ok": "Keyword"},
