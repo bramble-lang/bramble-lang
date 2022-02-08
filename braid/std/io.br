@@ -5,7 +5,7 @@ fn write(s: string) {
     return;
 }
 
-fn writef32ln(f: f32) {
+fn writef64ln(f: f64) {
     printf("%f\n", f);
     return;
 }

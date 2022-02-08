@@ -167,8 +167,8 @@ mod tests {
     }
 
     #[test]
-    fn test_f32() {
-        let text = "5f32";
+    fn test_f64() {
+        let text = "5f64";
         let mut sm = SourceMap::new();
         sm.add_string(text, "/test".into()).unwrap();
 
@@ -179,7 +179,7 @@ mod tests {
         let tokens = lexer.tokenize();
         assert_eq!(tokens.len(), 1, "{:?}", tokens);
         let token = tokens[0].clone().expect("Expected valid token");
-        assert_eq!(token, Token::new(F32(5.0), new_span(0, 4)));
+        assert_eq!(token, Token::new(F64(5.0), new_span(0, 4)));
     }
 
     #[test]
@@ -388,7 +388,7 @@ mod tests {
             ("i16", Primitive(Primitive::I16)),
             ("i32", Primitive(Primitive::I32)),
             ("i64", Primitive(Primitive::I64)),
-            ("f32", Primitive(Primitive::F32)),
+            ("f64", Primitive(Primitive::F64)),
             ("bool", Primitive(Primitive::Bool)),
             ("string", Primitive(Primitive::StringLiteral)),
         ]

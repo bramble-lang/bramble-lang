@@ -471,9 +471,9 @@ impl<'a> TypeResolver<'a> {
                 let ctx = ctx.with_type(Type::I64);
                 Ok(Expression::I64(ctx, *v))
             }
-            Expression::F32(ctx, v) => {
-                let ctx = ctx.with_type(Type::F32);
-                Ok(Expression::F32(ctx, *v))
+            Expression::F64(ctx, v) => {
+                let ctx = ctx.with_type(Type::F64);
+                Ok(Expression::F64(ctx, *v))
             }
             Expression::Boolean(ctx, v) => {
                 let ctx = ctx.with_type(Type::Bool);

@@ -21,7 +21,7 @@ pub enum Type {
     I16,
     I32,
     I64,
-    F32,
+    F64,
     Bool,
     StringLiteral,
     RawPointer(PointerMut, Box<Type>),
@@ -64,7 +64,7 @@ impl Type {
 
     pub fn is_number(&self) -> bool {
         match self {
-            Type::F32
+            Type::F64
             | Type::U8
             | Type::U16
             | Type::U32
@@ -99,7 +99,7 @@ impl Type {
             | Type::I32
             | Type::I64 => true,
             Type::Bool
-            | Type::F32
+            | Type::F64
             | Type::StringLiteral
             | Type::RawPointer(..)
             | Type::Array(_, _)
@@ -116,7 +116,7 @@ impl Type {
 
     pub fn is_float(&self) -> bool {
         match self {
-            | Type::F32 => true,
+            | Type::F64 => true,
             Type::U8
             | Type::U16
             | Type::U32
@@ -147,7 +147,7 @@ impl Type {
             | Type::I16
             | Type::I32
             | Type::I64
-            | Type::F32
+            | Type::F64
             | Type::Bool
             | Type::StringLiteral
             | Type::Array(_, _)
@@ -170,7 +170,7 @@ impl Type {
             | Type::U16
             | Type::U32
             | Type::U64
-            | Type::F32
+            | Type::F64
             | Type::Bool
             | Type::StringLiteral
             | Type::Array(_, _)
@@ -263,7 +263,7 @@ impl std::fmt::Display for Type {
             I16 => f.write_str("i16"),
             I32 => f.write_str("i32"),
             I64 => f.write_str("i64"),
-            F32 => f.write_str("f32"),
+            F64 => f.write_str("f64"),
             Bool => f.write_str("bool"),
             StringLiteral => f.write_str("string"),
             RawPointer(mutability, ty) => {

@@ -414,8 +414,8 @@ impl<'a> Lexer<'a> {
             Some(Primitive::U32)
         } else if branch.next_if_word("u64") {
             Some(Primitive::U64)
-        } else if branch.next_if_word("f32") {
-            Some(Primitive::F32)
+        } else if branch.next_if_word("f64") {
+            Some(Primitive::F64)
         } else {
             None
         }
@@ -580,7 +580,7 @@ impl<'a> Lexer<'a> {
         let mut branch = LexerBranch::from(self);
 
         let primitives = [
-            "u8", "u16", "u32", "u64", "i8", "i16", "i32", "i64", "f32", "bool", "string",
+            "u8", "u16", "u32", "u64", "i8", "i16", "i32", "i64", "f64", "bool", "string",
         ];
 
         Ok(match branch.next_if_one_of(&primitives) {
@@ -596,7 +596,7 @@ impl<'a> Lexer<'a> {
                     "i16" => Token::new(Primitive(Primitive::I16), span),
                     "i32" => Token::new(Primitive(Primitive::I32), span),
                     "i64" => Token::new(Primitive(Primitive::I64), span),
-                    "f32" => Token::new(Primitive(Primitive::F32), span),
+                    "f64" => Token::new(Primitive(Primitive::F64), span),
                     "bool" => Token::new(Primitive(Primitive::Bool), span),
                     "string" => Token::new(Primitive(Primitive::StringLiteral), span),
                     _ => panic!("Matched a primitive which does not exist: {}", w),
@@ -693,8 +693,8 @@ impl<'a> Lexer<'a> {
                 I64(int_token.parse::<i64>().unwrap()),
                 span,
             ))),
-            Primitive::F32 => Ok(Some(Token::new(
-                F32(int_token.parse::<f32>().unwrap()),
+            Primitive::F64 => Ok(Some(Token::new(
+                F64(int_token.parse::<f64>().unwrap()),
                 span,
             ))),
             Primitive::Bool | Primitive::StringLiteral => {

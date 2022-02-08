@@ -239,7 +239,7 @@ impl<'a> ForEachPreOrderMut {
             Expression::I16(..) => self.transform(exp, f),
             Expression::I32(..) => self.transform(exp, f),
             Expression::I64(..) => self.transform(exp, f),
-            Expression::F32(..) => self.transform(exp, f),
+            Expression::F64(..) => self.transform(exp, f),
             Expression::Boolean(..) => self.transform(exp, f),
             Expression::StringLiteral(..) => self.transform(exp, f),
             Expression::ArrayExpression(_, el, _) => {

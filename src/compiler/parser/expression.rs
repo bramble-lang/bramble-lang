@@ -752,7 +752,7 @@ impl<'a> Parser<'a> {
                 Lex::I16(0),
                 Lex::I32(0),
                 Lex::I64(0),
-                Lex::F32(0f32),
+                Lex::F64(0.0),
             ]) {
                 Some(Token {
                     span,
@@ -796,9 +796,9 @@ impl<'a> Parser<'a> {
                 }) => Ok(Some(Expression::I64(ParserContext::new(span), i))),
                 Some(Token {
                     span,
-                    sym: Lex::F32(i),
+                    sym: Lex::F64(i),
                     ..
-                }) => Ok(Some(Expression::F32(ParserContext::new(span), i))),
+                }) => Ok(Some(Expression::F64(ParserContext::new(span), i))),
                 Some(t) => panic!("Unexpected token: {:?}", t),
                 None => Ok(None),
             }

@@ -782,7 +782,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 Some(i64t.const_int(*i as u64, true).into())
                     .view(|ir| llvm.record_terminal(self.span(), ir))
             }
-            ast::Expression::F32(_, f) => {
+            ast::Expression::F64(_, f) => {
                 let i64t = llvm.context.f64_type();
                 Some(i64t.const_float(*f as f64).into())
                     .view(|ir| llvm.record_terminal(self.span(), ir))
@@ -1316,7 +1316,7 @@ impl ast::Type {
             ast::Type::U16 | ast::Type::I16 => llvm.context.i16_type().into(),
             ast::Type::U32 | ast::Type::I32 => llvm.context.i32_type().into(),
             ast::Type::U64 | ast::Type::I64 => llvm.context.i64_type().into(),
-            ast::Type::F32 => llvm.context.f64_type().into(),
+            ast::Type::F64 => llvm.context.f64_type().into(),
             ast::Type::Bool => llvm.context.bool_type().into(),
             ast::Type::Unit => llvm.context.void_type().into(),
             ast::Type::StringLiteral => llvm
