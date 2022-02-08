@@ -872,7 +872,7 @@ impl<'a> TypeResolver<'a> {
 
         match op {
             Negate => {
-                if operand.get_type().is_signed_int() {
+                if operand.get_type().is_signed_int() || operand.get_type().is_float() {
                     Ok((operand.get_type().clone(), operand))
                 } else {
                     Err(CompilerError::new(
