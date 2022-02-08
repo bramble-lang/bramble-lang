@@ -21,6 +21,7 @@ pub enum Type {
     I16,
     I32,
     I64,
+    F32,
     Bool,
     StringLiteral,
     RawPointer(PointerMut, Box<Type>),
@@ -72,6 +73,7 @@ impl Type {
             | Type::I32
             | Type::I64 => true,
             Type::Bool
+            | Type::F32
             | Type::StringLiteral
             | Type::RawPointer(..)
             | Type::Array(_, _)
@@ -93,6 +95,7 @@ impl Type {
             | Type::I16
             | Type::I32
             | Type::I64
+            | Type::F32
             | Type::Bool
             | Type::StringLiteral
             | Type::Array(_, _)
@@ -115,6 +118,7 @@ impl Type {
             | Type::U16
             | Type::U32
             | Type::U64
+            | Type::F32
             | Type::Bool
             | Type::StringLiteral
             | Type::Array(_, _)
@@ -207,6 +211,7 @@ impl std::fmt::Display for Type {
             I16 => f.write_str("i16"),
             I32 => f.write_str("i32"),
             I64 => f.write_str("i64"),
+            F32 => f.write_str("f32"),
             Bool => f.write_str("bool"),
             StringLiteral => f.write_str("string"),
             RawPointer(mutability, ty) => {

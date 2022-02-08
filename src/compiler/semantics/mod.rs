@@ -73,6 +73,7 @@ impl Writable for Type {
             Type::I16 => w.write_text("i16"),
             Type::I32 => w.write_text("i32"),
             Type::I64 => w.write_text("i64"),
+            Type::F32 => w.write_text("f32"),
             Type::Bool => w.write_text("bool"),
             Type::StringLiteral => w.write_text("string"),
             Type::RawPointer(is_mut, ty) => {
