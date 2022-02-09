@@ -105,6 +105,7 @@ pub enum Lex {
     Const,
     At,
     Hat,
+    SizeOf,
 }
 
 impl Lex {
@@ -181,6 +182,7 @@ impl std::fmt::Display for Lex {
             Const => f.write_str("const"),
             At => f.write_str("@"),
             Hat => f.write_str("^"),
+            SizeOf => f.write_str("size_of"),
         }
     }
 }
@@ -328,6 +330,7 @@ impl Token {
             | Lex::Const
             | Lex::At
             | Lex::Hat
+            | Lex::SizeOf
             | Lex::LArrow => *a == self.sym,
         }
     }

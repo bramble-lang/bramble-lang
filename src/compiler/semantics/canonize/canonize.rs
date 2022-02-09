@@ -96,6 +96,17 @@ impl Canonizable for Expression<SemanticContext> {
     ) -> CanonizeResult<()> {
         let span = self.span();
         match self {
+            Expression::SizeOf(_, ref mut ty) => {
+                let canon_type = stack
+                    .canonize_type(ty.as_ref())
+                    .map_err(|e| CompilerError::new(span, e))
+                    .view_err(|e| record_type_ref_event(span, Err(e), logger))?;
+                canon_type
+                    .get_path()
+                    .map(|p| record_type_ref_event(span, Ok(p), logger));
+                *ty = Box::new(canon_type); 
+                Ok(())
+            }
             Expression::Path(_, ref mut path) => {
                 if !path.is_canonical() {
                     stack

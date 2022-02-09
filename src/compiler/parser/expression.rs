@@ -506,11 +506,42 @@ impl<'a> Parser<'a> {
             }
             _ => self
                 .if_expression(stream)
+                .por(|ts| self.size_of(ts), stream)
                 .por(|ts| self.while_expression(ts), stream)
                 .por(|ts| self.expression_block(ts), stream)
                 .por(|ts| self.function_call_or_variable(ts), stream)
                 .por(|ts| self.constant(ts), stream)
                 .por(|ts| self.array_expression(ts), stream),
+        }
+    }
+
+    fn size_of(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
+        // Check of size_of keyword
+        match stream.next_if(&Lex::SizeOf) {
+            Some(op) => {
+                let (event, result) = self.new_event(Span::zero()).and_then(|| {
+                        let ctx = op.to_ctx();
+                        // Must have (
+                        stream.next_must_be(&Lex::LParen)?;
+                        
+                        // Read Type
+                        let (ty, _) = self.consume_type(stream)?.ok_or(CompilerError::new(
+                                ctx.span(),
+                                ParserError::RawPointerExpectedType,
+                            ))?;
+
+                        // Must have )
+                        let ctx = stream.next_must_be(&Lex::RParen)?.to_ctx().join(ctx);
+
+                        // Return size_of expression
+                        Ok(Some(Expression::SizeOf(ctx, Box::new(ty.clone()))))
+                });
+                result.view(|v| {
+                    let msg = v.map(|_| "size_of");
+                    self.record(event.with_span(v.span()), msg)
+                })
+            }
+            None => Ok(None)
         }
     }
 

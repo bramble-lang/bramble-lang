@@ -79,6 +79,7 @@ impl<'a> StringPool<'a> {
                 self.extract_from(array);
                 self.extract_from(index);
             }
+            SizeOf(..) => {}
             CustomType(..) => {}
             Identifier(..) => {}
             IdentifierDeclare(..) => {}

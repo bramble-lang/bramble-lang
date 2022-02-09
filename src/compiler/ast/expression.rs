@@ -31,6 +31,7 @@ pub enum Expression<I> {
         array: Box<Expression<I>>,
         index: Box<Expression<I>>,
     },
+    SizeOf(I, Box<Type>),
     CustomType(I, Path),
     Identifier(I, StringId),
     Path(I, Path),
@@ -78,6 +79,7 @@ impl<M: Context> Node<M> for Expression<M> {
             | F64(m, ..)
             | Boolean(m, ..)
             | StringLiteral(m, ..)
+            | SizeOf(m, ..)
             | CustomType(m, ..)
             | Identifier(m, ..)
             | IdentifierDeclare(m, ..)
@@ -110,6 +112,7 @@ impl<M: Context> Node<M> for Expression<M> {
             | F64(m, ..)
             | Boolean(m, ..)
             | StringLiteral(m, ..)
+            | SizeOf(m, ..)
             | CustomType(m, ..)
             | Identifier(m, ..)
             | IdentifierDeclare(m, ..)
@@ -196,6 +199,7 @@ impl<M: Context> Node<M> for Expression<M> {
             | Boolean(..)
             | StringLiteral(..)
             | ArrayExpression(_, _, _)
+            | SizeOf(..)
             | CustomType(..)
             | Identifier(..)
             | IdentifierDeclare(..)
@@ -245,6 +249,7 @@ impl<I> Expression<I> {
                     .join(",")
             ),
             ArrayAt { array, index, .. } => format!("{}[{}]", array, index),
+            SizeOf(_, ty) => format!("size_of({})", ty),
             CustomType(_, v) => format!("{}", v),
             Identifier(_, v) => format!("{}", v),
             IdentifierDeclare(_, v, p) => format!("{}:{}", v, p),

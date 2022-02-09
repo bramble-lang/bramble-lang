@@ -1639,6 +1639,73 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
     }
 
     #[test]
+    pub fn test_size_of() {
+        for (line, text, expected) in vec![
+            (
+                line!(),
+                "fn main() -> u64 {
+                    return size_of(i64);
+                }",
+                Ok(Type::U64),
+            ),
+            (
+                line!(),
+                "fn main() -> u64 {
+                    return size_of([i32; 13]);
+                }",
+                Ok(Type::U64),
+            ),
+            (
+                line!(),
+                "fn main() -> i64 {
+                    return size_of(f64);
+                }",
+                Err("L2: Return expected i64 but got u64"),
+            ),
+        ] {
+            println!("Test L{}", line);
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
+                .unwrap()
+                .tokenize()
+                .into_iter()
+                .collect::<LResult>()
+                .unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
+
+                    // Validate that the return statement is the correct type
+                    let ret_stm = &fn_main.get_body()[0];
+                    assert_eq!(ret_stm.context().ty(), expected_ty);
+                    if let Statement::Return(r) = ret_stm {
+                        assert_eq!(r.get_value().clone().unwrap().get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a return statement")
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err().fmt(&sm, &table).unwrap(), msg);
+                }
+            }
+        }
+    }
+
+    #[test]
     pub fn test_array_at_index() {
         for (line, text, expected) in vec![
             (
