@@ -651,6 +651,74 @@ pub mod tests {
     }
 
     #[test]
+    fn parse_size_of() {
+        for (text, expected_ctx, expected) in vec![
+            ("size_of(i64)", new_ctx(0, 12), Box::new(Type::I64)),
+            ("size_of(bool)", new_ctx(0, 13), Box::new(Type::Bool)),
+            (
+                "size_of([i32; 5])",
+                new_ctx(0, 17),
+                Box::new(Type::Array(Box::new(Type::I32), 5)),
+            ),
+        ]
+        .iter()
+        {
+            let mut table = StringTable::new();
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
+                .unwrap()
+                .tokenize()
+                .into_iter()
+                .collect::<LResult>()
+                .unwrap();
+            let mut stream = TokenStream::new(&tokens, &logger).unwrap();
+            let parser = Parser::new(&logger);
+            if let Some(Expression::SizeOf(ctx, ty)) = parser.expression(&mut stream).unwrap() {
+                assert_eq!(ty, *expected);
+                assert_eq!(ctx, *expected_ctx);
+            } else {
+                panic!("No nodes returned by parser")
+            }
+        }
+    }
+
+    #[test]
+    fn parse_size_of_custom_type() {
+        let text = "size_of(MyStruct)";
+        let expected_ctx = new_ctx(0, 17);
+
+        let mut table = StringTable::new();
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
+        let logger = Logger::new();
+        let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
+            .unwrap()
+            .tokenize()
+            .into_iter()
+            .collect::<LResult>()
+            .unwrap();
+        let mut stream = TokenStream::new(&tokens, &logger).unwrap();
+        let parser = Parser::new(&logger);
+        if let Some(Expression::SizeOf(ctx, ty)) = parser.expression(&mut stream).unwrap() {
+
+
+            let ms_id = table.insert("MyStruct".into());
+            let mut path = Path::new();
+            path.push(Element::Id(ms_id));
+            assert_eq!(ty, Box::new(Type::Custom(path)));
+            assert_eq!(ctx, expected_ctx);
+        } else {
+            panic!("No nodes returned by parser")
+        }
+    }
+
+    #[test]
     fn parse_mutation() {
         let text = "mut x := 5;";
         let mut table = StringTable::new();

@@ -253,6 +253,7 @@ impl<'a> ForEachPreOrderMut {
                 self.for_expression(index, f)?;
                 self.transform(exp, f)
             }
+            Expression::SizeOf(..) => self.transform(exp, f),
             Expression::CustomType(..) => self.transform(exp, f),
             Expression::Identifier(..) => self.transform(exp, f),
             Path(..) => self.transform(exp, f),

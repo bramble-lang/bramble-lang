@@ -203,6 +203,7 @@ where
             StringLiteral(_, s) => StringLiteral(self.transform(exp), s.clone()),
             ArrayExpression(_, _, _) => self.for_array_expression(exp),
             ArrayAt { .. } => self.for_array_at(exp),
+            SizeOf(_, ty) => SizeOf(self.transform(exp), ty.clone()),
             CustomType(_, name) => CustomType(self.transform(exp), name.clone()),
             Identifier(_, id) => Identifier(self.transform(exp), id.clone()),
             Path(_, path) => Path(self.transform(exp), path.clone()),

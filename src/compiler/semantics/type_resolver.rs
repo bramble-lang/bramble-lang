@@ -558,6 +558,10 @@ impl<'a> TypeResolver<'a> {
                     index: Box::new(n_index),
                 })
             }
+            Expression::SizeOf(ctx, ty) => {
+                let ctx = ctx.with_type(Type::U64);
+                Ok(Expression::SizeOf(ctx, ty.clone()))
+            }
             Expression::CustomType(ctx, name) => {
                 let ctx = ctx.with_type(Type::Custom(name.clone()));
                 Ok(Expression::CustomType(ctx, name.clone()))
