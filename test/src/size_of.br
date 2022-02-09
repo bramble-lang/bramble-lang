@@ -1,0 +1,27 @@
+fn my_main() -> i64 {
+    project::std::io::writeu64ln(size_of(i64));
+    project::std::io::writeu64ln(size_of(i32));
+    project::std::io::writeu64ln(size_of(i16));
+    project::std::io::writeu64ln(size_of(i8));
+    project::std::io::writeu64ln(size_of(u64));
+    project::std::io::writeu64ln(size_of(u32));
+    project::std::io::writeu64ln(size_of(u16));
+    project::std::io::writeu64ln(size_of(u8));
+    project::std::io::writeu64ln(size_of(bool));
+    project::std::io::writeu64ln(size_of(f64));
+    project::std::io::writeu64ln(size_of([f64; 3]));
+    project::std::io::writeu64ln(size_of(MyStruct));
+    project::std::io::writeu64ln(size_of(MyStruct2));
+
+    return 0;
+}
+
+struct MyStruct {
+    b: bool,
+    c: i8,
+}
+
+struct MyStruct2 {
+    x: i64,
+    y: f64,
+}

@@ -885,7 +885,9 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 Some(bitcast.into()).view(|ir| llvm.record_terminal(self.span(), ir))
             }
             ast::Expression::SizeOf(_, ty) => {
-                todo!()
+                let llvm_ty = ty.to_llvm_ir(llvm).unwrap();
+                let sz = llvm_ty.size_of().unwrap();
+                Some(sz.into()).view(|ir| llvm.record_terminal(self.span(), ir))
             }
             ast::Expression::Identifier(_, id) => {
                 let name = llvm.string_table.get(*id).unwrap();
