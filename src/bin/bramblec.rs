@@ -5,14 +5,14 @@ use std::fs::File;
 use std::path::Path;
 use std::time::Instant;
 
-use braid_lang::compiler::diagnostics::Logger;
-use braid_lang::diagnostics::{write_source_map, ConsoleWriter, JsonWriter};
+use bramble_lang::compiler::diagnostics::Logger;
+use bramble_lang::diagnostics::{write_source_map, ConsoleWriter, JsonWriter};
 use inkwell::context::Context;
 
-use braid_lang::project::*;
-use braid_lang::*;
+use bramble_lang::project::*;
+use bramble_lang::*;
 
-use crate::compiler::ast::MAIN_MODULE;
+use bramble_lang::compiler::ast::MAIN_MODULE;
 
 const BRAID_FILE_EXT: &str = "br";
 const USER_MAIN_FN: &str = "my_main";
@@ -31,7 +31,7 @@ fn main() -> Result<(), i32> {
         .value_of("input")
         .expect("Expected an input source file to compile");
     let src_path = Path::new(input);
-    let project_name = get_project_name(&src_path).unwrap();
+    let project_name = get_project_name(&src_path).expect(&format!("Could not open {:?}", src_path));
     let source_map = build_source_map(&src_path, BRAID_FILE_EXT).unwrap();
 
     let manifests: Vec<_> = match read_manifests(&config) {

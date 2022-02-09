@@ -33,7 +33,7 @@ pub fn get_files(path: &Path, ext: &str) -> Result<Vec<PathBuf>, std::io::Error>
             return Err(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
                 format!(
-                    "Is not a Braid language file, expected extension {} but got {}",
+                    "Is not a Bramble language file, expected extension {} but got {}",
                     ext,
                     ex.to_str().unwrap()
                 ),

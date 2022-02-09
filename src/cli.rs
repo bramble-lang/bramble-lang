@@ -30,10 +30,10 @@ pub enum Stage {
 }
 
 pub fn configure_cli() -> clap::App<'static, 'static> {
-    let app = App::new("Braid Compiler")
+    let app = App::new("Bramble Compiler")
         .version("0.1.0")
         .author("Erich Ess")
-        .about("Compiles Braid language files into x86 assembly for use by the NASM assembler")
+        .about("Compiles Bramble language files into x86 assembly for use by the NASM assembler")
         .arg(
             Arg::with_name("input")
                 .short("i")

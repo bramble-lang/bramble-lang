@@ -10,13 +10,13 @@ do
 done
 
 # check for the existence of the fedora image
-echo "Check if braid-${image} exists"
-not_exist=$(docker image inspect braid-${image}:latest)
+echo "Check if bramble-${image} exists"
+not_exist=$(docker image inspect bramble-${image}:latest)
 result=$?
 if [ $result -ne 0 ]; then
-    echo "Build Image for braid-${image}"
-    docker build -t braid-${image} -f ./docker/linux/${image}/Dockerfile .
+    echo "Build Image for bramble-${image}"
+    docker build -t bramble-${image} -f ./docker/linux/${image}/Dockerfile .
 fi
 
-# Start an interactive shell in Fedora and mount the local braid repo
-docker run -it -v `pwd`:/work/braid-lang braid-${image} sh
+# Start an interactive shell in Fedora and mount the local bramble repo
+docker run -it -v `pwd`:/work/bramble-lang bramble-${image} sh

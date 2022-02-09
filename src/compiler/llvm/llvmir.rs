@@ -1,6 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 
-/// The compiler traverses the Braid AST and constructs and constructs
+/// The compiler traverses the Bramble AST and constructs and constructs
 /// an LLVM Module through LLVM IR.
 
 /// This uses the LLVM C API to interface with LLVM and construct the
@@ -136,12 +136,12 @@ impl<'ctx> IrGen<'ctx> {
             .map_err(|e| e.to_string())
     }
 
-    /// Take the given Braid AST to compile it to LLVM IR and add it to the LLVM module.
+    /// Take the given Bramble AST to compile it to LLVM IR and add it to the LLVM module.
     ///
     /// All user input is expected to be fully validated and correct by the time it reaches
     /// the compiler phase (via syntactic and semantic analysis).  Therefore, if anything
     /// goes wrong during compilation, it is assumed to be the result of a critical bug in
-    /// the compiler itself and not an issue with the input Braid code. This means that any
+    /// the compiler itself and not an issue with the input Bramble code. This means that any
     /// error at this stage is unrecoverable; since its a bug in the compiler itself it cannot
     /// be trusted. So, if any unexpected state is encountered or any error happens this module
     /// will panic at that point in code and crash the compiler.
@@ -216,7 +216,7 @@ impl<'ctx> IrGen<'ctx> {
         }
     }
 
-    /// Creates `main` entry point which will be called by the OS to start the Braid
+    /// Creates `main` entry point which will be called by the OS to start the Bramble
     /// application. This main will initialize platform level values and state, then
     /// call the user defined main `my_main`.
     fn configure_user_main(&self, path: &Path) {

@@ -684,7 +684,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Returns true if the given character is a Braid delimiter.  Which is
+    /// Returns true if the given character is a Bramble delimiter.  Which is
     /// punctuation or whitespace.
     fn is_delimiter(c: SourceChar) -> bool {
         (c.is_ascii_punctuation() && c != '_') || c.is_whitespace()

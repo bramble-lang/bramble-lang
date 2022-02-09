@@ -83,7 +83,7 @@ impl CompilerDisplay for ParserError {
                 format!("Expected identifier after fn keyword")
             }
             ParserError::FnVarArgsNotAllowed => {
-                format!("Varargs are not allowed in Braid functions (only in externs)")
+                format!("Varargs are not allowed in Bramble functions (only in externs)")
             }
             ParserError::FnExpectedTypeAfterArrow => format!("Type expected after ->"),
             ParserError::FnExpectedReturn(token) => {

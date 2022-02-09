@@ -8,21 +8,21 @@ Item 2, of course, depends upon item 1.
 ## Project
 A project is a set of source code files that compile into a single output binary.
 
-The design of Braid's project system is simple: a project is a directory that contains Braid source
-code files.  A user gives the compiler the directory path and all Braid source files in the directory
+The design of Bramble's project system is simple: a project is a directory that contains Bramble source
+code files.  A user gives the compiler the directory path and all Bramble source files in the directory
 (and recursive subdirectories) are compiled as part of the single project.
 
-Internally, Braid links every source file together under a single Module node, called `root`, that
+Internally, Bramble links every source file together under a single Module node, called `root`, that
 represents the project itself.  This will generate a single LLVM output file that is then compiled
 into the final binary.
 
 ### Assumptions
-Right now, Braid assumes that all projects are executables and has no concept of a library project.
+Right now, Bramble assumes that all projects are executables and has no concept of a library project.
 That will presumably change when the second component of this feature timeline is implemented.
 
 ## Importing a Project
 A user will want to be able to write code that is shared across many different projects (a library).
-For this to work, the Braid compiler must support the concept of importing other projects and allowing
+For this to work, the Bramble compiler must support the concept of importing other projects and allowing
 a user to reference code from those projects.
 
 At a high level, here are the key steps that must be implemented:
@@ -141,7 +141,7 @@ Plan 1
         - in LLVM, if there is no my_main then don't compile the main function
     - For each project, I need to extract a list of all the functions/structs in that project that I can import
     along with semantic info about them. To keep things simple, I will start by just manually writing a manifest file for the std::io project and just read that as the "external functions" table for the compiler.
-    - The next problem is, implementing the IO for ints and stuff, if I can only import one printf.  Need to see if I can just %ld for all integers (probaly not because of width) and if not, what can I do?  Do I make extern local and scoped or do I allow aliasing of different externs?  The problem is that printf is variadic and I don't have variadic support in Braid, but I can extern printf as `extern fn printf(string, i64)` but then I can only use it for i64 because of semantic analysis.
+    - The next problem is, implementing the IO for ints and stuff, if I can only import one printf.  Need to see if I can just %ld for all integers (probaly not because of width) and if not, what can I do?  Do I make extern local and scoped or do I allow aliasing of different externs?  The problem is that printf is variadic and I don't have variadic support in Bramble, but I can extern printf as `extern fn printf(string, i64)` but then I can only use it for i64 because of semantic analysis.
         - How does Rust extern variadic functions?
         - Allow local definition of extern, then each function has its own
         - Allow aliasing of extern (does LLVM support this?)

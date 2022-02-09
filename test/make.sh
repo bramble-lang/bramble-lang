@@ -18,16 +18,16 @@ run() {
 
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         echo "Compiling"
-        cargo run $target --bin braidc -- --llvm -p linux --input "../braid/std" -o ./target/std.obj --manifest
-        cargo run $target --bin braidc -- --llvm -p linux --import ./target/std.manifest "$@" -o ./target/output.obj
+        cargo run $target --bin bramblec -- --llvm -p linux --input "../bramble/std" -o ./target/std.obj --manifest
+        cargo run $target --bin bramblec -- --llvm -p linux --import ./target/std.manifest "$@" -o ./target/output.obj
         echo ""
         echo "Assembling"
         gcc -no-pie -fno-pie -w ./target/std.obj ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log
         built=1
     elif [[ "$OSTYPE" == "darwin"* ]]; then
         echo "Compiling"
-        cargo run --$target --bin braidc -- --llvm -p machos --input "../braid/std" -o ./target/std.obj --manifest
-        cargo run --$target --bin braidc -- --llvm -p machos --import ./target/std.manifest "$@" -o ./target/output.obj
+        cargo run --$target --bin bramblec -- --llvm -p machos --input "../bramble/std" -o ./target/std.obj --manifest
+        cargo run --$target --bin bramblec -- --llvm -p machos --import ./target/std.manifest "$@" -o ./target/output.obj
         echo ""
         echo "Assembling"
         gcc -w ./target/std.obj ./target/output.obj -g -o ./target/output -m64 2>&1 > gcc.log

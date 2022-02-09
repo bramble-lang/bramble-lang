@@ -65,7 +65,7 @@ impl Manifest {
         Self::new(sm, st, &routines, &structs)
     }
 
-    /// Convert a Manifest of a Braid artifact to set of definitions which can be used
+    /// Convert a Manifest of a Bramble artifact to set of definitions which can be used
     /// by the compiler for imported items.
     pub fn to_import(self, st: &StringTable) -> Result<Import, ManifestError> {
         let structs = self

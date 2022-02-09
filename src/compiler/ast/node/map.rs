@@ -18,8 +18,8 @@ the value and type of the Annotation on an AST while preserving the AST topology
 Only Annotation data will be transformed.
 
 Each instance of a construct is given a name so that diagnostic and investigative
-data which is collected (to aid a developer with debugging the Braid compiler and
-to aid users with debugging their Braid code) can be identified in the Braid
+data which is collected (to aid a developer with debugging the Bramble compiler and
+to aid users with debugging their Bramble code) can be identified in the Bramble
 Compiler UI.
 */
 pub struct MapPreOrder<A, B, F>
