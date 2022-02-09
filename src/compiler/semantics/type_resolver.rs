@@ -560,6 +560,7 @@ impl<'a> TypeResolver<'a> {
             }
             Expression::SizeOf(ctx, ty) => {
                 let ctx = ctx.with_type(Type::U64);
+                self.valid_type(ty.as_ref(), ctx.span())?;
                 Ok(Expression::SizeOf(ctx, ty.clone()))
             }
             Expression::CustomType(ctx, name) => {

@@ -1657,6 +1657,13 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
             ),
             (
                 line!(),
+                "fn main() -> u64 {
+                    return size_of(FakeType);
+                }",
+                Err("L2: Could not find item with the given path: $main::FakeType ($main::FakeType)"),
+            ),
+            (
+                line!(),
                 "fn main() -> i64 {
                     return size_of(f64);
                 }",
