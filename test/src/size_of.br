@@ -12,6 +12,8 @@ fn my_main() -> i64 {
     project::std::io::writeu64ln(size_of([f64; 3]));
     project::std::io::writeu64ln(size_of(MyStruct));
     project::std::io::writeu64ln(size_of(MyStruct2));
+    project::std::io::writeu64ln(size_of(*const MyStruct2));
+    project::std::io::writeu64ln(size_of(*mut MyStruct2));
 
     return 0;
 }
