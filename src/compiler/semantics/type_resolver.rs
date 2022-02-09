@@ -288,6 +288,8 @@ impl<'a> TypeResolver<'a> {
         let rhs = bind.get_rhs();
         let (event, result) = self.new_event().and_then(|| {
             {
+                // Check that the type from the type annotation exists
+                self.valid_type(bind.get_type(), ctx.span())?;
                 let ctx = ctx.with_type(bind.get_type().clone());
                 let rhs = self.analyze_expression(rhs)?;
                 if ctx.ty() == rhs.get_type() {

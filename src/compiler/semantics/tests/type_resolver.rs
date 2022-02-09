@@ -1892,6 +1892,14 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
             ),
             (
                 line!(),
+                "fn main() -> [i32;5] {
+                    let k: Fake := 1;
+                    return k;
+                }",
+                Err("L2: Could not find item with the given path: $main::Fake ($main::Fake)"),
+            ),
+            (
+                line!(),
                 "fn main() -> [i32;0] {
                     let k: [i64;1] := [];
                     return k;
