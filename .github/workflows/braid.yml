@@ -1,6 +1,6 @@
 # This is a basic workflow to help you get started with Actions
 
-name: Braid
+name: Bramble
 
 # Controls when the action will run.
 on:
@@ -38,7 +38,7 @@ jobs:
         uses: actions-rs/toolchain@v1
 
       # Runs a set of commands using the runners shell
-      - name: Run Braid Test Suite
+      - name: Run Bramble Test Suite
         run: |
           cd test
           bash ./test.sh

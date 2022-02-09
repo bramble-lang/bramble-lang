@@ -6,7 +6,7 @@ use crate::{
 use super::{path::Path, HasVarArgs};
 
 /**
-The actual types which a value can have in Braid.  This covers base types along
+The actual types which a value can have in Bramble.  This covers base types along
 with aggregate types (the array and the structure).  This also includes the `Unknown`
 type, which is used when a type for a value has not yet been resolved by the
 Semantic Analyzer.

@@ -48,7 +48,7 @@ compiler and all new language features must describe how they will be
 recorded by the Insight platform and how the Insight Viewer will display
 them. Include how any changes to the Viewer will satisfy the UX goals.
 1. Syntactic Fuzz Checker Changes: A list of changes which must be made
-to the Syntactic Fuzz Checker `./src/bin/braid-gen`.
+to the Syntactic Fuzz Checker `./src/bin/bramble-gen`.
 
 Compiler changes will require:
 1. Documentation on any Compiler Interface changes.

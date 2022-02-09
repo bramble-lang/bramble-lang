@@ -3,9 +3,9 @@
 Be able to read input from the user.
 
 ## Functional Requirements
-- Use Braid function semantics to make the call to read from the user
+- Use Bramble function semantics to make the call to read from the user
 - Be able to define the function in assembly so that I can make syscalls etc.
-- But provide the user with a Braid function to call
+- But provide the user with a Bramble function to call
 - Do not define the implementation of the IO function using the `assembly!` macro
 within the compiler
 - There must be a separate file containing the implementation of input that the compiler

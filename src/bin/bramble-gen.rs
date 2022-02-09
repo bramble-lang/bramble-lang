@@ -3,7 +3,7 @@ use std::process::exit;
 use rand::prelude::*;
 
 /**
-A tool for generating random, syntactically correct Braid source code. For the
+A tool for generating random, syntactically correct Bramble source code. For the
 purposes of helping to test all possible correct combinations of code.
  */
 

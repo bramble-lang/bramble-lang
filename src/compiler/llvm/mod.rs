@@ -1,6 +1,6 @@
 mod import;
 /**
-   Translate Braid into LLVM IR.
+   Translate Bramble into LLVM IR.
 */
 mod llvmir;
 mod scopestack;

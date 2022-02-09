@@ -1,4 +1,4 @@
- This folder is for storing Braid programs that are written to test the design
+ This folder is for storing Bramble programs that are written to test the design
  of the language and make notes about what works and what does not.
 
  The structure of this section of the project should follow:

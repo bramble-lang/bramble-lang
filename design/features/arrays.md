@@ -2,7 +2,7 @@
 ## Problem
 A fixed set of randomly accessible data is one of the most basic types used in computer science
 and is the foundation for almost all complex data structures.  It is also necessary for modelling
-memory, files, and communication. Braid currently lacks any type that covers this.
+memory, files, and communication. Bramble currently lacks any type that covers this.
 
 ## Solution
 Add an array type which will allow the user to create a densely packed block of memory which can
@@ -175,8 +175,8 @@ Rust uses `alloca` to allocate space on the stack for the array. Then to use the
 
 To read elements from the array, Rust uses a similar strategy, but using the `load` instruction to read data from where the GEP is pointing. One difference, is that in my example, Rust does not use the first element pointer to read the first element of the array, it uses the GEP to get a pointer to the first element and then calls `load` on that pointer.  I'm guessing this is because the first element pointer is created in the compilation of the `bind` expression and is therefore inaccessible to the `read element at` expression. (Will LLVM optimization catch this?)
 
-## How Braid will compile:
-Braid will start out by just copying the way that Rust compiles these expressions:
+## How Bramble will compile:
+Bramble will start out by just copying the way that Rust compiles these expressions:
 
 ### Array Value
 1. Allocate space on the stack with `alloca`
@@ -230,7 +230,7 @@ Braid will start out by just copying the way that Rust compiles these expression
 2. In the line `let a = [1, 2, 3]` what is `a`? `a` is a pointer to the space in memory where the array begings.  The pointer to the first element in the array.  In the case of LLVM, `a` would be the value returned by `alloca`.
 3. Do arrays embed information about their size? No, because arrays have fixed compile time size, they do not need to embed information about their size into the array. This lets the array also be a core model for how contiguous memory works in the hardware.  If we want to do bounds checking on indices, then that can be computed at compile time because the size for an array
 will be known at compile time.
-4. What about when we need dynamically sized segment of memory? For things like building memory buffers, creating vectors, creating strings, etc.? Dynamically sized buffers will need to go into the heap. So a separate heap only array can be created once I have built the heap system and memory management for Braid.
+4. What about when we need dynamically sized segment of memory? For things like building memory buffers, creating vectors, creating strings, etc.? Dynamically sized buffers will need to go into the heap. So a separate heap only array can be created once I have built the heap system and memory management for Bramble.
 5. Something I noticed in the Rust examples: some of hte GEP calls use `i64` for the index and some use `i32`? Why does this happen?
 6. In Rust, what happens if I make the parameter for a function mutable (`fn test(mut a: [i32; 5])`)? It's locally mutable within the function but the mutations should not be seen outside the function. Rust does this by making a copy of the array at the call site and passing that copy to the function, rather than passing the original.
 

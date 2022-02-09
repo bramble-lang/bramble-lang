@@ -92,7 +92,7 @@ MUTATE = mut LVALUE := EXPRESSION
 LVALUE = [^]IDENTIFIER             // The formal labelling of the LVALUE is new to Stet
 ```
 
-> Note: currently braid does not support mutations of fields in a struct. This proposal
+> Note: currently bramble does not support mutations of fields in a struct. This proposal
 optimistically hopes that that language change can be fit in here. The LVALUE in Stet
 needs to be greatly matured so it can support derefs, fields, array elements, and 
 parens to control order of operations.  The LVALUE presented here is still not complete

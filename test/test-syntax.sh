@@ -1,5 +1,5 @@
 #! /bin/sh
-# Randomly generate syntactically correct code and test that braidc validates it.
+# Randomly generate syntactically correct code and test that bramblec validates it.
 if [ -z "$1" ]
   then
     echo "No argument supplied"
@@ -15,15 +15,15 @@ until [ $COUNTER -ge $1 ]; do
     let COUNTER+=1
     echo $COUNTER
 
-    rm /tmp/braid_test.br
-    ../target/debug/braid-gen 8 20 > /tmp/braid_test.br
-    ../target/debug/braidc --stage=parser --platform=linux -i /tmp/braid_test.br --output=./
+    rm /tmp/bramble_test.br
+    ../target/debug/bramble-gen 8 20 > /tmp/bramble_test.br
+    ../target/debug/bramblec --stage=parser --platform=linux -i /tmp/bramble_test.br --output=./
     result=$?
 
     if [[ result -ne 0 ]]; then
         end_time=$(date +%s)
         elapsed=$(( end_time - start_time ))
-        cat /tmp/braid_test.br
+        cat /tmp/bramble_test.br
         exit 1
     fi
 done

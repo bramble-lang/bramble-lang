@@ -2,12 +2,12 @@
 ## Problem
 I do not want to write Core Library functions directly in assembly. For example,
 the Coroutine core functions are written in straight assembly and as I add
-other functions (e.g. IO functions), I want to do those in Braid if possible.
+other functions (e.g. IO functions), I want to do those in Bramble if possible.
 
 ## Solution
 Read about how C implements functions like `printf` and so on to understand how
 the system interfacing functions are implemented in C without just writing inline
-assembly. Then add features to the Braid language that would let me do this.
+assembly. Then add features to the Bramble language that would let me do this.
 
 At the very least, I want to move the x86 defined code into separate files rather
 than being defined within the compiler: at least for large functions.

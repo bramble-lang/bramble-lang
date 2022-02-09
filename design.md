@@ -126,7 +126,7 @@ been added but the sizes and offsets have not been computed. The second state is
 information has been successfully computed and now it can be used by the compiler to compute addresses for fields
 for reading and writing. The third state is an Error state, which is used when certain invariants are violated:
 struct names are duplicated, a struct references another struct which does not exist, a struct is recursive; these
-errors all mean that the struct cannot have its size properly resolved. The Braid compiler makes this explicit
+errors all mean that the struct cannot have its size properly resolved. The Bramble compiler makes this explicit
 having the `UnresolvedStructTable` and `ResolvedStructTable` types
 
 The `Path` and `CanonicalPath` idea mentioned above is another instance of this philosophy: using types to enforce
@@ -319,16 +319,16 @@ are a few things which need to be done to improve this:
 
 1. Heap creation, allocation of data on the heap, and heap management.
 2. Cleaning up completed coroutines
-3. Be able to write the core in Braid.  Right now, the Core is written by and in assembly and this seems pretty
-inefficient, tedious, and hard to get correct.  How can I write this in Braid and then compile it as part of the
-compilation process.  At least these two problems need to be solved: 1. Braid needs to be able to work with
+3. Be able to write the core in Bramble.  Right now, the Core is written by and in assembly and this seems pretty
+inefficient, tedious, and hard to get correct.  How can I write this in Bramble and then compile it as part of the
+compilation process.  At least these two problems need to be solved: 1. Bramble needs to be able to work with
 things like the stack pointers and registers and 2. need a way to compile a separate set of code and inject it into
 the project.
 
 ## C Interop Functionality
 In order to get my language to the point of being useable for actual problems as quickly as possible, I want
 to be able to interop with existing C libraries so that I can just use those to fill gaps. To that end, I want
-to implement a C interop system so that I can easily call C functions from within Braid code. So, I should take
+to implement a C interop system so that I can easily call C functions from within Bramble code. So, I should take
 a look at how some languages to C interop and steal one of their designs.
 
 # 2021-01-25

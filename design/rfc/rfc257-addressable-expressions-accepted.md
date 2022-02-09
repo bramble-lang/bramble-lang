@@ -1,6 +1,6 @@
 # Addressable Expressions
 ## Overview
-Allow the Braid compiler to support more than just identifiers as the
+Allow the Bramble compiler to support more than just identifiers as the
 LHS of mutation operations and the operand of `@(const|mut)` operations.
 Specifically, be able to use array elements and structure fields so
 that the following would be legal:
@@ -128,7 +128,7 @@ mut X := Y :- Not Addressable
 
 Array elements and structure fields are not de facto addressable. For example,
 `foo().field`, the function `foo` returns a structure and we access the field
-`field`. Within Braid, we logically describe this as a _value_ and not an addressable
+`field`. Within Bramble, we logically describe this as a _value_ and not an addressable
 expression so it cannot be used for `@` or mutations. (Even though, in the LLVM
 IR we generate we actually allocate space in the caller stack frame for the returned
 structure value, we still logically describe it as a value expression, this is 
@@ -151,7 +151,7 @@ and that any expression can be used as the operand for `@(const|mut)`.
 
 ## UX
 The only impact on UX will be greater flexibility in what can be mutated and
-referenced. So, this will move Braid towards being more intuitive in that regard.
+referenced. So, this will move Bramble towards being more intuitive in that regard.
 
 ## Insights
 We should mark what expressions resolve to being addressable and what expressions
