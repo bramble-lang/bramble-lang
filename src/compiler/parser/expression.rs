@@ -775,8 +775,9 @@ impl<'a> Parser<'a> {
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
         self.number(stream)
-            .por(|ts| self.boolean(ts), stream)
+            .por(|ts| self.boolean_literal(ts), stream)
             .por(|ts| self.string_literal(ts), stream)
+            .por(|ts| self.null_literal(ts), stream)
     }
 
     pub(super) fn number(
@@ -850,7 +851,26 @@ impl<'a> Parser<'a> {
         })
     }
 
-    pub(super) fn boolean(
+    pub(super) fn null_literal(
+        &self,
+        stream: &mut TokenStream,
+    ) -> ParserResult<Expression<ParserContext>> {
+        let (event, result) =
+            self.new_event(Span::zero())
+                .and_then(|| match stream.next_if(&Lex::Null) {
+                    Some(Token {
+                        span,
+                        ..
+                    }) => Ok(Some(Expression::Null(ParserContext::new(span)))),
+                    _ => Ok(None),
+                });
+        result.view(|v| {
+            let msg = v.map(|_| "null");
+            self.record(event.with_span(v.span()), msg)
+        })
+    }
+
+    pub(super) fn boolean_literal(
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {

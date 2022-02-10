@@ -1540,6 +1540,34 @@ pub mod tests {
     }
 
     #[test]
+    fn parse_null() {
+        for (text, expected) in vec![
+            ("null", Expression::Null(new_ctx(0, 4))),
+        ] {
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+
+            let mut table = StringTable::new();
+            let src = sm.get(0).unwrap().read().unwrap();
+            let logger = Logger::new();
+            let tokens = Lexer::new(src, &mut table, &logger)
+                .unwrap()
+                .tokenize()
+                .into_iter()
+                .collect::<LResult>()
+                .unwrap();
+            let mut stream = TokenStream::new(&tokens, &logger).unwrap();
+            let logger = Logger::new();
+            let parser = Parser::new(&logger);
+            match parser.expression(&mut stream) {
+                Ok(Some(e)) => assert_eq!(e, expected),
+                Ok(t) => panic!("Expected an {:?} but got {:?}", expected, t),
+                Err(err) => panic!("Expected {:?}, but got {:?}", expected, err),
+            }
+        }
+    }
+
+    #[test]
     fn parse_number() {
         for (text, expected) in vec![
             ("64u8", Expression::U8(new_ctx(0, 4), 64)),

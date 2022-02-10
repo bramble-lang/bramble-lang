@@ -818,6 +818,18 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
         match self {
+            ast::Expression::Null(_) => {
+                let zero = llvm.context.i64_type().const_zero();
+                Some(
+                    llvm.builder
+                        .build_int_to_ptr(
+                            zero,
+                            llvm.context.i64_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                )
+            }
             ast::Expression::U8(_, i) => {
                 let u8t = llvm.context.i8_type();
                 Some(u8t.const_int(*i as u64, false).into())
@@ -1313,13 +1325,15 @@ impl ast::BinaryOperator {
                         .builder
                         .build_int_compare(IntPredicate::SGE, lv, rv, "")
                         .into(),
-                    ast::BinaryOperator::RawPointerOffset => panic!("Should be impossible to reach this arm"),
+                    ast::BinaryOperator::RawPointerOffset => {
+                        panic!("Should be impossible to reach this arm")
+                    }
                 }
             } else {
                 let lp = l.into_pointer_value();
                 let offset = r.into_int_value();
                 let outer_idx = llvm.context.i64_type().const_int(0, false);
-                unsafe {llvm.builder.build_gep(lp, &[offset], "").into()}
+                unsafe { llvm.builder.build_gep(lp, &[offset], "").into() }
             }
         };
 
@@ -1416,6 +1430,7 @@ impl ast::RoutineCall {
 impl ast::Type {
     fn to_llvm_ir<'ctx>(&self, llvm: &IrGen<'ctx>) -> Result<AnyTypeEnum<'ctx>> {
         let llvm_ty = match self {
+            ast::Type::Null => panic!("No variable should ever be given the Null type"),
             ast::Type::U8 | ast::Type::I8 => llvm.context.i8_type().into(),
             ast::Type::U16 | ast::Type::I16 => llvm.context.i16_type().into(),
             ast::Type::U32 | ast::Type::I32 => llvm.context.i32_type().into(),

@@ -79,6 +79,7 @@ impl Writable for Addressability {
 impl Writable for Type {
     fn write(&self, w: &dyn super::diagnostics::Writer) {
         match self {
+            Type::Null => w.write_text("null"),
             Type::U8 => w.write_text("u8"),
             Type::U16 => w.write_text("u16"),
             Type::U32 => w.write_text("u32"),

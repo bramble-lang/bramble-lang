@@ -56,6 +56,7 @@ impl<'a> StringPool<'a> {
                     Some(fe) => self.extract_from(fe),
                 }
             }
+            Null(_) => {}
             U8(..) => {}
             U16(..) => {}
             U32(..) => {}

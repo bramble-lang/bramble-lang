@@ -1244,6 +1244,94 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
     }
 
     #[test]
+    pub fn test_null_usage() {
+        for (text, expected) in vec![
+            (
+                "fn main() -> i64 {
+                    let p: *const i64 := null;
+                    return 0;
+                }",
+                Ok(Type::RawPointer(PointerMut::Const, Box::new(Type::I64))),
+            ),
+            (
+                "fn main() -> i64 {
+                    let p: *mut i64 := null;
+                    return 0;
+                }",
+                Ok(Type::RawPointer(PointerMut::Mut, Box::new(Type::I64))),
+            ),
+            (
+                "fn main() -> i64 {
+                    let mut p: *const i64 := null;
+                    mut p := null;
+                    return 0;
+                }",
+                Ok(Type::RawPointer(PointerMut::Const, Box::new(Type::I64))),
+            ),
+            (
+                "fn main() -> i64 {
+                    let mut p: *mut i64 := null;
+                    mut p := null;
+                    return 0;
+                }",
+                Ok(Type::RawPointer(PointerMut::Mut, Box::new(Type::I64))),
+            ),
+            (
+                "fn main() -> i64 {
+                    let k: i64 := ^null;
+                    return 0;
+                }",
+                Err("L2: ^ expected a *mut or *const but found null"),
+            ),
+            (
+                "fn main() -> i64 {
+                    mut ^null := 0;
+                    return 0;
+                }",
+                Err("L2: ^ expected a *mut or *const but found null"),
+            ),
+        ] {
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
+                .unwrap()
+                .tokenize()
+                .into_iter()
+                .collect::<LResult>()
+                .unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
+
+                    // validate that the RHS of the bind is the correct type
+                    let bind_stm = &fn_main.get_body()[0];
+                    if let Statement::Bind(b) = bind_stm {
+                        assert_eq!(b.get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a bind statement");
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err().fmt(&sm, &table).unwrap(), msg, "{}", text);
+                }
+            }
+        }
+    }
+
+    #[test]
     pub fn test_pointer_offset_op() {
         for (text, expected) in vec![
             (
