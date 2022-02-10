@@ -1037,6 +1037,7 @@ impl<'a> TypeResolver<'a> {
                     ))
                 }
             }
+            RawPointerOffset => todo!(),
         }
     }
 

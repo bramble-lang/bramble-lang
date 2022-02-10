@@ -1312,6 +1312,7 @@ impl ast::BinaryOperator {
                     .builder
                     .build_int_compare(IntPredicate::SGE, lv, rv, "")
                     .into(),
+                ast::BinaryOperator::RawPointerOffset => todo!(),
             }
         };
 
