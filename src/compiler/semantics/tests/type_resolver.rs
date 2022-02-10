@@ -1244,6 +1244,121 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
     }
 
     #[test]
+    pub fn test_pointer_offset_op() {
+        for (text, expected) in vec![
+            (
+                "fn main() -> i64 {
+                    let k: i64 := 1;
+                    let p: *const i64 := @const k;
+                    let pp: *const i64 := p@2;
+                    return 0;
+                }",
+                Ok(Type::RawPointer(PointerMut::Const, Box::new(Type::I64))),
+            ),
+            (
+                "fn main() -> i64 {
+                    let mut k: i64 := 1;
+                    let p: *mut i64 := @mut k;
+                    let pp: *mut i64 := p@2;
+                    return 0;
+                }",
+                Ok(Type::RawPointer(PointerMut::Mut, Box::new(Type::I64))),
+            ),
+            (
+                "fn main() -> i64 {
+                    let mut k: i64 := 1;
+                    let p: *mut i64 := @mut k;
+                    let pp: *mut i64 := p@k;
+                    return 0;
+                }",
+                Ok(Type::RawPointer(PointerMut::Mut, Box::new(Type::I64))),
+            ),
+            (
+                "fn main() -> i64 {
+                    let mut k: i64 := 1;
+                    let p: *mut i64 := @mut k;
+                    let pp: *mut i64 := p@(-2 - 3 * 4);
+                    return 0;
+                }",
+                Ok(Type::RawPointer(PointerMut::Mut, Box::new(Type::I64))),
+            ),
+            (
+                "fn main() -> i64 {
+                    let mut k: i64 := 1;
+                    let p: *mut i64 := @mut k;
+                    let pp: *const i64 := (p@(-2 - 3 * 4))@k;
+                    return 0;
+                }",
+                Err("L4: Bind expected *const i64 but got *mut i64"),
+            ),
+            (
+                "fn main() -> i64 {
+                    let k: i64 := 1;
+                    let p: *const i64 := @const k;
+                    let pp: *mut i64 := p@2;
+                    return 0;
+                }",
+                Err("L4: Bind expected *mut i64 but got *const i64"),
+            ),
+            (
+                "fn main() -> i64 {
+                    let mut k: i64 := 1;
+                    let p: *mut i64 := @mut k;
+                    let pp: *mut i64 := p@2.0;
+                    return 0;
+                }",
+                Err("L4: @ operator expects integer on right side, but got f64"),
+            ),
+            (
+                "fn main() -> bool {
+                    let k: i64 := 1;
+                    let p: *const i64 := k@2;
+                    return k + 3;
+                }",
+                Err("L3: @ operator expects raw pointer on left side, but got i64"),
+            ),
+        ] {
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
+                .unwrap()
+                .tokenize()
+                .into_iter()
+                .collect::<LResult>()
+                .unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
+
+                    // validate that the RHS of the bind is the correct type
+                    let bind_stm = &fn_main.get_body()[2];
+                    if let Statement::Bind(b) = bind_stm {
+                        assert_eq!(b.get_rhs().get_type(), expected_ty);
+                    } else {
+                        panic!("Expected a bind statement");
+                    }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err().fmt(&sm, &table).unwrap(), msg, "{}", text);
+                }
+            }
+        }
+    }
+
+    #[test]
     pub fn test_boolean_and_op() {
         for (text, expected) in vec![
             (

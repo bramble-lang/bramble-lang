@@ -983,8 +983,28 @@ impl<'a> TypeResolver<'a> {
         let r = self.analyze_expression(r)?;
 
         match op {
-            Add | Sub | Mul | Div
-             => {
+            RawPointerOffset => {
+                // The type of the lhs must be a raw pointer (const or mut)
+                if l.get_type().is_raw_pointer() {
+                    // The type of the rhs must be an integral type
+                    if r.get_type().is_integral() {
+                        Ok((l.get_type().clone(), l, r))
+                    } else {
+                        // The RHS must be an integer
+                        Err(CompilerError::new(
+                            l.span(),
+                            SemanticError::OffsetOperatorRequiresInteger(r.get_type().clone()),
+                        ))
+                    }
+                } else {
+                    // The LHS must be a raw pointer
+                    Err(CompilerError::new(
+                        l.span(),
+                        SemanticError::OffsetOperatorRequiresPointer(l.get_type().clone()),
+                    ))
+                }
+            }
+            Add | Sub | Mul | Div => {
                 if l.get_type().is_number()
                     && r.get_type().is_number()
                     && l.get_type() == r.get_type()
@@ -1037,7 +1057,6 @@ impl<'a> TypeResolver<'a> {
                     ))
                 }
             }
-            RawPointerOffset => todo!(),
         }
     }
 

@@ -185,6 +185,13 @@ impl Type {
             | Type::Unknown => false,
         }
     }
+
+    pub fn is_raw_pointer(&self) -> bool {
+        match self {
+            Type::RawPointer(..) => true,
+            _ => false,
+        }
+    }
 }
 
 impl PartialEq<Type> for &Type {
