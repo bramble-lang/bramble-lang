@@ -1419,6 +1419,7 @@ impl ast::RoutineCall {
 impl ast::Type {
     fn to_llvm_ir<'ctx>(&self, llvm: &IrGen<'ctx>) -> Result<AnyTypeEnum<'ctx>> {
         let llvm_ty = match self {
+            ast::Type::Null => todo!(),
             ast::Type::U8 | ast::Type::I8 => llvm.context.i8_type().into(),
             ast::Type::U16 | ast::Type::I16 => llvm.context.i16_type().into(),
             ast::Type::U32 | ast::Type::I32 => llvm.context.i32_type().into(),

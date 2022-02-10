@@ -245,7 +245,8 @@ impl<'a> SymbolTableScopeStack {
             | Type::RawPointer(..)
             | Type::Array(_, _)
             | Type::Unit => Ok(symbol),
-            Type::FunctionDef(..)
+            Type::Null
+            | Type::FunctionDef(..)
             | Type::CoroutineDef(..)
             | Type::ExternDecl(..)
             | Type::StructDef { .. }
@@ -410,7 +411,8 @@ impl<'a> SymbolTableScopeStack {
                     Ok(Type::Array(Box::new(self.canonize_type(el_ty)?), *len))
                 }
             }
-            Type::U8
+            Type::Null
+            | Type::U8
             | Type::U16
             | Type::U32
             | Type::U64

@@ -13,6 +13,7 @@ Semantic Analyzer.
  */
 #[derive(Clone, Debug, PartialEq)]
 pub enum Type {
+    Null,
     U8,
     U16,
     U32,
@@ -43,12 +44,22 @@ pub enum PointerMut {
 }
 
 impl Type {
+    pub fn can_be_assigned(&self, r: &Self) -> bool {
+        match self {
+            Self::RawPointer(..) => {
+                r == &Self::Null || self == r
+            },
+            _ => self == r,
+        }
+    }
+    
     pub fn get_path(&self) -> Option<&Path> {
         match self {
             Type::Custom(path) => Some(path),
             _ => None,
         }
     }
+
     pub fn get_members(&self) -> Option<&Vec<(StringId, Type)>> {
         match self {
             Type::StructDef(members) => Some(members),
@@ -73,7 +84,8 @@ impl Type {
             | Type::I16
             | Type::I32
             | Type::I64 => true,
-            Type::Bool
+            Type::Null
+            | Type::Bool
             | Type::StringLiteral
             | Type::RawPointer(..)
             | Type::Array(_, _)
@@ -98,7 +110,8 @@ impl Type {
             | Type::I16
             | Type::I32
             | Type::I64 => true,
-            Type::Bool
+            Type::Null
+            | Type::Bool
             | Type::F64
             | Type::StringLiteral
             | Type::RawPointer(..)
@@ -117,7 +130,8 @@ impl Type {
     pub fn is_float(&self) -> bool {
         match self {
             | Type::F64 => true,
-            Type::U8
+            Type::Null
+            | Type::U8
             | Type::U16
             | Type::U32
             | Type::U64
@@ -143,7 +157,8 @@ impl Type {
     pub fn is_unsigned_int(&self) -> bool {
         match self {
             Type::U8 | Type::U16 | Type::U32 | Type::U64 => true,
-            Type::I8
+            Type::Null
+            | Type::I8
             | Type::I16
             | Type::I32
             | Type::I64
@@ -166,7 +181,8 @@ impl Type {
     pub fn is_signed_int(&self) -> bool {
         match self {
             Type::I8 | Type::I16 | Type::I32 | Type::I64 => true,
-            Type::U8
+            Type::Null
+            | Type::U8
             | Type::U16
             | Type::U32
             | Type::U64
@@ -262,6 +278,7 @@ impl std::fmt::Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         use Type::*;
         match self {
+            Null => f.write_str("null"),
             U8 => f.write_str("u8"),
             U16 => f.write_str("u16"),
             U32 => f.write_str("u32"),

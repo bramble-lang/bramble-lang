@@ -292,7 +292,7 @@ impl<'a> TypeResolver<'a> {
                 self.valid_type(bind.get_type(), ctx.span())?;
                 let ctx = ctx.with_type(bind.get_type().clone());
                 let rhs = self.analyze_expression(rhs)?;
-                if ctx.ty() == rhs.get_type() {
+                if ctx.ty().can_be_assigned(rhs.get_type()) {
                     match self.symbols.add(
                         bind.get_id(),
                         ctx.ty().clone(),
@@ -326,7 +326,7 @@ impl<'a> TypeResolver<'a> {
             let lhs = self.analyze_expression(mutate.get_lhs())?;
             let rhs = self.analyze_expression(mutate.get_rhs())?;
             if lhs.context().is_mutable() {
-                if lhs.get_type() == rhs.get_type() {
+                if lhs.get_type().can_be_assigned(rhs.get_type()) {
                     let ctx = mutate.context().with_type(rhs.get_type().clone());
                     Ok(Mutate::new(ctx, lhs, rhs))
                 } else {
@@ -439,7 +439,7 @@ impl<'a> TypeResolver<'a> {
         let (event, result) = self.new_event().and_then(|| {
         match &ast {
             Expression::Null(ctx) => {
-                let ctx = ctx.with_type(Type::RawPointer(PointerMut::Const, Box::new(Type::Unknown)));
+                let ctx = ctx.with_type(Type::Null);
                 Ok(Expression::Null(ctx))
             }
             Expression::U8(ctx, v) => {
