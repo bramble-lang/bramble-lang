@@ -1,0 +1,27 @@
+fn my_main() -> i64 {
+    // An array
+    let mut arr: [i64; 3] := [1, 2, 3];
+    let mut p: *const i64 := @const arr[1];
+    project::std::io::writei64ln(^p);
+    mut p := p@arr[0];
+    project::std::io::writei64ln(^p);
+    mut p := p@-2;
+    project::std::io::writei64ln(^p);
+
+    // A structure
+    let st: MyStruct := MyStruct{i: 5, j: 6, k: 7};
+    let mut pp: *const i64 := @const st.j;
+    project::std::io::writei64ln(^pp);
+    mut pp := pp@1;
+    project::std::io::writei64ln(^pp);
+    mut pp := pp@-2;
+    project::std::io::writei64ln(^pp);
+
+    return 0;
+}
+
+struct MyStruct {
+    i: i64,
+    j: i64,
+    k: i64,
+}

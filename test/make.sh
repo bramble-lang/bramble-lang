@@ -6,9 +6,9 @@ run() {
     mkdir -p ./target
     target=--release
 
-    if [[ "$BRAID_TARGET" == "debug" ]]; then
+    if [[ "$BRAMBLE_TARGET" == "debug" ]]; then
         target=
-    elif [[ "$BRAID_TARGET" == "release" ]]; then
+    elif [[ "$BRAMBLE_TARGET" == "release" ]]; then
         target=--release
     fi
 
