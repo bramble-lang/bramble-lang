@@ -1047,7 +1047,7 @@ impl<'a> TypeResolver<'a> {
                 }
             }
             Eq | NEq | Ls | LsEq | Gr | GrEq => {
-                if l.get_type() == r.get_type() {
+                if l.get_type().can_be_compared(r.get_type()) {
                     Ok((Type::Bool, l, r))
                 } else {
                     Err(CompilerError::new(

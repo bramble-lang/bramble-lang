@@ -44,11 +44,32 @@ pub enum PointerMut {
 }
 
 impl Type {
+    /// Returns `true` if the the provided type can be assigned
+    /// to variables of this [`Type`].
+    /// 
+    /// If this is [`Type::Null`] then this will always return
+    /// false, because there is no addressable value which has typ
+    /// [`Type::Null`].
     pub fn can_be_assigned(&self, r: &Self) -> bool {
         match self {
             Self::RawPointer(..) => {
                 r == &Self::Null || self == r
             },
+            Self::Null => false,
+            _ => self == r,
+        }
+    }
+
+    /// Returns `true` if these types can be compared with
+    /// each other
+    pub fn can_be_compared(&self, r: &Self) -> bool {
+        match self {
+            Self::RawPointer(..) => {
+                r == &Self::Null || self == r
+            },
+            Self::Null => {
+                r == &Self::Null || r.can_be_compared(self)
+            }
             _ => self == r,
         }
     }
