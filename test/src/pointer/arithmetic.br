@@ -5,8 +5,8 @@ fn my_main() -> i64 {
     project::std::io::writei64ln(^p);
     mut p := p@arr[0];
     project::std::io::writei64ln(^p);
-    mut p := p@-2;
-    project::std::io::writei64ln(^p);
+    let p2: *const i64 := p@-2;
+    project::std::io::writei64ln(^p2);
 
     // A structure
     let st: MyStruct := MyStruct{i: 5, j: 6, k: 7};
