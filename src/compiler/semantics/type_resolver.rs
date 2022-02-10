@@ -438,6 +438,10 @@ impl<'a> TypeResolver<'a> {
         let mut refs = vec![];
         let (event, result) = self.new_event().and_then(|| {
         match &ast {
+            Expression::Null(ctx) => {
+                let ctx = ctx.with_type(Type::RawPointer(PointerMut::Const, Box::new(Type::Unknown)));
+                Ok(Expression::Null(ctx))
+            }
             Expression::U8(ctx, v) => {
                 let ctx = ctx.with_type(Type::U8);
                 Ok(Expression::U8(ctx, *v))

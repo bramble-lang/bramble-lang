@@ -818,6 +818,9 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
         match self {
+            ast::Expression::Null(_) => {
+                todo!()
+            }
             ast::Expression::U8(_, i) => {
                 let u8t = llvm.context.i8_type();
                 Some(u8t.const_int(*i as u64, false).into())

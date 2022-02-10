@@ -231,6 +231,7 @@ impl<'a> ForEachPreOrderMut {
 
         match exp {
             ExpressionBlock(..) => self.for_expression_block(exp, f),
+            Expression::Null(..) => self.transform(exp, f),
             Expression::U8(..) => self.transform(exp, f),
             Expression::U16(..) => self.transform(exp, f),
             Expression::U32(..) => self.transform(exp, f),

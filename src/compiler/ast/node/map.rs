@@ -190,6 +190,7 @@ where
         use Expression::*;
 
         match exp {
+            Null(_) => Null(self.transform(exp)),
             U8(_, i) => U8(self.transform(exp), *i),
             U16(_, i) => U16(self.transform(exp), *i),
             U32(_, i) => U32(self.transform(exp), *i),

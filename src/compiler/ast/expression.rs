@@ -14,6 +14,7 @@ use super::{
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expression<I> {
+    Null(I),
     U8(I, u8),
     U16(I, u16),
     U32(I, u32),
@@ -68,7 +69,8 @@ impl<M: Context> Node<M> for Expression<M> {
     fn context(&self) -> &M {
         use Expression::*;
         match self {
-            U8(m, ..)
+            Null(m)
+            | U8(m, ..)
             | U16(m, ..)
             | U32(m, ..)
             | U64(m, ..)
@@ -101,7 +103,8 @@ impl<M: Context> Node<M> for Expression<M> {
     fn get_context_mut(&mut self) -> &mut M {
         use Expression::*;
         match self {
-            U8(m, ..)
+            Null(m)
+            | U8(m, ..)
             | U16(m, ..)
             | U32(m, ..)
             | U64(m, ..)
@@ -187,7 +190,8 @@ impl<M: Context> Node<M> for Expression<M> {
                 }
                 o
             }
-            U8(..)
+            Null(..)
+            | U8(..)
             | U16(..)
             | U32(..)
             | U64(..)
@@ -230,6 +234,7 @@ impl<I> Expression<I> {
     pub fn root_str(&self) -> String {
         use Expression::*;
         match self {
+            Null(_) => format!("null"),
             U8(_, v) => format!("u8({})", v),
             U16(_, v) => format!("u16({})", v),
             U32(_, v) => format!("u32({})", v),
