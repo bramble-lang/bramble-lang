@@ -121,6 +121,7 @@ pub mod tests {
             ("2<=2", BinaryOperator::LsEq, 0, 4),
             ("2>2", BinaryOperator::Gr, 0, 3),
             ("2>=2", BinaryOperator::GrEq, 0, 4),
+            ("2@2", BinaryOperator::RawPointerOffset, 0, 3),  // Fully recoginizing that, semantically, this is wrong but syntactically it's valid!
         ] {
             let mut table = StringTable::new();
             let mut sm = SourceMap::new();

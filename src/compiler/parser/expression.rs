@@ -173,6 +173,12 @@ impl Expression<ParserContext> {
                 left,
                 right,
             ))),
+            Lex::At => Ok(Some(Expression::BinaryOp(
+                ctx,
+                BinaryOperator::RawPointerOffset,
+                left,
+                right,
+            ))),
             _ => {
                 err!(ctx.span(), ParserError::NotABinaryOp(op.clone()))
             }
@@ -247,7 +253,7 @@ impl<'a> Parser<'a> {
     }
 
     pub(super) fn sum(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
-        self.binary_op(stream, &[Lex::Add, Lex::Minus], Self::term)
+        self.binary_op(stream, &[Lex::Add, Lex::Minus, Lex::At], Self::term)
     }
 
     pub(super) fn term(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {

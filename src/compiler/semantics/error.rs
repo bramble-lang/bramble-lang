@@ -55,6 +55,8 @@ pub enum SemanticError {
     MutablePointerToImmutable,
     RoutineCallInvalidTarget(RoutineCall, Path, Type),
     InvalidIdentifierType(Type),
+    OffsetOperatorRequiresPointer(Type),
+    OffsetOperatorRequiresInteger(Type),
 }
 
 impl CompilerDisplay for SemanticError {
@@ -254,6 +256,14 @@ impl CompilerDisplay for SemanticError {
             SemanticError::ExpectedAddressable(op) => {
                 Ok(format!("{} expected an addressable operand", op))
             }
+            SemanticError::OffsetOperatorRequiresPointer(ty) => Ok(format!(
+                "@ operator expects raw pointer on left side, but got {}",
+                ty.fmt(sm, st)?
+            )),
+            SemanticError::OffsetOperatorRequiresInteger(ty) => Ok(format!(
+                "@ operator expects integer on right side, but got {}",
+                ty.fmt(sm, st)?
+            )),
         }
     }
 }
