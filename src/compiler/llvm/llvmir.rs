@@ -1313,7 +1313,7 @@ impl ast::BinaryOperator {
                         .builder
                         .build_int_compare(IntPredicate::SGE, lv, rv, "")
                         .into(),
-                    ast::BinaryOperator::RawPointerOffset => panic!("Cannot reach this branch"),
+                    ast::BinaryOperator::RawPointerOffset => panic!("Should be impossible to reach this arm"),
                 }
             } else {
                 let lp = l.into_pointer_value();
