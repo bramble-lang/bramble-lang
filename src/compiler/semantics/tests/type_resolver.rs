@@ -1319,6 +1319,13 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 Ok(Type::RawPointer(PointerMut::Const, Box::new(Type::I64))),
             ),
             (
+                "fn main() -> bool {
+                    let k: *const i64 := null;
+                    return null == 0;
+                }",
+                Err("L3: == expected null but found null and i64"),
+            ),
+            (
                 "fn main() -> i64 {
                     let k: i64 := ^null;
                     return 0;
