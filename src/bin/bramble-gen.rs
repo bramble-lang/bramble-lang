@@ -80,12 +80,12 @@ impl SyntaxGenerator {
 
         let id = self.get_id();
         tprint!(depth, "fn func{}(", id);
-        self.parameter_list(max_breadth);
+        self.parameter_list(max_breadth, max_depth, depth);
         print!(")");
 
         if choice(2) == 1 {
             print!(" -> ");
-            self.ty();
+            self.ty(max_depth, depth);
         }
 
         print!(" {{\n");
@@ -104,14 +104,14 @@ impl SyntaxGenerator {
 
         let id = self.get_id();
         tprint!(depth, "struct MyStruct{}{{", id);
-        self.parameter_list(max_breadth);
+        self.parameter_list(max_breadth, max_depth, depth);
         tprint!(depth, "}}\n");
     }
 
-    fn parameter_list(&mut self, max_breadth: u32) {
+    fn parameter_list(&mut self, max_breadth: u32, max_depth: u32, depth: u32) {
         for _ in 0..breadth(max_breadth) {
             print!("x: ");
-            self.ty();
+            self.ty(max_depth, depth);
             print!(", ");
         }
     }
@@ -122,7 +122,7 @@ impl SyntaxGenerator {
         }
 
         tprint!(depth, "let x: ");
-        self.ty();
+        self.ty(max_depth, depth);
         print!(" := ");
         self.expression(max_depth, depth);
         print!(";\n");
@@ -159,33 +159,61 @@ impl SyntaxGenerator {
     fn sum(&mut self, max_depth: u32, depth: u32) {
         self.term(max_depth, depth + 1);
         if depth < max_depth && choice(2) == 0 {
-            pick_op(&["+", "-"]);
+            pick_op(&["+", "-", "@"]);
             self.expression(max_depth, depth + 1);
         }
     }
 
     fn term(&mut self, max_depth: u32, depth: u32) {
-        self.negate(max_depth, depth + 1);
+        self.unary(max_depth, depth + 1);
         if depth < max_depth && choice(2) == 0 {
             pick_op(&["*", "/"]);
             self.expression(max_depth, depth + 1);
         }
     }
 
-    fn negate(&mut self, max_depth: u32, depth: u32) {
-        pick_op(&["-", "!", ""]);
+    fn unary(&mut self, max_depth: u32, depth: u32) {
+        pick_op(&["-", "!", "", "^"]);
         self.factor(max_depth, depth + 1);
     }
 
     fn factor(&mut self, max_depth: u32, depth: u32) {
         match choice(3) {
-            0 => pick_val(&["0", "10", "true", "false"]),
+            0 => pick_val(&[
+                &rand_integer(),
+                &rand_i64(),
+                &rand_i32(),
+                &rand_i16(),
+                &rand_i8(),
+                &rand_u64(),
+                &rand_u32(),
+                &rand_u16(),
+                &rand_u8(),
+                &rand_f64(),
+                &rand_string(),
+                "1.343e-10",
+                "43.253e20",
+                "true",
+                "false",
+                "null",
+            ]),
             1 => {
                 print!("(");
                 self.expression(max_depth, depth);
                 print!(")");
             }
             2 => self.if_expr(max_depth, depth),
+            3 => {
+                for _ in 0..choice(6) {
+                    match choice(3) {
+                        0 => print!("@const "),
+                        1 => print!("@mut "),
+                        2 => (),
+                        _ => panic!("Invalid choice"),
+                    }
+                }
+                print!("x");
+            }
             _ => panic!("Invalid choice"),
         }
     }
@@ -204,22 +232,28 @@ impl SyntaxGenerator {
         }
     }
 
-    fn ty(&mut self) {
-        if choice(2) == 0 {
-            let ty = match choice(10) {
-                0 => "u8",
-                1 => "u16",
-                2 => "u32",
-                3 => "u64",
-                4 => "i8",
-                5 => "i16",
-                6 => "i32",
-                7 => "i64",
-                8 => "bool",
-                9 => "string",
+    fn ty(&mut self, max_depth: u32, depth: u32) {
+        fn inner(max_depth: u32, depth: u32) -> String {
+            let ch = if depth < max_depth { 13 } else { 11 };
+            match choice(ch) {
+                0 => "u8".into(),
+                1 => "u16".into(),
+                2 => "u32".into(),
+                3 => "u64".into(),
+                4 => "i8".into(),
+                5 => "i16".into(),
+                6 => "i32".into(),
+                7 => "i64".into(),
+                8 => "f64".into(),
+                9 => "bool".into(),
+                10 => "string".into(),
+                11 => format!("*const {}", inner(max_depth, depth + 1)),
+                12 => format!("*mut {}", inner(max_depth, depth + 1)),
                 _ => panic!("Invalid choice"),
-            };
-            print!("{}", ty);
+            }
+        }
+        if choice(2) == 0 {
+            print!("{}", inner(max_depth, depth));
         } else {
             self.path()
         }
@@ -271,4 +305,69 @@ fn pick_op(ops: &[&str]) {
 fn pick_val(vals: &[&str]) {
     let len = vals.len();
     print!("{}", vals[choice(len as u32) as usize]);
+}
+
+fn rand_string() -> String {
+    let mut rng = rand::thread_rng();
+    let mut s = String::new();
+    for _ in 0..rng.gen_range(5..1024) {
+        let c = rng.gen::<char>();
+        if c == '"' {
+            s.push('\\');
+            s.push('\"');
+        } else {
+            s.push(c);
+        }
+    }
+    format!("\"{}\"", s)
+}
+
+fn rand_f64() -> String {
+    let f = rand::thread_rng().gen::<f64>();
+    format!("{}", f)
+}
+
+fn rand_integer() -> String {
+    let i = rand::thread_rng().gen::<i64>();
+    format!("{}", i)
+}
+
+fn rand_i64() -> String {
+    let i = rand::thread_rng().gen::<i64>();
+    format!("{}i64", i)
+}
+
+fn rand_i32() -> String {
+    let i = rand::thread_rng().gen::<i32>();
+    format!("{}i32", i)
+}
+
+fn rand_i16() -> String {
+    let i = rand::thread_rng().gen::<i16>();
+    format!("{}i16", i)
+}
+
+fn rand_i8() -> String {
+    let i = rand::thread_rng().gen::<i8>();
+    format!("{}i8", i)
+}
+
+fn rand_u64() -> String {
+    let i = rand::thread_rng().gen::<u64>();
+    format!("{}u64", i)
+}
+
+fn rand_u32() -> String {
+    let i = rand::thread_rng().gen::<u32>();
+    format!("{}u32", i)
+}
+
+fn rand_u16() -> String {
+    let i = rand::thread_rng().gen::<u16>();
+    format!("{}u16", i)
+}
+
+fn rand_u8() -> String {
+    let i = rand::thread_rng().gen::<u8>();
+    format!("{}u8", i)
 }

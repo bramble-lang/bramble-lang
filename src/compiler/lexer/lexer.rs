@@ -400,7 +400,7 @@ impl<'a> Lexer<'a> {
         // If the type suffix is for an integer but the literal is a float then throw an error
         if is_float && type_suffix != Primitive::F64 {
             let span = self.current_char_span().unwrap();
-            return err!(span, LexerError::InvalidNumber)
+            return err!(span, LexerError::InvalidNumber);
         }
 
         // Check that the current character at the lexer cursor position is a delimiter (we have
@@ -570,7 +570,8 @@ impl<'a> Lexer<'a> {
         // longer keyword must be placed first; otherwise the shorter keyword will incorrectly match.
         let keywords = [
             "let", "mut", "return", "yield", "yret", "fn", "const", "co", "mod", "struct",
-            "extern", "init", "if", "else", "while", "self", "super", "root", "project", "size_of", "null"
+            "extern", "init", "if", "else", "while", "self", "super", "root", "project", "size_of",
+            "null",
         ];
 
         Ok(match branch.next_if_one_of(&keywords) {
@@ -703,34 +704,58 @@ impl<'a> Lexer<'a> {
         prim: Primitive,
     ) -> LexerResult<Option<Token>> {
         match prim {
-            Primitive::U8 => Ok(Some(Token::new(U8(int_token.parse::<u8>().unwrap()), span))),
+            Primitive::U8 => Ok(Some(Token::new(
+                U8(int_token
+                    .parse::<u8>()
+                    .expect(&format!("Not valid u8: {}", int_token))),
+                span,
+            ))),
             Primitive::U16 => Ok(Some(Token::new(
-                U16(int_token.parse::<u16>().unwrap()),
+                U16(int_token
+                    .parse::<u16>()
+                    .expect(&format!("Not valid u16: {}", int_token))),
                 span,
             ))),
             Primitive::U32 => Ok(Some(Token::new(
-                U32(int_token.parse::<u32>().unwrap()),
+                U32(int_token
+                    .parse::<u32>()
+                    .expect(&format!("Not valid u32: {}", int_token))),
                 span,
             ))),
             Primitive::U64 => Ok(Some(Token::new(
-                U64(int_token.parse::<u64>().unwrap()),
+                U64(int_token
+                    .parse::<u64>()
+                    .expect(&format!("Not valid u64: {}", int_token))),
                 span,
             ))),
-            Primitive::I8 => Ok(Some(Token::new(I8(int_token.parse::<i8>().unwrap()), span))),
+            Primitive::I8 => Ok(Some(Token::new(
+                I8(int_token
+                    .parse::<i8>()
+                    .expect(&format!("Not valid i8: {}", int_token))),
+                span,
+            ))),
             Primitive::I16 => Ok(Some(Token::new(
-                I16(int_token.parse::<i16>().unwrap()),
+                I16(int_token
+                    .parse::<i16>()
+                    .expect(&format!("Not valid i16: {}", int_token))),
                 span,
             ))),
             Primitive::I32 => Ok(Some(Token::new(
-                I32(int_token.parse::<i32>().unwrap()),
+                I32(int_token
+                    .parse::<i32>()
+                    .expect(&format!("Not valid i32: {}", int_token))),
                 span,
             ))),
             Primitive::I64 => Ok(Some(Token::new(
-                I64(int_token.parse::<i64>().unwrap()),
+                I64(int_token
+                    .parse::<i64>()
+                    .expect(&format!("Not valid i64: {}", int_token))),
                 span,
             ))),
             Primitive::F64 => Ok(Some(Token::new(
-                F64(int_token.parse::<f64>().unwrap()),
+                F64(int_token
+                    .parse::<f64>()
+                    .expect(&format!("Not valid f64: {}", int_token))),
                 span,
             ))),
             Primitive::Bool | Primitive::StringLiteral => {
