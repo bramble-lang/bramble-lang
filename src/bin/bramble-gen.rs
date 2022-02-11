@@ -190,6 +190,7 @@ impl SyntaxGenerator {
                 &rand_u16(),
                 &rand_u8(),
                 &rand_f64(),
+                &rand_string(),
                 "1.343e-10",
                 "43.253e20",
                 "true",
@@ -303,6 +304,21 @@ fn pick_op(ops: &[&str]) {
 fn pick_val(vals: &[&str]) {
     let len = vals.len();
     print!("{}", vals[choice(len as u32) as usize]);
+}
+
+fn rand_string() -> String {
+    let mut rng = rand::thread_rng();
+    let mut s = String::new();
+    for _ in 0..rng.gen_range(5..1024) {
+        let c = rng.gen::<char>();
+        if c == '"' {
+            s.push('\\');
+            s.push('\"');
+        } else {
+            s.push(c);
+        }
+    }
+    format!("\"{}\"", s)
 }
 
 fn rand_f64() -> String {

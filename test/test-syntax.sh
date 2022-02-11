@@ -23,7 +23,7 @@ until [ $COUNTER -ge $1 ]; do
     if [[ result -ne 0 ]]; then
         end_time=$(date +%s)
         elapsed=$(( end_time - start_time ))
-        cat /tmp/bramble_test.br
+        # cat /tmp/bramble_test.br
         exit 1
     fi
 done
