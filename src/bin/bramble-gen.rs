@@ -234,7 +234,7 @@ impl SyntaxGenerator {
 
     fn ty(&mut self, max_depth: u32, depth: u32) {
         fn inner(max_depth: u32, depth: u32) -> String {
-            let ch = if depth < max_depth { 12 } else { 10 };
+            let ch = if depth < max_depth { 13 } else { 11 };
             match choice(ch) {
                 0 => "u8".into(),
                 1 => "u16".into(),
@@ -244,10 +244,11 @@ impl SyntaxGenerator {
                 5 => "i16".into(),
                 6 => "i32".into(),
                 7 => "i64".into(),
-                8 => "bool".into(),
-                9 => "string".into(),
-                10 => format!("*const {}", inner(max_depth, depth + 1)),
-                11 => format!("*mut {}", inner(max_depth, depth + 1)),
+                8 => "f64".into(),
+                9 => "bool".into(),
+                10 => "string".into(),
+                11 => format!("*const {}", inner(max_depth, depth + 1)),
+                12 => format!("*mut {}", inner(max_depth, depth + 1)),
                 _ => panic!("Invalid choice"),
             }
         }
