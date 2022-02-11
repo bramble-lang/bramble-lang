@@ -45,7 +45,7 @@ checksum = "cf1de2fe8c75bc145a2f577add951f8134889b4795d47466a54a5c846d691693"
 
 [[package]]
 name = "bramble-lang"
-version = "0.99.0"
+version = "0.100.0"
 dependencies = [
  "clap",
  "inkwell",
