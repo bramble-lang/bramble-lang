@@ -1,3 +1,5 @@
+use std::num::{ParseIntError, ParseFloatError};
+
 use crate::compiler::{
     source::SourceChar, CompilerDisplay, CompilerDisplayError, SourceError, SourceMap,
 };
@@ -13,6 +15,8 @@ pub enum LexerError {
     ExpectedEscapeCharacter,
     InvalidNumber,
     InvalidSuffixOnFloat,
+    ParseIntError(Primitive, ParseIntError),
+    ParseFloatError(Primitive, ParseFloatError),
     UnexpectedSuffixType(Primitive),
     SourceError, // TODO: make this more descriptive
 }
@@ -30,6 +34,8 @@ impl CompilerDisplay for LexerError {
             SourceError => format!("Error reading characters from source code"),
             UnexpectedEof => format!("Unexpected EOF"),
             InvalidSuffixOnFloat => format!("Invalid suffix after float literal."),
+            ParseIntError(p, e) => format!("{} of {}", e, p),
+            ParseFloatError(p, e) => format!("{} of {}", e, p),
         };
 
         Ok(format!("{}", msg))
@@ -39,5 +45,12 @@ impl CompilerDisplay for LexerError {
 impl From<SourceError> for LexerError {
     fn from(_: SourceError) -> Self {
         Self::SourceError
+    }
+}
+
+impl From<ParseIntError> for LexerError {
+    fn from(e: ParseIntError) -> Self {
+        format!("{:?}", e);
+        Self::InvalidNumber
     }
 }

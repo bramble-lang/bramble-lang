@@ -18,8 +18,8 @@ the value and type of the Annotation on an AST while preserving the AST topology
 Only Annotation data will be transformed.
 
 Each instance of a construct is given a name so that diagnostic and investigative
-data which is collected (to aid a developer with debugging the Braid compiler and
-to aid users with debugging their Braid code) can be identified in the Braid
+data which is collected (to aid a developer with debugging the Bramble compiler and
+to aid users with debugging their Bramble code) can be identified in the Bramble
 Compiler UI.
 */
 pub struct MapPreOrder<A, B, F>
@@ -169,8 +169,9 @@ where
 
     fn for_mutate(&mut self, mutate: &Mutate<A>) -> Mutate<B> {
         let b = self.transform(mutate);
+        let lhs = self.for_expression(mutate.get_lhs());
         let rhs = self.for_expression(mutate.get_rhs());
-        Mutate::new(b, mutate.get_id(), rhs)
+        Mutate::new(b, lhs, rhs)
     }
 
     fn for_yieldreturn(&mut self, yr: &YieldReturn<A>) -> YieldReturn<B> {
@@ -189,6 +190,7 @@ where
         use Expression::*;
 
         match exp {
+            Null(_) => Null(self.transform(exp)),
             U8(_, i) => U8(self.transform(exp), *i),
             U16(_, i) => U16(self.transform(exp), *i),
             U32(_, i) => U32(self.transform(exp), *i),
@@ -202,6 +204,7 @@ where
             StringLiteral(_, s) => StringLiteral(self.transform(exp), s.clone()),
             ArrayExpression(_, _, _) => self.for_array_expression(exp),
             ArrayAt { .. } => self.for_array_at(exp),
+            SizeOf(_, ty) => SizeOf(self.transform(exp), ty.clone()),
             CustomType(_, name) => CustomType(self.transform(exp), name.clone()),
             Identifier(_, id) => Identifier(self.transform(exp), id.clone()),
             Path(_, path) => Path(self.transform(exp), path.clone()),

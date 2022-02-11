@@ -494,7 +494,10 @@ impl<'a> Parser<'a> {
         })
     }
 
-    pub(super) fn identifier(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
+    pub(super) fn identifier(
+        &self,
+        stream: &mut TokenStream,
+    ) -> ParserResult<Expression<ParserContext>> {
         let (event, result) = self
             .new_event(Span::zero())
             .and_then(|| match stream.next_if_id() {
@@ -507,7 +510,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn consume_type(&self, stream: &mut TokenStream) -> ParserResult<(Type, ParserContext)> {
+    pub(super) fn consume_type(&self, stream: &mut TokenStream) -> ParserResult<(Type, ParserContext)> {
         let (event, result) = self.new_event(Span::zero()).and_then(|| {
             let is_coroutine = stream.next_if(&Lex::CoroutineDef).is_some();
             let ty = match stream.next_if(&Lex::Primitive(Primitive::U8)) {
@@ -555,7 +558,7 @@ impl<'a> Parser<'a> {
             let msg = v.map(|v| match v.0 {
                 Type::Custom(_) => "Custom Type",
                 Type::Array(..) => "Array Type",
-                Type::RawPointer(..) => "Array Type",
+                Type::RawPointer(..) => "Raw Pointer Type",
                 _ => "Primitive Type",
             });
             let span = match v {
@@ -577,7 +580,11 @@ impl<'a> Parser<'a> {
                                 ctx.span(),
                                 ParserError::RawPointerExpectedType,
                             ))?;
-                            Ok(Some((Type::RawPointer(PointerMut::Mut, Box::new(ty.0)), ctx)))
+                            let ctx = ctx.join(ty.1);
+                            Ok(Some((
+                                Type::RawPointer(PointerMut::Mut, Box::new(ty.0)),
+                                ctx,
+                            )))
                         }
                         Some(c) if c.sym == Lex::Const => {
                             let ctx = star.to_ctx();
@@ -585,8 +592,12 @@ impl<'a> Parser<'a> {
                                 ctx.span(),
                                 ParserError::RawPointerExpectedType,
                             ))?;
-                            Ok(Some((Type::RawPointer(PointerMut::Const, Box::new(ty.0)), ctx)))
-                        },
+                            let ctx = ctx.join(ty.1);
+                            Ok(Some((
+                                Type::RawPointer(PointerMut::Const, Box::new(ty.0)),
+                                ctx,
+                            )))
+                        }
                         Some(_) => Err(CompilerError::new(
                             star.span(),
                             ParserError::RawPointerExpectedConstOrMut,
@@ -671,13 +682,12 @@ impl<'a> Parser<'a> {
                     let id = decl_tok[0].sym.get_str().expect(
                     "CRITICAL: first token is an identifier but cannot be converted to a string",
                 );
-                    self.consume_type(stream)
-                        .and_then(|result| {
-                            Ok(result.and_then(|(ty, ty_ctx)| {
-                                let ctx = ctx.join(ty_ctx);
-                                Some(Expression::IdentifierDeclare(ctx, id, ty))
-                            }))
-                        })
+                    self.consume_type(stream).and_then(|result| {
+                        Ok(result.and_then(|(ty, ty_ctx)| {
+                            let ctx = ctx.join(ty_ctx);
+                            Some(Expression::IdentifierDeclare(ctx, id, ty))
+                        }))
+                    })
                 }
                 None => Ok(None),
             }

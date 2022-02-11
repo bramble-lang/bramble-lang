@@ -1,4 +1,11 @@
 extern fn printf(fmt: string, ...);
+extern fn scanf(fmt: string, ...);
+
+fn readi64() -> i64 {
+    let mut i: i64 := 0;
+    scanf("%ld", @mut i);
+    return i;
+}
 
 fn write(s: string) {
     printf(s);

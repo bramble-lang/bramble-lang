@@ -1,5 +1,5 @@
 /*!
-The Scope Stack stores a mapping from Braid Identifiers to LLVM registers
+The Scope Stack stores a mapping from Bramble Identifiers to LLVM registers
 while preserving the scope hierarchy.
 */
 use std::collections::HashMap;

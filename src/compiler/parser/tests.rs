@@ -29,9 +29,10 @@ pub mod tests {
 
     #[test]
     fn parse_unary_operators() {
-        for (text, expected, span, id_span) in vec![
+        for (text, expected, span, operand_span) in vec![
             ("-a", UnaryOperator::Negate, (0, 2), (1, 2)),
             ("!a", UnaryOperator::Not, (0, 2), (1, 2)),
+            ("^a", UnaryOperator::DerefRawPointer, (0, 2), (1, 2)),
             ("@const a", UnaryOperator::AddressConst, (0, 8), (7, 8)),
             ("@mut a", UnaryOperator::AddressMut, (0, 6), (5, 6)),
         ]
@@ -59,7 +60,7 @@ pub mod tests {
                 assert_eq!(ctx, new_ctx(span.0, span.1));
                 assert_eq!(
                     *operand,
-                    Expression::Identifier(new_ctx(id_span.0, id_span.1), a)
+                    Expression::Identifier(new_ctx(operand_span.0, operand_span.1), a)
                 );
             } else {
                 panic!("No nodes returned by parser for {:?} => {:?}", text, exp)
@@ -69,8 +70,12 @@ pub mod tests {
 
     #[test]
     fn parse_double_unary_operators() {
-        for (text, expected) in
-            vec![("--a", UnaryOperator::Negate), ("!!a", UnaryOperator::Not)].iter()
+        for (text, expected) in vec![
+            ("--a", UnaryOperator::Negate),
+            ("!!a", UnaryOperator::Not),
+            ("^^a", UnaryOperator::DerefRawPointer),
+        ]
+        .iter()
         {
             let mut table = StringTable::new();
             let a = table.insert("a".into());
@@ -116,6 +121,7 @@ pub mod tests {
             ("2<=2", BinaryOperator::LsEq, 0, 4),
             ("2>2", BinaryOperator::Gr, 0, 3),
             ("2>=2", BinaryOperator::GrEq, 0, 4),
+            ("2@2", BinaryOperator::RawPointerOffset, 0, 3),  // Fully recoginizing that, semantically, this is wrong but syntactically it's valid!
         ] {
             let mut table = StringTable::new();
             let mut sm = SourceMap::new();
@@ -611,8 +617,8 @@ pub mod tests {
     #[test]
     fn address_of_fails() {
         for (text, span) in vec![
-            ("let x: *const i64 := @const 5;", (21, 27)),
-            ("let y: *const i64 := @mut 7;", (21, 25)),
+            ("let x: *const i64 := @const;", (21, 27)),
+            ("let y: *const i64 := @mut *;", (21, 25)),
         ]
         .iter()
         {
@@ -646,10 +652,79 @@ pub mod tests {
     }
 
     #[test]
+    fn parse_size_of() {
+        for (text, expected_ctx, expected) in vec![
+            ("size_of(i64)", new_ctx(0, 12), Box::new(Type::I64)),
+            ("size_of(bool)", new_ctx(0, 13), Box::new(Type::Bool)),
+            (
+                "size_of([i32; 5])",
+                new_ctx(0, 17),
+                Box::new(Type::Array(Box::new(Type::I32), 5)),
+            ),
+        ]
+        .iter()
+        {
+            let mut table = StringTable::new();
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
+                .unwrap()
+                .tokenize()
+                .into_iter()
+                .collect::<LResult>()
+                .unwrap();
+            let mut stream = TokenStream::new(&tokens, &logger).unwrap();
+            let parser = Parser::new(&logger);
+            if let Some(Expression::SizeOf(ctx, ty)) = parser.expression(&mut stream).unwrap() {
+                assert_eq!(ty, *expected);
+                assert_eq!(ctx, *expected_ctx);
+            } else {
+                panic!("No nodes returned by parser")
+            }
+        }
+    }
+
+    #[test]
+    fn parse_size_of_custom_type() {
+        let text = "size_of(MyStruct)";
+        let expected_ctx = new_ctx(0, 17);
+
+        let mut table = StringTable::new();
+        let mut sm = SourceMap::new();
+        sm.add_string(text, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
+        let logger = Logger::new();
+        let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
+            .unwrap()
+            .tokenize()
+            .into_iter()
+            .collect::<LResult>()
+            .unwrap();
+        let mut stream = TokenStream::new(&tokens, &logger).unwrap();
+        let parser = Parser::new(&logger);
+        if let Some(Expression::SizeOf(ctx, ty)) = parser.expression(&mut stream).unwrap() {
+
+
+            let ms_id = table.insert("MyStruct".into());
+            let mut path = Path::new();
+            path.push(Element::Id(ms_id));
+            assert_eq!(ty, Box::new(Type::Custom(path)));
+            assert_eq!(ctx, expected_ctx);
+        } else {
+            panic!("No nodes returned by parser")
+        }
+    }
+
+    #[test]
     fn parse_mutation() {
         let text = "mut x := 5;";
         let mut table = StringTable::new();
-        let x = table.insert("x".into());
+        let x_sid = table.insert("x".into());
+        let x = Expression::Identifier(new_ctx(4, 5), x_sid);
 
         let mut sm = SourceMap::new();
         sm.add_string(text, "/test".into()).unwrap();
@@ -668,7 +743,7 @@ pub mod tests {
         assert_eq!(*stm.context(), new_ctx(0, text.len() as u32));
         match stm {
             Statement::Mutate(m) => {
-                assert_eq!(m.get_id(), x);
+                assert_eq!(m.get_lhs(), &x);
                 assert_eq!(*m.get_rhs(), Expression::I64(new_ctx(9, 10), 5));
             }
             _ => panic!("Not a binding statement"),
@@ -1460,6 +1535,34 @@ pub mod tests {
                     _ => assert!(false, "Not a return statement"),
                 },
                 _ => assert!(false, "Not a routine, got {:?}", module),
+            }
+        }
+    }
+
+    #[test]
+    fn parse_null() {
+        for (text, expected) in vec![
+            ("null", Expression::Null(new_ctx(0, 4))),
+        ] {
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+
+            let mut table = StringTable::new();
+            let src = sm.get(0).unwrap().read().unwrap();
+            let logger = Logger::new();
+            let tokens = Lexer::new(src, &mut table, &logger)
+                .unwrap()
+                .tokenize()
+                .into_iter()
+                .collect::<LResult>()
+                .unwrap();
+            let mut stream = TokenStream::new(&tokens, &logger).unwrap();
+            let logger = Logger::new();
+            let parser = Parser::new(&logger);
+            match parser.expression(&mut stream) {
+                Ok(Some(e)) => assert_eq!(e, expected),
+                Ok(t) => panic!("Expected an {:?} but got {:?}", expected, t),
+                Err(err) => panic!("Expected {:?}, but got {:?}", expected, err),
             }
         }
     }

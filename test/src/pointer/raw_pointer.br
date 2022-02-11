@@ -1,0 +1,44 @@
+fn my_main() -> i64 {
+    // Initing a pointer with a pointer
+    let i: i64 := 5;
+    let p: *const i64 := @const i;
+    let p2: *const i64 := p;
+    project::std::io::writei64ln(^p);
+    project::std::io::writei64ln(^p2);
+
+    // Mutating a pointer
+    let mut p3: *const i64 := @const i;
+    project::std::io::writei64ln(^p3);
+    let j: i64 := 6;
+    mut p3 := @const j;
+    project::std::io::writei64ln(^p3);
+    mut p3 := p2;
+    project::std::io::writei64ln(^p3);
+
+    // pointer to array elements
+    let mut arr: [i64; 3] := [1, 2, 3];
+    let mut parr: *mut i64 := @mut arr[0];
+    project::std::io::writei64ln(^parr);
+    mut parr := @mut arr[1];
+    project::std::io::writei64ln(^parr);
+    mut ^parr := ^parr * 2;
+    project::std::io::writei64ln(^parr);
+    project::std::io::writei64ln(arr[1]);
+
+    // pointer to structure fields
+    let mut ms: MS := MS{i: 3i32, j: 23i32};
+    let mut ps: *mut i32 := @mut ms.i;
+    project::std::io::writei32ln(^ps);
+    mut ps := @mut ms.j;
+    project::std::io::writei32ln(^ps);
+    mut ^ps := ^ps * 3i32;
+    project::std::io::writei32ln(^ps);
+    project::std::io::writei32ln(ms.j);
+
+    return 0;
+}
+
+struct MS {
+    i: i32,
+    j: i32,
+}

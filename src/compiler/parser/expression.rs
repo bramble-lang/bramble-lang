@@ -83,6 +83,11 @@ impl Expression<ParserContext> {
                 UnaryOperator::Not,
                 operand,
             ))),
+            Lex::Hat => Ok(Some(Expression::UnaryOp(
+                ctx.join(*operand.context()),
+                UnaryOperator::DerefRawPointer,
+                operand,
+            ))),
             _ => {
                 err!(ctx.span(), ParserError::NotAUnaryOp(op.clone()))
             }
@@ -168,6 +173,12 @@ impl Expression<ParserContext> {
                 left,
                 right,
             ))),
+            Lex::At => Ok(Some(Expression::BinaryOp(
+                ctx,
+                BinaryOperator::RawPointerOffset,
+                left,
+                right,
+            ))),
             _ => {
                 err!(ctx.span(), ParserError::NotABinaryOp(op.clone()))
             }
@@ -242,7 +253,7 @@ impl<'a> Parser<'a> {
     }
 
     pub(super) fn sum(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
-        self.binary_op(stream, &[Lex::Add, Lex::Minus], Self::term)
+        self.binary_op(stream, &[Lex::Add, Lex::Minus, Lex::At], Self::term)
     }
 
     pub(super) fn term(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
@@ -300,7 +311,7 @@ impl<'a> Parser<'a> {
                                     )),
                                 }?;
 
-                                let id = self.identifier(stream)?.ok_or(CompilerError::new(
+                                let id = self.subdata_access(stream)?.ok_or(CompilerError::new(
                                     at_ctx.span(),
                                     ParserError::ExpectedIdentifierAfter(at.sym.clone()),
                                 ))?;
@@ -342,7 +353,7 @@ impl<'a> Parser<'a> {
     ) -> ParserResult<Expression<ParserContext>> {
         match self.address_of(stream)? {
             Some(exp) => Ok(Some(exp)),
-            None => match stream.next_if_one_of(&[Lex::Minus, Lex::Not, Lex::At]) {
+            None => match stream.next_if_one_of(&[Lex::Minus, Lex::Not, Lex::Hat]) {
                 Some(op) => {
                     let (event, result) = self.new_event(Span::zero()).and_then(|| {
                         self.negate(stream)
@@ -358,12 +369,11 @@ impl<'a> Parser<'a> {
                     });
 
                     result.view(|v| {
-                        let msg = v.map(|_| {
-                            if op.sym == Lex::Minus {
-                                "Arithmetic Negate"
-                            } else {
-                                "Boolean Negate"
-                            }
+                        let msg = v.map(|_| match op.sym {
+                            Lex::Minus => "Arithmetic Negate",
+                            Lex::Not => "Boolean Negate",
+                            Lex::Hat => "Deref Raw Pointer",
+                            _ => panic!("Invalid Unary Operator"),
                         });
                         self.record(event.with_span(v.span()), msg)
                     })
@@ -502,11 +512,42 @@ impl<'a> Parser<'a> {
             }
             _ => self
                 .if_expression(stream)
+                .por(|ts| self.size_of(ts), stream)
                 .por(|ts| self.while_expression(ts), stream)
                 .por(|ts| self.expression_block(ts), stream)
                 .por(|ts| self.function_call_or_variable(ts), stream)
                 .por(|ts| self.constant(ts), stream)
                 .por(|ts| self.array_expression(ts), stream),
+        }
+    }
+
+    fn size_of(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
+        // Check of size_of keyword
+        match stream.next_if(&Lex::SizeOf) {
+            Some(op) => {
+                let (event, result) = self.new_event(Span::zero()).and_then(|| {
+                        let ctx = op.to_ctx();
+                        // Must have (
+                        stream.next_must_be(&Lex::LParen)?;
+                        
+                        // Read Type
+                        let (ty, _) = self.consume_type(stream)?.ok_or(CompilerError::new(
+                                ctx.span(),
+                                ParserError::RawPointerExpectedType,
+                            ))?;
+
+                        // Must have )
+                        let ctx = stream.next_must_be(&Lex::RParen)?.to_ctx().join(ctx);
+
+                        // Return size_of expression
+                        Ok(Some(Expression::SizeOf(ctx, Box::new(ty.clone()))))
+                });
+                result.view(|v| {
+                    let msg = v.map(|_| "size_of");
+                    self.record(event.with_span(v.span()), msg)
+                })
+            }
+            None => Ok(None)
         }
     }
 
@@ -734,8 +775,9 @@ impl<'a> Parser<'a> {
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
         self.number(stream)
-            .por(|ts| self.boolean(ts), stream)
+            .por(|ts| self.boolean_literal(ts), stream)
             .por(|ts| self.string_literal(ts), stream)
+            .por(|ts| self.null_literal(ts), stream)
     }
 
     pub(super) fn number(
@@ -809,7 +851,26 @@ impl<'a> Parser<'a> {
         })
     }
 
-    pub(super) fn boolean(
+    pub(super) fn null_literal(
+        &self,
+        stream: &mut TokenStream,
+    ) -> ParserResult<Expression<ParserContext>> {
+        let (event, result) =
+            self.new_event(Span::zero())
+                .and_then(|| match stream.next_if(&Lex::Null) {
+                    Some(Token {
+                        span,
+                        ..
+                    }) => Ok(Some(Expression::Null(ParserContext::new(span)))),
+                    _ => Ok(None),
+                });
+        result.view(|v| {
+            let msg = v.map(|_| "null");
+            self.record(event.with_span(v.span()), msg)
+        })
+    }
+
+    pub(super) fn boolean_literal(
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {

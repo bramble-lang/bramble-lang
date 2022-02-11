@@ -1,10 +1,10 @@
-# Reviewing the current syntax of Braid
+# Reviewing the current syntax of Bramble
 ## Goal
 Review my current syntax design (and semantic design too, where appropriate) and see
 how much I like it and where things are rough or feel wrong or are not intuitive.
 
 ### How I will judge
-I don't yet know how I will judge or even measure the quality of the syntax in Braid.
+I don't yet know how I will judge or even measure the quality of the syntax in Bramble.
 Part of why I am forcing myself to do this, is to finally sit down and come up with
 an answer to that question. My expectation, is that I will have to do this several
 times before I really come down with a solid methodology and set of questions that
@@ -36,7 +36,7 @@ design. So it's better for me to just do it, get the feature working, see how my
 changes cause the whole of the language to change and judge the consequences and use
 that to learn from. Reinforcing the need to sit down and do this review.  Also, I
 will probably continue to work in this fashion until I develop an intuition about
-syntax design and solidify design principles for Braid.  I just have to regularly
+syntax design and solidify design principles for Bramble.  I just have to regularly
 sit down and review my design and go back and refactor things that I do not like.
 
 ### Accomplishments
@@ -94,7 +94,7 @@ allow you to intuit what could be done.
 organically grow and add new features in a way that will be consistent and holistic.
 
 ## How to Review
-1. Write an actual program in Braid and see how everything feels.
+1. Write an actual program in Bramble and see how everything feels.
 - Tower of Hanoi
 - Factorial calculator
 - Fibonacci Sequence calculator

@@ -14,6 +14,7 @@ use super::{
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expression<I> {
+    Null(I),
     U8(I, u8),
     U16(I, u16),
     U32(I, u32),
@@ -31,6 +32,7 @@ pub enum Expression<I> {
         array: Box<Expression<I>>,
         index: Box<Expression<I>>,
     },
+    SizeOf(I, Box<Type>),
     CustomType(I, Path),
     Identifier(I, StringId),
     Path(I, Path),
@@ -67,7 +69,8 @@ impl<M: Context> Node<M> for Expression<M> {
     fn context(&self) -> &M {
         use Expression::*;
         match self {
-            U8(m, ..)
+            Null(m)
+            | U8(m, ..)
             | U16(m, ..)
             | U32(m, ..)
             | U64(m, ..)
@@ -78,6 +81,7 @@ impl<M: Context> Node<M> for Expression<M> {
             | F64(m, ..)
             | Boolean(m, ..)
             | StringLiteral(m, ..)
+            | SizeOf(m, ..)
             | CustomType(m, ..)
             | Identifier(m, ..)
             | IdentifierDeclare(m, ..)
@@ -99,7 +103,8 @@ impl<M: Context> Node<M> for Expression<M> {
     fn get_context_mut(&mut self) -> &mut M {
         use Expression::*;
         match self {
-            U8(m, ..)
+            Null(m)
+            | U8(m, ..)
             | U16(m, ..)
             | U32(m, ..)
             | U64(m, ..)
@@ -110,6 +115,7 @@ impl<M: Context> Node<M> for Expression<M> {
             | F64(m, ..)
             | Boolean(m, ..)
             | StringLiteral(m, ..)
+            | SizeOf(m, ..)
             | CustomType(m, ..)
             | Identifier(m, ..)
             | IdentifierDeclare(m, ..)
@@ -184,7 +190,8 @@ impl<M: Context> Node<M> for Expression<M> {
                 }
                 o
             }
-            U8(..)
+            Null(..)
+            | U8(..)
             | U16(..)
             | U32(..)
             | U64(..)
@@ -196,6 +203,7 @@ impl<M: Context> Node<M> for Expression<M> {
             | Boolean(..)
             | StringLiteral(..)
             | ArrayExpression(_, _, _)
+            | SizeOf(..)
             | CustomType(..)
             | Identifier(..)
             | IdentifierDeclare(..)
@@ -226,6 +234,7 @@ impl<I> Expression<I> {
     pub fn root_str(&self) -> String {
         use Expression::*;
         match self {
+            Null(_) => format!("null"),
             U8(_, v) => format!("u8({})", v),
             U16(_, v) => format!("u16({})", v),
             U32(_, v) => format!("u32({})", v),
@@ -245,6 +254,7 @@ impl<I> Expression<I> {
                     .join(",")
             ),
             ArrayAt { array, index, .. } => format!("{}[{}]", array, index),
+            SizeOf(_, ty) => format!("size_of({})", ty),
             CustomType(_, v) => format!("{}", v),
             Identifier(_, v) => format!("{}", v),
             IdentifierDeclare(_, v, p) => format!("{}:{}", v, p),
@@ -276,6 +286,7 @@ pub enum BinaryOperator {
     LsEq,
     Gr,
     GrEq,
+    RawPointerOffset,
 }
 
 impl std::fmt::Display for BinaryOperator {
@@ -294,6 +305,7 @@ impl std::fmt::Display for BinaryOperator {
             LsEq => f.write_str("<="),
             Gr => f.write_str(">"),
             GrEq => f.write_str(">="),
+            RawPointerOffset => f.write_str("@"),
         }
     }
 }
@@ -304,6 +316,7 @@ pub enum UnaryOperator {
     Not,
     AddressConst,
     AddressMut,
+    DerefRawPointer,
 }
 
 impl std::fmt::Display for UnaryOperator {
@@ -314,6 +327,7 @@ impl std::fmt::Display for UnaryOperator {
             Not => f.write_str("!"),
             AddressConst => f.write_str("@const "),
             AddressMut => f.write_str("@mut "),
+            DerefRawPointer => f.write_str("^"),
         }
     }
 }

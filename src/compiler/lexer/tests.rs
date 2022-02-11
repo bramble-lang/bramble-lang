@@ -319,6 +319,7 @@ mod tests {
             (",", Comma),
             (";", Semicolon),
             ("@", At),
+            ("^", Hat),
         ]
         .iter()
         {
@@ -384,6 +385,8 @@ mod tests {
             ("if", If),
             ("else", Else),
             ("while", While),
+            ("size_of", SizeOf),
+            ("null", Null),
         ]
         .iter()
         {

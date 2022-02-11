@@ -4,7 +4,7 @@ use crate::StringTable;
 
 use super::ast::*;
 
-/// Stores the statically defined strings that occur within a Braid compilation unit
+/// Stores the statically defined strings that occur within a Bramble compilation unit
 /// These will then be encoded into the data section of the generated binary for
 /// quick access at run time.
 #[derive(Debug)]
@@ -56,6 +56,7 @@ impl<'a> StringPool<'a> {
                     Some(fe) => self.extract_from(fe),
                 }
             }
+            Null(_) => {}
             U8(..) => {}
             U16(..) => {}
             U32(..) => {}
@@ -79,6 +80,7 @@ impl<'a> StringPool<'a> {
                 self.extract_from(array);
                 self.extract_from(index);
             }
+            SizeOf(..) => {}
             CustomType(..) => {}
             Identifier(..) => {}
             IdentifierDeclare(..) => {}

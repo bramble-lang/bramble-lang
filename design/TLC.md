@@ -1,6 +1,6 @@
 # Tender Love and Care
 The goal of this document is to find root causes of designs that are causing me problems with
-the Braid compiler so that I can then redesign and refactor that code. The general goal will
+the Bramble compiler so that I can then redesign and refactor that code. The general goal will
 be to document symptoms (code that is hard to work with, easy to break, overloaded, etc) and
 find the root causes of those problems.  Or to list out things I would like to do with this
 compiler, document what would make them easier, see how I would implement them, then see what
@@ -62,7 +62,7 @@ be addressed by making a Path arena and all paths are stored there?  Item 2 coul
 Serde to just be within the Project module and manually implementing the serde.
 10. What's the lesson that can be learned from this?
      - It took about 4 hours for me to realize that this would be such a huge problem.  Should have started by testing
-     out the basic structures in Braid and seeing if they would all allow copy to be implemented.
+     out the basic structures in Bramble and seeing if they would all allow copy to be implemented.
      - There's a deep level of tight coupling here in the Path structure that runs throughout the whole program.
      Is this good or bad?
      - Is this still worthwhile?  Can my goal of reducing the `clones` possible?

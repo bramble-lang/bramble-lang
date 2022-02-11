@@ -1,6 +1,6 @@
 [package]
-name = "braid-lang"
-version = "0.99.0"
+name = "bramble-lang"
+version = "0.100.0"
 authors = ["erich"]
 edition = "2018"
 

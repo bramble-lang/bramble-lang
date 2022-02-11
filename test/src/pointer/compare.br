@@ -1,0 +1,29 @@
+fn my_main() -> i64 {
+    let a: i64 := 5;
+    let b: i64 := 5;
+    let p1: *const i64 := @const a;
+    let p2: *const i64 := @const a;
+    let n: *const i64 := null;
+
+    project::std::io::writeboolln(p1 == p1);        // true
+    project::std::io::writeboolln(p1 == p2);        // true
+    project::std::io::writeboolln(p1 == @const b);  // false
+    project::std::io::writeboolln(p1 != @const b);  // true
+    project::std::io::writeboolln(p1 == null);      // false
+    project::std::io::writeboolln(p1 != null);      // true
+    project::std::io::writeboolln(n == null);       // true
+    project::std::io::writeboolln(n != null);       // false
+    project::std::io::writeboolln(p1 > null);       // true
+    project::std::io::writeboolln(p1 >= null);      // true
+    project::std::io::writeboolln(p1 < null);       // false
+    project::std::io::writeboolln(p1 <= null);      // false
+
+    let p1c: *const i64 := p1;
+    project::std::io::writeboolln(p1c == p1);        // true
+    project::std::io::writeboolln(p1c == p1c@0);     // true
+    project::std::io::writeboolln(p1c == p1c@1);     // false
+    project::std::io::writeboolln(p1c < p1c@1);      // true
+    project::std::io::writeboolln(p1c@1 == p1c@1);   // true
+
+    return 0;
+}

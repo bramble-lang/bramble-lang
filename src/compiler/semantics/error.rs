@@ -1,7 +1,7 @@
 use crate::{
     compiler::{
         ast::{BinaryOperator, Path, PathCanonizationError, RoutineCall, Type, UnaryOperator},
-        CompilerDisplay, CompilerDisplayError, SourceMap,
+        CompilerDisplay, CompilerDisplayError, SourceError, SourceMap, Span,
     },
     StringId,
 };
@@ -24,8 +24,8 @@ pub enum SemanticError {
     AlreadyDeclared(StringId),
     PathTooSuper,
     BindExpected(Type, Type),
-    VariableNotMutable(StringId),
-    BindMismatch(StringId, Type, Type),
+    ExpressionNotMutable(Span),
+    BindMismatch(Span, Type, Type),
     YieldExpected(Type, Type),
     YieldInvalidLocation,
     ReturnExpected(Type, Type),
@@ -44,8 +44,10 @@ pub enum SemanticError {
     StructExprFieldTypeMismatch(Path, StringId, Type, Type),
     ExpectedSignedInteger(UnaryOperator, Type),
     ExpectedBool(UnaryOperator, Type),
+    ExpectedRawPointer(UnaryOperator, Type),
     OpExpected(BinaryOperator, Type, Type, Type),
     ExpectedIdentifier(UnaryOperator),
+    ExpectedAddressable(UnaryOperator),
     RoutineParamTypeMismatch(Path, Vec<(u32, Type, Type)>),
     MainFnInvalidType,
     MainFnInvalidParams,
@@ -53,6 +55,8 @@ pub enum SemanticError {
     MutablePointerToImmutable,
     RoutineCallInvalidTarget(RoutineCall, Path, Type),
     InvalidIdentifierType(Type),
+    OffsetOperatorRequiresPointer(Type),
+    OffsetOperatorRequiresInteger(Type),
 }
 
 impl CompilerDisplay for SemanticError {
@@ -104,12 +108,12 @@ impl CompilerDisplay for SemanticError {
                 expected.fmt(sm, st)?,
                 actual.fmt(sm, st)?
             )),
-            SemanticError::VariableNotMutable(sid) => {
-                Ok(format!("Variable {} is not mutable", sid.fmt(sm, st)?))
+            SemanticError::ExpressionNotMutable(span) => {
+                Ok(format!("{} is not mutable", sm.text_in_span(*span)?))
             }
-            SemanticError::BindMismatch(sid, expected, actual) => Ok(format!(
+            SemanticError::BindMismatch(span, expected, actual) => Ok(format!(
                 "{} is of type {} but is assigned {}",
-                sid.fmt(sm, st)?,
+                sm.text_in_span(*span)?,
                 expected.fmt(sm, st)?,
                 actual.fmt(sm, st)?
             )),
@@ -193,6 +197,11 @@ impl CompilerDisplay for SemanticError {
                 op,
                 ty.fmt(sm, st)?
             )),
+            SemanticError::ExpectedRawPointer(op, ty) => Ok(format!(
+                "{} expected a *mut or *const but found {}",
+                op,
+                ty.fmt(sm, st)?
+            )),
             SemanticError::OpExpected(op, expected, l, r) => Ok(format!(
                 "{} expected {} but found {} and {}",
                 op,
@@ -240,8 +249,21 @@ impl CompilerDisplay for SemanticError {
                 "Invalid type used in identifier declaration: {}",
                 ty.fmt(sm, st)?
             )),
-            SemanticError::MutablePointerToImmutable => Ok(format!("Cannot make mutable pointer to immutable variable")),
+            SemanticError::MutablePointerToImmutable => {
+                Ok(format!("Cannot make mutable pointer to immutable variable"))
+            }
             SemanticError::ExpectedIdentifier(op) => Ok(format!("{} expected identifier", op)),
+            SemanticError::ExpectedAddressable(op) => {
+                Ok(format!("{} expected an addressable operand", op))
+            }
+            SemanticError::OffsetOperatorRequiresPointer(ty) => Ok(format!(
+                "@ operator expects raw pointer on left side, but got {}",
+                ty.fmt(sm, st)?
+            )),
+            SemanticError::OffsetOperatorRequiresInteger(ty) => Ok(format!(
+                "@ operator expects integer on right side, but got {}",
+                ty.fmt(sm, st)?
+            )),
         }
     }
 }
@@ -251,5 +273,11 @@ impl From<PathCanonizationError> for SemanticError {
         match pe {
             PathCanonizationError::SubceedingRoot => Self::PathTooSuper, // TODO: maybe reevaluate why I get this from the AST in Semantic?
         }
+    }
+}
+
+impl From<SourceError> for CompilerDisplayError {
+    fn from(se: SourceError) -> Self {
+        Self::SourceError(se)
     }
 }

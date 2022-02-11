@@ -39,6 +39,7 @@ pub trait CompilerDisplay {
 #[derive(Debug)]
 pub enum CompilerDisplayError {
     StringIdNotFound,
+    SourceError(SourceError),
 }
 
 impl From<StringTableError> for CompilerDisplayError {

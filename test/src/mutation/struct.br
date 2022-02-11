@@ -1,0 +1,24 @@
+fn my_main() -> i64 {
+    let mut ms: MS := MS{i: 1, j: 2, k: 3i32};
+
+    project::std::io::writei64ln(ms.i); // 1
+    project::std::io::writei64ln(ms.j); // 2
+    project::std::io::writei32ln(ms.k); // 3
+
+    mut ms.i := ms.i * 15;
+    project::std::io::writei64ln(ms.i); // 15
+
+    mut (ms).j := ms.i * ms.j; // 15 * 2
+    project::std::io::writei64ln(ms.j); // 30
+
+    mut (ms.k) := ms.k / 3i32;
+    project::std::io::writei32ln(ms.k); // 1
+
+    return 0;
+}
+
+struct MS {
+    i: i64,
+    j: i64,
+    k: i32,
+}

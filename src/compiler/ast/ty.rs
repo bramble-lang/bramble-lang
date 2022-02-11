@@ -6,13 +6,14 @@ use crate::{
 use super::{path::Path, HasVarArgs};
 
 /**
-The actual types which a value can have in Braid.  This covers base types along
+The actual types which a value can have in Bramble.  This covers base types along
 with aggregate types (the array and the structure).  This also includes the `Unknown`
 type, which is used when a type for a value has not yet been resolved by the
 Semantic Analyzer.
  */
 #[derive(Clone, Debug, PartialEq)]
 pub enum Type {
+    Null,
     U8,
     U16,
     U32,
@@ -43,12 +44,43 @@ pub enum PointerMut {
 }
 
 impl Type {
+    /// Returns `true` if the the provided type can be assigned
+    /// to variables of this [`Type`].
+    /// 
+    /// If this is [`Type::Null`] then this will always return
+    /// false, because there is no addressable value which has typ
+    /// [`Type::Null`].
+    pub fn can_be_assigned(&self, r: &Self) -> bool {
+        match self {
+            Self::RawPointer(..) => {
+                r == &Self::Null || self == r
+            },
+            Self::Null => false,
+            _ => self == r,
+        }
+    }
+
+    /// Returns `true` if these types can be compared with
+    /// each other
+    pub fn can_be_compared(&self, r: &Self) -> bool {
+        match self {
+            Self::RawPointer(..) => {
+                r == &Self::Null || self == r
+            },
+            Self::Null => {
+                r == &Self::Null || r.can_be_compared(self)
+            }
+            _ => self == r,
+        }
+    }
+    
     pub fn get_path(&self) -> Option<&Path> {
         match self {
             Type::Custom(path) => Some(path),
             _ => None,
         }
     }
+
     pub fn get_members(&self) -> Option<&Vec<(StringId, Type)>> {
         match self {
             Type::StructDef(members) => Some(members),
@@ -73,7 +105,8 @@ impl Type {
             | Type::I16
             | Type::I32
             | Type::I64 => true,
-            Type::Bool
+            Type::Null
+            | Type::Bool
             | Type::StringLiteral
             | Type::RawPointer(..)
             | Type::Array(_, _)
@@ -98,7 +131,8 @@ impl Type {
             | Type::I16
             | Type::I32
             | Type::I64 => true,
-            Type::Bool
+            Type::Null
+            | Type::Bool
             | Type::F64
             | Type::StringLiteral
             | Type::RawPointer(..)
@@ -117,7 +151,8 @@ impl Type {
     pub fn is_float(&self) -> bool {
         match self {
             | Type::F64 => true,
-            Type::U8
+            Type::Null
+            | Type::U8
             | Type::U16
             | Type::U32
             | Type::U64
@@ -143,7 +178,8 @@ impl Type {
     pub fn is_unsigned_int(&self) -> bool {
         match self {
             Type::U8 | Type::U16 | Type::U32 | Type::U64 => true,
-            Type::I8
+            Type::Null
+            | Type::I8
             | Type::I16
             | Type::I32
             | Type::I64
@@ -166,7 +202,8 @@ impl Type {
     pub fn is_signed_int(&self) -> bool {
         match self {
             Type::I8 | Type::I16 | Type::I32 | Type::I64 => true,
-            Type::U8
+            Type::Null
+            | Type::U8
             | Type::U16
             | Type::U32
             | Type::U64
@@ -183,6 +220,13 @@ impl Type {
             | Type::ExternDecl(..)
             | Type::RawPointer(..)
             | Type::Unknown => false,
+        }
+    }
+
+    pub fn is_raw_pointer(&self) -> bool {
+        match self {
+            Type::RawPointer(..) => true,
+            _ => false,
         }
     }
 }
@@ -255,6 +299,7 @@ impl std::fmt::Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         use Type::*;
         match self {
+            Null => f.write_str("null"),
             U8 => f.write_str("u8"),
             U16 => f.write_str("u16"),
             U32 => f.write_str("u32"),

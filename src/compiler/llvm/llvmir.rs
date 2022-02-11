@@ -1,6 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 
-/// The compiler traverses the Braid AST and constructs and constructs
+/// The compiler traverses the Bramble AST and constructs and constructs
 /// an LLVM Module through LLVM IR.
 
 /// This uses the LLVM C API to interface with LLVM and construct the
@@ -136,12 +136,12 @@ impl<'ctx> IrGen<'ctx> {
             .map_err(|e| e.to_string())
     }
 
-    /// Take the given Braid AST to compile it to LLVM IR and add it to the LLVM module.
+    /// Take the given Bramble AST to compile it to LLVM IR and add it to the LLVM module.
     ///
     /// All user input is expected to be fully validated and correct by the time it reaches
     /// the compiler phase (via syntactic and semantic analysis).  Therefore, if anything
     /// goes wrong during compilation, it is assumed to be the result of a critical bug in
-    /// the compiler itself and not an issue with the input Braid code. This means that any
+    /// the compiler itself and not an issue with the input Bramble code. This means that any
     /// error at this stage is unrecoverable; since its a bug in the compiler itself it cannot
     /// be trusted. So, if any unexpected state is encountered or any error happens this module
     /// will panic at that point in code and crash the compiler.
@@ -216,7 +216,7 @@ impl<'ctx> IrGen<'ctx> {
         }
     }
 
-    /// Creates `main` entry point which will be called by the OS to start the Braid
+    /// Creates `main` entry point which will be called by the OS to start the Bramble
     /// application. This main will initialize platform level values and state, then
     /// call the user defined main `my_main`.
     fn configure_user_main(&self, path: &Path) {
@@ -543,6 +543,12 @@ trait ToLlvmIr<'ctx> {
     /// Compile a Language unit to LLVM and return the appropriate LLVM Value
     /// if it has one (Modules don't have LLVM Values so those will return None)
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value>;
+
+    /// If an expression is addressable then this will generate LLVM IR code
+    /// which gets the address of the expression's location rather than the value.
+    fn to_address(&self, llvm: &mut IrGen<'ctx>) -> Option<PointerValue<'ctx>> {
+        None
+    }
 }
 
 impl<'ctx> ToLlvmIr<'ctx> for ast::Module<SemanticContext> {
@@ -692,16 +698,14 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Mutate<SemanticContext> {
 
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
         let event = llvm.new_event(self.span());
+
         let rhs = self.get_rhs().to_llvm_ir(llvm).unwrap();
-        let sid = self.get_id();
-        let name = llvm.string_table.get(sid).unwrap();
+        let lhs_ptr = self.get_lhs().to_address(llvm).unwrap();
 
-        let v_ptr = llvm.registers.get(&name).unwrap().into_pointer_value();
-
-        let st = llvm.builder.build_store(v_ptr, rhs);
+        let st = llvm.builder.build_store(lhs_ptr, rhs);
         llvm.record(event, &st);
 
-        Some(v_ptr)
+        Some(lhs_ptr)
     }
 }
 
@@ -740,8 +744,92 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Return<SemanticContext> {
 impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
     type Value = BasicValueEnum<'ctx>;
 
+    fn to_address(&self, llvm: &mut IrGen<'ctx>) -> Option<PointerValue<'ctx>> {
+        // If this value is not addressable then do _not_ return a pointer
+        // The semantic analyzer should prevent this situation from happening but just in case
+        if !self.context().is_addressable() {
+            return None;
+        }
+
+        match self {
+            ast::Expression::Identifier(_, id) => {
+                let name = llvm.string_table.get(*id).unwrap();
+
+                let ptr = llvm.registers.get(&name).unwrap().into_pointer_value();
+                Some(ptr)
+            }
+            ast::Expression::ArrayAt {
+                context: ctx,
+                array,
+                index,
+            } => {
+                // evalute the array to get the ptr to the array
+                // Check the array type, if it's not a pointer then get the GEP
+                let llvm_array_ptr = match array.to_llvm_ir(llvm) {
+                    Some(a) if a.is_pointer_value() => a.into_pointer_value(),
+                    Some(a) => panic!("Unexpected type for array: {:?}", a),
+                    None => panic!("Could not convert type {} to LLVM type", array),
+                };
+
+                // evaluate the index to get the index value
+                let llvm_index = index.to_llvm_ir(llvm).unwrap().into_int_value();
+
+                // Compute the GEP
+                let outer_idx = llvm.context.i64_type().const_int(0, false);
+                let el_ptr = unsafe {
+                    llvm.builder
+                        .build_gep(llvm_array_ptr, &[outer_idx, llvm_index], "")
+                };
+                Some(el_ptr)
+            }
+            ast::Expression::MemberAccess(ctx, val, field) => {
+                let event = llvm.new_event(self.span());
+                let sdef = llvm
+                    .struct_table
+                    .get(
+                        &val.get_type()
+                            .get_path()
+                            .unwrap()
+                            .to_label(llvm.source_map, llvm.string_table),
+                    )
+                    .unwrap();
+
+                let field_idx = sdef.get_field_idx(*field).unwrap();
+
+                let field_idx_llvm = llvm.context.i64_type().const_int(field_idx as u64, true);
+
+                let val_llvm = val.to_llvm_ir(llvm).unwrap().into_pointer_value();
+                let field_ptr = llvm
+                    .builder
+                    .build_struct_gep(val_llvm, field_idx as u32, "")
+                    .unwrap();
+                llvm.record(event, &field_ptr);
+
+                Some(field_ptr)
+            }
+            ast::Expression::UnaryOp(ctx, ast::UnaryOperator::DerefRawPointer, operand) => {
+                let r = operand.to_llvm_ir(llvm).expect("Expected a value");
+                let ptr = r.into_pointer_value();
+                Some(ptr)
+            }
+            _ => None,
+        }
+    }
+
     fn to_llvm_ir(&self, llvm: &mut IrGen<'ctx>) -> Option<Self::Value> {
         match self {
+            ast::Expression::Null(_) => {
+                let zero = llvm.context.i64_type().const_zero();
+                Some(
+                    llvm.builder
+                        .build_int_to_ptr(
+                            zero,
+                            llvm.context.i64_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                )
+            }
             ast::Expression::U8(_, i) => {
                 let u8t = llvm.context.i8_type();
                 Some(u8t.const_int(*i as u64, false).into())
@@ -808,9 +896,13 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 );
                 Some(bitcast.into()).view(|ir| llvm.record_terminal(self.span(), ir))
             }
+            ast::Expression::SizeOf(_, ty) => {
+                let llvm_ty = ty.to_llvm_ir(llvm).unwrap();
+                let sz = llvm_ty.size_of().unwrap();
+                Some(sz.into()).view(|ir| llvm.record_terminal(self.span(), ir))
+            }
             ast::Expression::Identifier(_, id) => {
                 let name = llvm.string_table.get(*id).unwrap();
-
                 let ptr = llvm.registers.get(&name).unwrap().into_pointer_value();
                 if ptr.get_type().get_element_type().is_aggregate_type() {
                     Some(ptr.into())
@@ -1103,26 +1195,37 @@ impl ast::UnaryOperator {
     ) -> BasicValueEnum<'ctx> {
         let event = llvm.new_event(span);
         let is_float = right.get_type().is_float();
-        let r = right.to_llvm_ir(llvm).expect("Expected a value");
         let op = match (self, is_float) {
             (ast::UnaryOperator::Negate, false) => {
+                let r = right.to_llvm_ir(llvm).expect("Expected a value");
                 let rv = r.into_int_value();
                 llvm.builder.build_int_neg(rv, "").into()
             }
             (ast::UnaryOperator::Negate, true) => {
+                let r = right.to_llvm_ir(llvm).expect("Expected a value");
                 let rv = r.into_float_value();
                 llvm.builder.build_float_neg(rv, "").into()
             }
             (ast::UnaryOperator::Not, false) => {
+                let r = right.to_llvm_ir(llvm).expect("Expected a value");
                 let rv = r.into_int_value();
                 llvm.builder.build_not(rv, "").into()
             }
             (ast::UnaryOperator::AddressConst, false) | (ast::UnaryOperator::AddressMut, false) => {
                 // get pointer to identifier
-                let rp = r.into_pointer_value();
-                rp.into()
+                let ptr = right.to_address(llvm).unwrap();
+                ptr.into()
             }
-            _ => todo!(),
+            (ast::UnaryOperator::DerefRawPointer, false) => {
+                let r = right.to_llvm_ir(llvm).expect("Expected a value");
+                let ptr = r.into_pointer_value();
+                if ptr.get_type().get_element_type().is_aggregate_type() {
+                    ptr.into()
+                } else {
+                    llvm.builder.build_load(ptr, "").into()
+                }
+            }
+            _ => panic!("Invalid operator"),
         };
 
         llvm.record(event, &op);
@@ -1141,6 +1244,7 @@ impl ast::BinaryOperator {
     ) -> BasicValueEnum<'ctx> {
         let event = llvm.new_event(span);
         let is_float = left.get_type().is_float();
+        let is_pointer = left.get_type().is_raw_pointer() || right.get_type().is_raw_pointer();
         let l = left.to_llvm_ir(llvm).expect("Expected a value");
         let r = right.to_llvm_ir(llvm).expect("Expected a value");
         let op = if is_float {
@@ -1173,6 +1277,35 @@ impl ast::BinaryOperator {
                     .build_float_compare(FloatPredicate::OGE, lf, rf, "")
                     .into(),
                 _ => panic!("Attempting to apply invalid operators to floats"),
+            }
+        } else if is_pointer {
+            if self == &ast::BinaryOperator::RawPointerOffset {
+                let lp = l.into_pointer_value();
+                let offset = r.into_int_value();
+                let outer_idx = llvm.context.i64_type().const_int(0, false);
+                unsafe { llvm.builder.build_gep(lp, &[offset], "").into() }
+            } else {
+                let lp = l.into_pointer_value();
+                let rp = r.into_pointer_value();
+                use ast::BinaryOperator::*;
+                match self {
+                    Eq | NEq | Ls | LsEq | Gr | GrEq => {
+                        // figure out diff
+                        let li = llvm.builder.build_ptr_to_int(lp, llvm.context.i64_type(), "");
+                        let ri = llvm.builder.build_ptr_to_int(rp, llvm.context.i64_type(), "");
+                        let predicate = match self {
+                            Eq => IntPredicate::EQ,
+                            NEq => IntPredicate::NE,
+                            Ls => IntPredicate::ULT,
+                            LsEq => IntPredicate::ULE,
+                            Gr => IntPredicate::UGT,
+                            GrEq => IntPredicate::UGE,
+                            _ => panic!(),
+                        };
+                        llvm.builder.build_int_compare(predicate, li, ri, "").into()
+                    },
+                    _ => panic!(),
+                }
             }
         } else {
             let lv = l.into_int_value();
@@ -1221,6 +1354,9 @@ impl ast::BinaryOperator {
                     .builder
                     .build_int_compare(IntPredicate::SGE, lv, rv, "")
                     .into(),
+                ast::BinaryOperator::RawPointerOffset => {
+                    panic!("Should be impossible to reach this arm")
+                }
             }
         };
 
@@ -1317,6 +1453,7 @@ impl ast::RoutineCall {
 impl ast::Type {
     fn to_llvm_ir<'ctx>(&self, llvm: &IrGen<'ctx>) -> Result<AnyTypeEnum<'ctx>> {
         let llvm_ty = match self {
+            ast::Type::Null => panic!("No variable should ever be given the Null type"),
             ast::Type::U8 | ast::Type::I8 => llvm.context.i8_type().into(),
             ast::Type::U16 | ast::Type::I16 => llvm.context.i16_type().into(),
             ast::Type::U32 | ast::Type::I32 => llvm.context.i32_type().into(),

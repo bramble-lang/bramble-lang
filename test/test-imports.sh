@@ -1,12 +1,12 @@
 #!/bin/sh
 
-#   Runs all the Braid integration tests.
+#   Runs all the Bramble integration tests.
 #
-#   Each test consists of a Braid program, an expected output, and, sometimes, an input file.
-#   This script will compile the Braid program, run it, and compare the output with the expected
+#   Each test consists of a Bramble program, an expected output, and, sometimes, an input file.
+#   This script will compile the Bramble program, run it, and compare the output with the expected
 #   output, if the two match then the test passes.
 #
-#   To add an integration test, simply write a Braid program and save it to `./test/src/{path}/{test}.br`
+#   To add an integration test, simply write a Bramble program and save it to `./test/src/{path}/{test}.br`
 #   and put the expected output in `./test/src/{path}/{test}.out`.  This script will automatically
 #   find and execute the test (based on the existance of the .out file).
 #
