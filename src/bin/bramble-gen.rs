@@ -173,13 +173,29 @@ impl SyntaxGenerator {
     }
 
     fn unary(&mut self, max_depth: u32, depth: u32) {
-        pick_op(&["-", "!", "", "^", ]);
+        pick_op(&["-", "!", "", "^"]);
         self.factor(max_depth, depth + 1);
     }
 
     fn factor(&mut self, max_depth: u32, depth: u32) {
         match choice(3) {
-            0 => pick_val(&["0", "10", "0.34", "-1", "1.343e-10", "43.253e20", "true", "false", "null"]),
+            0 => pick_val(&[
+                &rand_integer(),
+                &rand_i64(),
+                &rand_i32(),
+                &rand_i16(),
+                &rand_i8(),
+                &rand_u64(),
+                &rand_u32(),
+                &rand_u16(),
+                &rand_u8(),
+                &rand_f64(),
+                "1.343e-10",
+                "43.253e20",
+                "true",
+                "false",
+                "null",
+            ]),
             1 => {
                 print!("(");
                 self.expression(max_depth, depth);
@@ -192,7 +208,7 @@ impl SyntaxGenerator {
                         0 => print!("@const "),
                         1 => print!("@mut "),
                         2 => (),
-                        _ => panic!("Invalid choice")
+                        _ => panic!("Invalid choice"),
                     }
                 }
                 print!("x");
@@ -217,11 +233,7 @@ impl SyntaxGenerator {
 
     fn ty(&mut self, max_depth: u32, depth: u32) {
         fn inner(max_depth: u32, depth: u32) -> String {
-            let ch = if depth < max_depth {
-                12
-            } else {
-                10
-            };
+            let ch = if depth < max_depth { 12 } else { 10 };
             match choice(ch) {
                 0 => "u8".into(),
                 1 => "u16".into(),
@@ -291,4 +303,54 @@ fn pick_op(ops: &[&str]) {
 fn pick_val(vals: &[&str]) {
     let len = vals.len();
     print!("{}", vals[choice(len as u32) as usize]);
+}
+
+fn rand_f64() -> String {
+    let f = rand::thread_rng().gen::<f64>();
+    format!("{}", f)
+}
+
+fn rand_integer() -> String {
+    let i = rand::thread_rng().gen::<i64>();
+    format!("{}", i)
+}
+
+fn rand_i64() -> String {
+    let i = rand::thread_rng().gen::<i64>();
+    format!("{}i64", i)
+}
+
+fn rand_i32() -> String {
+    let i = rand::thread_rng().gen::<i32>();
+    format!("{}i32", i)
+}
+
+fn rand_i16() -> String {
+    let i = rand::thread_rng().gen::<i16>();
+    format!("{}i16", i)
+}
+
+fn rand_i8() -> String {
+    let i = rand::thread_rng().gen::<i8>();
+    format!("{}i8", i)
+}
+
+fn rand_u64() -> String {
+    let i = rand::thread_rng().gen::<u64>();
+    format!("{}u64", i)
+}
+
+fn rand_u32() -> String {
+    let i = rand::thread_rng().gen::<u32>();
+    format!("{}u32", i)
+}
+
+fn rand_u16() -> String {
+    let i = rand::thread_rng().gen::<u16>();
+    format!("{}u16", i)
+}
+
+fn rand_u8() -> String {
+    let i = rand::thread_rng().gen::<u8>();
+    format!("{}u8", i)
 }
