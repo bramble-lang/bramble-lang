@@ -1,0 +1,21 @@
+fn my_main() -> i64 {
+    let a: i64 := 5;
+    let b: i64 := 5;
+    let p1: *const i64 := @const a;
+    let p2: *const i64 := @const a;
+    let n: *const i64 := null;
+
+    project::std::io::writeboolln(p1 == p2);        // true
+    project::std::io::writeboolln(p1 == @const b);  // false
+    project::std::io::writeboolln(p1 != @const b);  // false
+    project::std::io::writeboolln(p1 == null);      // false
+    project::std::io::writeboolln(p1 != null);      // true
+    project::std::io::writeboolln(n == null);       // true
+    project::std::io::writeboolln(n != null);       // false
+    project::std::io::writeboolln(p1 > null);       // true
+    project::std::io::writeboolln(p1 >= null);      // true
+    project::std::io::writeboolln(p1 < null);       // false
+    project::std::io::writeboolln(p1 <= null);      // false
+
+    return 0;
+}

@@ -1244,6 +1244,7 @@ impl ast::BinaryOperator {
     ) -> BasicValueEnum<'ctx> {
         let event = llvm.new_event(span);
         let is_float = left.get_type().is_float();
+        let is_pointer = left.get_type().is_raw_pointer() || right.get_type().is_raw_pointer();
         let l = left.to_llvm_ir(llvm).expect("Expected a value");
         let r = right.to_llvm_ir(llvm).expect("Expected a value");
         let op = if is_float {
@@ -1277,63 +1278,85 @@ impl ast::BinaryOperator {
                     .into(),
                 _ => panic!("Attempting to apply invalid operators to floats"),
             }
-        } else {
-            if self != &ast::BinaryOperator::RawPointerOffset {
-                let lv = l.into_int_value();
-                let rv = r.into_int_value();
-                match self {
-                    ast::BinaryOperator::Add => llvm.builder.build_int_add(lv, rv, "").into(),
-                    ast::BinaryOperator::Sub => llvm.builder.build_int_sub(lv, rv, "").into(),
-                    ast::BinaryOperator::Mul => llvm.builder.build_int_mul(lv, rv, "").into(),
-                    ast::BinaryOperator::Div => {
-                        // With the current design, the difference between signed and unsigned division is
-                        // a hardware difference and falls squarely within the field of the LLVM generator
-                        // module.  But this violates the precept that this module makes no decisions and only
-                        // transcribes exactly what it is given.  Ultimately, I need to capture the notion
-                        // of operators for each operand type in the language layer; especially when I get
-                        // to implementing FP values and operations.
-                        if left.get_type().is_unsigned_int() {
-                            llvm.builder.build_int_unsigned_div(lv, rv, "")
-                        } else {
-                            llvm.builder.build_int_signed_div(lv, rv, "")
-                        }
-                        .into()
-                    }
-                    ast::BinaryOperator::BAnd => llvm.builder.build_and(lv, rv, "").into(),
-                    ast::BinaryOperator::BOr => llvm.builder.build_or(lv, rv, "").into(),
-                    ast::BinaryOperator::Eq => llvm
-                        .builder
-                        .build_int_compare(IntPredicate::EQ, lv, rv, "")
-                        .into(),
-                    ast::BinaryOperator::NEq => llvm
-                        .builder
-                        .build_int_compare(IntPredicate::NE, lv, rv, "")
-                        .into(),
-                    ast::BinaryOperator::Ls => llvm
-                        .builder
-                        .build_int_compare(IntPredicate::SLT, lv, rv, "")
-                        .into(),
-                    ast::BinaryOperator::LsEq => llvm
-                        .builder
-                        .build_int_compare(IntPredicate::SLE, lv, rv, "")
-                        .into(),
-                    ast::BinaryOperator::Gr => llvm
-                        .builder
-                        .build_int_compare(IntPredicate::SGT, lv, rv, "")
-                        .into(),
-                    ast::BinaryOperator::GrEq => llvm
-                        .builder
-                        .build_int_compare(IntPredicate::SGE, lv, rv, "")
-                        .into(),
-                    ast::BinaryOperator::RawPointerOffset => {
-                        panic!("Should be impossible to reach this arm")
-                    }
-                }
-            } else {
+        } else if is_pointer {
+            if self == &ast::BinaryOperator::RawPointerOffset {
                 let lp = l.into_pointer_value();
                 let offset = r.into_int_value();
                 let outer_idx = llvm.context.i64_type().const_int(0, false);
                 unsafe { llvm.builder.build_gep(lp, &[offset], "").into() }
+            } else {
+                let lp = l.into_pointer_value();
+                let rp = r.into_pointer_value();
+                use ast::BinaryOperator::*;
+                match self {
+                    Eq | NEq | Ls | LsEq | Gr | GrEq => {
+                        // figure out diff
+                        let li = llvm.builder.build_ptr_to_int(lp, llvm.context.i64_type(), "");
+                        let ri = llvm.builder.build_ptr_to_int(rp, llvm.context.i64_type(), "");
+                        let predicate = match self {
+                            Eq => IntPredicate::EQ,
+                            NEq => IntPredicate::NE,
+                            Ls => IntPredicate::ULT,
+                            LsEq => IntPredicate::ULE,
+                            Gr => IntPredicate::UGT,
+                            GrEq => IntPredicate::UGE,
+                            _ => panic!(),
+                        };
+                        llvm.builder.build_int_compare(predicate, li, ri, "").into()
+                    },
+                    _ => panic!(),
+                }
+            }
+        } else {
+            let lv = l.into_int_value();
+            let rv = r.into_int_value();
+            match self {
+                ast::BinaryOperator::Add => llvm.builder.build_int_add(lv, rv, "").into(),
+                ast::BinaryOperator::Sub => llvm.builder.build_int_sub(lv, rv, "").into(),
+                ast::BinaryOperator::Mul => llvm.builder.build_int_mul(lv, rv, "").into(),
+                ast::BinaryOperator::Div => {
+                    // With the current design, the difference between signed and unsigned division is
+                    // a hardware difference and falls squarely within the field of the LLVM generator
+                    // module.  But this violates the precept that this module makes no decisions and only
+                    // transcribes exactly what it is given.  Ultimately, I need to capture the notion
+                    // of operators for each operand type in the language layer; especially when I get
+                    // to implementing FP values and operations.
+                    if left.get_type().is_unsigned_int() {
+                        llvm.builder.build_int_unsigned_div(lv, rv, "")
+                    } else {
+                        llvm.builder.build_int_signed_div(lv, rv, "")
+                    }
+                    .into()
+                }
+                ast::BinaryOperator::BAnd => llvm.builder.build_and(lv, rv, "").into(),
+                ast::BinaryOperator::BOr => llvm.builder.build_or(lv, rv, "").into(),
+                ast::BinaryOperator::Eq => llvm
+                    .builder
+                    .build_int_compare(IntPredicate::EQ, lv, rv, "")
+                    .into(),
+                ast::BinaryOperator::NEq => llvm
+                    .builder
+                    .build_int_compare(IntPredicate::NE, lv, rv, "")
+                    .into(),
+                ast::BinaryOperator::Ls => llvm
+                    .builder
+                    .build_int_compare(IntPredicate::SLT, lv, rv, "")
+                    .into(),
+                ast::BinaryOperator::LsEq => llvm
+                    .builder
+                    .build_int_compare(IntPredicate::SLE, lv, rv, "")
+                    .into(),
+                ast::BinaryOperator::Gr => llvm
+                    .builder
+                    .build_int_compare(IntPredicate::SGT, lv, rv, "")
+                    .into(),
+                ast::BinaryOperator::GrEq => llvm
+                    .builder
+                    .build_int_compare(IntPredicate::SGE, lv, rv, "")
+                    .into(),
+                ast::BinaryOperator::RawPointerOffset => {
+                    panic!("Should be impossible to reach this arm")
+                }
             }
         };
 
