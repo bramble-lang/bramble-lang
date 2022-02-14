@@ -1,0 +1,106 @@
+/*
+A linked list written in Bramble.
+*/
+
+fn my_main() -> i64 {
+  let mut list: list::List := list::new();
+  list::append(@mut list, 1);
+  list::append(@mut list, 2);
+  list::print(@const list);
+  list::append(@mut list, 3);
+  list::print(@const list);
+  list::delete(@mut list, 2);
+  list::print(@const list);
+  return 0;
+}
+
+mod list {
+  extern fn malloc(sz: u64) -> *mut Node;
+  extern fn free(n: *mut Node);
+
+  struct Node {
+    val: i64,
+    next: *mut Node,
+  }
+
+  struct List {
+    head: *mut Node,
+  }
+
+  fn new() -> List {
+    return List {
+      head: null,
+    };
+  }
+
+  fn new_node(v: i64) -> *mut Node {
+      let n: *mut Node := malloc(size_of(Node));
+      mut (^n).val := v;
+      mut (^n).next := null;
+
+      return n;
+  }
+
+  fn append(list: *mut List, v: i64) {
+    // If head is null then make head
+    if ((^list).head == null) {
+      mut (^list).head := new_node(v);
+    } else {
+      // Otherwise, search to the first node where `next` is null
+      let mut c: *mut Node := (^list).head;
+      while ((^c).next != null) {
+        mut c := (^c).next;
+      };
+      
+      // Add new node
+      mut (^c).next := new_node(v);
+    };
+
+    return;
+  }
+
+  // Will delete the first occurence of v from 
+  // the list. Returns false if nothing was deleted.
+  fn delete(list: *mut List, v: i64) -> bool {
+    // If head is null return
+    return if ((^list).head == null) {
+      false
+    } else {
+      // Otherwise
+      // Iterate through list until `(^(^c).next).val == v`
+      let mut c: *mut Node := (^list).head;
+      let mut p: *mut Node := null;
+      while (c != null && (^c).val != v) {
+        mut p := c;
+        mut c := (^c).next;
+      };
+
+      // If c is null then v is not in the list and return false
+      if (c == null) {
+        false
+      } else {
+        // Set the current node to skip over c.next
+        // If p is null, then remove the head node
+        if (p == null) {
+          mut (^list).head := (^(^list).head).next;
+        } else {
+          mut (^p).next := (^c).next;
+        };
+          
+        // Then free c.next
+        free(c);
+        true
+      }
+    };
+  }
+
+  fn print(list: *const List) {
+    let mut c: *mut Node := (^list).head;
+    while (c != null) {
+      project::std::io::writei64ln((^c).val);
+      mut c := (^c).next;
+    };
+
+    return;
+  }
+}
