@@ -43,6 +43,15 @@ pub enum PointerMut {
     Const,
 }
 
+impl std::fmt::Display for PointerMut {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PointerMut::Mut => f.write_str("mut"),
+            PointerMut::Const => f.write_str("const"),
+        }
+    }
+}
+
 impl Type {
     /// Returns `true` if the the provided type can be assigned
     /// to variables of this [`Type`].
@@ -256,6 +265,7 @@ impl CompilerDisplay for Type {
             Type::Custom(path) => path.fmt(sm, st),
             Type::Coroutine(ty) => Ok(format!("co<{}>", ty.fmt(sm, st)?)),
             Type::Array(ty, sz) => Ok(format!("[{}; {}]", ty.fmt(sm, st)?, sz)),
+            Type::RawPointer(m, ty) => Ok(format!("*{} {}", m, ty.fmt(sm, st)?)),
             Type::ExternDecl(params, has_varargs, ret_ty) => {
                 let mut params = params
                     .iter()
