@@ -1,0 +1,64 @@
+/*
+A rough demo of smart pointer semantics. This design helps to demonstrate the need for:
+1. Drop semantics.  Where a drop/destructor function is called when something ceases to be alive
+2. Casting to and from pointers. The smart pointer here must be specific to the type of its data,
+this could be solved with either casting to and from a byte pointer or with "Generics".
+*/
+
+fn my_main() -> i64 {
+    let sp: *mut smart::SP := smart::new(5);
+    project::std::io::writei64ln((^smart::get(sp)));
+    mut (^smart::get(sp)) := 7;
+    project::std::io::writei64ln((^smart::get(sp)));
+
+    let spc: *mut smart::SP := smart::clone(sp);
+    project::std::io::writei64ln((^smart::get(spc)));
+
+    smart::drop(spc);
+    smart::drop(sp);
+
+    return 0;
+}
+
+mod smart {
+    extern fn malloc(sz: u64) -> *mut SP;
+    extern fn free(n: *mut SP);
+
+    struct SP {
+        counter: u64,
+        data: i64,
+    }
+
+    fn new(foo: i64) -> *mut SP {
+        let mut sp: *mut SP := malloc(size_of(SP));
+        mut (^sp).counter := 1u64;
+        mut (^sp).data := foo;
+        return sp;
+    }
+
+    fn get(sp: *mut SP) -> *mut i64 {
+        return if((^sp).counter > 0u64) {
+            @mut (^sp).data
+        } else {
+            let tmp: *mut i64 := null;
+            tmp
+        };
+    }
+
+    fn clone(sp: *mut SP) -> *mut SP {
+        mut (^sp).counter := (^sp).counter + 1u64;
+        return sp;
+    }
+
+    fn drop(sp: *mut SP) {
+        mut (^sp).counter := (^sp).counter - 1u64;
+
+        if ((^sp).counter == 0u64) {
+            project::std::io::write("Dropping SP\n");
+        } else {
+            project::std::io::write("Decrementing\n");
+        };
+
+        return;
+    }
+}
