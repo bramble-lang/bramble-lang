@@ -55,7 +55,14 @@ impl Type {
             Self::RawPointer(..) => {
                 r == &Self::Null || self == r
             },
-            Self::Null => false,
+            Self::Null => r == &Self::Null || r.can_be_assigned(&Self::Null),
+            Self::Array(ty, sz) => {
+                if let Self::Array(rty, rsz) = r {
+                    sz == rsz && ty.can_be_assigned(rty)
+                } else {
+                    false
+                }
+            }
             _ => self == r,
         }
     }
@@ -68,7 +75,7 @@ impl Type {
                 r == &Self::Null || self == r
             },
             Self::Null => {
-                r == &Self::Null || r.can_be_compared(self)
+                r == &Self::Null || r.can_be_compared(&Self::Null)
             }
             _ => self == r,
         }

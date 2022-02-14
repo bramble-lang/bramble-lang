@@ -504,7 +504,7 @@ impl<'a> TypeResolver<'a> {
                 } else {
                     el_ty = nelements[0].context().ty().clone();
                     for e in &nelements {
-                        if e.context().ty() != el_ty {
+                        if !e.context().ty().can_be_assigned(&el_ty) {
                             return Err(CompilerError::new(
                                 ctx.span(),
                                 SemanticError::ArrayInconsistentElementTypes,

@@ -1830,12 +1830,12 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 Ok(Type::U16),
             ),
             (
-                "fn main() -> u16 {
+                "fn main() -> *const u16 {
                     let a: [*const u16; 5] := [null, null, null, null, null];
-                    let k: u16 := a[0];
-                    return k * 3u16;
+                    let k: *const u16 := a[0];
+                    return k;
                 }",
-                Ok(Type::U16),
+                Ok(Type::RawPointer(PointerMut::Const, Box::new(Type::U16))),
             ),
             (
                 "fn main() -> i16 {
