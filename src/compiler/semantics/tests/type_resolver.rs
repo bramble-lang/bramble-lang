@@ -1830,6 +1830,14 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 Ok(Type::U16),
             ),
             (
+                "fn main() -> u16 {
+                    let a: [*const u16; 5] := [null, null, null, null, null];
+                    let k: u16 := a[0];
+                    return k * 3u16;
+                }",
+                Ok(Type::U16),
+            ),
+            (
                 "fn main() -> i16 {
                     let a: [i16; 2] := [1, 2,];
                     let k: i16 := a[0];
@@ -3128,6 +3136,16 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 fn test() -> MyStruct 
                 {
                     let x: root::MyStruct := MyStruct{x: 1};
+                    return x;
+                }",
+                Ok(()),
+            ),
+            (
+                line!(),
+                "struct MyStruct{x:*const i64}
+                fn test() -> MyStruct 
+                {
+                    let x: root::MyStruct := MyStruct{x: null};
                     return x;
                 }",
                 Ok(()),
