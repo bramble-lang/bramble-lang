@@ -75,7 +75,7 @@ run_test() {
         fi
     fi
 
-    $(cp ${build_dir}/../trace.json ./src/${test}.json)
+    # $(cp ${build_dir}/../trace.json ./src/${test}.json)
 
     # Test the output of the compiled binary
     result=$(diff ${build_dir}/stdout ./src/${test}.out)
