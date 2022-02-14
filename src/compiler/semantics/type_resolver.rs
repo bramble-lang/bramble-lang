@@ -864,7 +864,7 @@ impl<'a> TypeResolver<'a> {
                         SemanticError::StructExprMemberNotFound(canonical_path.clone(), *pn),
                     ))?;
                     let param = self.analyze_expression(pv)?;
-                    if param.get_type() != member_ty {
+                    if param.get_type().can_be_assigned(member_ty) {
                         return Err(CompilerError::new(
                             ctx.span(),
                             SemanticError::StructExprFieldTypeMismatch(
