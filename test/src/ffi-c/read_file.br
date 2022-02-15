@@ -1,0 +1,24 @@
+fn my_main() -> i64 {
+    file::test();
+    return 0;
+}
+
+mod file {
+    struct FILE {}
+    extern fn fopen(path: string, perms: string) -> *mut FILE;
+    extern fn fgets(buffer: *mut u8, max: u32, file: *mut FILE);
+    extern fn printf(pattern: string, ...);
+    extern fn malloc(sz: u64) -> *mut u8;
+
+    fn test() {
+        let file: *mut FILE := fopen("./src/ffi-c/read_file.txt", "r");
+
+        let buf: *mut u8 := malloc(32u64);
+        fgets(buf, 30u32, file);
+        printf("%s", buf);
+        fgets(buf, 30u32, file);
+        printf("%s", buf);
+
+        return;
+    }
+}
