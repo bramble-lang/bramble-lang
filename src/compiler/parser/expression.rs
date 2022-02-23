@@ -356,8 +356,8 @@ impl<'a> Parser<'a> {
                     Some(as_tok) => {
                         // If found, then parse a type expression
                         let (ty, ty_ctx) = self.consume_type(stream)?.ok_or(CompilerError::new(
-                                    as_tok.span(),
-                                    ParserError::InvalidCast,
+                                    exp.context().join(as_tok.to_ctx()).span(),
+                                    ParserError::InvalidCastTarget,
                                 ))?;
                         let cast_ctx = exp.context().join(ty_ctx);
 

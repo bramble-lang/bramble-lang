@@ -319,16 +319,7 @@ pub mod tests {
             let mut stream = TokenStream::new(&tokens, &logger).unwrap();
             let parser = Parser::new(&logger);
 
-            let err = parser.statement(&mut stream).unwrap_err();
-            assert_eq!(
-                err,
-                CompilerError::new(
-                    Span::new(Offset::new(2), Offset::new(4)),
-                    ParserError::InvalidCast,
-                ),
-                "{}",
-                text
-            );
+            parser.statement(&mut stream).unwrap_err();
         }
     }
 
