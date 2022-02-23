@@ -257,7 +257,7 @@ impl<'a> Parser<'a> {
     }
 
     pub(super) fn term(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
-        self.binary_op(stream, &[Lex::Mul, Lex::Div], Self::negate)
+        self.binary_op(stream, &[Lex::Mul, Lex::Div], Self::cast)
     }
 
     pub(super) fn binary_op(
@@ -345,6 +345,30 @@ impl<'a> Parser<'a> {
             let msg = v.map(|_| "Address Of");
             self.record(event.with_span(v.span()), msg)
         })
+    }
+
+    pub(super) fn cast(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
+        // Parser unary expressions
+        match self.negate(stream)? {
+            Some(exp) => {
+                // Check of the `as` operator
+                match stream.next_if(&Lex::As) {
+                    Some(as_tok) => {
+                        // If found, then parse a type expression
+                        let (ty, ty_ctx) = self.consume_type(stream)?.ok_or(CompilerError::new(
+                                    as_tok.span(),
+                                    ParserError::InvalidCast,
+                                ))?;
+                        let cast_ctx = exp.context().join(ty_ctx);
+
+                        // Create the cast node
+                        Ok(Some(Expression::TypeCast(cast_ctx, Box::new(exp), ty)))
+                    }
+                    None => Ok(Some(exp)),
+                }
+            }
+            None => Ok(None),
+        }
     }
 
     pub(super) fn negate(
@@ -526,28 +550,28 @@ impl<'a> Parser<'a> {
         match stream.next_if(&Lex::SizeOf) {
             Some(op) => {
                 let (event, result) = self.new_event(Span::zero()).and_then(|| {
-                        let ctx = op.to_ctx();
-                        // Must have (
-                        stream.next_must_be(&Lex::LParen)?;
-                        
-                        // Read Type
-                        let (ty, _) = self.consume_type(stream)?.ok_or(CompilerError::new(
-                                ctx.span(),
-                                ParserError::RawPointerExpectedType,
-                            ))?;
+                    let ctx = op.to_ctx();
+                    // Must have (
+                    stream.next_must_be(&Lex::LParen)?;
 
-                        // Must have )
-                        let ctx = stream.next_must_be(&Lex::RParen)?.to_ctx().join(ctx);
+                    // Read Type
+                    let (ty, _) = self.consume_type(stream)?.ok_or(CompilerError::new(
+                        ctx.span(),
+                        ParserError::RawPointerExpectedType,
+                    ))?;
 
-                        // Return size_of expression
-                        Ok(Some(Expression::SizeOf(ctx, Box::new(ty.clone()))))
+                    // Must have )
+                    let ctx = stream.next_must_be(&Lex::RParen)?.to_ctx().join(ctx);
+
+                    // Return size_of expression
+                    Ok(Some(Expression::SizeOf(ctx, Box::new(ty.clone()))))
                 });
                 result.view(|v| {
                     let msg = v.map(|_| "size_of");
                     self.record(event.with_span(v.span()), msg)
                 })
             }
-            None => Ok(None)
+            None => Ok(None),
         }
     }
 
@@ -858,10 +882,9 @@ impl<'a> Parser<'a> {
         let (event, result) =
             self.new_event(Span::zero())
                 .and_then(|| match stream.next_if(&Lex::Null) {
-                    Some(Token {
-                        span,
-                        ..
-                    }) => Ok(Some(Expression::Null(ParserContext::new(span)))),
+                    Some(Token { span, .. }) => {
+                        Ok(Some(Expression::Null(ParserContext::new(span))))
+                    }
                     _ => Ok(None),
                 });
         result.view(|v| {

@@ -122,6 +122,7 @@ impl<'a> StringPool<'a> {
                     self.extract_from(f);
                 }
             }
+            TypeCast(_, exp, _) => self.extract_from(exp),
         }
     }
 

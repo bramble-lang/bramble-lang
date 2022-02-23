@@ -220,6 +220,7 @@ where
             RoutineCall(..) => self.for_routine_call(exp),
             StructExpression(..) => self.for_struct_expression(exp),
             ExpressionBlock(..) => self.for_expression_block(exp),
+            TypeCast(_, exp, _) => self.for_expression(exp),
         }
     }
 

@@ -231,34 +231,34 @@ impl<'a> ForEachPreOrderMut {
 
         match exp {
             ExpressionBlock(..) => self.for_expression_block(exp, f),
-            Expression::Null(..) => self.transform(exp, f),
-            Expression::U8(..) => self.transform(exp, f),
-            Expression::U16(..) => self.transform(exp, f),
-            Expression::U32(..) => self.transform(exp, f),
-            Expression::U64(..) => self.transform(exp, f),
-            Expression::I8(..) => self.transform(exp, f),
-            Expression::I16(..) => self.transform(exp, f),
-            Expression::I32(..) => self.transform(exp, f),
-            Expression::I64(..) => self.transform(exp, f),
-            Expression::F64(..) => self.transform(exp, f),
-            Expression::Boolean(..) => self.transform(exp, f),
-            Expression::StringLiteral(..) => self.transform(exp, f),
-            Expression::ArrayExpression(_, el, _) => {
+            Null(..) => self.transform(exp, f),
+            U8(..) => self.transform(exp, f),
+            U16(..) => self.transform(exp, f),
+            U32(..) => self.transform(exp, f),
+            U64(..) => self.transform(exp, f),
+            I8(..) => self.transform(exp, f),
+            I16(..) => self.transform(exp, f),
+            I32(..) => self.transform(exp, f),
+            I64(..) => self.transform(exp, f),
+            F64(..) => self.transform(exp, f),
+            Boolean(..) => self.transform(exp, f),
+            StringLiteral(..) => self.transform(exp, f),
+            ArrayExpression(_, el, _) => {
                 for e in el {
                     self.for_expression(e, f)?;
                 }
                 self.transform(exp, f)
             }
-            Expression::ArrayAt { array, index, .. } => {
+            ArrayAt { array, index, .. } => {
                 self.for_expression(array, f)?;
                 self.for_expression(index, f)?;
                 self.transform(exp, f)
             }
-            Expression::SizeOf(..) => self.transform(exp, f),
-            Expression::CustomType(..) => self.transform(exp, f),
-            Expression::Identifier(..) => self.transform(exp, f),
+            SizeOf(..) => self.transform(exp, f),
+            CustomType(..) => self.transform(exp, f),
+            Identifier(..) => self.transform(exp, f),
             Path(..) => self.transform(exp, f),
-            Expression::IdentifierDeclare(..) => self.transform(exp, f),
+            IdentifierDeclare(..) => self.transform(exp, f),
             MemberAccess(..) => self.for_member_access(exp, f),
             UnaryOp(..) => self.for_unary_op(exp, f),
             BinaryOp(..) => self.for_binary_op(exp, f),
@@ -267,6 +267,7 @@ impl<'a> ForEachPreOrderMut {
             Yield(..) => self.for_yield(exp, f),
             RoutineCall(..) => self.for_routine_call(exp, f),
             StructExpression(..) => self.for_struct_expression(exp, f),
+            TypeCast(_, exp, _) => self.for_expression(exp, f),
         }
     }
 

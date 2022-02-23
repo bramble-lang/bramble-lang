@@ -1182,6 +1182,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 panic!("IdentifierDelcare nodes should be resolved and removed before the compiler stage")
             }
             ast::Expression::Yield(..) => panic!("Yield is not yet implemented for LLVM"),
+            ast::Expression::TypeCast(_, _, _) => todo!(),
         }
     }
 }
@@ -1357,7 +1358,6 @@ impl ast::BinaryOperator {
                 ast::BinaryOperator::RawPointerOffset => {
                     panic!("Should be impossible to reach this arm")
                 }
-                ast::BinaryOperator::PrimTyCast => todo!(),
             }
         };
 

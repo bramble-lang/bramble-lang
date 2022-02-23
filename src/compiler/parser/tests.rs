@@ -253,17 +253,20 @@ pub mod tests {
 
     #[test]
     fn primitive_casting() {
-        for (text, expected) in vec![
-            ("x as i32", BinaryOperator::PrimTyCast),
-            ("x as f64", BinaryOperator::PrimTyCast),
-            ("x as *const i8", BinaryOperator::PrimTyCast),
-            ("x as *mut i8", BinaryOperator::PrimTyCast),
-            ("x as *mut MyType", BinaryOperator::PrimTyCast),
-            ("x as *mut [i8;4]", BinaryOperator::PrimTyCast),
-            ("x as bool", BinaryOperator::PrimTyCast),
-            ("x as i8", BinaryOperator::PrimTyCast),
-            ("x as u8", BinaryOperator::PrimTyCast),
+        for ty in vec![
+            Type::I8,
+            Type::I16,
+            Type::I32,
+            Type::I64,
+            Type::U8,
+            Type::U16,
+            Type::U32,
+            Type::U64,
+            Type::F64,
+            Type::RawPointer(PointerMut::Const, Box::new(Type::U8)),
+            Type::RawPointer(PointerMut::Mut, Box::new(Type::F64)),
         ] {
+            let text = &format!("2 as {}", ty);
             let l = 0;
             let h = text.len() as u32;
 
@@ -281,15 +284,15 @@ pub mod tests {
                 .unwrap();
             let mut stream = TokenStream::new(&tokens, &logger).unwrap();
             let parser = Parser::new(&logger);
-            if let Some(Expression::BinaryOp(ctx, op, left, right)) =
+            if let Some(Expression::TypeCast(ctx, left, result_ty)) =
                 parser.expression(&mut stream).unwrap()
             {
-                assert_eq!(op, expected);
+                //assert_eq!(op, expected);
                 assert_eq!(ctx, new_ctx(l, h));
                 assert_eq!(*left, Expression::I64(new_ctx(0, 1), 2));
                 assert_eq!(
-                    *right,
-                    Expression::I64(new_ctx(text.len() as u32 - 1, text.len() as u32), 2)
+                    result_ty,
+                    ty
                 );
             } else {
                 panic!("No nodes returned by parser for {}", text)
@@ -299,7 +302,7 @@ pub mod tests {
 
     #[test]
     fn primitive_casting_fails() {
-        for text in vec!["x as 5", "4 as 43.0", "4 as x", "x as [i8; 5]"].iter() {
+        for text in vec!["x as 5", "4 as 43.0", "x as [1, 2, 3]"].iter() {
             let mut table = StringTable::new();
 
             let mut sm = SourceMap::new();
@@ -320,7 +323,7 @@ pub mod tests {
             assert_eq!(
                 err,
                 CompilerError::new(
-                    Span::new(Offset::new(7), Offset::new(8)),
+                    Span::new(Offset::new(2), Offset::new(4)),
                     ParserError::InvalidCast,
                 ),
                 "{}",

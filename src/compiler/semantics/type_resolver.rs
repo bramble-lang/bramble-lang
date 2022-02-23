@@ -885,6 +885,7 @@ impl<'a> TypeResolver<'a> {
                     resolved_params,
                 ))
             }
+            Expression::TypeCast(_, _, _) => todo!(),
         }
         });
         result.view(|e| self.record2(event, e, refs))
@@ -1061,7 +1062,6 @@ impl<'a> TypeResolver<'a> {
                     ))
                 }
             }
-            PrimTyCast => todo!(),
         }
     }
 
