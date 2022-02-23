@@ -253,17 +253,20 @@ pub mod tests {
 
     #[test]
     fn primitive_casting() {
-        for (text, expected, l, h) in vec![
-            ("x as i32", BinaryOperator::PrimTyCast, 0, 8),
-            ("x as f64", BinaryOperator::PrimTyCast, 0, 8),
-            ("x as *const i8", BinaryOperator::PrimTyCast, 0, 8),
-            ("x as *mut i8", BinaryOperator::PrimTyCast, 0, 8),
-            ("x as *mut MyType", BinaryOperator::PrimTyCast, 0, 8),
-            ("x as *mut [i8;4]", BinaryOperator::PrimTyCast, 0, 8),
-            ("x as bool", BinaryOperator::PrimTyCast, 0, 8),
-            ("x as i8", BinaryOperator::PrimTyCast, 0, 8),
-            ("x as u8", BinaryOperator::PrimTyCast, 0, 8),
+        for (text, expected) in vec![
+            ("x as i32", BinaryOperator::PrimTyCast),
+            ("x as f64", BinaryOperator::PrimTyCast),
+            ("x as *const i8", BinaryOperator::PrimTyCast),
+            ("x as *mut i8", BinaryOperator::PrimTyCast),
+            ("x as *mut MyType", BinaryOperator::PrimTyCast),
+            ("x as *mut [i8;4]", BinaryOperator::PrimTyCast),
+            ("x as bool", BinaryOperator::PrimTyCast),
+            ("x as i8", BinaryOperator::PrimTyCast),
+            ("x as u8", BinaryOperator::PrimTyCast),
         ] {
+            let l = 0;
+            let h = text.len() as u32;
+
             let mut table = StringTable::new();
             let mut sm = SourceMap::new();
             sm.add_string(text, "/test".into()).unwrap();
@@ -318,7 +321,7 @@ pub mod tests {
                 err,
                 CompilerError::new(
                     Span::new(Offset::new(7), Offset::new(8)),
-                    ParserError::RawPointerExpectedConstOrMut,
+                    ParserError::InvalidCast,
                 ),
                 "{}",
                 text
