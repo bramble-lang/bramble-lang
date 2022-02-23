@@ -287,6 +287,7 @@ pub enum BinaryOperator {
     Gr,
     GrEq,
     RawPointerOffset,
+    PrimTyCast,
 }
 
 impl std::fmt::Display for BinaryOperator {
@@ -306,6 +307,7 @@ impl std::fmt::Display for BinaryOperator {
             Gr => f.write_str(">"),
             GrEq => f.write_str(">="),
             RawPointerOffset => f.write_str("@"),
+            PrimTyCast => f.write_str("as"),
         }
     }
 }

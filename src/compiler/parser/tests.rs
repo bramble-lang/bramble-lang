@@ -121,7 +121,7 @@ pub mod tests {
             ("2<=2", BinaryOperator::LsEq, 0, 4),
             ("2>2", BinaryOperator::Gr, 0, 3),
             ("2>=2", BinaryOperator::GrEq, 0, 4),
-            ("2@2", BinaryOperator::RawPointerOffset, 0, 3),  // Fully recoginizing that, semantically, this is wrong but syntactically it's valid!
+            ("2@2", BinaryOperator::RawPointerOffset, 0, 3), // Fully recoginizing that, semantically, this is wrong but syntactically it's valid!
         ] {
             let mut table = StringTable::new();
             let mut sm = SourceMap::new();
@@ -248,6 +248,81 @@ pub mod tests {
             assert_eq!(*right, Expression::Boolean(new_ctx(8, 13), false));
         } else {
             panic!("No nodes returned by parser")
+        }
+    }
+
+    #[test]
+    fn primitive_casting() {
+        for (text, expected, l, h) in vec![
+            ("x as i32", BinaryOperator::PrimTyCast, 0, 8),
+            ("x as f64", BinaryOperator::PrimTyCast, 0, 8),
+            ("x as *const i8", BinaryOperator::PrimTyCast, 0, 8),
+            ("x as *mut i8", BinaryOperator::PrimTyCast, 0, 8),
+            ("x as *mut MyType", BinaryOperator::PrimTyCast, 0, 8),
+            ("x as *mut [i8;4]", BinaryOperator::PrimTyCast, 0, 8),
+            ("x as bool", BinaryOperator::PrimTyCast, 0, 8),
+            ("x as i8", BinaryOperator::PrimTyCast, 0, 8),
+            ("x as u8", BinaryOperator::PrimTyCast, 0, 8),
+        ] {
+            let mut table = StringTable::new();
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
+                .unwrap()
+                .tokenize()
+                .into_iter()
+                .collect::<LResult>()
+                .unwrap();
+            let mut stream = TokenStream::new(&tokens, &logger).unwrap();
+            let parser = Parser::new(&logger);
+            if let Some(Expression::BinaryOp(ctx, op, left, right)) =
+                parser.expression(&mut stream).unwrap()
+            {
+                assert_eq!(op, expected);
+                assert_eq!(ctx, new_ctx(l, h));
+                assert_eq!(*left, Expression::I64(new_ctx(0, 1), 2));
+                assert_eq!(
+                    *right,
+                    Expression::I64(new_ctx(text.len() as u32 - 1, text.len() as u32), 2)
+                );
+            } else {
+                panic!("No nodes returned by parser for {}", text)
+            }
+        }
+    }
+
+    #[test]
+    fn primitive_casting_fails() {
+        for text in vec!["x as 5", "4 as 43.0", "4 as x", "x as [i8; 5]"].iter() {
+            let mut table = StringTable::new();
+
+            let mut sm = SourceMap::new();
+            sm.add_string(text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
+                .unwrap()
+                .tokenize()
+                .into_iter()
+                .collect::<LResult>()
+                .unwrap();
+            let mut stream = TokenStream::new(&tokens, &logger).unwrap();
+            let parser = Parser::new(&logger);
+
+            let err = parser.statement(&mut stream).unwrap_err();
+            assert_eq!(
+                err,
+                CompilerError::new(
+                    Span::new(Offset::new(7), Offset::new(8)),
+                    ParserError::RawPointerExpectedConstOrMut,
+                ),
+                "{}",
+                text
+            );
         }
     }
 
@@ -707,8 +782,6 @@ pub mod tests {
         let mut stream = TokenStream::new(&tokens, &logger).unwrap();
         let parser = Parser::new(&logger);
         if let Some(Expression::SizeOf(ctx, ty)) = parser.expression(&mut stream).unwrap() {
-
-
             let ms_id = table.insert("MyStruct".into());
             let mut path = Path::new();
             path.push(Element::Id(ms_id));
@@ -1541,9 +1614,7 @@ pub mod tests {
 
     #[test]
     fn parse_null() {
-        for (text, expected) in vec![
-            ("null", Expression::Null(new_ctx(0, 4))),
-        ] {
+        for (text, expected) in vec![("null", Expression::Null(new_ctx(0, 4)))] {
             let mut sm = SourceMap::new();
             sm.add_string(text, "/test".into()).unwrap();
 

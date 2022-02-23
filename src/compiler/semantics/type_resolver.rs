@@ -1061,6 +1061,7 @@ impl<'a> TypeResolver<'a> {
                     ))
                 }
             }
+            PrimTyCast => todo!(),
         }
     }
 

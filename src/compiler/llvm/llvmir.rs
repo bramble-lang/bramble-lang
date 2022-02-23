@@ -1357,6 +1357,7 @@ impl ast::BinaryOperator {
                 ast::BinaryOperator::RawPointerOffset => {
                     panic!("Should be impossible to reach this arm")
                 }
+                ast::BinaryOperator::PrimTyCast => todo!(),
             }
         };
 
