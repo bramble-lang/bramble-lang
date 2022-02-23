@@ -387,6 +387,7 @@ mod tests {
             ("while", While),
             ("size_of", SizeOf),
             ("null", Null),
+            ("as", As),
         ]
         .iter()
         {

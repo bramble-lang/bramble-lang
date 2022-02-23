@@ -570,7 +570,7 @@ impl<'a> Lexer<'a> {
         // longer keyword must be placed first; otherwise the shorter keyword will incorrectly match.
         let keywords = [
             "let", "mut", "return", "yield", "yret", "fn", "const", "co", "mod", "struct",
-            "extern", "init", "if", "else", "while", "self", "super", "root", "project", "size_of", "null"
+            "extern", "init", "if", "else", "while", "self", "super", "root", "project", "size_of", "null", "as"
         ];
 
         Ok(match branch.next_if_one_of(&keywords) {
@@ -599,6 +599,7 @@ impl<'a> Lexer<'a> {
                     "const" => Token::new(Const, span),
                     "size_of" => Token::new(SizeOf, span),
                     "null" => Token::new(Null, span),
+                    "as" => Token::new(As, span),
                     _ => panic!("Matched a keyword which does not exist: {}", w),
                 })
             }
