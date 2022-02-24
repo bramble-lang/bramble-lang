@@ -119,7 +119,43 @@ impl Type {
 
     /// Returns whether this type can be cast to the target type.
     pub fn can_cast_to(&self, r: &Self) -> bool {
-        self.can_be_cast() && r.can_be_cast()
+        if self.can_be_cast() && r.can_be_cast() {
+            match self {
+                | Type::U8  
+                | Type::U16 
+                | Type::U32 
+                | Type::U64 
+                | Type::I8  
+                | Type::I16 
+                | Type::I32 
+                | Type::I64 
+                | Type::Bool => {
+                    r.is_number() || r.is_raw_const_pointer()
+                },
+                Type::RawPointer(PointerMut::Mut, _) => {
+                    r.is_raw_pointer() || r.is_integral() || r == Type::StringLiteral
+                },
+                Type::RawPointer(PointerMut::Const, _) => {
+                    r.is_raw_const_pointer() || r.is_integral() || r == Type::StringLiteral
+                },
+                Type::F64 => {
+                    r.is_number()
+                },
+                Type::StringLiteral => r == Type::StringLiteral || r.is_raw_const_pointer(),
+                Type::Null => false,
+                Type::Array(_, _) => false,
+                Type::Unit => false,
+                Type::Custom(_) => false,
+                Type::StructDef(_) => false,
+                Type::FunctionDef(_, _) => false,
+                Type::CoroutineDef(_, _) => false,
+                Type::Coroutine(_) => false,
+                Type::ExternDecl(_, _, _) => false,
+                Type::Unknown => false,
+            }
+        } else {
+            false
+        }
     }
     
     pub fn get_path(&self) -> Option<&Path> {
@@ -274,6 +310,13 @@ impl Type {
     pub fn is_raw_pointer(&self) -> bool {
         match self {
             Type::RawPointer(..) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_raw_const_pointer(&self) -> bool {
+        match self {
+            Type::RawPointer(PointerMut::Const, _) => true,
             _ => false,
         }
     }

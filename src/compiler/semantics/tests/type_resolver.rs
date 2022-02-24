@@ -1985,8 +1985,36 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                 Err("L2: Invalid type cast"),
             ),
             // Cast from *const to *mut -> Err
+            (
+                "fn main() -> i64 {
+                    let i: *const i64 := null;
+                    let k: *mut i64 := 5 as *mut i64;
+                    return ^k;
+                }
+                struct MyStruct{}
+                ",
+                Err("L3: Invalid type cast"),
+            ),
             // Cast from fX to *m -> Err
+            (
+                "fn main() -> i64 {
+                    let k: *mut i64 := 5.0 as *mut f64;
+                    return ^k;
+                }
+                struct MyStruct{}
+                ",
+                Err("L2: Invalid type cast"),
+            ),
             // Cast from *m to fX -> Err
+            (
+                "fn main() -> f64 {
+                    let k: *mut f64 := null;
+                    return k as f64;
+                }
+                struct MyStruct{}
+                ",
+                Err("L3: Invalid type cast"),
+            ),
             (
                 "fn main() -> bool {
                     let k: MyStruct := 5 as MyStruct;
