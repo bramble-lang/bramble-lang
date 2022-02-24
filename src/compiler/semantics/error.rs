@@ -57,6 +57,7 @@ pub enum SemanticError {
     InvalidIdentifierType(Type),
     OffsetOperatorRequiresPointer(Type),
     OffsetOperatorRequiresInteger(Type),
+    InvalidTypeCast,
 }
 
 impl CompilerDisplay for SemanticError {
@@ -264,6 +265,7 @@ impl CompilerDisplay for SemanticError {
                 "@ operator expects integer on right side, but got {}",
                 ty.fmt(sm, st)?
             )),
+            SemanticError::InvalidTypeCast => Ok(format!("Invalid type cast")),
         }
     }
 }

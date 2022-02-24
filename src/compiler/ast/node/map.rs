@@ -220,7 +220,7 @@ where
             RoutineCall(..) => self.for_routine_call(exp),
             StructExpression(..) => self.for_struct_expression(exp),
             ExpressionBlock(..) => self.for_expression_block(exp),
-            TypeCast(_, exp, _) => self.for_expression(exp),
+            TypeCast(..) => self.for_cast(exp),
         }
     }
 
@@ -270,6 +270,16 @@ where
             Expression::BinaryOp(b, *op, Box::new(l), Box::new(r))
         } else {
             panic!("Expected BinaryOp, but got {:?}", bin_op)
+        }
+    }
+
+    fn for_cast(&mut self, cast: &Expression<A>) -> Expression<B> {
+        if let Expression::TypeCast(_, exp, ty) = cast {
+            let b = self.transform(cast);
+            let exp2 = self.for_expression(exp);
+            Expression::TypeCast(b, Box::new(exp2), ty.clone())
+        } else {
+            panic!("Expected BinaryOp, but got {:?}", cast)
         }
     }
 

@@ -89,6 +89,38 @@ impl Type {
             _ => self == r,
         }
     }
+
+    pub fn can_be_cast(&self) -> bool {
+        match self {
+            Type::Null => false,
+            Type::U8 => true,
+            Type::U16 => true,
+            Type::U32 => true,
+            Type::U64 => true,
+            Type::I8 => true,
+            Type::I16 => true,
+            Type::I32 => true,
+            Type::I64 => true,
+            Type::F64 => true,
+            Type::Bool => true,
+            Type::StringLiteral => false,
+            Type::RawPointer(_, _) => true,
+            Type::Array(_, _) => false,
+            Type::Unit => false,
+            Type::Custom(_) => false,
+            Type::StructDef(_) => false,
+            Type::FunctionDef(_, _) => false,
+            Type::CoroutineDef(_, _) => false,
+            Type::Coroutine(_) => false,
+            Type::ExternDecl(_, _, _) => false,
+            Type::Unknown => false,
+        }
+    }
+
+    /// Returns whether this type can be cast to the target type.
+    pub fn can_cast_to(&self, r: &Self) -> bool {
+        self.can_be_cast() && r.can_be_cast()
+    }
     
     pub fn get_path(&self) -> Option<&Path> {
         match self {

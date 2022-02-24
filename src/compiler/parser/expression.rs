@@ -354,6 +354,7 @@ impl<'a> Parser<'a> {
                 // Check of the `as` operator
                 match stream.next_if(&Lex::As) {
                     Some(as_tok) => {
+                        let (event, result) = self.new_event(Span::zero()).and_then(||{
                         // If found, then parse a type expression
                         let (ty, ty_ctx) = self.consume_type(stream)?.ok_or(CompilerError::new(
                                     exp.context().join(as_tok.to_ctx()).span(),
@@ -363,6 +364,12 @@ impl<'a> Parser<'a> {
 
                         // Create the cast node
                         Ok(Some(Expression::TypeCast(cast_ctx, Box::new(exp), ty)))
+                        });
+
+                        result.view(|v| {
+                            let msg = v.map(|_| "cast");
+                            self.record(event.with_span(v.span()), msg)
+                        })
                     }
                     None => Ok(Some(exp)),
                 }

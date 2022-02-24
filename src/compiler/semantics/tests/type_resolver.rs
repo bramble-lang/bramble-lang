@@ -1374,7 +1374,12 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().fmt(&sm, &table).unwrap(), msg, "{}", text);
+                    assert_eq!(
+                        module.unwrap_err().fmt(&sm, &table).unwrap(),
+                        msg,
+                        "{}",
+                        text
+                    );
                 }
             }
         }
@@ -1489,7 +1494,12 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     }
                 }
                 Err(msg) => {
-                    assert_eq!(module.unwrap_err().fmt(&sm, &table).unwrap(), msg, "{}", text);
+                    assert_eq!(
+                        module.unwrap_err().fmt(&sm, &table).unwrap(),
+                        msg,
+                        "{}",
+                        text
+                    );
                 }
             }
         }
@@ -1890,6 +1900,132 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     } else {
                         panic!("Expected a return statement")
                     }
+                }
+                Err(msg) => {
+                    assert_eq!(module.unwrap_err().fmt(&sm, &table).unwrap(), msg);
+                }
+            }
+        }
+    }
+
+    #[test]
+    pub fn test_type_cast() {
+        for (text, expected) in vec![
+            (
+                "fn main() -> i64 {
+                    let k: i32 := (1 + 5) as i32;
+                    return k as i64;
+                }",
+                Ok(vec![Type::I32, Type::I64]),
+            ),
+            (
+                "fn main() -> i64 {
+                    let k: *const i64 := 0 as *const i64;
+                    return ^k;
+                }",
+                Ok(vec![
+                    Type::RawPointer(PointerMut::Const, Box::new(Type::I64)),
+                    Type::I64,
+                ]),
+            ),
+            // Cast from *mut to *const -> Ok
+            (
+                "fn main() -> i64 {
+                    let i: *mut i64 := null;
+                    let k: *const i64 := i as *const i64;
+                    return ^k;
+                }",
+                Ok(vec![
+                    Type::RawPointer(PointerMut::Mut, Box::new(Type::I64)),
+                    Type::RawPointer(PointerMut::Const, Box::new(Type::I64)),
+                    Type::I64,
+                ]),
+            ),
+            // Cast from iX to *const -> Ok
+            (
+                "fn main() -> i64 {
+                    let k: *const i64 := 0i8 as *const i64;
+                    return ^k;
+                }",
+                Ok(vec![
+                    Type::RawPointer(PointerMut::Const, Box::new(Type::I64)),
+                    Type::I64,
+                ]),
+            ),
+            // Cast from fX to iY -> Ok
+            (
+                "fn main() -> i64 {
+                    let k: f64 := 0.2;
+                    return k as i64;
+                }",
+                Ok(vec![
+                    Type::F64,
+                    Type::I64,
+                ]),
+            ),
+            // Cast from iY to fX -> Ok
+            (
+                "fn main() -> f64 {
+                    let k: i64 := 2;
+                    return k as f64;
+                }",
+                Ok(vec![
+                    Type::I64,
+                    Type::F64,
+                ]),
+            ),
+            // Cast from iX to *mut -> Err
+            (
+                "fn main() -> i64 {
+                    let k: *mut i64 := 5 as *mut i64;
+                    return ^k;
+                }
+                struct MyStruct{}
+                ",
+                Err("L2: Invalid type cast"),
+            ),
+            // Cast from *const to *mut -> Err
+            // Cast from fX to *m -> Err
+            // Cast from *m to fX -> Err
+            (
+                "fn main() -> bool {
+                    let k: MyStruct := 5 as MyStruct;
+                    return k + 3;
+                }
+                struct MyStruct{}
+                ",
+                Err("L2: Invalid type cast"),
+            ),
+        ] {
+            let mut sm = SourceMap::new();
+            sm.add_string(&text, "/test".into()).unwrap();
+            let src = sm.get(0).unwrap().read().unwrap();
+
+            let mut table = StringTable::new();
+            let main = table.insert("main".into());
+            let main_mod = table.insert(MAIN_MODULE.into());
+            let main_fn = table.insert("my_main".into());
+
+            let logger = Logger::new();
+            let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
+                .unwrap()
+                .tokenize()
+                .into_iter()
+                .collect::<LResult>()
+                .unwrap();
+
+            let parser = Parser::new(&logger);
+            let ast = parser.parse(main, &tokens).unwrap().unwrap();
+            let module = resolve_types(&ast, main_mod, main_fn, &logger);
+            match expected {
+                Ok(expected_ty) => {
+                    let module = module.unwrap();
+                    let fn_main = module.get_functions()[0].to_routine().unwrap();
+
+                    // Validate the resolved type of each statement matches the expected resolved type
+                    fn_main.get_body().iter().enumerate().for_each(|(idx, stm)|{
+                        assert_eq!(stm.context().ty(), expected_ty[idx], "Test Data: {}", text);
+                    });
                 }
                 Err(msg) => {
                     assert_eq!(module.unwrap_err().fmt(&sm, &table).unwrap(), msg);
