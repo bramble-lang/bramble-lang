@@ -1200,17 +1200,8 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
 
                 Some(el_val)
             }
-            ast::Expression::CustomType(..) => {
-                panic!("CustomType nodes should be resolved and removed before the compiler stage.")
-            }
-            ast::Expression::Path(..) => {
-                panic!("Path nodes should be resolved and removed before the compiler stage.")
-            }
-            ast::Expression::IdentifierDeclare(..) => {
-                panic!("IdentifierDelcare nodes should be resolved and removed before the compiler stage")
-            }
-            ast::Expression::Yield(..) => panic!("Yield is not yet implemented for LLVM"),
             ast::Expression::TypeCast(_, src, target_ty) => {
+                let event = llvm.new_event(self.span());
                 let target_ty_llvm = target_ty.to_llvm_ir(llvm).unwrap();
                 let src_llvm = src.to_llvm_ir(llvm).unwrap();
                 let src_signed = src.get_type().is_signed();
@@ -1288,8 +1279,18 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     }
                     _ => panic!("Illegal casting operation"),
                 };
-                Some(op)
+                Some(op.into()).view(|ir| llvm.record(event, ir))
             }
+            ast::Expression::CustomType(..) => {
+                panic!("CustomType nodes should be resolved and removed before the compiler stage.")
+            }
+            ast::Expression::Path(..) => {
+                panic!("Path nodes should be resolved and removed before the compiler stage.")
+            }
+            ast::Expression::IdentifierDeclare(..) => {
+                panic!("IdentifierDelcare nodes should be resolved and removed before the compiler stage")
+            }
+            ast::Expression::Yield(..) => panic!("Yield is not yet implemented for LLVM"),
         }
     }
 }
