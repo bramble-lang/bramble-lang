@@ -1195,8 +1195,8 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                         if src_width < target_width {
                             match (src_signed, target_signed) {
                                 (false, false)
-                                | (false, true)
-                                | (true, false) => llvm.builder.build_int_z_extend(iv, tty, ""),
+                                | (false, true) => llvm.builder.build_int_z_extend(iv, tty, ""),
+                                | (true, false)
                                 | (true, true) => llvm.builder.build_int_s_extend(iv, tty, ""),
                             }
                         // else if downcasting
