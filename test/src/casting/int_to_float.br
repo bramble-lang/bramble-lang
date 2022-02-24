@@ -1,0 +1,39 @@
+fn my_main() -> i64 {
+    let p64: i64 := 1;
+    let n64: i64 := -1;
+    let un64: u64 := 0u64;
+    project::std::io::writef64ln(n64 as f64);
+    project::std::io::writef64ln(p64 as f64);
+    project::std::io::writef64ln(un64 as f64);
+
+    let p16: i16 := 1i16;
+    let n16: i16 := -1i16;
+    let un16: u16 := 0u16;
+    project::std::io::writef64ln(n16 as f64);
+    project::std::io::writef64ln(p16 as f64);
+    project::std::io::writef64ln(un16 as f64);
+
+    let pf: f64 := 550000.5;
+    let nf: f64 := -550000.5;
+    project::std::io::writei64ln(pf as i64);
+    project::std::io::writei64ln(nf as i64);
+    project::std::io::writeu64ln(pf as u64);
+    project::std::io::writeu64ln(nf as u64);
+    project::std::io::writei16ln(pf as i16);
+    project::std::io::writei16ln(nf as i16);
+    project::std::io::writeu16ln(pf as u16);
+    project::std::io::writeu16ln(nf as u16);
+
+    let a: i64 := -5;
+    let b: f64 := 2.3;
+    let v: f64 := (a * 5) as f64 / b;
+    project::std::io::writef64ln(v);
+
+    return 0;
+}
+
+struct MyStruct {
+    i: i64,
+    j: i64,
+    k: i64,
+}

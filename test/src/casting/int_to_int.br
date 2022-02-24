@@ -1,0 +1,49 @@
+fn my_main() -> i64 {
+    let n16: i16 := -2i16;
+    let p16: i16 := 2i16;
+    let un16: u16 := 5u16;
+    let umax16: u16 := 65535u16;
+
+    // Test Upcasting
+    project::std::io::writei64ln(n16 as i64);
+    project::std::io::writei64ln(p16 as i64);
+    project::std::io::writei64ln(umax16 as i64);
+    project::std::io::writeu64ln(n16 as u64);
+    project::std::io::writeu64ln(p16 as u64);
+    project::std::io::writeu64ln(umax16 as u64);
+
+    // Value fits in target 
+        // Downcast signed to signed
+            // negative
+            // positive
+        // Downcast unsigned to signed
+        // Downcast signed to unsigned
+            // negative
+            // positive
+        // Downcast unsigned to unsigned
+    project::std::io::writei8ln(n16 as i8);
+    project::std::io::writei8ln(p16 as i8);
+    project::std::io::writei8ln(un16 as i8);
+    project::std::io::writeu8ln(n16 as u8);
+    project::std::io::writeu8ln(p16 as u8);
+    project::std::io::writeu8ln(un16 as u8);
+
+    // Value too big for target 
+    let bn16: i16 := -500i16;
+    let bp16: i16 := 500i16;
+    let bun16: u16 := 500u16;
+    project::std::io::writei8ln(bn16 as i8);
+    project::std::io::writei8ln(bp16 as i8);
+    project::std::io::writei8ln(bun16 as i8);
+    project::std::io::writeu8ln(bn16 as u8);
+    project::std::io::writeu8ln(bp16 as u8);
+    project::std::io::writeu8ln(bun16 as u8);
+    
+    return 0;
+}
+
+struct MyStruct {
+    i: i64,
+    j: i64,
+    k: i64,
+}
