@@ -1286,7 +1286,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     (BasicValueEnum::PointerValue(pv), AnyTypeEnum::PointerType(tty)) => {
                         llvm.builder.build_bitcast(pv, tty, "")
                     }
-                    _ => todo!(),
+                    _ => panic!("Illegal casting operation"),
                 };
                 Some(op)
             }
