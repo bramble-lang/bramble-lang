@@ -1,0 +1,21 @@
+fn my_main() -> i64 {
+    let i: i64 := (18441921395520346504u64) as i64;
+    let p: *const i64 := @const i;
+    let bp: *const u8 := p as *const u8;
+
+    project::std::io::writeu8ln(^(bp@0));
+    project::std::io::writeu8ln(^(bp@1));
+    project::std::io::writeu8ln(^(bp@2));
+    project::std::io::writeu8ln(^(bp@3));
+    project::std::io::writeu8ln(^(bp@4));
+    project::std::io::writeu8ln(^(bp@5));
+    project::std::io::writeu8ln(^(bp@6));
+    project::std::io::writeu8ln(^(bp@7));
+    return 0;
+}
+
+struct MyStruct {
+    i: i64,
+    j: i64,
+    k: i64,
+}
