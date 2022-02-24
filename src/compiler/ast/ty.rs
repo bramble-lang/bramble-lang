@@ -320,6 +320,60 @@ impl Type {
             _ => false,
         }
     }
+
+    pub fn bit_width(&self) -> u8 {
+        match self {
+            Type::Null => 64,
+            Type::U8 => 8,
+            Type::U16 => 16,
+            Type::U32 => 32,
+            Type::U64 => 64,
+            Type::I8 => 8,
+            Type::I16 => 16,
+            Type::I32 => 32,
+            Type::I64 => 64,
+            Type::F64 => 64,
+            Type::Bool => 8,
+            Type::StringLiteral => 0,
+            Type::RawPointer(_, _) => 64,
+            Type::Array(_, _) => 0,
+            Type::Unit => 0,
+            Type::Custom(_) => 0,
+            Type::StructDef(_) => 0,
+            Type::FunctionDef(_, _) => 0,
+            Type::CoroutineDef(_, _) => 0,
+            Type::Coroutine(_) => 0,
+            Type::ExternDecl(_, _, _) => 0,
+            Type::Unknown => 0,
+        }
+    }
+
+    pub fn is_signed(&self) -> bool {
+        match self {
+            | Type::I8  
+            | Type::I16 
+            | Type::I32 
+            | Type::I64 
+            | Type::F64 => true,
+            | Type::Null
+            | Type::U8  
+            | Type::U16 
+            | Type::U32 
+            | Type::U64
+            | Type::Bool 
+            | Type::StringLiteral
+            | Type::RawPointer(_, _)
+            | Type::Array(_, _)
+            | Type::Unit
+            | Type::Custom(_)
+            | Type::StructDef(_)
+            | Type::FunctionDef(_, _) 
+            | Type::CoroutineDef(_, _)
+            | Type::Coroutine(_)
+            | Type::ExternDecl(_, _, _)
+            | Type::Unknown => false,
+        }
+    }
 }
 
 impl PartialEq<Type> for &Type {

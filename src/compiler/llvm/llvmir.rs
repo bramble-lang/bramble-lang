@@ -1182,7 +1182,75 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 panic!("IdentifierDelcare nodes should be resolved and removed before the compiler stage")
             }
             ast::Expression::Yield(..) => panic!("Yield is not yet implemented for LLVM"),
-            ast::Expression::TypeCast(_, _, _) => todo!(),
+            ast::Expression::TypeCast(_, src, target_ty) => {
+                let target_ty_llvm = target_ty.to_llvm_ir(llvm).unwrap();
+                let src_llvm = src.to_llvm_ir(llvm).unwrap();
+                let src_signed = src.get_type().is_signed();
+                let src_width = src.get_type().bit_width();
+                let target_signed = target_ty.is_signed();
+                let target_width = target_ty.bit_width();
+                let op = match (src_llvm, target_ty_llvm) {
+                    (BasicValueEnum::IntValue(iv), AnyTypeEnum::IntType(tty)) => {
+                        // if upcasting
+                        if src_width < target_width {
+                            match (src_signed, target_signed) {
+                                (false, false)
+                                | (false, true)
+                                | (true, false) => llvm.builder.build_int_z_extend(iv, tty, ""),
+                                | (true, true) => llvm.builder.build_int_s_extend(iv, tty, ""),
+                            }
+                        // else if downcasting
+                        } else {
+                            // trancate
+                            llvm.builder.build_int_truncate(iv, tty, "")
+                        }.into()
+                    }
+                    // int to float
+                    (BasicValueEnum::IntValue(iv), AnyTypeEnum::FloatType(tty)) => {
+                        // if source is signed
+                        if src_signed {
+                            llvm.builder.build_signed_int_to_float(iv, tty, "")
+                        // otherwise
+                        } else {
+                            llvm.builder.build_unsigned_int_to_float(iv, tty, "")
+                        }.into()
+                    }
+                    // float to int
+                    (BasicValueEnum::FloatValue(fv), AnyTypeEnum::IntType(tty)) => {
+                        // if target is signed
+                        if target_signed {
+                            llvm.builder.build_float_to_signed_int(fv, tty, "")
+                        // otherwise
+                        } else {
+                            llvm.builder.build_float_to_unsigned_int(fv, tty, "")
+                        }.into()
+                    }
+                    // float to float
+                    (BasicValueEnum::FloatValue(fv), AnyTypeEnum::FloatType(tty)) => {
+                        // if upcasting
+                        if src_width < target_width {
+                            llvm.builder.build_float_ext(fv, tty, "")
+                        // otherwise
+                        } else {
+                            llvm.builder.build_float_trunc(fv, tty, "")
+                        }.into()
+                    }
+                    // pointer to int
+                    (BasicValueEnum::PointerValue(pv), AnyTypeEnum::IntType(tty)) => {
+                        llvm.builder.build_ptr_to_int(pv, tty, "").into()
+                    }
+                    // int to pointer
+                    (BasicValueEnum::IntValue(iv), AnyTypeEnum::PointerType(tty)) => {
+                        llvm.builder.build_int_to_ptr(iv, tty, "").into()
+                    }
+                    // pointer to pointer
+                    (BasicValueEnum::PointerValue(pv), AnyTypeEnum::PointerType(tty)) => {
+                        llvm.builder.build_bitcast(pv, tty, "")
+                    }
+                    _ => todo!(),
+                };
+                Some(op)
+            },
         }
     }
 }
