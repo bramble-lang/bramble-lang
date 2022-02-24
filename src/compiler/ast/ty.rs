@@ -141,7 +141,7 @@ impl Type {
                 Type::F64 => {
                     r.is_number()
                 },
-                Type::StringLiteral => r == Type::StringLiteral || r.is_raw_const_pointer(),
+                Type::StringLiteral => false,
                 Type::Null => false,
                 Type::Array(_, _) => false,
                 Type::Unit => false,
