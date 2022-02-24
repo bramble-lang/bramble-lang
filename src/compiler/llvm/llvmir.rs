@@ -484,6 +484,34 @@ impl<'ctx> IrGen<'ctx> {
         self.record_terminal(span, &mc);
     }
 
+    /// Returns the LLVM Intrinsic for FP to Signed Integer
+    fn get_fptosi(&self, src: &Type, target: &Type) -> FunctionValue<'ctx> {
+        let i_name = format!("llvm.fptosi.sat.{}.{}", src, target);
+        match self.module.get_function(&i_name) {
+            Some(i) => i,
+            None => {
+                let sty = src.to_llvm_ir(self).unwrap().into_basic_type().unwrap();
+                let tty = target.to_llvm_ir(self).unwrap().into_int_type();
+                let intrinsic_ty = tty.fn_type(&[sty], false);
+                self.module.add_function(&i_name, intrinsic_ty, None)
+            }
+        }
+    }
+
+    /// Returns the LLVM Intrinsic for FP to Unsigned Integer
+    fn get_fptoui(&self, src: &Type, target: &Type) -> FunctionValue<'ctx> {
+        let i_name = format!("llvm.fptoui.sat.{}.{}", src, target);
+        match self.module.get_function(&i_name) {
+            Some(i) => i,
+            None => {
+                let sty = src.to_llvm_ir(self).unwrap().into_basic_type().unwrap();
+                let tty = target.to_llvm_ir(self).unwrap().into_int_type();
+                let intrinsic_ty = tty.fn_type(&[sty], false);
+                self.module.add_function(&i_name, intrinsic_ty, None)
+            }
+        }
+    }
+
     /// If the LLVM builder cursor is currently within a function, this will
     /// return that function.  Otherwise it will return `None`.
     fn get_current_fn(&self) -> Option<FunctionValue> {
@@ -1194,16 +1222,19 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                         // if upcasting
                         if src_width < target_width {
                             match (src_signed, target_signed) {
-                                (false, false)
-                                | (false, true) => llvm.builder.build_int_z_extend(iv, tty, ""),
-                                | (true, false)
-                                | (true, true) => llvm.builder.build_int_s_extend(iv, tty, ""),
+                                (false, false) | (false, true) => {
+                                    llvm.builder.build_int_z_extend(iv, tty, "")
+                                }
+                                (true, false) | (true, true) => {
+                                    llvm.builder.build_int_s_extend(iv, tty, "")
+                                }
                             }
                         // else if downcasting
                         } else {
                             // trancate
                             llvm.builder.build_int_truncate(iv, tty, "")
-                        }.into()
+                        }
+                        .into()
                     }
                     // int to float
                     (BasicValueEnum::IntValue(iv), AnyTypeEnum::FloatType(tty)) => {
@@ -1213,34 +1244,24 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                         // otherwise
                         } else {
                             llvm.builder.build_unsigned_int_to_float(iv, tty, "")
-                        }.into()
+                        }
+                        .into()
                     }
                     // float to int
                     (BasicValueEnum::FloatValue(fv), AnyTypeEnum::IntType(tty)) => {
                         // if target is signed
-                        if target_signed {
-                            // @llvm.fptoui.sat.i64.f64
-                            let i_name = format!("llvm.fptosi.sat.{}.{}", src.get_type(), target_ty);
-                            let fptosi = match llvm.module.get_function(&i_name) { 
-                                Some(i) => i,
-                                None => {
-                                    let i_ty = tty.fn_type(&[src_llvm.get_type()], false);
-                                    llvm.module.add_function(&i_name, i_ty, None)
-                                }
-                            };
-                            llvm.builder.build_call(fptosi, &[src_llvm], "").try_as_basic_value().left().unwrap()
+                        let sty = src.get_type();
+                        let caster = if target_signed {
+                            llvm.get_fptosi(sty, target_ty)
                         // otherwise
                         } else {
-                            let i_name = format!("llvm.fptoui.sat.{}.{}", src.get_type(), target_ty);
-                            let fptosi = match llvm.module.get_function(&i_name) { 
-                                Some(i) => i,
-                                None => {
-                                    let i_ty = tty.fn_type(&[src_llvm.get_type()], false);
-                                    llvm.module.add_function(&i_name, i_ty, None)
-                                }
-                            };
-                            llvm.builder.build_call(fptosi, &[src_llvm], "").try_as_basic_value().left().unwrap()
-                        }
+                            llvm.get_fptoui(sty, target_ty)
+                        };
+                        llvm.builder
+                            .build_call(caster, &[src_llvm], "")
+                            .try_as_basic_value()
+                            .left()
+                            .unwrap()
                     }
                     // float to float
                     (BasicValueEnum::FloatValue(fv), AnyTypeEnum::FloatType(tty)) => {
@@ -1250,7 +1271,8 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                         // otherwise
                         } else {
                             llvm.builder.build_float_trunc(fv, tty, "")
-                        }.into()
+                        }
+                        .into()
                     }
                     // pointer to int
                     (BasicValueEnum::PointerValue(pv), AnyTypeEnum::IntType(tty)) => {
@@ -1267,7 +1289,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     _ => todo!(),
                 };
                 Some(op)
-            },
+            }
         }
     }
 }
@@ -1377,8 +1399,12 @@ impl ast::BinaryOperator {
                 match self {
                     Eq | NEq | Ls | LsEq | Gr | GrEq => {
                         // figure out diff
-                        let li = llvm.builder.build_ptr_to_int(lp, llvm.context.i64_type(), "");
-                        let ri = llvm.builder.build_ptr_to_int(rp, llvm.context.i64_type(), "");
+                        let li = llvm
+                            .builder
+                            .build_ptr_to_int(lp, llvm.context.i64_type(), "");
+                        let ri = llvm
+                            .builder
+                            .build_ptr_to_int(rp, llvm.context.i64_type(), "");
                         let predicate = match self {
                             Eq => IntPredicate::EQ,
                             NEq => IntPredicate::NE,
@@ -1389,7 +1415,7 @@ impl ast::BinaryOperator {
                             _ => panic!(),
                         };
                         llvm.builder.build_int_compare(predicate, li, ri, "").into()
-                    },
+                    }
                     _ => panic!(),
                 }
             }
