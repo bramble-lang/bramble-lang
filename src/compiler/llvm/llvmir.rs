@@ -1219,11 +1219,28 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     (BasicValueEnum::FloatValue(fv), AnyTypeEnum::IntType(tty)) => {
                         // if target is signed
                         if target_signed {
-                            llvm.builder.build_float_to_signed_int(fv, tty, "")
+                            // @llvm.fptoui.sat.i64.f64
+                            let i_name = format!("llvm.fptosi.sat.{}.{}", src.get_type(), target_ty);
+                            let fptosi = match llvm.module.get_function(&i_name) { 
+                                Some(i) => i,
+                                None => {
+                                    let i_ty = tty.fn_type(&[src_llvm.get_type()], false);
+                                    llvm.module.add_function(&i_name, i_ty, None)
+                                }
+                            };
+                            llvm.builder.build_call(fptosi, &[src_llvm], "").try_as_basic_value().left().unwrap()
                         // otherwise
                         } else {
-                            llvm.builder.build_float_to_unsigned_int(fv, tty, "")
-                        }.into()
+                            let i_name = format!("llvm.fptoui.sat.{}.{}", src.get_type(), target_ty);
+                            let fptosi = match llvm.module.get_function(&i_name) { 
+                                Some(i) => i,
+                                None => {
+                                    let i_ty = tty.fn_type(&[src_llvm.get_type()], false);
+                                    llvm.module.add_function(&i_name, i_ty, None)
+                                }
+                            };
+                            llvm.builder.build_call(fptosi, &[src_llvm], "").try_as_basic_value().left().unwrap()
+                        }
                     }
                     // float to float
                     (BasicValueEnum::FloatValue(fv), AnyTypeEnum::FloatType(tty)) => {
