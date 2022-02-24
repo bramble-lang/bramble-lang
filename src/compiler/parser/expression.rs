@@ -349,33 +349,38 @@ impl<'a> Parser<'a> {
 
     pub(super) fn cast(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
         // Parser unary expressions
-        match self.negate(stream)? {
-            Some(exp) => {
-                // Check of the `as` operator
-                match stream.next_if(&Lex::As) {
-                    Some(as_tok) => {
-                        let (event, result) = self.new_event(Span::zero()).and_then(||{
-                        // If found, then parse a type expression
-                        let (ty, ty_ctx) = self.consume_type(stream)?.ok_or(CompilerError::new(
+        let mut msg = None;
+        let (event, result) = self.new_event(Span::zero()).and_then(|| {
+            match self.negate(stream)? {
+                Some(exp) => {
+                    // Check of the `as` operator
+                    match stream.next_if(&Lex::As) {
+                        Some(as_tok) => {
+                            msg = Some("cast");
+                            // If found, then parse a type expression
+                            let (ty, ty_ctx) =
+                                self.consume_type(stream)?.ok_or(CompilerError::new(
                                     exp.context().join(as_tok.to_ctx()).span(),
                                     ParserError::InvalidCastTarget,
                                 ))?;
-                        let cast_ctx = exp.context().join(ty_ctx);
+                            let cast_ctx = exp.context().join(ty_ctx);
 
-                        // Create the cast node
-                        Ok(Some(Expression::TypeCast(cast_ctx, Box::new(exp), ty)))
-                        });
-
-                        result.view(|v| {
-                            let msg = v.map(|_| "cast");
-                            self.record(event.with_span(v.span()), msg)
-                        })
+                            // Create the cast node
+                            Ok(Some(Expression::TypeCast(cast_ctx, Box::new(exp), ty)))
+                        }
+                        None => Ok(Some(exp)),
                     }
-                    None => Ok(Some(exp)),
                 }
+                None => Ok(None),
             }
-            None => Ok(None),
-        }
+        });
+
+        result.view(|v| {
+            match msg {
+                Some(msg) => self.record(event.with_span(v.span()), Ok(&msg)),
+                None => self.record_noop(event.with_span(v.span())),
+            };
+        })
     }
 
     pub(super) fn negate(
