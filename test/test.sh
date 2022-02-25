@@ -75,22 +75,14 @@ run_test() {
         fi
     fi
 
-    $(cp ${build_dir}/../trace.json ./src/${test}.json)
+    # $(cp ${build_dir}/../trace.json ./src/${test}.json)
 
     # Test the output of the compiled binary
     result=$(diff ${build_dir}/stdout ./src/${test}.out)
     if [ $? -eq 0 ]
     then
-        # Test the trace output from the compiler
-        result=$(diff ${build_dir}/../trace.json ./src/${test}.json)
-        if [ $? -eq 0 ]
-        then
-            ((num_pass=num_pass+1))
-            echo "${test} Pass"
-        else
-            echo "${test} Trace Test: Fail"
-            echo "${result}"
-        fi
+        ((num_pass=num_pass+1))
+        echo "${test} Pass"
     else
         echo "${test}: Fail"
         echo ${result}
