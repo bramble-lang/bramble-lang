@@ -28,8 +28,8 @@ jobs:
       - name: Install LLVM 13
         run: |
           sudo apt-get update
-          sudo apt-get install llvm-13
-          sudo apt-get install llvm-13-dev
+          sudo apt-get install llvm
+          sudo apt-get install llvm-dev
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
 
