@@ -27,9 +27,9 @@ jobs:
     steps:
       - name: Install LLVM 13
         run: |
-          wget https://apt.llvm.org/llvm.sh
-          chmod +x llvm.sh
-          sudo ./llvm.sh 13
+          sudo apt-get update
+          sudo apt-get install llvm-13
+          sudo apt-get install llvm-13-dev
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
 
