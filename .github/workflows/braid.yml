@@ -32,7 +32,6 @@ jobs:
           sudo ./llvm.sh 13
           sudo apt-get install llvm-13
           sudo apt-get install llvm-13-dev
-          llc --version
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
 
