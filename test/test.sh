@@ -40,7 +40,7 @@ run_test() {
     built=1
 
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        ../target/${target}/bramblec --llvm -p linux --import ${std_dir}/std.manifest --json-trace -i ./src/${test} -o ${build_dir}/output.obj > ${build_dir}/stdout 2> /dev/null
+        ../target/${target}/bramblec --llvm -p linux --emit=llvm-ir --import ${std_dir}/std.manifest --json-trace -i ./src/${test} -o ${build_dir}/output.obj > ${build_dir}/stdout 2> /dev/null
     elif [[ "$OSTYPE" == "darwin"* ]]; then
         ../target/${target}/bramblec --llvm -p machos --import ${std_dir}/std.manifest --json-trace -i ./src/${test} -o ${build_dir}/output.obj > ${build_dir}/stdout 2> /dev/null
     fi
@@ -93,6 +93,8 @@ run_test() {
         echo "Expected:"
         cat ./src/${test}.out
         echo "\n-------------"
+
+        cat "./target/output.ll"
     fi
 }
 
