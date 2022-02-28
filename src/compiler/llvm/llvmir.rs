@@ -484,34 +484,6 @@ impl<'ctx> IrGen<'ctx> {
         self.record_terminal(span, &mc);
     }
 
-    /// Returns the LLVM Intrinsic for FP to Signed Integer
-    fn get_fptosi(&self, src: &Type, target: &Type) -> FunctionValue<'ctx> {
-        let i_name = format!("llvm.fptosi.sat.{}.{}", src, target);
-        match self.module.get_function(&i_name) {
-            Some(i) => i,
-            None => {
-                let sty = src.to_llvm_ir(self).unwrap().into_basic_type().unwrap();
-                let tty = target.to_llvm_ir(self).unwrap().into_int_type();
-                let intrinsic_ty = tty.fn_type(&[sty], false);
-                self.module.add_function(&i_name, intrinsic_ty, None)
-            }
-        }
-    }
-
-    /// Returns the LLVM Intrinsic for FP to Unsigned Integer
-    fn get_fptoui(&self, src: &Type, target: &Type) -> FunctionValue<'ctx> {
-        let i_name = format!("llvm.fptoui.sat.{}.{}", src, target);
-        match self.module.get_function(&i_name) {
-            Some(i) => i,
-            None => {
-                let sty = src.to_llvm_ir(self).unwrap().into_basic_type().unwrap();
-                let tty = target.to_llvm_ir(self).unwrap().into_int_type();
-                let intrinsic_ty = tty.fn_type(&[sty], false);
-                self.module.add_function(&i_name, intrinsic_ty, None)
-            }
-        }
-    }
-
     /// If the LLVM builder cursor is currently within a function, this will
     /// return that function.  Otherwise it will return `None`.
     fn get_current_fn(&self) -> Option<FunctionValue> {
@@ -1248,17 +1220,6 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                             llvm.builder.build_float_to_unsigned_int(fv, tty, "")
                         }
                         .into()
-                        /*let caster = if target_signed {
-                            llvm.get_fptosi(sty, target_ty)
-                        // otherwise
-                        } else {
-                            llvm.get_fptoui(sty, target_ty)
-                        };
-                        llvm.builder
-                            .build_call(caster, &[src_llvm], "")
-                            .try_as_basic_value()
-                            .left()
-                            .unwrap()*/
                     }
                     // float to float
                     (BasicValueEnum::FloatValue(fv), AnyTypeEnum::FloatType(tty)) => {
