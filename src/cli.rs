@@ -66,8 +66,9 @@ pub fn configure_cli() -> clap::App<'static, 'static> {
         .arg(
             Arg::with_name("emit")
                 .long("emit")
-                .possible_values(&["llvm-ir"])
                 .takes_value(true)
+                .possible_values(&["llvm-ir", "asm"])
+                .max_values(2)
                 .help("When set, this will output different types of IR (LLVM, assembly, etc.)")
         )
         .arg(

@@ -106,7 +106,7 @@ impl<'ctx> IrGen<'ctx> {
     }
 
     /// Compile the LLVM IR into an object file for the target platform
-    pub fn emit_object_code(&self, path: &std::path::Path) -> Result<()> {
+    pub fn emit_object_code(&self, path: &std::path::Path, emit_asm: bool) -> Result<()> {
         // Get target for current machine
         let triple = inkwell::targets::TargetMachine::get_default_triple();
 
@@ -129,6 +129,14 @@ impl<'ctx> IrGen<'ctx> {
         // Configure the module
         self.module.set_data_layout(&data.get_data_layout());
         self.module.set_triple(&triple);
+
+        // If emit asm is true, then also write the assembly for the target machine to a file
+        if emit_asm {
+            let asm_path = path.with_extension("s");
+            machine
+                .write_to_file(&self.module, inkwell::targets::FileType::Assembly, &asm_path)
+                .map_err(|e| e.to_string())?
+        }
 
         // Emit object file
         machine
