@@ -25,13 +25,13 @@ jobs:
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      - name: Install LLVM 13
+      - name: Install LLVM 11
         run: |
+          sudo apt-get install build-essential
+          sudo apt-get install zlib1g-dev libz-dev 
           wget https://apt.llvm.org/llvm.sh
           chmod +x llvm.sh
           sudo ./llvm.sh 11
-          sudo apt-get install llvm-11
-          sudo apt-get install llvm-11-dev
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
 
