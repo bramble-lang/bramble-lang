@@ -421,7 +421,7 @@ impl<'a> SymbolTableScopeStack {
             | Type::I32
             | Type::I64
             | Type::F64
-            | Type::Bool 
+            | Type::Bool
             | Type::StringLiteral
             | Type::Unit
             | Type::Unknown => Ok(ty.clone()),

@@ -168,7 +168,7 @@ impl<R: Read> UnicodeCharIterator<R> {
             let d = self.continuation()?;
             Ok((a & 0b0000_0111) << 18 | b << 12 | c << 6 | d)
         } else {
-            return Err(UnicodeParsingError::InvalidWord(a))
+            return Err(UnicodeParsingError::InvalidWord(a));
         };
 
         result

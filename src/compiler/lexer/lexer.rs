@@ -400,7 +400,7 @@ impl<'a> Lexer<'a> {
         // If the type suffix is for an integer but the literal is a float then throw an error
         if is_float && type_suffix != Primitive::F64 {
             let span = self.current_char_span().unwrap();
-            return err!(span, LexerError::InvalidNumber)
+            return err!(span, LexerError::InvalidNumber);
         }
 
         // Check that the current character at the lexer cursor position is a delimiter (we have
@@ -570,7 +570,8 @@ impl<'a> Lexer<'a> {
         // longer keyword must be placed first; otherwise the shorter keyword will incorrectly match.
         let keywords = [
             "let", "mut", "return", "yield", "yret", "fn", "const", "co", "mod", "struct",
-            "extern", "init", "if", "else", "while", "self", "super", "root", "project", "size_of", "null", "as"
+            "extern", "init", "if", "else", "while", "self", "super", "root", "project", "size_of",
+            "null", "as",
         ];
 
         Ok(match branch.next_if_one_of(&keywords) {
@@ -704,52 +705,58 @@ impl<'a> Lexer<'a> {
         prim: Primitive,
     ) -> LexerResult<Option<Token>> {
         match prim {
-            Primitive::U8 => Ok(Some(Token::new(U8(int_token.parse::<u8>().map_err(|e|
+            Primitive::U8 => Ok(Some(Token::new(
+                U8(int_token.parse::<u8>().map_err(|e| {
                     CompilerError::new(span, LexerError::ParseIntError(Primitive::U8, e))
-                )?), span))),
+                })?),
+                span,
+            ))),
             Primitive::U16 => Ok(Some(Token::new(
-                U16(int_token.parse::<u16>().map_err(|e|
-                    CompilerError::new(span, LexerError::ParseIntError(Primitive::U16, e ))
-                )?),
+                U16(int_token.parse::<u16>().map_err(|e| {
+                    CompilerError::new(span, LexerError::ParseIntError(Primitive::U16, e))
+                })?),
                 span,
             ))),
             Primitive::U32 => Ok(Some(Token::new(
-                U32(int_token.parse::<u32>().map_err(|e|
+                U32(int_token.parse::<u32>().map_err(|e| {
                     CompilerError::new(span, LexerError::ParseIntError(Primitive::U32, e))
-                )?),
+                })?),
                 span,
             ))),
             Primitive::U64 => Ok(Some(Token::new(
-                U64(int_token.parse::<u64>().map_err(|e|
+                U64(int_token.parse::<u64>().map_err(|e| {
                     CompilerError::new(span, LexerError::ParseIntError(Primitive::U64, e))
-                )?),
+                })?),
                 span,
             ))),
-            Primitive::I8 => Ok(Some(Token::new(I8(int_token.parse::<i8>().map_err(|e|
+            Primitive::I8 => Ok(Some(Token::new(
+                I8(int_token.parse::<i8>().map_err(|e| {
                     CompilerError::new(span, LexerError::ParseIntError(Primitive::I8, e))
-                )?), span))),
+                })?),
+                span,
+            ))),
             Primitive::I16 => Ok(Some(Token::new(
-                I16(int_token.parse::<i16>().map_err(|e|
+                I16(int_token.parse::<i16>().map_err(|e| {
                     CompilerError::new(span, LexerError::ParseIntError(Primitive::I16, e))
-                )?),
+                })?),
                 span,
             ))),
             Primitive::I32 => Ok(Some(Token::new(
-                I32(int_token.parse::<i32>().map_err(|e|
+                I32(int_token.parse::<i32>().map_err(|e| {
                     CompilerError::new(span, LexerError::ParseIntError(Primitive::I32, e))
-                )?),
+                })?),
                 span,
             ))),
             Primitive::I64 => Ok(Some(Token::new(
-                I64(int_token.parse::<i64>().map_err(|e|
+                I64(int_token.parse::<i64>().map_err(|e| {
                     CompilerError::new(span, LexerError::ParseIntError(Primitive::I64, e))
-                )?),
+                })?),
                 span,
             ))),
             Primitive::F64 => Ok(Some(Token::new(
-                F64(int_token.parse::<f64>().map_err(|e|
+                F64(int_token.parse::<f64>().map_err(|e| {
                     CompilerError::new(span, LexerError::ParseFloatError(Primitive::F64, e))
-                )?),
+                })?),
                 span,
             ))),
             Primitive::Bool | Primitive::StringLiteral => {

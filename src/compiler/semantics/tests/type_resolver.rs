@@ -1958,10 +1958,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     let k: f64 := 0.2;
                     return k as i64;
                 }",
-                Ok(vec![
-                    Type::F64,
-                    Type::I64,
-                ]),
+                Ok(vec![Type::F64, Type::I64]),
             ),
             // Cast from iY to fX -> Ok
             (
@@ -1969,10 +1966,7 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     let k: i64 := 2;
                     return k as f64;
                 }",
-                Ok(vec![
-                    Type::I64,
-                    Type::F64,
-                ]),
+                Ok(vec![Type::I64, Type::F64]),
             ),
             // Cast from iX to *mut -> Err
             (
@@ -2051,9 +2045,13 @@ let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger).unwrap()
                     let fn_main = module.get_functions()[0].to_routine().unwrap();
 
                     // Validate the resolved type of each statement matches the expected resolved type
-                    fn_main.get_body().iter().enumerate().for_each(|(idx, stm)|{
-                        assert_eq!(stm.context().ty(), expected_ty[idx], "Test Data: {}", text);
-                    });
+                    fn_main
+                        .get_body()
+                        .iter()
+                        .enumerate()
+                        .for_each(|(idx, stm)| {
+                            assert_eq!(stm.context().ty(), expected_ty[idx], "Test Data: {}", text);
+                        });
                 }
                 Err(msg) => {
                     assert_eq!(module.unwrap_err().fmt(&sm, &table).unwrap(), msg);

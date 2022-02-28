@@ -290,10 +290,7 @@ pub mod tests {
                 //assert_eq!(op, expected);
                 assert_eq!(ctx, new_ctx(l, h));
                 assert_eq!(*left, Expression::I64(new_ctx(0, 1), 2));
-                assert_eq!(
-                    result_ty,
-                    ty
-                );
+                assert_eq!(result_ty, ty);
             } else {
                 panic!("No nodes returned by parser for {}", text)
             }

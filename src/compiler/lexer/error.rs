@@ -1,4 +1,4 @@
-use std::num::{ParseIntError, ParseFloatError};
+use std::num::{ParseFloatError, ParseIntError};
 
 use crate::compiler::{
     source::SourceChar, CompilerDisplay, CompilerDisplayError, SourceError, SourceMap,

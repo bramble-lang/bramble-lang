@@ -104,7 +104,7 @@ impl Canonizable for Expression<SemanticContext> {
                 canon_type
                     .get_path()
                     .map(|p| record_type_ref_event(span, Ok(p), logger));
-                *ty = Box::new(canon_type); 
+                *ty = Box::new(canon_type);
                 Ok(())
             }
             Expression::Path(_, ref mut path) => {
