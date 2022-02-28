@@ -510,7 +510,10 @@ impl<'a> Parser<'a> {
         })
     }
 
-    pub(super) fn consume_type(&self, stream: &mut TokenStream) -> ParserResult<(Type, ParserContext)> {
+    pub(super) fn consume_type(
+        &self,
+        stream: &mut TokenStream,
+    ) -> ParserResult<(Type, ParserContext)> {
         let (event, result) = self.new_event(Span::zero()).and_then(|| {
             let is_coroutine = stream.next_if(&Lex::CoroutineDef).is_some();
             let ty = match stream.next_if(&Lex::Primitive(Primitive::U8)) {

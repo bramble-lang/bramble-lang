@@ -54,6 +54,7 @@ pub enum Expression<I> {
     ExpressionBlock(I, Vec<Statement<I>>, Option<Box<Expression<I>>>),
 
     BinaryOp(I, BinaryOperator, Box<Expression<I>>, Box<Expression<I>>),
+    TypeCast(I, Box<Expression<I>>, Type),
     UnaryOp(I, UnaryOperator, Box<Expression<I>>),
 
     Yield(I, Box<Expression<I>>),
@@ -93,6 +94,7 @@ impl<M: Context> Node<M> for Expression<M> {
             | While { context: m, .. }
             | ExpressionBlock(m, ..)
             | Yield(m, ..)
+            | TypeCast(m, ..)
             | RoutineCall(m, ..) => m,
             StructExpression(m, ..) => m,
             ArrayExpression(m, _, _) => m,
@@ -127,6 +129,7 @@ impl<M: Context> Node<M> for Expression<M> {
             | While { context: m, .. }
             | ExpressionBlock(m, ..)
             | Yield(m, ..)
+            | TypeCast(m, ..)
             | RoutineCall(m, ..) => m,
             StructExpression(m, ..) => m,
             ArrayExpression(m, _, _) => m,
@@ -208,6 +211,7 @@ impl<M: Context> Node<M> for Expression<M> {
             | Identifier(..)
             | IdentifierDeclare(..)
             | Path(..) => vec![],
+            TypeCast(_, e, _) => vec![e.as_ref()],
         }
     }
 
@@ -268,6 +272,7 @@ impl<I> Expression<I> {
             While { .. } => "while".into(),
             ExpressionBlock(..) => "expression block".into(),
             Yield(_, _) => "yield".into(),
+            TypeCast(_, _e, _ty) => format!("type cast"),
         }
     }
 }

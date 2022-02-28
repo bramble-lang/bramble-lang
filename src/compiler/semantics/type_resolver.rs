@@ -885,6 +885,23 @@ impl<'a> TypeResolver<'a> {
                     resolved_params,
                 ))
             }
+            Expression::TypeCast(ctx, exp, target) => {
+                // 1. Analyze exp and get it's type
+                let exp2 = self.analyze_expression(exp)?;
+                // 2. Make sure that exp.ty can be cast to ty  have a method on Type for testing casts.  This keeps the data about
+                // casting within the type definitions.
+                if exp2.context().ty().can_cast_to(target) {
+                    // 4. If it can, then update the type information for this node in the tree
+                    let ctx2 = ctx.with_type(target.clone());
+                    Ok(Expression::TypeCast(ctx2, Box::new(exp2), target.clone()))
+                } else {
+                // 3. If not, then return an error
+                    return Err(CompilerError::new(
+                        ctx.span(),
+                        SemanticError::InvalidTypeCast,
+                    ));
+                }
+            },
         }
         });
         result.view(|e| self.record2(event, e, refs))

@@ -54,6 +54,7 @@ pub enum ParserError {
     AddressOfExpectedConstOrMut,
     MemberAccessExpectedField,
     IndexOpInvalidExpr,
+    InvalidCastTarget,
 }
 
 impl CompilerDisplay for ParserError {
@@ -174,6 +175,7 @@ impl CompilerDisplay for ParserError {
                 lex_to_string(sm, st, &Some(*lex))?
             ),
             ParserError::AddressOfExpectedConstOrMut => format!("Expected const or mut after @"),
+            ParserError::InvalidCastTarget => format!("Can only cast to and from primitive types."),
         };
         Ok(msg)
     }

@@ -45,7 +45,7 @@ checksum = "cf1de2fe8c75bc145a2f577add951f8134889b4795d47466a54a5c846d691693"
 
 [[package]]
 name = "bramble-lang"
-version = "0.100.0"
+version = "0.101.0"
 dependencies = [
  "clap",
  "inkwell",
@@ -189,9 +189,9 @@ checksum = "7fb9b38af92608140b86b693604b9ffcc5824240a484d1ecd4795bacb2fe88f3"
 
 [[package]]
 name = "llvm-sys"
-version = "110.0.1"
+version = "110.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21ede189444b8c78907e5d36da5dabcf153170fcff9c1dba48afc4b33c7e19f0"
+checksum = "6b918288a585ac36703abefcbc5d4c43137b604ec0c2d39abefb55e25c7501dc"
 dependencies = [
  "cc",
  "lazy_static",

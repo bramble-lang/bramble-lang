@@ -55,15 +55,13 @@ impl std::fmt::Display for PointerMut {
 impl Type {
     /// Returns `true` if the the provided type can be assigned
     /// to variables of this [`Type`].
-    /// 
+    ///
     /// If this is [`Type::Null`] then this will always return
     /// false, because there is no addressable value which has typ
     /// [`Type::Null`].
     pub fn can_be_assigned(&self, r: &Self) -> bool {
         match self {
-            Self::RawPointer(..) => {
-                r == &Self::Null || self == r
-            },
+            Self::RawPointer(..) => r == &Self::Null || self == r,
             Self::Null => r == &Self::Null || r.can_be_assigned(&Self::Null),
             Self::Array(ty, sz) => {
                 if let Self::Array(rty, rsz) = r {
@@ -80,16 +78,76 @@ impl Type {
     /// each other
     pub fn can_be_compared(&self, r: &Self) -> bool {
         match self {
-            Self::RawPointer(..) => {
-                r == &Self::Null || self == r
-            },
-            Self::Null => {
-                r == &Self::Null || r.can_be_compared(&Self::Null)
-            }
+            Self::RawPointer(..) => r == &Self::Null || self == r,
+            Self::Null => r == &Self::Null || r.can_be_compared(&Self::Null),
             _ => self == r,
         }
     }
-    
+
+    pub fn can_be_cast(&self) -> bool {
+        match self {
+            Type::Null => false,
+            Type::U8 => true,
+            Type::U16 => true,
+            Type::U32 => true,
+            Type::U64 => true,
+            Type::I8 => true,
+            Type::I16 => true,
+            Type::I32 => true,
+            Type::I64 => true,
+            Type::F64 => true,
+            Type::Bool => true,
+            Type::StringLiteral => false,
+            Type::RawPointer(_, _) => true,
+            Type::Array(_, _) => false,
+            Type::Unit => false,
+            Type::Custom(_) => false,
+            Type::StructDef(_) => false,
+            Type::FunctionDef(_, _) => false,
+            Type::CoroutineDef(_, _) => false,
+            Type::Coroutine(_) => false,
+            Type::ExternDecl(_, _, _) => false,
+            Type::Unknown => false,
+        }
+    }
+
+    /// Returns whether this type can be cast to the target type.
+    pub fn can_cast_to(&self, r: &Self) -> bool {
+        if self.can_be_cast() && r.can_be_cast() {
+            match self {
+                Type::U8
+                | Type::U16
+                | Type::U32
+                | Type::U64
+                | Type::I8
+                | Type::I16
+                | Type::I32
+                | Type::I64
+                | Type::Bool => r.is_number() || r.is_raw_const_pointer(),
+                Type::RawPointer(PointerMut::Mut, _) => {
+                    r.is_raw_pointer() || r.is_integral() || r == Type::StringLiteral
+                }
+                Type::RawPointer(PointerMut::Const, _) => {
+                    r.is_raw_const_pointer() || r.is_integral() || r == Type::StringLiteral
+                }
+                Type::F64 => r.is_number(),
+                Type::StringLiteral => false,
+                Type::Null => false,
+                Type::Array(_, _) => false,
+                Type::Unit => false,
+                Type::Custom(_) => false,
+                Type::StructDef(_) => false,
+                Type::FunctionDef(_, _) => false,
+                Type::CoroutineDef(_, _) => false,
+                Type::Coroutine(_) => false,
+                Type::ExternDecl(_, _, _) => false,
+                Type::Unknown => false,
+            }
+        } else {
+            false
+        }
+    }
+
     pub fn get_path(&self) -> Option<&Path> {
         match self {
             Type::Custom(path) => Some(path),
@@ -166,7 +224,7 @@ impl Type {
 
     pub fn is_float(&self) -> bool {
         match self {
-            | Type::F64 => true,
+            Type::F64 => true,
             Type::Null
             | Type::U8
             | Type::U16
@@ -243,6 +301,63 @@ impl Type {
         match self {
             Type::RawPointer(..) => true,
             _ => false,
+        }
+    }
+
+    pub fn is_raw_const_pointer(&self) -> bool {
+        match self {
+            Type::RawPointer(PointerMut::Const, _) => true,
+            _ => false,
+        }
+    }
+
+    pub fn bit_width(&self) -> u8 {
+        match self {
+            Type::Null => 64,
+            Type::U8 => 8,
+            Type::U16 => 16,
+            Type::U32 => 32,
+            Type::U64 => 64,
+            Type::I8 => 8,
+            Type::I16 => 16,
+            Type::I32 => 32,
+            Type::I64 => 64,
+            Type::F64 => 64,
+            Type::Bool => 8,
+            Type::StringLiteral => 0,
+            Type::RawPointer(_, _) => 64,
+            Type::Array(_, _) => 0,
+            Type::Unit => 0,
+            Type::Custom(_) => 0,
+            Type::StructDef(_) => 0,
+            Type::FunctionDef(_, _) => 0,
+            Type::CoroutineDef(_, _) => 0,
+            Type::Coroutine(_) => 0,
+            Type::ExternDecl(_, _, _) => 0,
+            Type::Unknown => 0,
+        }
+    }
+
+    pub fn is_signed(&self) -> bool {
+        match self {
+            Type::I8 | Type::I16 | Type::I32 | Type::I64 | Type::F64 => true,
+            Type::Null
+            | Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64
+            | Type::Bool
+            | Type::StringLiteral
+            | Type::RawPointer(_, _)
+            | Type::Array(_, _)
+            | Type::Unit
+            | Type::Custom(_)
+            | Type::StructDef(_)
+            | Type::FunctionDef(_, _)
+            | Type::CoroutineDef(_, _)
+            | Type::Coroutine(_)
+            | Type::ExternDecl(_, _, _)
+            | Type::Unknown => false,
         }
     }
 }
