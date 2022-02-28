@@ -1242,7 +1242,13 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     (BasicValueEnum::FloatValue(fv), AnyTypeEnum::IntType(tty)) => {
                         // if target is signed
                         let sty = src.get_type();
-                        let caster = if target_signed {
+                        if target_signed {
+                            llvm.builder.build_float_to_signed_int(fv, tty, "")
+                        } else {
+                            llvm.builder.build_float_to_unsigned_int(fv, tty, "")
+                        }
+                        .into()
+                        /*let caster = if target_signed {
                             llvm.get_fptosi(sty, target_ty)
                         // otherwise
                         } else {
@@ -1252,7 +1258,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                             .build_call(caster, &[src_llvm], "")
                             .try_as_basic_value()
                             .left()
-                            .unwrap()
+                            .unwrap()*/
                     }
                     // float to float
                     (BasicValueEnum::FloatValue(fv), AnyTypeEnum::FloatType(tty)) => {
