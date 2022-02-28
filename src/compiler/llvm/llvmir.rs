@@ -1173,80 +1173,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 Some(el_val)
             }
             ast::Expression::TypeCast(_, src, target_ty) => {
-                let event = llvm.new_event(self.span());
-                let target_ty_llvm = target_ty.to_llvm_ir(llvm).unwrap();
-                let src_llvm = src.to_llvm_ir(llvm).unwrap();
-                let src_signed = src.get_type().is_signed();
-                let src_width = src.get_type().bit_width();
-                let target_signed = target_ty.is_signed();
-                let target_width = target_ty.bit_width();
-                let op = match (src_llvm, target_ty_llvm) {
-                    (BasicValueEnum::IntValue(iv), AnyTypeEnum::IntType(tty)) => {
-                        // if upcasting
-                        if src_width < target_width {
-                            match (src_signed, target_signed) {
-                                (false, false) | (false, true) => {
-                                    llvm.builder.build_int_z_extend(iv, tty, "")
-                                }
-                                (true, false) | (true, true) => {
-                                    llvm.builder.build_int_s_extend(iv, tty, "")
-                                }
-                            }
-                        // else if downcasting
-                        } else {
-                            // trancate
-                            llvm.builder.build_int_truncate(iv, tty, "")
-                        }
-                        .into()
-                    }
-                    // int to float
-                    (BasicValueEnum::IntValue(iv), AnyTypeEnum::FloatType(tty)) => {
-                        // if source is signed
-                        if src_signed {
-                            llvm.builder.build_signed_int_to_float(iv, tty, "")
-                        // otherwise
-                        } else {
-                            llvm.builder.build_unsigned_int_to_float(iv, tty, "")
-                        }
-                        .into()
-                    }
-                    // float to int
-                    (BasicValueEnum::FloatValue(fv), AnyTypeEnum::IntType(tty)) => {
-                        // if target is signed
-                        let sty = src.get_type();
-                        if target_signed {
-                            llvm.builder.build_float_to_signed_int(fv, tty, "")
-                        } else {
-                            llvm.builder.build_float_to_unsigned_int(fv, tty, "")
-                        }
-                        .into()
-                    }
-                    // float to float
-                    (BasicValueEnum::FloatValue(fv), AnyTypeEnum::FloatType(tty)) => {
-                        // if upcasting
-                        if src_width < target_width {
-                            llvm.builder.build_float_ext(fv, tty, "")
-                        // otherwise
-                        } else {
-                            llvm.builder.build_float_trunc(fv, tty, "")
-                        }
-                        .into()
-                    }
-                    // pointer to int
-                    (BasicValueEnum::PointerValue(pv), AnyTypeEnum::IntType(tty)) => {
-                        llvm.builder.build_ptr_to_int(pv, tty, "").into()
-                    }
-                    // int to pointer
-                    (BasicValueEnum::IntValue(iv), AnyTypeEnum::PointerType(tty)) => {
-                        llvm.builder.build_int_to_ptr(iv, tty, "").into()
-                    }
-                    // pointer to pointer
-                    (BasicValueEnum::PointerValue(pv), AnyTypeEnum::PointerType(tty)) => {
-                        llvm.builder.build_bitcast(pv, tty, "")
-                    }
-                    _ => panic!("Illegal casting operation"),
-                };
-                Some(op.into()).view(|ir| llvm.record(event, ir))
+                Some(self.type_cast(llvm, src, target_ty))
             }
             ast::Expression::CustomType(..) => {
                 panic!("CustomType nodes should be resolved and removed before the compiler stage.")
@@ -1259,6 +1186,95 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
             }
             ast::Expression::Yield(..) => panic!("Yield is not yet implemented for LLVM"),
         }
+    }
+}
+
+impl ast::Expression<SemanticContext> {
+    /// Construct the LLVM IR instructions needed for casting one primitive type
+    /// to another primitive type.  This will panic if the requested cast operation
+    /// is illegal.
+    fn type_cast<'ctx>(
+        &self,
+        llvm: &mut IrGen<'ctx>,
+        src: &ast::Expression<SemanticContext>,
+        target_ty: &Type,
+    ) -> BasicValueEnum<'ctx> {
+        let event = llvm.new_event(self.span());
+        let target_ty_llvm = target_ty.to_llvm_ir(llvm).unwrap();
+        let src_llvm = src.to_llvm_ir(llvm).unwrap();
+        let src_signed = src.get_type().is_signed();
+        let src_width = src.get_type().bit_width();
+        let target_signed = target_ty.is_signed();
+        let target_width = target_ty.bit_width();
+        let op = match (src_llvm, target_ty_llvm) {
+            (BasicValueEnum::IntValue(iv), AnyTypeEnum::IntType(tty)) => {
+                // if upcasting
+                if src_width < target_width {
+                    match (src_signed, target_signed) {
+                        (false, false) | (false, true) => {
+                            llvm.builder.build_int_z_extend(iv, tty, "")
+                        }
+                        (true, false) | (true, true) => {
+                            llvm.builder.build_int_s_extend(iv, tty, "")
+                        }
+                    }
+                // else if downcasting
+                } else {
+                    // trancate
+                    llvm.builder.build_int_truncate(iv, tty, "")
+                }
+                .into()
+            }
+            // int to float
+            (BasicValueEnum::IntValue(iv), AnyTypeEnum::FloatType(tty)) => {
+                // if source is signed
+                if src_signed {
+                    llvm.builder.build_signed_int_to_float(iv, tty, "")
+                // otherwise
+                } else {
+                    llvm.builder.build_unsigned_int_to_float(iv, tty, "")
+                }
+                .into()
+            }
+            // float to int
+            (BasicValueEnum::FloatValue(fv), AnyTypeEnum::IntType(tty)) => {
+                // if target is signed
+                let sty = src.get_type();
+                if target_signed {
+                    llvm.builder.build_float_to_signed_int(fv, tty, "")
+                } else {
+                    llvm.builder.build_float_to_unsigned_int(fv, tty, "")
+                }
+                .into()
+            }
+            // float to float
+            (BasicValueEnum::FloatValue(fv), AnyTypeEnum::FloatType(tty)) => {
+                // if upcasting
+                if src_width < target_width {
+                    llvm.builder.build_float_ext(fv, tty, "")
+                // otherwise
+                } else {
+                    llvm.builder.build_float_trunc(fv, tty, "")
+                }
+                .into()
+            }
+            // pointer to int
+            (BasicValueEnum::PointerValue(pv), AnyTypeEnum::IntType(tty)) => {
+                llvm.builder.build_ptr_to_int(pv, tty, "").into()
+            }
+            // int to pointer
+            (BasicValueEnum::IntValue(iv), AnyTypeEnum::PointerType(tty)) => {
+                llvm.builder.build_int_to_ptr(iv, tty, "").into()
+            }
+            // pointer to pointer
+            (BasicValueEnum::PointerValue(pv), AnyTypeEnum::PointerType(tty)) => {
+                llvm.builder.build_bitcast(pv, tty, "")
+            }
+            _ => panic!("Illegal casting operation"),
+        };
+        let ir = op.into();
+        llvm.record(event, &ir);
+        ir
     }
 }
 
