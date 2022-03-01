@@ -1,5 +1,9 @@
+//! The IR abstractions used to represent any given Bramble program
+//! as a CFG.
+
 use crate::{StringId, compiler::{ast::Type, Span}};
 
+const ROOT_SCOPE: usize = 0;
 
 /// Procedure
 /// This type represents a single function from the input source code.
@@ -32,7 +36,7 @@ impl Procedure {
 
     /// Add an argument to this procedure
     pub fn add_arg(&mut self, name: StringId, ty: &Type) -> VarId {
-        let vd = VarDecl::new(name, false, ty, ScopeId::root());
+        let vd = VarDecl::new(name, false, ty, ScopeId::new(ROOT_SCOPE));
         self.vars.push(vd);
         let id = self.vars.len() - 1;
         VarId::new(id)
@@ -135,10 +139,6 @@ struct ScopeId(usize);
 impl ScopeId {
     pub fn new(id: usize) -> ScopeId {
         ScopeId(id)
-    }
-
-    pub fn root() -> ScopeId {
-        ScopeId::new(0)
     }
 
     pub fn index(&self) -> usize {
