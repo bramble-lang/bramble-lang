@@ -101,7 +101,7 @@ impl<'ctx> IrGen<'ctx> {
     }
 
     /// Print the LLVM IR to the given file
-    pub fn print(&self, path: &std::path::Path) {
+    pub fn emit_llvm_ir(&self, path: &std::path::Path) {
         self.module.print_to_file(path).unwrap()
     }
 
