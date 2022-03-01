@@ -15,6 +15,8 @@ use crate::StringId;
 
 use super::{ast::Type, Span};
 
+pub mod transform;
+
 /// Procedure
 /// This type represents a single function from the input source code.
 #[derive(Debug, PartialEq, Clone)]
