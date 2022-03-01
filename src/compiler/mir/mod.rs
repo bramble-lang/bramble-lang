@@ -11,9 +11,6 @@
   3. Analysis: tools used for traversing and transforming the MIR representation
   that is generated from the MIR compiler.
  */
-
-// IR Types
-
 use crate::StringId;
 
 use super::{ast::Type, Span};
