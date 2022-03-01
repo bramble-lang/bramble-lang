@@ -67,7 +67,7 @@ impl Procedure {
     pub fn new_bb(&mut self) -> BasicBlockId {
         let bb = BasicBlock::new();
         self.blocks.push(bb);
-        let id = self.blocks.len() -1;
+        let id = self.blocks.len() - 1;
         BasicBlockId::new(id)
     }
 
@@ -194,9 +194,7 @@ struct TempDecl {
 
 impl TempDecl {
     pub fn new(ty: &Type) -> TempDecl {
-        TempDecl {
-            ty: ty.clone(),
-        }
+        TempDecl { ty: ty.clone() }
     }
 }
 
@@ -206,7 +204,7 @@ impl TempDecl {
 struct BasicBlock {
     statements: Vec<Statement>,
 
-    /// This dictates how this basic block will terminate. This value is initially set to 
+    /// This dictates how this basic block will terminate. This value is initially set to
     /// [`Option::None`] because the terminator may not be known at the start of the construction
     /// of this [`BasicBlock`].
     terminator: Option<Terminator>,
@@ -343,7 +341,7 @@ enum TerminatorKind {
         func: Operand,
         /// The arguments for the function being called
         args: Vec<Operand>,
-        /// The result of the function and which basic block is the reentry point from the called function
+        /// The location of the function result and which basic block is the reentry point from the called function
         reentry: (LValue, BasicBlockId),
     },
 
