@@ -8,7 +8,7 @@ const ROOT_SCOPE: usize = 0;
 /// Procedure
 /// This type represents a single function from the input source code.
 #[derive(Debug, PartialEq, Clone)]
-struct Procedure {
+pub struct Procedure {
     /// The set of basic blocks that constitute this procedure
     blocks: Vec<BasicBlock>,
     /// The return type of this function
@@ -92,7 +92,7 @@ impl Procedure {
 
 /// Identifier for a specific basic block in a procedure
 #[derive(Debug, PartialEq, Copy, Clone)]
-struct BasicBlockId(usize);
+pub struct BasicBlockId(usize);
 
 impl BasicBlockId {
     pub fn new(id: usize) -> BasicBlockId {
@@ -106,7 +106,7 @@ impl BasicBlockId {
 
 /// Identifier for a user declared variable
 #[derive(Debug, PartialEq, Clone)]
-struct VarId(usize);
+pub struct VarId(usize);
 
 impl VarId {
     pub fn new(id: usize) -> VarId {
@@ -120,7 +120,7 @@ impl VarId {
 
 /// Identifier for a temporary variable.
 #[derive(Debug, PartialEq, Clone)]
-struct TempId(usize);
+pub struct TempId(usize);
 
 impl TempId {
     pub fn new(id: usize) -> TempId {
@@ -134,7 +134,7 @@ impl TempId {
 
 /// Identifier for each scope that exists within the function
 #[derive(Debug, PartialEq, Clone)]
-struct ScopeId(usize);
+pub struct ScopeId(usize);
 
 impl ScopeId {
     pub fn new(id: usize) -> ScopeId {
@@ -148,7 +148,7 @@ impl ScopeId {
 
 /// A variable declared by the user.
 #[derive(Debug, PartialEq, Clone)]
-struct VarDecl {
+pub struct VarDecl {
     /// Name of this variable
     name: StringId,
     /// Whether this variable can be mutated
@@ -173,7 +173,7 @@ impl VarDecl {
 /// A temporary variable created by the MIR compiler to store
 /// results.
 #[derive(Debug, PartialEq, Clone)]
-struct TempDecl {
+pub struct TempDecl {
     /// The type of this variable
     ty: Type,
 }
@@ -187,7 +187,7 @@ impl TempDecl {
 /// Basic Block
 /// A single basic block from a CFG
 #[derive(Debug, PartialEq, Clone)]
-struct BasicBlock {
+pub struct BasicBlock {
     statements: Vec<Statement>,
 
     /// This dictates how this basic block will terminate. This value is initially set to
@@ -240,14 +240,14 @@ struct StatementId(usize);
 /// Statement
 /// A single statement, from which basic blocks are constructed
 #[derive(Debug, PartialEq, Clone)]
-struct Statement {
+pub struct Statement {
     kind: StatementKind,
 
     span: Span,
 }
 
 #[derive(Debug, PartialEq, Clone)]
-enum StatementKind {
+pub enum StatementKind {
     /// This statement assigns the result of an [`RValue`] operation
     /// to the memory location represented by the [`LValue`].
     Assign(LValue, RValue),
@@ -256,7 +256,7 @@ enum StatementKind {
 /// LValue
 /// A physical location in memory where a value can be stored
 #[derive(Debug, PartialEq, Clone)]
-enum LValue {
+pub enum LValue {
     /// A user defined variable.
     Var(VarId),
 
@@ -274,7 +274,7 @@ enum LValue {
 /// Describes the method used to access the data of an indirect data type
 /// such as a reference, array, or structure.
 #[derive(Debug, PartialEq, Clone)]
-enum Accessor {
+pub enum Accessor {
     Index(u64),
     Field(StringId, Type),
     Deref,
@@ -284,7 +284,7 @@ enum Accessor {
 /// An operation that results in a value which can be
 /// stored in some physical location in memory
 #[derive(Debug, PartialEq, Clone)]
-enum RValue {
+pub enum RValue {
     /// Provides a way of reading a specific variable or using a constant in an assignment.
     Use(Operand),
 
@@ -304,7 +304,7 @@ enum RValue {
 /// Operand
 /// Value that can be used as the parameters for the RValue operations
 #[derive(Debug, PartialEq, Clone)]
-enum Operand {
+pub enum Operand {
     Constant,
     LValue(LValue),
 }
@@ -313,14 +313,14 @@ enum Operand {
 /// Marks the final statement in a basic block and indicates where the
 /// program will go to next
 #[derive(Debug, PartialEq, Clone)]
-struct Terminator {
+pub struct Terminator {
     kind: TerminatorKind,
 
     span: Span,
 }
 
 #[derive(Debug, PartialEq, Clone)]
-enum TerminatorKind {
+pub enum TerminatorKind {
     /// Enter a new functions scope.
     CallFn {
         /// The function to enter
@@ -351,7 +351,7 @@ enum TerminatorKind {
 
 /// Binary operators
 #[derive(Debug, PartialEq, Copy, Clone)]
-enum BinOp {
+pub enum BinOp {
     /// '+' add two primitive numbers together
     Add,
     /// '-' subtract one primitive from another
@@ -380,7 +380,7 @@ enum BinOp {
 
 /// Unary operators
 #[derive(Debug, PartialEq, Copy, Clone)]
-enum UnOp {
+pub enum UnOp {
     /// '-' negate a primitive value
     Negate,
     /// '!' bitwise not a primitive value
