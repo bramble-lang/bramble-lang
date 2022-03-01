@@ -361,6 +361,8 @@ enum BinOp {
     Lt,
     Ge,
     Gt,
+    And,
+    Or,
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
