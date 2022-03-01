@@ -11,6 +11,7 @@ pub mod llvm;
 pub mod parser;
 pub mod semantics;
 pub mod stringtable;
+mod mir;
 
 // Expose certain compiler items outside of the module because they are key parts
 // of the interface between the compiler and modules which use the compiler.
