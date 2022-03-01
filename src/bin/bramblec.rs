@@ -155,12 +155,12 @@ fn main() -> Result<(), i32> {
             return Err(ERR_LLVM_IR_ERROR);
         }
     }
-
-    if config.is_present("emit") {
-        llvm.print(Path::new("./target/output.ll"));
+   
+    if emit_llvm_ir(&config) {
+        llvm.emit_llvm_ir(Path::new("./target/output.ll"));
     }
 
-    llvm.emit_object_code(Path::new(output_target)).unwrap();
+    llvm.emit_object_code(Path::new(output_target), emit_asm(&config)).unwrap();
 
     if config.is_present("manifest") {
         let manifest = Manifest::extract(&semantic_ast, &source_map, &string_table).unwrap();
