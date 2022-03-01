@@ -95,9 +95,6 @@ enum LValue {
     /// A temporary variable created by the compiler during MIR construction
     Temp(VarId),
 
-    /// A location in the static data portion of a program
-    Static,
-
     /// Represents accessing data via some form of transformation (e.g., array index,
     /// dereferencing a raw pointer, or the field of a structure)
     Subdata(Subdata),
