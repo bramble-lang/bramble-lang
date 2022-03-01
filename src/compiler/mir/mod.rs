@@ -17,6 +17,7 @@ use super::{ast::Type, Span};
 
 /// Procedure
 /// This type represents a single function from the input source code.
+#[derive(Debug, PartialEq, Clone)]
 struct Procedure {
     /// The set of basic blocks that constitute this procedure
     blocks: Vec<BasicBlock>,
@@ -30,16 +31,98 @@ struct Procedure {
     span: Span,
 }
 
+impl Procedure {
+    pub fn new() -> Procedure {
+        todo!()
+    }
+
+    pub fn get_bb(&self, id: BasicBlockId) -> &BasicBlock {
+        todo!()
+    }
+
+    pub fn get_bb_mut(&mut self, id: BasicBlockId) -> &mut BasicBlock {
+        todo!()
+    }
+
+    pub fn new_bb(&mut self) -> BasicBlockId {
+        todo!()
+    }
+
+    pub fn get_var(&self, id: VarId) -> &VarDecl {
+        todo!()
+    }
+
+    pub fn get_temp(&self, id: TempId) -> &TempDecl {
+        todo!()
+    }
+
+    pub fn add_var(&self, name: StringId, ty: &Type, mutable: bool) -> VarId {
+        todo!()
+    }
+
+    pub fn add_temp(&self, ty: &Type) -> VarId {
+        todo!()
+    }
+}
+
 /// Identifier for a specific basic block in a procedure
+#[derive(Debug, PartialEq, Copy, Clone)]
 struct BasicBlockId(usize);
 
-/// Identifier for a variable or temporary variable.
+impl BasicBlockId {
+    pub fn new(id: usize) -> BasicBlockId {
+        BasicBlockId(id)
+    }
+
+    pub fn id(&self) -> usize {
+        self.0
+    }
+}
+
+/// Identifier for a user declared variable
+#[derive(Debug, PartialEq, Clone)]
 struct VarId(usize);
 
+impl VarId {
+    pub fn new(id: usize) -> VarId {
+        VarId(id)
+    }
+
+    pub fn index(&self) -> usize {
+        self.0
+    }
+}
+
+/// Identifier for a temporary variable.
+#[derive(Debug, PartialEq, Clone)]
+struct TempId(usize);
+
+impl TempId {
+    pub fn new(id: usize) -> TempId {
+        TempId(id)
+    }
+
+    pub fn index(&self) -> usize {
+        self.0
+    }
+}
+
 /// Identifier for each scope that exists within the function
+#[derive(Debug, PartialEq, Clone)]
 struct ScopeId(usize);
 
+impl ScopeId {
+    pub fn new(id: usize) -> ScopeId {
+        ScopeId(id)
+    }
+
+    pub fn index(&self) -> usize {
+        self.0
+    }
+}
+
 /// A variable declared by the user.
+#[derive(Debug, PartialEq, Clone)]
 struct VarDecl {
     /// Name of this variable
     name: StringId,
@@ -53,6 +136,7 @@ struct VarDecl {
 
 /// A temporary variable created by the MIR compiler to store
 /// results.
+#[derive(Debug, PartialEq, Clone)]
 struct TempDecl {
     /// The type of this variable
     ty: Type,
@@ -60,6 +144,7 @@ struct TempDecl {
 
 /// Basic Block
 /// A single basic block from a CFG
+#[derive(Debug, PartialEq, Clone)]
 struct BasicBlock {
     statements: Vec<Statement>,
     terminator: Terminator,
@@ -67,16 +152,19 @@ struct BasicBlock {
     span: Span,
 }
 
+#[derive(Debug, PartialEq, Copy, Clone)]
 struct StatementId(usize);
 
 /// Statement
 /// A single statement, from which basic blocks are constructed
+#[derive(Debug, PartialEq, Clone)]
 struct Statement {
     kind: StatementKind,
 
     span: Span,
 }
 
+#[derive(Debug, PartialEq, Clone)]
 enum StatementKind {
     /// This statement assigns the result of an [`RValue`] operation
     /// to the memory location represented by the [`LValue`].
@@ -85,6 +173,7 @@ enum StatementKind {
 
 /// LValue
 /// A physical location in memory where a value can be stored
+#[derive(Debug, PartialEq, Clone)]
 enum LValue {
     /// A user defined variable.
     Var(VarId),
@@ -94,18 +183,25 @@ enum LValue {
 
     /// Represents accessing data via some form of transformation (e.g., array index,
     /// dereferencing a raw pointer, or the field of a structure)
-    Subdata(Subdata),
+    Access(Box<LValue>, Accessor),
 
     /// Where to store the result of a procedure so that the caller can get the result.
     ReturnPointer,
 }
 
-enum Subdata {
+/// Describes the method used to access the data of an indirect data type
+/// such as a reference, array, or structure.
+#[derive(Debug, PartialEq, Clone)]
+enum Accessor {
+    Index(u64),
+    Field(StringId, Type),
+    Deref,
 }
 
 /// RValue
 /// An operation that results in a value which can be
 /// stored in some physical location in memory
+#[derive(Debug, PartialEq, Clone)]
 enum RValue {
     /// Provides a way of reading a specific variable or using a constant in an assignment.
     Use(Operand),
@@ -125,6 +221,7 @@ enum RValue {
 
 /// Operand
 /// Value that can be used as the parameters for the RValue operations
+#[derive(Debug, PartialEq, Clone)]
 enum Operand {
     Constant,
     LValue(LValue),
@@ -133,12 +230,14 @@ enum Operand {
 /// Terminator
 /// Marks the final statement in a basic block and indicates where the
 /// program will go to next
+#[derive(Debug, PartialEq, Clone)]
 struct Terminator {
     kind: TerminatorKind,
 
     span: Span,
 }
 
+#[derive(Debug, PartialEq, Clone)]
 enum TerminatorKind {
     /// Enter a new functions scope.
     CallFn{
@@ -170,6 +269,7 @@ enum TerminatorKind {
     },
 }
 
+#[derive(Debug, PartialEq, Copy, Clone)]
 enum BinOp {
     Add,
     Sub,
@@ -183,6 +283,7 @@ enum BinOp {
     Gt,
 }
 
+#[derive(Debug, PartialEq, Copy, Clone)]
 enum UnOp {
     Negate,
     Not,
