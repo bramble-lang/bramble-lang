@@ -351,22 +351,36 @@ enum TerminatorKind {
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 enum BinOp {
+    // '+' add two primitive numbers together
     Add,
+    // '-' subtract one primitive from another
     Sub,
+    // '*' multiply two primitive numbers
     Mul,
+    // '/' divive a primitive by another primitive
     Div,
+    // '==' compare two primitives and see if they are equal
     Eq,
+    // '!=' check if two primitives are not equal
     Ne,
+    // '<=' check if one primitive is less than or equal to another
     Le,
+    // '<' check if one primitive is less than another
     Lt,
+    // '>=' check if one primitive is greater than or equal to another
     Ge,
+    // '>' check if one primitive is greater than another
     Gt,
+    // '&' bitwise and operation on two primitives
     And,
+    // '|' bitwise or operation on two primitives
     Or,
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 enum UnOp {
+    // '-' negate a primitive value
     Negate,
+    // '!' bitwise not a primitive value
     Not,
 }
