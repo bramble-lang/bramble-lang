@@ -1,16 +1,16 @@
 /*!
-  The middle intermediate representation for the Bramble compiler.
-  This models functions as [Control Flow Graphs](https://en.wikipedia.org/wiki/Control-flow_graph)
-  and makes lifetime, consistency, and other analyses easier to 
-  implement.
+ The middle intermediate representation for the Bramble compiler.
+ This models functions as [Control Flow Graphs](https://en.wikipedia.org/wiki/Control-flow_graph)
+ and makes lifetime, consistency, and other analyses easier to
+ implement.
 
-  This module consists of the following major tools:
-  
-  1. IR Model: a set of types which are used to represent program in CFG form.
-  2. MIR Compiler: this will convert an AST into a MIR representation.
-  3. Analysis: tools used for traversing and transforming the MIR representation
-  that is generated from the MIR compiler.
- */
+ This module consists of the following major tools:
+
+ 1. IR Model: a set of types which are used to represent program in CFG form.
+ 2. MIR Compiler: this will convert an AST into a MIR representation.
+ 3. Analysis: tools used for traversing and transforming the MIR representation
+ that is generated from the MIR compiler.
+*/
 use crate::StringId;
 
 use super::{ast::Type, Span};
@@ -32,36 +32,71 @@ struct Procedure {
 }
 
 impl Procedure {
-    pub fn new() -> Procedure {
-        todo!()
+    /// Creates a new MIR procedure. When created this will not have any
+    /// basic blocks or arguments.
+    pub fn new(ret_ty: &Type, span: Span) -> Procedure {
+        Procedure {
+            blocks: vec![],
+            ret_ty: ret_ty.clone(),
+            vars: vec![],
+            temps: vec![],
+            span,
+        }
     }
 
+    /// Add an argument to this procedure
+    pub fn add_arg(&mut self, name: StringId, ty: &Type) -> VarId {
+        let vd = VarDecl::new(name, false, ty, ScopeId::root());
+        self.vars.push(vd);
+        let id = self.vars.len() - 1;
+        VarId::new(id)
+    }
+
+    /// Get a [`BasicBlock`] for this procedure
     pub fn get_bb(&self, id: BasicBlockId) -> &BasicBlock {
-        todo!()
+        &self.blocks[id.index()]
     }
 
+    /// Get a mutable [`BasicBlock`] from this procedure.
     pub fn get_bb_mut(&mut self, id: BasicBlockId) -> &mut BasicBlock {
-        todo!()
+        &mut self.blocks[id.index()]
     }
 
+    /// Create a new, empty, [`BasicBlock`] in this procedure. This will
+    /// return the ID of that [`BasicBlock`].
     pub fn new_bb(&mut self) -> BasicBlockId {
-        todo!()
+        let bb = BasicBlock::new();
+        self.blocks.push(bb);
+        let id = self.blocks.len() -1;
+        BasicBlockId::new(id)
     }
 
+    /// Get the declaration details of a user defined variable in
+    /// this procedure.
     pub fn get_var(&self, id: VarId) -> &VarDecl {
-        todo!()
+        &self.vars[id.index()]
     }
 
+    /// Get the declaration details of a temporary variable.
     pub fn get_temp(&self, id: TempId) -> &TempDecl {
-        todo!()
+        &self.temps[id.index()]
     }
 
-    pub fn add_var(&self, name: StringId, ty: &Type, mutable: bool) -> VarId {
-        todo!()
+    /// Add a new user defined variable to the procedure.
+    pub fn add_var(&mut self, name: StringId, mutable: bool, ty: &Type, scope: ScopeId) -> VarId {
+        let vd = VarDecl::new(name, mutable, ty, scope);
+        self.vars.push(vd);
+        let id = self.vars.len() - 1;
+
+        VarId::new(id)
     }
 
-    pub fn add_temp(&self, ty: &Type) -> VarId {
-        todo!()
+    /// Add a new temporary variable to the procedures stack
+    pub fn add_temp(&mut self, ty: &Type) -> TempId {
+        let td = TempDecl::new(ty);
+        self.temps.push(td);
+        let id = self.temps.len() - 1;
+        TempId::new(id)
     }
 }
 
@@ -74,7 +109,7 @@ impl BasicBlockId {
         BasicBlockId(id)
     }
 
-    pub fn id(&self) -> usize {
+    pub fn index(&self) -> usize {
         self.0
     }
 }
@@ -116,6 +151,10 @@ impl ScopeId {
         ScopeId(id)
     }
 
+    pub fn root() -> ScopeId {
+        ScopeId::new(0)
+    }
+
     pub fn index(&self) -> usize {
         self.0
     }
@@ -127,11 +166,22 @@ struct VarDecl {
     /// Name of this variable
     name: StringId,
     /// Whether this variable can be mutated
-    mutability: bool,
+    mutable: bool,
     /// The type of this variable
     ty: Type,
     /// What scope this variable was declared in
     scope: ScopeId,
+}
+
+impl VarDecl {
+    pub fn new(name: StringId, mutable: bool, ty: &Type, scope: ScopeId) -> VarDecl {
+        VarDecl {
+            name,
+            mutable,
+            ty: ty.clone(),
+            scope,
+        }
+    }
 }
 
 /// A temporary variable created by the MIR compiler to store
@@ -142,14 +192,62 @@ struct TempDecl {
     ty: Type,
 }
 
+impl TempDecl {
+    pub fn new(ty: &Type) -> TempDecl {
+        TempDecl {
+            ty: ty.clone(),
+        }
+    }
+}
+
 /// Basic Block
 /// A single basic block from a CFG
 #[derive(Debug, PartialEq, Clone)]
 struct BasicBlock {
     statements: Vec<Statement>,
-    terminator: Terminator,
 
-    span: Span,
+    /// This dictates how this basic block will terminate. This value is initially set to 
+    /// [`Option::None`] because the terminator may not be known at the start of the construction
+    /// of this [`BasicBlock`].
+    terminator: Option<Terminator>,
+
+    /// Marks the span of input source code that this [`BasicBlock`] represents.
+    /// This value is initially [`Option::None`] because the Span will be calculated
+    /// as [`Statement`]s are added to the [`BasicBlock`] and, therefore, at creation
+    /// the Span is not expected to be known.
+    span: Option<Span>,
+}
+
+impl BasicBlock {
+    pub fn new() -> BasicBlock {
+        BasicBlock {
+            statements: vec![],
+            terminator: None,
+            span: None,
+        }
+    }
+
+    /// Append a new statement to this [`BasicBlock`].
+    pub fn add_stm(&mut self, stm: Statement) {
+        self.add_span(stm.span);
+        self.statements.push(stm);
+    }
+
+    /// Set the [`Terminator`] of this [`BasicBlock`].
+    pub fn set_terminator(&mut self, term: Terminator) {
+        self.add_span(term.span);
+        self.terminator = Some(term);
+    }
+
+    fn add_span(&mut self, span: Span) {
+        // Expand the span of this basic block to cover the new statement and the
+        // previous statements
+        if let Some(ref mut bb_span) = self.span {
+            *bb_span = Span::cover(*bb_span, span);
+        } else {
+            self.span = Some(span);
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -168,7 +266,7 @@ struct Statement {
 enum StatementKind {
     /// This statement assigns the result of an [`RValue`] operation
     /// to the memory location represented by the [`LValue`].
-    Assign(LValue, RValue)
+    Assign(LValue, RValue),
 }
 
 /// LValue
@@ -207,7 +305,7 @@ enum RValue {
     Use(Operand),
 
     /// Represents binary insructions that are available on the CPU
-    BinOp(Operand,Operand),
+    BinOp(Operand, Operand),
 
     /// Unary instructions that are available on the CPU
     UnOp(Operand),
@@ -240,7 +338,7 @@ struct Terminator {
 #[derive(Debug, PartialEq, Clone)]
 enum TerminatorKind {
     /// Enter a new functions scope.
-    CallFn{
+    CallFn {
         /// The function to enter
         func: Operand,
         /// The arguments for the function being called
@@ -253,13 +351,11 @@ enum TerminatorKind {
     Return,
 
     /// Unconditionally, go to the given basic block
-    GoTo{
-        target: BasicBlockId,
-    },
+    GoTo { target: BasicBlockId },
 
     /// Takes a boolean value and two basic blocks. On true it will go to to the first
     /// basic block, on false it will go to to the second basic block.
-    CondGoTo{
+    CondGoTo {
         /// The value used to determine which of the two basic blocks to go to
         cond: Operand,
         /// If `cond` is true, then go to this basic block
