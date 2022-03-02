@@ -17,6 +17,7 @@ use self::ir::Procedure;
 use super::Span;
 
 mod ir;
+mod test;
 pub mod transform;
 
 pub struct Module {

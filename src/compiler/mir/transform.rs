@@ -10,7 +10,7 @@
 use log::debug;
 
 use crate::compiler::{
-    ast::{BinaryOperator, Expression, Module, RoutineDef, Statement, Type},
+    ast::{BinaryOperator, Expression, Module, RoutineDef, Statement, Type, Return},
     semantics::semanticnode::SemanticContext,
     Span,
 };
@@ -25,7 +25,7 @@ pub fn module_transform(module: &Module<SemanticContext>) {
             crate::compiler::ast::Item::Routine(r) => {
                 let ft = FuncTransformer::new();
                 let p = ft.transform(r);
-                println!("{:?}", p);
+                println!("Procedure: {:?}", p);
             }
             crate::compiler::ast::Item::Struct(_) => todo!(),
             crate::compiler::ast::Item::Extern(_) => todo!(),
@@ -155,13 +155,22 @@ impl FuncTransformer {
     }
 
     fn statement(&mut self, stm: &Statement<SemanticContext>) {
+        debug!("Transform statement");
         match stm {
             Statement::Bind(bind) => todo!(),
             Statement::Expression(expr) => todo!(),
             Statement::Mutate(_) => todo!(),
             Statement::YieldReturn(_) => todo!(),
-            Statement::Return(ret) => self.gen.term_return(),
+            Statement::Return(ret) => self.ret(ret),
         }
+    }
+
+    fn ret(&mut self, ret: &Return<SemanticContext>) {
+        match ret.get_value() {
+            Some(val) => self.expression(val),
+            None => todo!(),
+        };
+        self.gen.term_return();
     }
 
     /// This can return either an Operand or an RValue, if this is evaluating a constant or an identifier
