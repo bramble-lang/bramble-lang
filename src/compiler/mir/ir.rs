@@ -109,19 +109,24 @@ impl Display for Procedure {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("fn () -> {:?}:\n", self.ret_ty))?;
 
+        // Print out the stack: vars and temps
+        f.write_str("Stack:\n")?;
+
         // Print out the variables
         for idx in 0..self.vars.len() {
+            let vid = VarId::new(idx);
             if self.vars[idx].mutable {
-                f.write_fmt(format_args!("let mut %{}: {:?} // {}\n", idx, self.vars[idx].ty, self.vars[idx].name))?
+                f.write_fmt(format_args!("let mut {}: {:?} // {}\n", vid, self.vars[idx].ty, self.vars[idx].name))?
             } else {
-                f.write_fmt(format_args!("let %{}: {:?} // {}\n", idx, self.vars[idx].ty, self.vars[idx].name))?
+                f.write_fmt(format_args!("let {}: {:?} // {}\n", vid, self.vars[idx].ty, self.vars[idx].name))?
             }
         }
         f.write_str("\n")?;
         
         // Print the temporary variables
         for idx in 0..self.temps.len() {
-            f.write_fmt(format_args!("let mut %_{}: {:?}\n", idx, self.temps[idx].ty))?
+            let tid = TempId::new(idx);
+            f.write_fmt(format_args!("let mut {}: {:?}\n", tid, self.temps[idx].ty))?
         }
 
         // Print all the basic blocks
@@ -171,7 +176,7 @@ impl VarId {
 
 impl Display for VarId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{}", self.0))
+        f.write_fmt(format_args!("%{}", self.0))
     }
 }
 
@@ -191,7 +196,7 @@ impl TempId {
 
 impl Display for TempId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{}", self.0))
+        f.write_fmt(format_args!("%%{}", self.0))
     }
 }
 
@@ -372,8 +377,8 @@ pub enum LValue {
 impl Display for LValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let text = match self {
-            LValue::Var(v) => format!("%{}", v),
-            LValue::Temp(t) => format!("%_{}", t),
+            LValue::Var(v) => format!("{}", v),
+            LValue::Temp(t) => format!("{}", t),
             LValue::Access(lv, acc) => format!("{}{}", lv, acc),
             LValue::ReturnPointer => format!("ReturnPtr"),
         };
