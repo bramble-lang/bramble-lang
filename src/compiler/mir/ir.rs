@@ -1,7 +1,7 @@
 //! The IR abstractions used to represent any given Bramble program
 //! as a CFG.
 
-use std::fmt::{Display, Write};
+use std::fmt::Display;
 
 use crate::{
     compiler::{ast::Type, Span},
