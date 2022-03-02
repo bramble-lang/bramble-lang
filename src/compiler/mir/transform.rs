@@ -194,7 +194,7 @@ impl FuncTransformer {
         let ty = bind.get_type();
         let vid = self.gen.var(var, mutable, ty);
 
-        let expr = self.expression(bind.get_rhs()).operand();
+        let expr = self.expression(bind.get_rhs());
 
         self.gen.store(LValue::Var(vid), RValue::Use(expr))
     }
@@ -202,7 +202,7 @@ impl FuncTransformer {
     fn ret(&mut self, ret: &Return<SemanticContext>) {
         match ret.get_value() {
             Some(val) => {
-                let v = self.expression(val).operand();
+                let v = self.expression(val);
                 self.gen.store(LValue::ReturnPointer, RValue::Use(v));
             }
             None => (),
@@ -212,14 +212,13 @@ impl FuncTransformer {
 
     /// This can return either an Operand or an RValue, if this is evaluating a constant or an identifier
     /// then this returns an operand.  If this is evaluating an operation then it returns an RValue.
-    fn expression(&mut self, expr: &Expression<SemanticContext>) -> ExprResult {
+    fn expression(&mut self, expr: &Expression<SemanticContext>) -> Operand {
         // TEMP: it might turn out that I don't need ExprResult
         match expr {
-            Expression::I64(_, i) => ExprResult::Operand(self.gen.const_i64(*i)),
+            Expression::I64(_, i) => self.gen.const_i64(*i),
             Expression::BinaryOp(ctx, op, left, right) => {
                 let rv = self.binary_op(*op, left, right);
-                let temp = self.gen.temp_store(rv, ctx.ty());
-                ExprResult::Operand(temp)
+                self.gen.temp_store(rv, ctx.ty())
             }
             Expression::Null(_) => todo!(),
             Expression::U8(_, _) => todo!(),
@@ -230,7 +229,7 @@ impl FuncTransformer {
             Expression::I16(_, _) => todo!(),
             Expression::I32(_, _) => todo!(),
             Expression::F64(_, _) => todo!(),
-            Expression::Boolean(_, b) => ExprResult::Operand(self.gen.const_bool(*b)),
+            Expression::Boolean(_, b) => self.gen.const_bool(*b),
             Expression::StringLiteral(_, _) => todo!(),
             Expression::ArrayExpression(_, _, _) => todo!(),
             Expression::ArrayAt {
@@ -245,7 +244,7 @@ impl FuncTransformer {
                 let vid = self.gen.find_var(*id).unwrap();
 
                 // Return a LValue::Var(VarId) as the result of this expression
-                ExprResult::Operand(Operand::LValue(LValue::Var(vid)))
+                Operand::LValue(LValue::Var(vid))
             }
             Expression::Path(_, _) => todo!(),
             Expression::MemberAccess(_, _, _) => todo!(),
@@ -257,7 +256,7 @@ impl FuncTransformer {
                 cond,
                 if_arm,
                 else_arm,
-            } => ExprResult::Operand(self.if_expr(cond, if_arm, else_arm)),
+            } => self.if_expr(cond, if_arm, else_arm),
             Expression::While {
                 context,
                 cond,
@@ -267,12 +266,11 @@ impl FuncTransformer {
                 for stm in block {
                     self.statement(stm);
                 }
-                let val = if let Some(expr) = expr {
+                if let Some(expr) = expr {
                     self.expression(expr)
                 } else {
                     todo!()
-                };
-                val
+                }
             },
             Expression::TypeCast(_, _, _) => todo!(),
             Expression::UnaryOp(_, _, _) => todo!(),
@@ -289,7 +287,7 @@ impl FuncTransformer {
         let then_bb = self.gen.new_bb();
         let else_bb = self.gen.new_bb();
         let merge_bb = self.gen.new_bb();
-        let cond_val = self.expression(cond).operand();
+        let cond_val = self.expression(cond);
         self.gen.term_if(cond_val, then_bb, else_bb);
 
         // if the if expression has a type other than unit, then create a temporary
@@ -297,13 +295,13 @@ impl FuncTransformer {
         let temp = self.gen.temp(then_block.get_type());
 
         self.gen.set_bb(then_bb);
-        let val = self.expression(then_block).operand();
+        let val = self.expression(then_block);
         self.gen.store(LValue::Temp(temp), RValue::Use(val));
         self.gen.term_goto(merge_bb);
 
         if let Some(else_block) = else_block {
             self.gen.set_bb(else_bb);
-            let val = self.expression(else_block).operand();
+            let val = self.expression(else_block);
             self.gen.store(LValue::Temp(temp), RValue::Use(val));
             self.gen.term_goto(merge_bb);
         } else {
@@ -323,8 +321,8 @@ impl FuncTransformer {
     ) -> RValue {
         match op {
             BinaryOperator::Add => {
-                let left = self.expression(left).operand();
-                let right = self.expression(right).operand();
+                let left = self.expression(left);
+                let right = self.expression(right);
                 self.gen.add(left, right)
             }
             BinaryOperator::Sub => todo!(),
@@ -339,27 +337,6 @@ impl FuncTransformer {
             BinaryOperator::Gr => todo!(),
             BinaryOperator::GrEq => todo!(),
             BinaryOperator::RawPointerOffset => todo!(),
-        }
-    }
-}
-
-enum ExprResult {
-    Operand(Operand),
-    RValue(RValue),
-}
-
-impl ExprResult {
-    fn operand(self) -> Operand {
-        match self {
-            Self::Operand(op) => op,
-            Self::RValue(_) => panic!("Expected Operand but got RValue"),
-        }
-    }
-
-    fn rvalue(self) -> RValue {
-        match self {
-            Self::RValue(rv) => rv,
-            Self::Operand(_) => panic!("Expected RValue but got Operand"),
         }
     }
 }
