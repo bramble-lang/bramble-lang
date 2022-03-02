@@ -90,7 +90,11 @@ impl MirGenerator {
     /// Terminates by returning to the caller function
     fn term_return(&mut self) {
         debug!("Terminator: Return");
-        todo!()
+        let cid = self.current_bb.unwrap();
+        self.proc.as_mut().map(|p| {
+            let bb = p.get_bb_mut(cid);
+            bb.set_terminator(Terminator::new(TerminatorKind::Return))
+        });
     }
 
     /// Terminates by going to the destination basic block
@@ -142,7 +146,7 @@ impl FuncTransformer {
             Statement::Expression(expr) => todo!(),
             Statement::Mutate(_) => todo!(),
             Statement::YieldReturn(_) => todo!(),
-            Statement::Return(ret) => todo!(),
+            Statement::Return(ret) => self.gen.term_return(),
         }
     }
 

@@ -331,6 +331,15 @@ pub struct Terminator {
     span: Span,
 }
 
+impl Terminator {
+    pub fn new(kind: TerminatorKind) -> Terminator {
+        Terminator {
+            kind,
+            span: Span::zero(),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum TerminatorKind {
     /// Enter a new functions scope.
