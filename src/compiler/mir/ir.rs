@@ -95,6 +95,34 @@ impl Procedure {
     }
 }
 
+impl Display for Procedure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("fn () -> {:?}:\n", self.ret_ty))?;
+
+        // Print out the variables
+        for idx in 0..self.vars.len() {
+            if self.vars[idx].mutable {
+                f.write_fmt(format_args!("let mut %{}: {:?} // {}\n", idx, self.vars[idx].ty, self.vars[idx].name))?
+            } else {
+                f.write_fmt(format_args!("let %{}: {:?} // {}\n", idx, self.vars[idx].ty, self.vars[idx].name))?
+            }
+        }
+        
+        // Print the temporary variables
+        for idx in 0..self.temps.len() {
+            f.write_fmt(format_args!("let mut %_{}: {:?}\n", idx, self.temps[idx].ty))?
+        }
+
+        // Print all the basic blocks
+        for bb in 0..self.blocks.len() {
+            f.write_fmt(format_args!("BB{}: \n", bb))?;
+            f.write_fmt(format_args!("{}", self.blocks[bb]))?
+        }
+
+        Ok(())
+    }
+}
+
 /// Identifier for a specific basic block in a procedure
 #[derive(Debug, PartialEq, Copy, Clone)]
 struct BasicBlockId(usize);
