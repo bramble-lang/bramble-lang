@@ -429,17 +429,30 @@ impl Display for RValue {
 /// Value that can be used as the parameters for the RValue operations
 #[derive(Debug, PartialEq, Clone)]
 pub enum Operand {
-    Constant,
+    Constant(Constant),
     LValue(LValue),
 }
 
 impl Display for Operand {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let text = match self {
-            Operand::Constant => format!("constant"),
+            Operand::Constant(c) => format!("{}", c),
             Operand::LValue(lv) => format!("{}", lv),
         };
         f.write_str(&text)
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum Constant {
+    I64(i64)
+}
+
+impl Display for Constant {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Constant::I64(i) => f.write_fmt(format_args!("{}i64", i)),
+        }
     }
 }
 

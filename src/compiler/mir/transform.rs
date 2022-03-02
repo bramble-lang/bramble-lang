@@ -60,7 +60,7 @@ impl MirGenerator {
     }
 
     fn const_i64(&mut self, i: i64) -> Operand {
-        Operand::Constant
+        Operand::Constant(Constant::I64(i))
     }
 
     fn var(&mut self) -> VarId {
@@ -75,14 +75,18 @@ impl MirGenerator {
         let tv = LValue::Temp(self.temp(ty));
         debug!("Temp store: {:?} := {:?}", tv, rv);
 
+        self.store(tv.clone(), rv);
+
+        Operand::LValue(tv)
+    }
+
+    fn store(&mut self, lv: LValue, rv: RValue) {
         let cid = self.current_bb.unwrap();
         let bb = self.proc.get_bb_mut(cid);
         bb.add_stm(super::ir::Statement::new(StatementKind::Assign(
-            tv.clone(),
+            lv,
             rv,
         )));
-
-        Operand::LValue(tv)
     }
 
     fn sub(&mut self) {
@@ -167,8 +171,11 @@ impl FuncTransformer {
 
     fn ret(&mut self, ret: &Return<SemanticContext>) {
         match ret.get_value() {
-            Some(val) => self.expression(val),
-            None => todo!(),
+            Some(val) => {
+                let v = self.expression(val).operand();
+                self.gen.store(LValue::ReturnPointer, RValue::Use(v));
+            },
+            None => (),
         };
         self.gen.term_return();
     }
