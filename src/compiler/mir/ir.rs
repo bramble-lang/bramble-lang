@@ -107,6 +107,7 @@ impl Display for Procedure {
                 f.write_fmt(format_args!("let %{}: {:?} // {}\n", idx, self.vars[idx].ty, self.vars[idx].name))?
             }
         }
+        f.write_str("\n")?;
         
         // Print the temporary variables
         for idx in 0..self.temps.len() {
@@ -115,6 +116,7 @@ impl Display for Procedure {
 
         // Print all the basic blocks
         for bb in 0..self.blocks.len() {
+            f.write_str("\n")?;
             f.write_fmt(format_args!("BB{}: \n", bb))?;
             f.write_fmt(format_args!("{}", self.blocks[bb]))?
         }
@@ -462,7 +464,7 @@ impl Terminator {
 
 impl Display for Terminator {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("term {}\n", self.kind))
+        f.write_fmt(format_args!("{}\n", self.kind))
     }
 }
 
@@ -546,18 +548,18 @@ pub enum BinOp {
 impl Display for BinOp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let txt = match self {
-            BinOp::Add => "+",
-            BinOp::Sub => "-",
-            BinOp::Mul => "*",
-            BinOp::Div => "/",
-            BinOp::Eq => "==",
-            BinOp::Ne => "!=",
-            BinOp::Le => "<=",
-            BinOp::Lt => "<",
-            BinOp::Ge => ">=",
-            BinOp::Gt => ">",
-            BinOp::And => "&",
-            BinOp::Or => "|",
+            BinOp::Add => "Add",
+            BinOp::Sub => "Sub",
+            BinOp::Mul => "Mul",
+            BinOp::Div => "Div",
+            BinOp::Eq => "Eq",
+            BinOp::Ne => "Neq",
+            BinOp::Le => "Le",
+            BinOp::Lt => "Lt",
+            BinOp::Ge => "Ge",
+            BinOp::Gt => "Gt",
+            BinOp::And => "BitwiseAnd",
+            BinOp::Or => "BitwiseOr",
         };
         f.write_str(txt)
     }

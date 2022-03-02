@@ -25,7 +25,7 @@ pub fn module_transform(module: &Module<SemanticContext>) {
             crate::compiler::ast::Item::Routine(r) => {
                 let ft = FuncTransformer::new();
                 let p = ft.transform(r);
-                println!("Procedure: {:?}", p);
+                println!("Procedure: {}", p);
             }
             crate::compiler::ast::Item::Struct(_) => todo!(),
             crate::compiler::ast::Item::Extern(_) => todo!(),
