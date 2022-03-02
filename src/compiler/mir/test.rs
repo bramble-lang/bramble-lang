@@ -18,6 +18,8 @@ pub mod tests {
         let text = "
         fn test() -> i64 {
             let x: i64 := 5;
+            let b: bool := true;
+            if (b) {13} else {29};
             return 1 + 2 + 3 + x;
         }
         ";

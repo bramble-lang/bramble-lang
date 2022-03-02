@@ -9,11 +9,14 @@
 
 use log::debug;
 
-use crate::{compiler::{
-    ast::{BinaryOperator, Expression, Module, RoutineDef, Statement, Type, Return, Bind},
-    semantics::semanticnode::SemanticContext,
-    Span,
-}, StringId};
+use crate::{
+    compiler::{
+        ast::{BinaryOperator, Bind, Expression, Module, Return, RoutineDef, Statement, Type},
+        semantics::semanticnode::SemanticContext,
+        Span,
+    },
+    StringId,
+};
 
 use super::ir::*;
 
@@ -67,6 +70,10 @@ impl MirGenerator {
         Operand::Constant(Constant::I64(i))
     }
 
+    fn const_bool(&mut self, b: bool) -> Operand {
+        Operand::Constant(Constant::Bool(b))
+    }
+
     fn var(&mut self, name: StringId, mutable: bool, ty: &Type) -> VarId {
         self.proc.add_var(name, mutable, ty, ScopeId::new(0))
     }
@@ -87,10 +94,7 @@ impl MirGenerator {
     fn store(&mut self, lv: LValue, rv: RValue) {
         let cid = self.current_bb.unwrap();
         let bb = self.proc.get_bb_mut(cid);
-        bb.add_stm(super::ir::Statement::new(StatementKind::Assign(
-            lv,
-            rv,
-        )));
+        bb.add_stm(super::ir::Statement::new(StatementKind::Assign(lv, rv)));
     }
 
     fn sub(&mut self) {
@@ -118,15 +122,23 @@ impl MirGenerator {
     }
 
     /// Terminates by going to the destination basic block
-    fn term_goto(&mut self, destination: BasicBlockId) {
-        debug!("Goto: {:?}", destination);
-        todo!()
+    fn term_goto(&mut self, target: BasicBlockId) {
+        debug!("Goto: {:?}", target);
+        let cid = self.current_bb.unwrap();
+        let bb = self.proc.get_bb_mut(cid);
+        bb.set_terminator(Terminator::new(TerminatorKind::GoTo{target}))
     }
 
     /// Terminates with a conditional go to
-    fn term_if(&mut self, then_bb: BasicBlockId, else_bb: BasicBlockId) {
-        debug!("If _ then {:?} else {:?}", then_bb, else_bb);
-        todo!()
+    fn term_if(&mut self, cond: Operand, then_bb: BasicBlockId, else_bb: BasicBlockId) {
+        debug!("If {:?} then {:?} else {:?}", cond, then_bb, else_bb);
+        let cid = self.current_bb.unwrap();
+        let bb = self.proc.get_bb_mut(cid);
+        bb.set_terminator(Terminator::new(TerminatorKind::CondGoTo {
+            cond,
+            tru: then_bb,
+            fls: else_bb,
+        }));
     }
 
     /// Terminates by calling the given function
@@ -166,7 +178,9 @@ impl FuncTransformer {
         debug!("Transform statement");
         match stm {
             Statement::Bind(bind) => self.bind(bind),
-            Statement::Expression(expr) => todo!(),
+            Statement::Expression(expr) => {
+                self.expression(expr);
+            }
             Statement::Mutate(_) => todo!(),
             Statement::YieldReturn(_) => todo!(),
             Statement::Return(ret) => self.ret(ret),
@@ -190,7 +204,7 @@ impl FuncTransformer {
             Some(val) => {
                 let v = self.expression(val).operand();
                 self.gen.store(LValue::ReturnPointer, RValue::Use(v));
-            },
+            }
             None => (),
         };
         self.gen.term_return();
@@ -216,7 +230,7 @@ impl FuncTransformer {
             Expression::I16(_, _) => todo!(),
             Expression::I32(_, _) => todo!(),
             Expression::F64(_, _) => todo!(),
-            Expression::Boolean(_, _) => todo!(),
+            Expression::Boolean(_, b) => ExprResult::Operand(self.gen.const_bool(*b)),
             Expression::StringLiteral(_, _) => todo!(),
             Expression::ArrayExpression(_, _, _) => todo!(),
             Expression::ArrayAt {
@@ -232,7 +246,7 @@ impl FuncTransformer {
 
                 // Return a LValue::Var(VarId) as the result of this expression
                 ExprResult::Operand(Operand::LValue(LValue::Var(vid)))
-            },
+            }
             Expression::Path(_, _) => todo!(),
             Expression::MemberAccess(_, _, _) => todo!(),
             Expression::IdentifierDeclare(_, _, _) => todo!(),
@@ -243,17 +257,62 @@ impl FuncTransformer {
                 cond,
                 if_arm,
                 else_arm,
-            } => todo!(),
+            } => ExprResult::Operand(self.if_expr(cond, if_arm, else_arm)),
             Expression::While {
                 context,
                 cond,
                 body,
             } => todo!(),
-            Expression::ExpressionBlock(_, _, _) => todo!(),
+            Expression::ExpressionBlock(_, block, expr) => {
+                for stm in block {
+                    self.statement(stm);
+                }
+                let val = if let Some(expr) = expr {
+                    self.expression(expr)
+                } else {
+                    todo!()
+                };
+                val
+            },
             Expression::TypeCast(_, _, _) => todo!(),
             Expression::UnaryOp(_, _, _) => todo!(),
             Expression::Yield(_, _) => todo!(),
         }
+    }
+
+    fn if_expr(
+        &mut self,
+        cond: &Expression<SemanticContext>,
+        then_block: &Expression<SemanticContext>,
+        else_block: &Option<Box<Expression<SemanticContext>>>,
+    ) -> Operand {
+        let then_bb = self.gen.new_bb();
+        let else_bb = self.gen.new_bb();
+        let merge_bb = self.gen.new_bb();
+        let cond_val = self.expression(cond).operand();
+        self.gen.term_if(cond_val, then_bb, else_bb);
+
+        // if the if expression has a type other than unit, then create a temporary
+        // variable to store the resolved value.
+        let temp = self.gen.temp(then_block.get_type());
+
+        self.gen.set_bb(then_bb);
+        let val = self.expression(then_block).operand();
+        self.gen.store(LValue::Temp(temp), RValue::Use(val));
+        self.gen.term_goto(merge_bb);
+
+        if let Some(else_block) = else_block {
+            self.gen.set_bb(else_bb);
+            let val = self.expression(else_block).operand();
+            self.gen.store(LValue::Temp(temp), RValue::Use(val));
+            self.gen.term_goto(merge_bb);
+        } else {
+            self.gen.set_bb(else_bb);
+            self.gen.term_goto(merge_bb);
+        }
+
+        self.gen.set_bb(merge_bb);
+        Operand::LValue(LValue::Temp(temp))
     }
 
     fn binary_op(

@@ -181,7 +181,7 @@ impl Display for VarId {
 }
 
 /// Identifier for a temporary variable.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub struct TempId(usize);
 
 impl TempId {
@@ -460,13 +460,15 @@ impl Display for Operand {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Constant {
-    I64(i64)
+    I64(i64),
+    Bool(bool),
 }
 
 impl Display for Constant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Constant::I64(i) => f.write_fmt(format_args!("{}i64", i)),
+            Constant::Bool(b) => f.write_fmt(format_args!("{}", b)),
         }
     }
 }
