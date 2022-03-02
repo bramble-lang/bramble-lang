@@ -17,7 +17,8 @@ pub mod tests {
     fn basic() {
         let text = "
         fn test() -> i64 {
-            return 1 + 2 + 3;
+            let x: i64 := 5;
+            return 1 + 2 + 3 + x;
         }
         ";
 

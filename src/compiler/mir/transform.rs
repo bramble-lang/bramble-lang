@@ -9,11 +9,11 @@
 
 use log::debug;
 
-use crate::compiler::{
-    ast::{BinaryOperator, Expression, Module, RoutineDef, Statement, Type, Return},
+use crate::{compiler::{
+    ast::{BinaryOperator, Expression, Module, RoutineDef, Statement, Type, Return, Bind},
     semantics::semanticnode::SemanticContext,
     Span,
-};
+}, StringId};
 
 use super::ir::*;
 
@@ -59,12 +59,16 @@ impl MirGenerator {
         self.current_bb = Some(bb)
     }
 
+    fn find_var(&self, name: StringId) -> Option<VarId> {
+        self.proc.find_var(name)
+    }
+
     fn const_i64(&mut self, i: i64) -> Operand {
         Operand::Constant(Constant::I64(i))
     }
 
-    fn var(&mut self) -> VarId {
-        todo!()
+    fn var(&mut self, name: StringId, mutable: bool, ty: &Type) -> VarId {
+        self.proc.add_var(name, mutable, ty, ScopeId::new(0))
     }
 
     fn temp(&mut self, ty: &Type) -> TempId {
@@ -161,12 +165,24 @@ impl FuncTransformer {
     fn statement(&mut self, stm: &Statement<SemanticContext>) {
         debug!("Transform statement");
         match stm {
-            Statement::Bind(bind) => todo!(),
+            Statement::Bind(bind) => self.bind(bind),
             Statement::Expression(expr) => todo!(),
             Statement::Mutate(_) => todo!(),
             Statement::YieldReturn(_) => todo!(),
             Statement::Return(ret) => self.ret(ret),
         }
+    }
+
+    fn bind(&mut self, bind: &Bind<SemanticContext>) {
+        debug!("Binding statement");
+        let var = bind.get_id();
+        let mutable = bind.is_mutable();
+        let ty = bind.get_type();
+        let vid = self.gen.var(var, mutable, ty);
+
+        let expr = self.expression(bind.get_rhs()).operand();
+
+        self.gen.store(LValue::Var(vid), RValue::Use(expr))
     }
 
     fn ret(&mut self, ret: &Return<SemanticContext>) {
@@ -210,7 +226,13 @@ impl FuncTransformer {
             } => todo!(),
             Expression::SizeOf(_, _) => todo!(),
             Expression::CustomType(_, _) => todo!(),
-            Expression::Identifier(_, _) => todo!(),
+            Expression::Identifier(_, id) => {
+                // Look up Var ID using the Identifier String ID
+                let vid = self.gen.find_var(*id).unwrap();
+
+                // Return a LValue::Var(VarId) as the result of this expression
+                ExprResult::Operand(Operand::LValue(LValue::Var(vid)))
+            },
             Expression::Path(_, _) => todo!(),
             Expression::MemberAccess(_, _, _) => todo!(),
             Expression::IdentifierDeclare(_, _, _) => todo!(),

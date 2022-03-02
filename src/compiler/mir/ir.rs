@@ -72,6 +72,16 @@ impl Procedure {
         &self.vars[id.index()]
     }
 
+    pub fn find_var(&self, name: StringId) -> Option<VarId> {
+        for idx in 0..self.vars.len() {
+            if self.vars[idx].name == name {
+                return Some(VarId::new(idx))
+            }
+        }
+
+        None
+    }
+
     /// Get the declaration details of a temporary variable.
     pub fn get_temp(&self, id: TempId) -> &TempDecl {
         &self.temps[id.index()]
