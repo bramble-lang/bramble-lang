@@ -9,7 +9,7 @@
 
 use crate::compiler::{ast::RoutineDef, semantics::semanticnode::SemanticContext};
 
-use super::ir::BasicBlockId;
+use super::ir::{BasicBlockId, VarId, TempId};
 
 /// Provides a Builder interface for constructing the MIR CFG representation of a 
 /// routine. This will keep track of the current [`super::ir::BasicBlock`] and make sure that
@@ -30,6 +30,22 @@ impl MirGenerator {
     }
 
     fn set_bb(&mut self, bb: BasicBlockId) {
+        todo!()
+    }
+
+    fn var(&mut self) -> VarId {
+        todo!()
+    }
+
+    fn temp(&mut self) -> TempId {
+        todo!()
+    }
+
+    fn sub(&mut self) {
+        todo!()
+    }
+
+    fn mul(&mut self) {
         todo!()
     }
 
