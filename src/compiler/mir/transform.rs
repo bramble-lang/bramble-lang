@@ -9,7 +9,7 @@
 
 use log::debug;
 
-use crate::compiler::{ast::{RoutineDef, Expression, Statement, BinaryOperator}, semantics::semanticnode::SemanticContext};
+use crate::compiler::{ast::{RoutineDef, Expression, Statement, BinaryOperator, Type}, semantics::semanticnode::SemanticContext};
 
 use super::ir::*;
 
@@ -18,7 +18,10 @@ use super::ir::*;
 /// MIR operations are applied to that [`BasicBlock`]. This also provides a simplfied
 /// interface for constructing the MIR operands, operations, and statements, to 
 /// simplify the code that traverses input ASTs and transforms them into MIR.
-pub struct MirGenerator {}
+pub struct MirGenerator {
+    proc: Option<Procedure>,
+    current_bb: Option<BasicBlockId>,
+}
 
 impl MirGenerator {
     pub fn new() -> MirGenerator {
@@ -28,29 +31,44 @@ impl MirGenerator {
     fn module(&self) {}
 
     fn new_bb(&mut self) -> BasicBlockId {
-        todo!()
+        match &mut self.proc {
+            Some(p) => {
+                p.new_bb()
+            },
+            None => todo!(),
+        }
     }
 
     fn set_bb(&mut self, bb: BasicBlockId) {
-        todo!()
+        self.current_bb = Some(bb)
     }
 
     fn const_i64(&mut self, i: i64) -> Operand {
-        todo!()
+        Operand::Constant
     }
 
     fn var(&mut self) -> VarId {
         todo!()
     }
 
-    fn temp(&mut self) -> TempId {
-        todo!()
+    fn temp(&mut self, ty: &Type) -> TempId {
+        match &mut self.proc {
+            Some(p) => p.add_temp(ty),
+            None => todo!(),
+        }
     }
 
-    fn temp_store(&mut self, rv: RValue) -> Operand {
-        let tv = self.temp();
+    fn temp_store(&mut self, rv: RValue, ty: &Type) -> Operand {
+        let tv = LValue::Temp(self.temp(ty));
         debug!("Temp store: {:?} := {:?}", tv, rv);
-        todo!()
+
+        let cid = self.current_bb.unwrap();
+        self.proc.as_mut().map(|p| {
+            let bb = p.get_bb_mut(cid);
+            bb.add_stm(super::ir::Statement::new(StatementKind::Assign(tv.clone(), rv)))
+        });
+
+        Operand::LValue(tv)
     }
 
     fn sub(&mut self) {
@@ -66,7 +84,7 @@ impl MirGenerator {
     /// Add two operands together
     fn add(&mut self, left: Operand, right: Operand) -> RValue {
         debug!("Add: {:?}, {:?}", left, right);
-        todo!()
+        RValue::BinOp(BinOp::Add, left, right)
     }
 
     /// Terminates by returning to the caller function
@@ -130,8 +148,14 @@ impl FuncTransformer {
 
     /// This can return either an Operand or an RValue, if this is evaluating a constant or an identifier
     /// then this returns an operand.  If this is evaluating an operation then it returns an RValue.
-    fn expression(&mut self, expr: &Expression<SemanticContext>) -> ExprResult { // TEMP using Result as Rust does not have an Either builtin
+    fn expression(&mut self, expr: &Expression<SemanticContext>) -> ExprResult { /// TEMP: it might turn out that I don't need ExprResult
         match expr {
+            Expression::I64(_, i) => ExprResult::Operand(self.gen.const_i64(*i)),
+            Expression::BinaryOp(ctx, op, left, right) => {
+                let rv = self.binary_op(*op, left, right);
+                let temp = self.gen.temp_store(rv, ctx.ty());
+                ExprResult::Operand(temp)
+            },
             Expression::Null(_) => todo!(),
             Expression::U8(_, _) => todo!(),
             Expression::U16(_, _) => todo!(),
@@ -140,7 +164,6 @@ impl FuncTransformer {
             Expression::I8(_, _) => todo!(),
             Expression::I16(_, _) => todo!(),
             Expression::I32(_, _) => todo!(),
-            Expression::I64(_, i) => ExprResult::Operand(self.gen.const_i64(*i)),
             Expression::F64(_, _) => todo!(),
             Expression::Boolean(_, _) => todo!(),
             Expression::StringLiteral(_, _) => todo!(),
@@ -157,11 +180,6 @@ impl FuncTransformer {
             Expression::If { context, cond, if_arm, else_arm } => todo!(),
             Expression::While { context, cond, body } => todo!(),
             Expression::ExpressionBlock(_, _, _) => todo!(),
-            Expression::BinaryOp(_, op, left, right) => {
-                let rv = self.binary_op(*op, left, right);
-                let temp = self.gen.temp_store(rv);
-                ExprResult::RValue(RValue::Use(temp))
-            },
             Expression::TypeCast(_, _, _) => todo!(),
             Expression::UnaryOp(_, _, _) => todo!(),
             Expression::Yield(_, _) => todo!(),

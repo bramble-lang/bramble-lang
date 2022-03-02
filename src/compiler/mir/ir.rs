@@ -1,7 +1,10 @@
 //! The IR abstractions used to represent any given Bramble program
 //! as a CFG.
 
-use crate::{StringId, compiler::{ast::Type, Span}};
+use crate::{
+    compiler::{ast::Type, Span},
+    StringId,
+};
 
 const ROOT_SCOPE: usize = 0;
 
@@ -247,8 +250,11 @@ pub struct Statement {
 }
 
 impl Statement {
-    pub fn new() -> Statement {
-        todo!()
+    pub fn new(kind: StatementKind) -> Statement {
+        Statement {
+            kind,
+            span: Span::zero(),
+        }
     }
 }
 
@@ -295,7 +301,7 @@ pub enum RValue {
     Use(Operand),
 
     /// Represents binary insructions that are available on the CPU
-    BinOp(Operand, Operand),
+    BinOp(BinOp, Operand, Operand),
 
     /// Unary instructions that are available on the CPU
     UnOp(Operand),
