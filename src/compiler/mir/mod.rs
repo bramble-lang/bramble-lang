@@ -12,5 +12,14 @@
  that is generated from the MIR compiler.
 */
 
+use self::ir::Procedure;
+
+use super::Span;
+
 mod ir;
 pub mod transform;
+
+pub struct Module {
+    funcs: Vec<Procedure>,
+    span: Span,
+}
