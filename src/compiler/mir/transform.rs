@@ -7,6 +7,8 @@
 // CFG MIR used for dataflow analysis and LLVM IR generation by the Bramble
 // compiler.
 
+use log::debug;
+
 use crate::compiler::{ast::{RoutineDef, Expression, Statement, BinaryOperator}, semantics::semanticnode::SemanticContext};
 
 use super::ir::*;
@@ -45,36 +47,49 @@ impl MirGenerator {
         todo!()
     }
 
+    fn temp_store(&mut self, rv: RValue) -> Operand {
+        let tv = self.temp();
+        debug!("Temp store: {:?} := {:?}", tv, rv);
+        todo!()
+    }
+
     fn sub(&mut self) {
+        debug!("Sub");
         todo!()
     }
 
     fn mul(&mut self) {
+        debug!("Mul");
         todo!()
     }
 
     /// Add two operands together
     fn add(&mut self, left: Operand, right: Operand) -> RValue {
+        debug!("Add: {:?}, {:?}", left, right);
         todo!()
     }
 
     /// Terminates by returning to the caller function
     fn term_return(&mut self) {
+        debug!("Terminator: Return");
         todo!()
     }
 
     /// Terminates by going to the destination basic block
     fn term_goto(&mut self, destination: BasicBlockId) {
+        debug!("Goto: {:?}", destination);
         todo!()
     }
 
     /// Terminates with a conditional go to
     fn term_if(&mut self, then_bb: BasicBlockId, else_bb: BasicBlockId) {
+        debug!("If _ then {:?} else {:?}", then_bb, else_bb);
         todo!()
     }
 
     /// Terminates by calling the given function
     fn term_call(&mut self) {
+        debug!("Call");
         todo!()
     }
 }
@@ -115,7 +130,7 @@ impl FuncTransformer {
 
     /// This can return either an Operand or an RValue, if this is evaluating a constant or an identifier
     /// then this returns an operand.  If this is evaluating an operation then it returns an RValue.
-    fn expression(&mut self, expr: Expression<SemanticContext>) -> Result<Operand, RValue> { // TEMP using Result as Rust does not have an Either builtin
+    fn expression(&mut self, expr: &Expression<SemanticContext>) -> ExprResult { // TEMP using Result as Rust does not have an Either builtin
         match expr {
             Expression::Null(_) => todo!(),
             Expression::U8(_, _) => todo!(),
@@ -125,7 +140,7 @@ impl FuncTransformer {
             Expression::I8(_, _) => todo!(),
             Expression::I16(_, _) => todo!(),
             Expression::I32(_, _) => todo!(),
-            Expression::I64(_, i) => Ok(self.gen.const_i64(i)),
+            Expression::I64(_, i) => ExprResult::Operand(self.gen.const_i64(*i)),
             Expression::F64(_, _) => todo!(),
             Expression::Boolean(_, _) => todo!(),
             Expression::StringLiteral(_, _) => todo!(),
@@ -142,18 +157,22 @@ impl FuncTransformer {
             Expression::If { context, cond, if_arm, else_arm } => todo!(),
             Expression::While { context, cond, body } => todo!(),
             Expression::ExpressionBlock(_, _, _) => todo!(),
-            Expression::BinaryOp(_, _, _, _) => todo!(),
+            Expression::BinaryOp(_, op, left, right) => {
+                let rv = self.binary_op(*op, left, right);
+                let temp = self.gen.temp_store(rv);
+                ExprResult::RValue(RValue::Use(temp))
+            },
             Expression::TypeCast(_, _, _) => todo!(),
             Expression::UnaryOp(_, _, _) => todo!(),
             Expression::Yield(_, _) => todo!(),
         }
     }
 
-    fn binary_op(&mut self, op: BinaryOperator, left: Expression<SemanticContext>, right: Expression<SemanticContext>) -> RValue {
+    fn binary_op(&mut self, op: BinaryOperator, left: &Expression<SemanticContext>, right: &Expression<SemanticContext>) -> RValue {
         match op {
             BinaryOperator::Add => {
-                let left = self.expression(left);
-                let right = self.expression(right);
+                let left = self.expression(left).operand();
+                let right = self.expression(right).operand();
                 self.gen.add(left, right)
             },
             BinaryOperator::Sub => todo!(),
@@ -168,6 +187,27 @@ impl FuncTransformer {
             BinaryOperator::Gr => todo!(),
             BinaryOperator::GrEq => todo!(),
             BinaryOperator::RawPointerOffset => todo!(),
+        }
+    }
+}
+
+enum ExprResult {
+    Operand(Operand),
+    RValue(RValue)
+}
+
+impl ExprResult {
+    fn operand(self) -> Operand {
+        match self {
+            Self::Operand(op) => op,
+            Self::RValue(_) => panic!("Expected Operand but got RValue")
+        }
+    }
+
+    fn rvalue(self) -> RValue {
+        match self {
+            Self::RValue(rv) => rv,
+            Self::Operand(_) => panic!("Expected RValue but got Operand"),
         }
     }
 }

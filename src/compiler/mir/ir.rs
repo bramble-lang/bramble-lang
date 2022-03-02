@@ -246,6 +246,12 @@ pub struct Statement {
     span: Span,
 }
 
+impl Statement {
+    pub fn new() -> Statement {
+        todo!()
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum StatementKind {
     /// This statement assigns the result of an [`RValue`] operation
@@ -261,7 +267,7 @@ pub enum LValue {
     Var(VarId),
 
     /// A temporary variable created by the compiler during MIR construction
-    Temp(VarId),
+    Temp(TempId),
 
     /// Represents accessing data via some form of transformation (e.g., array index,
     /// dereferencing a raw pointer, or the field of a structure)
