@@ -1,6 +1,8 @@
 //! The IR abstractions used to represent any given Bramble program
 //! as a CFG.
 
+use std::fmt::{Display, Write};
+
 use crate::{
     compiler::{ast::Type, Span},
     StringId,
@@ -93,6 +95,34 @@ impl Procedure {
     }
 }
 
+impl Display for Procedure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("fn () -> {:?}:\n", self.ret_ty))?;
+
+        // Print out the variables
+        for idx in 0..self.vars.len() {
+            if self.vars[idx].mutable {
+                f.write_fmt(format_args!("let mut %{}: {:?} // {}\n", idx, self.vars[idx].ty, self.vars[idx].name))?
+            } else {
+                f.write_fmt(format_args!("let %{}: {:?} // {}\n", idx, self.vars[idx].ty, self.vars[idx].name))?
+            }
+        }
+        
+        // Print the temporary variables
+        for idx in 0..self.temps.len() {
+            f.write_fmt(format_args!("let mut %_{}: {:?}\n", idx, self.temps[idx].ty))?
+        }
+
+        // Print all the basic blocks
+        for bb in 0..self.blocks.len() {
+            f.write_fmt(format_args!("BB{}: \n", bb))?;
+            f.write_fmt(format_args!("{}", self.blocks[bb]))?
+        }
+
+        Ok(())
+    }
+}
+
 /// Identifier for a specific basic block in a procedure
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub struct BasicBlockId(usize);
@@ -104,6 +134,12 @@ impl BasicBlockId {
 
     pub fn index(&self) -> usize {
         self.0
+    }
+}
+
+impl Display for BasicBlockId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("BB{}", self.0))
     }
 }
 
@@ -121,6 +157,12 @@ impl VarId {
     }
 }
 
+impl Display for VarId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{}", self.0))
+    }
+}
+
 /// Identifier for a temporary variable.
 #[derive(Debug, PartialEq, Clone)]
 pub struct TempId(usize);
@@ -132,6 +174,12 @@ impl TempId {
 
     pub fn index(&self) -> usize {
         self.0
+    }
+}
+
+impl Display for TempId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{}", self.0))
     }
 }
 
@@ -237,6 +285,18 @@ impl BasicBlock {
     }
 }
 
+impl Display for BasicBlock {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for stm in &self.statements {
+            f.write_fmt(format_args!("{}\n", stm))?
+        }
+        match &self.terminator {
+            Some(term) => f.write_fmt(format_args!("{}\n", term)),
+            None => f.write_fmt(format_args!("MISSING TERMINATOR\n")),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Copy, Clone)]
 struct StatementId(usize);
 
@@ -258,11 +318,25 @@ impl Statement {
     }
 }
 
+impl Display for Statement {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{}", self.kind))
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum StatementKind {
     /// This statement assigns the result of an [`RValue`] operation
     /// to the memory location represented by the [`LValue`].
     Assign(LValue, RValue),
+}
+
+impl Display for StatementKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            StatementKind::Assign(l, r) => f.write_fmt(format_args!("{} := {}", l, r)),
+        }
+    }
 }
 
 /// LValue
@@ -283,6 +357,18 @@ pub enum LValue {
     ReturnPointer,
 }
 
+impl Display for LValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let text = match self {
+            LValue::Var(v) => format!("%{}", v),
+            LValue::Temp(t) => format!("%_{}", t),
+            LValue::Access(lv, acc) => format!("{}{}", lv, acc),
+            LValue::ReturnPointer => format!("ReturnPtr"),
+        };
+        f.write_str(&text)
+    }
+}
+
 /// Describes the method used to access the data of an indirect data type
 /// such as a reference, array, or structure.
 #[derive(Debug, PartialEq, Clone)]
@@ -290,6 +376,17 @@ pub enum Accessor {
     Index(u64),
     Field(StringId, Type),
     Deref,
+}
+
+impl Display for Accessor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let text = match self {
+            Accessor::Index(i) => format!("[{}]", i),
+            Accessor::Field(f, _) => format!(".{}", f),
+            Accessor::Deref => format!("Deref()"),
+        };
+        f.write_str(&text)
+    }
 }
 
 /// RValue
@@ -313,12 +410,35 @@ pub enum RValue {
     AddressOf(Operand),
 }
 
+impl Display for RValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let text = match self {
+            RValue::Use(o) => format!("Use({})", o),
+            RValue::BinOp(op, l, r) => format!("{}({}, {})", op, l, r),
+            RValue::UnOp(o) => format!("({})", o),
+            RValue::Cast(v, t) => format!("{} as {:?}", v, t),
+            RValue::AddressOf(o) => format!("AddressOf({})", o),
+        };
+        f.write_str(&text)
+    }
+}
+
 /// Operand
 /// Value that can be used as the parameters for the RValue operations
 #[derive(Debug, PartialEq, Clone)]
 pub enum Operand {
     Constant,
     LValue(LValue),
+}
+
+impl Display for Operand {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let text = match self {
+            Operand::Constant => format!("constant"),
+            Operand::LValue(lv) => format!("{}", lv),
+        };
+        f.write_str(&text)
+    }
 }
 
 /// Terminator
@@ -337,6 +457,12 @@ impl Terminator {
             kind,
             span: Span::zero(),
         }
+    }
+}
+
+impl Display for Terminator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("term {}\n", self.kind))
     }
 }
 
@@ -370,6 +496,24 @@ pub enum TerminatorKind {
     },
 }
 
+impl Display for TerminatorKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let text = match self {
+            TerminatorKind::CallFn {
+                func,
+                args,
+                reentry,
+            } => format!("call {}", func),
+            TerminatorKind::Return => format!("return"),
+            TerminatorKind::GoTo { target } => format!("goto {}", target),
+            TerminatorKind::CondGoTo { cond, tru, fls } => {
+                format!("if ({}) then {} else {}", cond, tru, fls)
+            }
+        };
+        f.write_str(&text)
+    }
+}
+
 /// Binary operators
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum BinOp {
@@ -399,6 +543,26 @@ pub enum BinOp {
     Or,
 }
 
+impl Display for BinOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let txt = match self {
+            BinOp::Add => "+",
+            BinOp::Sub => "-",
+            BinOp::Mul => "*",
+            BinOp::Div => "/",
+            BinOp::Eq => "==",
+            BinOp::Ne => "!=",
+            BinOp::Le => "<=",
+            BinOp::Lt => "<",
+            BinOp::Ge => ">=",
+            BinOp::Gt => ">",
+            BinOp::And => "&",
+            BinOp::Or => "|",
+        };
+        f.write_str(txt)
+    }
+}
+
 /// Unary operators
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum UnOp {
@@ -406,4 +570,14 @@ pub enum UnOp {
     Negate,
     /// '!' bitwise not a primitive value
     Not,
+}
+
+impl Display for UnOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let txt = match self {
+            UnOp::Negate => "-",
+            UnOp::Not => "!",
+        };
+        f.write_str(txt)
+    }
 }
