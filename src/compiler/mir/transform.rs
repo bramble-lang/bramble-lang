@@ -81,8 +81,8 @@ impl MirBuilder {
         Operand::Constant(Constant::Bool(b))
     }
 
-    fn var(&mut self, name: StringId, mutable: bool, ty: &Type) -> VarId {
-        self.proc.add_var(name, mutable, ty, ScopeId::new(0))
+    fn var(&mut self, name: StringId, mutable: bool, ty: &Type, span: Span) -> VarId {
+        self.proc.add_var(name, mutable, ty, ScopeId::new(0), span)
     }
 
     fn temp(&mut self, ty: &Type) -> TempId {
@@ -213,7 +213,7 @@ impl FuncTransformer {
         let var = bind.get_id();
         let mutable = bind.is_mutable();
         let ty = bind.get_type();
-        let vid = self.mir.var(var, mutable, ty);
+        let vid = self.mir.var(var, mutable, ty, bind.context().span());
 
         let expr = self.expression(bind.get_rhs());
 

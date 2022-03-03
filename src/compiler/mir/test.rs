@@ -41,7 +41,7 @@ pub mod tests {
         let text = "
         fn test() -> i64 {
             let x: i64 := 5;
-            let b: bool := true;
+            let mut b: bool := true;
             let y: i64 := if (b) {13} else {29};
             return 1 + 2 + 3 + x + y;
         }
