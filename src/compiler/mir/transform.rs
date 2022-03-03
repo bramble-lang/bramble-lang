@@ -129,7 +129,7 @@ impl MirBuilder {
         debug!("Goto: {:?}", target);
         let cid = self.current_bb.unwrap();
         let bb = self.proc.get_bb_mut(cid);
-        bb.set_terminator(Terminator::new(TerminatorKind::GoTo{target}))
+        bb.set_terminator(Terminator::new(TerminatorKind::GoTo { target }))
     }
 
     /// Terminates with a conditional go to
@@ -271,8 +271,9 @@ impl FuncTransformer {
                 if let Some(expr) = expr {
                     self.expression(expr)
                 } else {
-                    Operand::Constant(Constant::Unit)                }
-            },
+                    Operand::Constant(Constant::Unit)
+                }
+            }
             Expression::TypeCast(_, _, _) => todo!(),
             Expression::UnaryOp(_, _, _) => todo!(),
             Expression::Yield(_, _) => todo!(),
@@ -286,32 +287,46 @@ impl FuncTransformer {
         else_block: &Option<Box<Expression<SemanticContext>>>,
     ) -> Operand {
         let then_bb = self.mir.new_bb();
-        let else_bb = self.mir.new_bb();
+        let else_bb = else_block.as_ref().map(|block| (block, self.mir.new_bb()));
         let merge_bb = self.mir.new_bb();
-        let cond_val = self.expression(cond);
-        self.mir.term_cond_goto(cond_val, then_bb, else_bb);
 
-        // if the if expression has a type other than unit, then create a temporary
-        // variable to store the resolved value.
-        let temp = self.mir.temp(then_block.get_type());
+        // Setup the conditional
+        let cond_val = self.expression(cond);
+
+        // If there is an else block then jump to the else block on false
+        // otherwise jump to the merge block
+        if let Some(else_bb) = &else_bb {
+            self.mir.term_cond_goto(cond_val, then_bb, else_bb.1);
+        } else {
+            self.mir.term_cond_goto(cond_val, then_bb, merge_bb);
+        }
+
+        // Only create a temp location if this if expression can resolve to a
+        // value
+        let result = if else_block.is_some() && then_block.get_type() != Type::Unit {
+            Some(self.mir.temp(then_block.get_type()))
+        } else {
+            None
+        };
 
         self.mir.set_bb(then_bb);
         let val = self.expression(then_block);
-        self.mir.store(LValue::Temp(temp), RValue::Use(val));
+        result.map(|t| self.mir.store(LValue::Temp(t), RValue::Use(val)));
         self.mir.term_goto(merge_bb);
 
-        if let Some(else_block) = else_block {
+        // If there is an else block, then construct it
+        if let Some((else_block, else_bb)) = else_bb {
             self.mir.set_bb(else_bb);
             let val = self.expression(else_block);
-            self.mir.store(LValue::Temp(temp), RValue::Use(val));
-            self.mir.term_goto(merge_bb);
-        } else {
-            self.mir.set_bb(else_bb);
+            result.map(|t| self.mir.store(LValue::Temp(t), RValue::Use(val)));
             self.mir.term_goto(merge_bb);
         }
 
         self.mir.set_bb(merge_bb);
-        Operand::LValue(LValue::Temp(temp))
+        match result {
+            Some(r) => Operand::LValue(LValue::Temp(r)),
+            None => Operand::Constant(Constant::Unit),
+        }
     }
 
     fn binary_op(
