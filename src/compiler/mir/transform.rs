@@ -15,6 +15,7 @@ use crate::{
             BinaryOperator, Bind, Context, Expression, Module, Node, Return, RoutineDef, Statement,
             Type,
         },
+        diagnostics::{EventStack, Logger},
         semantics::semanticnode::SemanticContext,
         source::Offset,
         Span,
@@ -24,14 +25,17 @@ use crate::{
 
 use super::ir::*;
 
-pub fn module_transform(module: &Module<SemanticContext>) -> Vec<Procedure> {
+pub fn module_transform<'ctx>(
+    module: &Module<SemanticContext>,
+    logger: &'ctx Logger,
+) -> Vec<Procedure> {
     let funcs = module.get_functions();
     let mut mirs = vec![];
 
     for f in funcs {
         match f {
             crate::compiler::ast::Item::Routine(r) => {
-                let ft = FuncTransformer::new();
+                let ft = FuncTransformer::new(logger);
                 let p = ft.transform(r);
                 mirs.push(p);
             }
@@ -48,16 +52,20 @@ pub fn module_transform(module: &Module<SemanticContext>) -> Vec<Procedure> {
 /// MIR operations are applied to that [`BasicBlock`]. This also provides a simplfied
 /// interface for constructing the MIR operands, operations, and statements, to
 /// simplify the code that traverses input ASTs and transforms them into MIR.
-struct MirBuilder {
+struct MirBuilder<'ctx> {
     proc: Procedure,
     current_bb: Option<BasicBlockId>,
+    logger: &'ctx Logger<'ctx>,
+    event_stack: EventStack,
 }
 
-impl MirBuilder {
-    pub fn new() -> MirBuilder {
+impl<'ctx> MirBuilder<'ctx> {
+    pub fn new(logger: &'ctx Logger) -> MirBuilder<'ctx> {
         MirBuilder {
             proc: Procedure::new(&Type::Unit, Span::zero()),
             current_bb: None,
+            logger,
+            event_stack: EventStack::new(),
         }
     }
 
@@ -168,14 +176,14 @@ impl MirBuilder {
 }
 
 /// Transform a single function to the MIR form
-struct FuncTransformer {
-    mir: MirBuilder,
+struct FuncTransformer<'ctx> {
+    mir: MirBuilder<'ctx>,
 }
 
-impl FuncTransformer {
-    pub fn new() -> FuncTransformer {
+impl<'ctx> FuncTransformer<'ctx> {
+    pub fn new(logger: &'ctx Logger) -> FuncTransformer<'ctx> {
         FuncTransformer {
-            mir: MirBuilder::new(),
+            mir: MirBuilder::new(logger),
         }
     }
 
@@ -340,7 +348,8 @@ impl FuncTransformer {
                 then_block.context().span(),
             )
         });
-        self.mir.term_goto(merge_bb, span_end(then_block.context().span()));
+        self.mir
+            .term_goto(merge_bb, span_end(then_block.context().span()));
 
         // If there is an else block, then construct it
         if let Some((else_block, else_bb)) = else_bb {
@@ -353,7 +362,8 @@ impl FuncTransformer {
                     else_block.context().span(),
                 )
             });
-            self.mir.term_goto(merge_bb, span_end(else_block.context().span()));
+            self.mir
+                .term_goto(merge_bb, span_end(else_block.context().span()));
         }
 
         self.mir.set_bb(merge_bb);

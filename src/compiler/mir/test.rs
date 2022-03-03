@@ -13,7 +13,7 @@ pub mod tests {
 
     type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
 
-    fn compile(input: &str) -> Module<SemanticContext> {
+    fn compile(input: &str, logger: &Logger) -> Module<SemanticContext> {
         let mut sm = SourceMap::new();
         sm.add_string(input, "/test".into()).unwrap();
         let src = sm.get(0).unwrap().read().unwrap();
@@ -23,7 +23,6 @@ pub mod tests {
         let main_mod = table.insert(MAIN_MODULE.into());
         let main_fn = table.insert("my_main".into());
 
-        let logger = Logger::new();
         let tokens: Vec<Token> = Lexer::new(src, &mut table, &logger)
             .unwrap()
             .tokenize()
@@ -46,8 +45,9 @@ pub mod tests {
             return 1 + 2 + 3 + x + y;
         }
         ";
-        let module = compile(text);
-        let mirs = transform::module_transform(&module);
+        let logger = Logger::new();
+        let module = compile(text, &logger);
+        let mirs = transform::module_transform(&module, &logger);
         for mir in mirs {
             println!("{}", mir);
         }
@@ -63,8 +63,9 @@ pub mod tests {
             return 1 + 2 + 3 + x;
         }
         ";
-        let module = compile(text);
-        let mirs = transform::module_transform(&module);
+        let logger = Logger::new();
+        let module = compile(text, &logger);
+        let mirs = transform::module_transform(&module, &logger);
         for mir in mirs {
             println!("{}", mir);
         }
