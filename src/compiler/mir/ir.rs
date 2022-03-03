@@ -1,7 +1,7 @@
 //! The IR abstractions used to represent any given Bramble program
 //! as a CFG.
 
-use std::fmt::{Display, Write};
+use std::fmt::Display;
 
 use crate::{
     compiler::{ast::Type, Span},
@@ -13,7 +13,7 @@ const ROOT_SCOPE: usize = 0;
 /// Procedure
 /// This type represents a single function from the input source code.
 #[derive(Debug, PartialEq, Clone)]
-struct Procedure {
+pub struct Procedure {
     /// The set of basic blocks that constitute this procedure
     blocks: Vec<BasicBlock>,
     /// The return type of this function
@@ -72,6 +72,18 @@ impl Procedure {
         &self.vars[id.index()]
     }
 
+    /// Will return the [`VarId`] for the given variable name if it
+    /// exists in the function's stack.
+    pub fn find_var(&self, name: StringId) -> Option<VarId> {
+        for idx in 0..self.vars.len() {
+            if self.vars[idx].name == name {
+                return Some(VarId::new(idx))
+            }
+        }
+
+        None
+    }
+
     /// Get the declaration details of a temporary variable.
     pub fn get_temp(&self, id: TempId) -> &TempDecl {
         &self.temps[id.index()]
@@ -99,22 +111,29 @@ impl Display for Procedure {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("fn () -> {:?}:\n", self.ret_ty))?;
 
+        // Print out the stack: vars and temps
+        f.write_str("Stack:\n")?;
+
         // Print out the variables
         for idx in 0..self.vars.len() {
+            let vid = VarId::new(idx);
             if self.vars[idx].mutable {
-                f.write_fmt(format_args!("let mut %{}: {:?} // {}\n", idx, self.vars[idx].ty, self.vars[idx].name))?
+                f.write_fmt(format_args!("let mut {}: {:?} // {}\n", vid, self.vars[idx].ty, self.vars[idx].name))?
             } else {
-                f.write_fmt(format_args!("let %{}: {:?} // {}\n", idx, self.vars[idx].ty, self.vars[idx].name))?
+                f.write_fmt(format_args!("let {}: {:?} // {}\n", vid, self.vars[idx].ty, self.vars[idx].name))?
             }
         }
+        f.write_str("\n")?;
         
         // Print the temporary variables
         for idx in 0..self.temps.len() {
-            f.write_fmt(format_args!("let mut %_{}: {:?}\n", idx, self.temps[idx].ty))?
+            let tid = TempId::new(idx);
+            f.write_fmt(format_args!("let mut {}: {:?}\n", tid, self.temps[idx].ty))?
         }
 
         // Print all the basic blocks
         for bb in 0..self.blocks.len() {
+            f.write_str("\n")?;
             f.write_fmt(format_args!("BB{}: \n", bb))?;
             f.write_fmt(format_args!("{}", self.blocks[bb]))?
         }
@@ -125,7 +144,7 @@ impl Display for Procedure {
 
 /// Identifier for a specific basic block in a procedure
 #[derive(Debug, PartialEq, Copy, Clone)]
-struct BasicBlockId(usize);
+pub struct BasicBlockId(usize);
 
 impl BasicBlockId {
     pub fn new(id: usize) -> BasicBlockId {
@@ -144,8 +163,8 @@ impl Display for BasicBlockId {
 }
 
 /// Identifier for a user declared variable
-#[derive(Debug, PartialEq, Clone)]
-struct VarId(usize);
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub struct VarId(usize);
 
 impl VarId {
     pub fn new(id: usize) -> VarId {
@@ -159,13 +178,13 @@ impl VarId {
 
 impl Display for VarId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{}", self.0))
+        f.write_fmt(format_args!("%{}", self.0))
     }
 }
 
 /// Identifier for a temporary variable.
-#[derive(Debug, PartialEq, Clone)]
-struct TempId(usize);
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub struct TempId(usize);
 
 impl TempId {
     pub fn new(id: usize) -> TempId {
@@ -177,9 +196,15 @@ impl TempId {
     }
 }
 
+impl Display for TempId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("%%{}", self.0))
+    }
+}
+
 /// Identifier for each scope that exists within the function
 #[derive(Debug, PartialEq, Clone)]
-struct ScopeId(usize);
+pub struct ScopeId(usize);
 
 impl ScopeId {
     pub fn new(id: usize) -> ScopeId {
@@ -193,7 +218,7 @@ impl ScopeId {
 
 /// A variable declared by the user.
 #[derive(Debug, PartialEq, Clone)]
-struct VarDecl {
+pub struct VarDecl {
     /// Name of this variable
     name: StringId,
     /// Whether this variable can be mutated
@@ -218,7 +243,7 @@ impl VarDecl {
 /// A temporary variable created by the MIR compiler to store
 /// results.
 #[derive(Debug, PartialEq, Clone)]
-struct TempDecl {
+pub struct TempDecl {
     /// The type of this variable
     ty: Type,
 }
@@ -232,7 +257,7 @@ impl TempDecl {
 /// Basic Block
 /// A single basic block from a CFG
 #[derive(Debug, PartialEq, Clone)]
-struct BasicBlock {
+pub struct BasicBlock {
     statements: Vec<Statement>,
 
     /// This dictates how this basic block will terminate. This value is initially set to
@@ -297,10 +322,19 @@ struct StatementId(usize);
 /// Statement
 /// A single statement, from which basic blocks are constructed
 #[derive(Debug, PartialEq, Clone)]
-struct Statement {
+pub struct Statement {
     kind: StatementKind,
 
     span: Span,
+}
+
+impl Statement {
+    pub fn new(kind: StatementKind) -> Statement {
+        Statement {
+            kind,
+            span: Span::zero(),
+        }
+    }
 }
 
 impl Display for Statement {
@@ -310,7 +344,7 @@ impl Display for Statement {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-enum StatementKind {
+pub enum StatementKind {
     /// This statement assigns the result of an [`RValue`] operation
     /// to the memory location represented by the [`LValue`].
     Assign(LValue, RValue),
@@ -327,12 +361,12 @@ impl Display for StatementKind {
 /// LValue
 /// A physical location in memory where a value can be stored
 #[derive(Debug, PartialEq, Clone)]
-enum LValue {
+pub enum LValue {
     /// A user defined variable.
     Var(VarId),
 
     /// A temporary variable created by the compiler during MIR construction
-    Temp(VarId),
+    Temp(TempId),
 
     /// Represents accessing data via some form of transformation (e.g., array index,
     /// dereferencing a raw pointer, or the field of a structure)
@@ -345,8 +379,8 @@ enum LValue {
 impl Display for LValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let text = match self {
-            LValue::Var(v) => format!("%{}", v),
-            LValue::Temp(t) => format!("%_{}", t),
+            LValue::Var(v) => format!("{}", v),
+            LValue::Temp(t) => format!("{}", t),
             LValue::Access(lv, acc) => format!("{}{}", lv, acc),
             LValue::ReturnPointer => format!("ReturnPtr"),
         };
@@ -357,7 +391,7 @@ impl Display for LValue {
 /// Describes the method used to access the data of an indirect data type
 /// such as a reference, array, or structure.
 #[derive(Debug, PartialEq, Clone)]
-enum Accessor {
+pub enum Accessor {
     Index(u64),
     Field(StringId, Type),
     Deref,
@@ -378,12 +412,12 @@ impl Display for Accessor {
 /// An operation that results in a value which can be
 /// stored in some physical location in memory
 #[derive(Debug, PartialEq, Clone)]
-enum RValue {
+pub enum RValue {
     /// Provides a way of reading a specific variable or using a constant in an assignment.
     Use(Operand),
 
     /// Represents binary insructions that are available on the CPU
-    BinOp(Operand, Operand),
+    BinOp(BinOp, Operand, Operand),
 
     /// Unary instructions that are available on the CPU
     UnOp(Operand),
@@ -399,7 +433,7 @@ impl Display for RValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let text = match self {
             RValue::Use(o) => format!("Use({})", o),
-            RValue::BinOp(l, r) => format!("({}, {})", l, r),
+            RValue::BinOp(op, l, r) => format!("{}({}, {})", op, l, r),
             RValue::UnOp(o) => format!("({})", o),
             RValue::Cast(v, t) => format!("{} as {:?}", v, t),
             RValue::AddressOf(o) => format!("AddressOf({})", o),
@@ -411,18 +445,35 @@ impl Display for RValue {
 /// Operand
 /// Value that can be used as the parameters for the RValue operations
 #[derive(Debug, PartialEq, Clone)]
-enum Operand {
-    Constant,
+pub enum Operand {
+    Constant(Constant),
     LValue(LValue),
 }
 
 impl Display for Operand {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let text = match self {
-            Operand::Constant => format!("constant"),
+            Operand::Constant(c) => format!("{}", c),
             Operand::LValue(lv) => format!("{}", lv),
         };
         f.write_str(&text)
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum Constant {
+    Unit,
+    I64(i64),
+    Bool(bool),
+}
+
+impl Display for Constant {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Constant::Unit => f.write_str("()"),
+            Constant::I64(i) => f.write_fmt(format_args!("{}i64", i)),
+            Constant::Bool(b) => f.write_fmt(format_args!("{}", b)),
+        }
     }
 }
 
@@ -430,20 +481,29 @@ impl Display for Operand {
 /// Marks the final statement in a basic block and indicates where the
 /// program will go to next
 #[derive(Debug, PartialEq, Clone)]
-struct Terminator {
+pub struct Terminator {
     kind: TerminatorKind,
 
     span: Span,
 }
 
+impl Terminator {
+    pub fn new(kind: TerminatorKind) -> Terminator {
+        Terminator {
+            kind,
+            span: Span::zero(),
+        }
+    }
+}
+
 impl Display for Terminator {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("term {}\n", self.kind))
+        f.write_fmt(format_args!("{}", self.kind))
     }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-enum TerminatorKind {
+pub enum TerminatorKind {
     /// Enter a new functions scope.
     CallFn {
         /// The function to enter
@@ -492,7 +552,7 @@ impl Display for TerminatorKind {
 
 /// Binary operators
 #[derive(Debug, PartialEq, Copy, Clone)]
-enum BinOp {
+pub enum BinOp {
     /// '+' add two primitive numbers together
     Add,
     /// '-' subtract one primitive from another
@@ -522,18 +582,18 @@ enum BinOp {
 impl Display for BinOp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let txt = match self {
-            BinOp::Add => "+",
-            BinOp::Sub => "-",
-            BinOp::Mul => "*",
-            BinOp::Div => "/",
-            BinOp::Eq => "==",
-            BinOp::Ne => "!=",
-            BinOp::Le => "<=",
-            BinOp::Lt => "<",
-            BinOp::Ge => ">=",
-            BinOp::Gt => ">",
-            BinOp::And => "&",
-            BinOp::Or => "|",
+            BinOp::Add => "Add",
+            BinOp::Sub => "Sub",
+            BinOp::Mul => "Mul",
+            BinOp::Div => "Div",
+            BinOp::Eq => "Eq",
+            BinOp::Ne => "Neq",
+            BinOp::Le => "Le",
+            BinOp::Lt => "Lt",
+            BinOp::Ge => "Ge",
+            BinOp::Gt => "Gt",
+            BinOp::And => "BitwiseAnd",
+            BinOp::Or => "BitwiseOr",
         };
         f.write_str(txt)
     }
@@ -541,7 +601,7 @@ impl Display for BinOp {
 
 /// Unary operators
 #[derive(Debug, PartialEq, Copy, Clone)]
-enum UnOp {
+pub enum UnOp {
     /// '-' negate a primitive value
     Negate,
     /// '!' bitwise not a primitive value
