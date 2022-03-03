@@ -2,30 +2,20 @@
 pub mod tests {
     use crate::{
         compiler::{
-            ast::MAIN_MODULE,
+            ast::{MAIN_MODULE, Module},
             diagnostics::Logger,
             lexer::{tokens::Token, LexerError},
             parser::Parser,
-            CompilerError, Lexer, SourceMap, mir::transform,
+            CompilerError, Lexer, SourceMap, mir::transform, semantics::semanticnode::SemanticContext,
         },
         resolve_types, StringTable,
     };
 
     type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
 
-    #[test]
-    fn basic() {
-        let text = "
-        fn test() -> i64 {
-            let x: i64 := 5;
-            let b: bool := true;
-            if (b) {13} else {29};
-            return 1 + 2 + 3 + x;
-        }
-        ";
-
+    fn compile(input: &str) -> Module<SemanticContext> {
         let mut sm = SourceMap::new();
-        sm.add_string(&text, "/test".into()).unwrap();
+        sm.add_string(input, "/test".into()).unwrap();
         let src = sm.get(0).unwrap().read().unwrap();
 
         let mut table = StringTable::new();
@@ -43,7 +33,23 @@ pub mod tests {
 
         let parser = Parser::new(&logger);
         let ast = parser.parse(main, &tokens).unwrap().unwrap();
-        let module = resolve_types(&ast, main_mod, main_fn, &logger).unwrap();
-        transform::module_transform(&module);
+        resolve_types(&ast, main_mod, main_fn, &logger).unwrap()
+    }
+
+    #[test]
+    fn basic() {
+        let text = "
+        fn test() -> i64 {
+            let x: i64 := 5;
+            let b: bool := true;
+            if (b) {13} else {29};
+            return 1 + 2 + 3 + x;
+        }
+        ";
+        let module = compile(text);
+        let mirs = transform::module_transform(&module);
+        for mir in mirs {
+            println!("{}", mir);
+        }
     }
 }

@@ -20,20 +20,23 @@ use crate::{
 
 use super::ir::*;
 
-pub fn module_transform(module: &Module<SemanticContext>) {
+pub fn module_transform(module: &Module<SemanticContext>) -> Vec<Procedure> {
     let funcs = module.get_functions();
+    let mut mirs = vec![];
 
     for f in funcs {
         match f {
             crate::compiler::ast::Item::Routine(r) => {
                 let ft = FuncTransformer::new();
                 let p = ft.transform(r);
-                println!("Procedure: {}", p);
+                mirs.push(p);
             }
             crate::compiler::ast::Item::Struct(_) => todo!(),
             crate::compiler::ast::Item::Extern(_) => todo!(),
         }
     }
+
+    mirs
 }
 
 /// Provides a Builder interface for constructing the MIR CFG representation of a
