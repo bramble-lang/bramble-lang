@@ -404,7 +404,6 @@ fn span_end(span: Span) -> Span {
     if high == 0 {
         Span::zero()
     } else {
-        let low = high - 1;
-        Span::new(Offset::new(low), Offset::new(high))
+        Span::new(Offset::new(high), Offset::new(high))
     }
 }
