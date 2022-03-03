@@ -130,7 +130,7 @@ impl MirBuilder {
     }
 
     /// Terminates with a conditional go to
-    fn term_if(&mut self, cond: Operand, then_bb: BasicBlockId, else_bb: BasicBlockId) {
+    fn term_cond_goto(&mut self, cond: Operand, then_bb: BasicBlockId, else_bb: BasicBlockId) {
         debug!("If {:?} then {:?} else {:?}", cond, then_bb, else_bb);
         let cid = self.current_bb.unwrap();
         let bb = self.proc.get_bb_mut(cid);
@@ -288,7 +288,7 @@ impl FuncTransformer {
         let else_bb = self.mir.new_bb();
         let merge_bb = self.mir.new_bb();
         let cond_val = self.expression(cond);
-        self.mir.term_if(cond_val, then_bb, else_bb);
+        self.mir.term_cond_goto(cond_val, then_bb, else_bb);
 
         // if the if expression has a type other than unit, then create a temporary
         // variable to store the resolved value.
