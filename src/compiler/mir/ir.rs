@@ -72,6 +72,8 @@ impl Procedure {
         &self.vars[id.index()]
     }
 
+    /// Will return the [`VarId`] for the given variable name if it
+    /// exists in the function's stack.
     pub fn find_var(&self, name: StringId) -> Option<VarId> {
         for idx in 0..self.vars.len() {
             if self.vars[idx].name == name {
