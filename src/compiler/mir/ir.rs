@@ -39,6 +39,10 @@ impl Procedure {
         }
     }
 
+    pub fn set_span(&mut self, span: Span) {
+        self.span = span;
+    }
+
     /// Add an argument to this procedure
     pub fn add_arg(&mut self, name: StringId, ty: &Type) -> VarId {
         let vd = VarDecl::new(name, false, ty, ScopeId::new(ROOT_SCOPE));
@@ -307,10 +311,10 @@ impl BasicBlock {
 impl Display for BasicBlock {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for stm in &self.statements {
-            f.write_fmt(format_args!("{}\n", stm))?
+            f.write_fmt(format_args!("{}  // {}\n", stm, stm.span))?
         }
         match &self.terminator {
-            Some(term) => f.write_fmt(format_args!("{}\n", term)),
+            Some(term) => f.write_fmt(format_args!("{} // {}\n", term, term.span)),
             None => f.write_fmt(format_args!("MISSING TERMINATOR\n")),
         }
     }
@@ -329,10 +333,10 @@ pub struct Statement {
 }
 
 impl Statement {
-    pub fn new(kind: StatementKind) -> Statement {
+    pub fn new(kind: StatementKind, span: Span) -> Statement {
         Statement {
             kind,
-            span: Span::zero(),
+            span,
         }
     }
 }
@@ -488,10 +492,10 @@ pub struct Terminator {
 }
 
 impl Terminator {
-    pub fn new(kind: TerminatorKind) -> Terminator {
+    pub fn new(kind: TerminatorKind, span: Span) -> Terminator {
         Terminator {
             kind,
-            span: Span::zero(),
+            span,
         }
     }
 }
