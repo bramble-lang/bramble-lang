@@ -462,6 +462,7 @@ impl Display for Operand {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Constant {
+    Unit,
     I64(i64),
     Bool(bool),
 }
@@ -469,6 +470,7 @@ pub enum Constant {
 impl Display for Constant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Constant::Unit => f.write_str("()"),
             Constant::I64(i) => f.write_fmt(format_args!("{}i64", i)),
             Constant::Bool(b) => f.write_fmt(format_args!("{}", b)),
         }

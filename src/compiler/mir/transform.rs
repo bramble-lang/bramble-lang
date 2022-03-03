@@ -271,8 +271,7 @@ impl FuncTransformer {
                 if let Some(expr) = expr {
                     self.expression(expr)
                 } else {
-                    todo!()
-                }
+                    Operand::Constant(Constant::Unit)                }
             },
             Expression::TypeCast(_, _, _) => todo!(),
             Expression::UnaryOp(_, _, _) => todo!(),

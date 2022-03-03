@@ -52,4 +52,21 @@ pub mod tests {
             println!("{}", mir);
         }
     }
+
+    #[test]
+    fn if_no_else() {
+        let text = "
+        fn test() -> i64 {
+            let x: i64 := 5;
+            let b: bool := true;
+            if (b) {};
+            return 1 + 2 + 3 + x;
+        }
+        ";
+        let module = compile(text);
+        let mirs = transform::module_transform(&module);
+        for mir in mirs {
+            println!("{}", mir);
+        }
+    }
 }
