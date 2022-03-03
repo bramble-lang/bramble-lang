@@ -178,12 +178,16 @@ impl<'ctx> MirBuilder<'ctx> {
 /// Transform a single function to the MIR form
 struct FuncTransformer<'ctx> {
     mir: MirBuilder<'ctx>,
+    logger: &'ctx Logger<'ctx>,
+    event_stack: EventStack,
 }
 
 impl<'ctx> FuncTransformer<'ctx> {
     pub fn new(logger: &'ctx Logger) -> FuncTransformer<'ctx> {
         FuncTransformer {
             mir: MirBuilder::new(logger),
+            logger,
+            event_stack: EventStack::new(),
         }
     }
 
