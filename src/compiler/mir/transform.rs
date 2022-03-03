@@ -213,7 +213,6 @@ impl FuncTransformer {
     /// This can return either an Operand or an RValue, if this is evaluating a constant or an identifier
     /// then this returns an operand.  If this is evaluating an operation then it returns an RValue.
     fn expression(&mut self, expr: &Expression<SemanticContext>) -> Operand {
-        // TEMP: it might turn out that I don't need ExprResult
         match expr {
             Expression::I64(_, i) => self.mir.const_i64(*i),
             Expression::BinaryOp(ctx, op, left, right) => {
