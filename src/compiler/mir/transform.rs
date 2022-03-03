@@ -41,14 +41,14 @@ pub fn module_transform(module: &Module<SemanticContext>) {
 /// MIR operations are applied to that [`BasicBlock`]. This also provides a simplfied
 /// interface for constructing the MIR operands, operations, and statements, to
 /// simplify the code that traverses input ASTs and transforms them into MIR.
-struct MirGenerator {
+struct MirBuilder {
     proc: Procedure,
     current_bb: Option<BasicBlockId>,
 }
 
-impl MirGenerator {
-    pub fn new() -> MirGenerator {
-        MirGenerator {
+impl MirBuilder {
+    pub fn new() -> MirBuilder {
+        MirBuilder {
             proc: Procedure::new(&Type::Unit, Span::zero()),
             current_bb: None,
         }
@@ -150,28 +150,28 @@ impl MirGenerator {
 
 /// Transform a single function to the MIR form
 struct FuncTransformer {
-    gen: MirGenerator,
+    mir: MirBuilder,
 }
 
 impl FuncTransformer {
     pub fn new() -> FuncTransformer {
         FuncTransformer {
-            gen: MirGenerator::new(),
+            mir: MirBuilder::new(),
         }
     }
 
     pub fn transform(mut self, func: &RoutineDef<SemanticContext>) -> Procedure {
         // Create a new MIR Procedure
         // Create a BasicBlock for the function
-        let bb = self.gen.new_bb();
-        self.gen.set_bb(bb);
+        let bb = self.mir.new_bb();
+        self.mir.set_bb(bb);
 
         // Iterate over every statement and add it to the basic block
         func.body.iter().for_each(|stm| self.statement(stm));
 
         // Add the return from function as the terminator for the final basic block of the function
-        self.gen.term_return();
-        self.gen.proc
+        self.mir.term_return();
+        self.mir.proc
     }
 
     fn statement(&mut self, stm: &Statement<SemanticContext>) {
@@ -192,22 +192,22 @@ impl FuncTransformer {
         let var = bind.get_id();
         let mutable = bind.is_mutable();
         let ty = bind.get_type();
-        let vid = self.gen.var(var, mutable, ty);
+        let vid = self.mir.var(var, mutable, ty);
 
         let expr = self.expression(bind.get_rhs());
 
-        self.gen.store(LValue::Var(vid), RValue::Use(expr))
+        self.mir.store(LValue::Var(vid), RValue::Use(expr))
     }
 
     fn ret(&mut self, ret: &Return<SemanticContext>) {
         match ret.get_value() {
             Some(val) => {
                 let v = self.expression(val);
-                self.gen.store(LValue::ReturnPointer, RValue::Use(v));
+                self.mir.store(LValue::ReturnPointer, RValue::Use(v));
             }
             None => (),
         };
-        self.gen.term_return();
+        self.mir.term_return();
     }
 
     /// This can return either an Operand or an RValue, if this is evaluating a constant or an identifier
@@ -215,10 +215,10 @@ impl FuncTransformer {
     fn expression(&mut self, expr: &Expression<SemanticContext>) -> Operand {
         // TEMP: it might turn out that I don't need ExprResult
         match expr {
-            Expression::I64(_, i) => self.gen.const_i64(*i),
+            Expression::I64(_, i) => self.mir.const_i64(*i),
             Expression::BinaryOp(ctx, op, left, right) => {
                 let rv = self.binary_op(*op, left, right);
-                self.gen.temp_store(rv, ctx.ty())
+                self.mir.temp_store(rv, ctx.ty())
             }
             Expression::Null(_) => todo!(),
             Expression::U8(_, _) => todo!(),
@@ -229,7 +229,7 @@ impl FuncTransformer {
             Expression::I16(_, _) => todo!(),
             Expression::I32(_, _) => todo!(),
             Expression::F64(_, _) => todo!(),
-            Expression::Boolean(_, b) => self.gen.const_bool(*b),
+            Expression::Boolean(_, b) => self.mir.const_bool(*b),
             Expression::StringLiteral(_, _) => todo!(),
             Expression::ArrayExpression(_, _, _) => todo!(),
             Expression::ArrayAt {
@@ -241,7 +241,7 @@ impl FuncTransformer {
             Expression::CustomType(_, _) => todo!(),
             Expression::Identifier(_, id) => {
                 // Look up Var ID using the Identifier String ID
-                let vid = self.gen.find_var(*id).unwrap();
+                let vid = self.mir.find_var(*id).unwrap();
 
                 // Return a LValue::Var(VarId) as the result of this expression
                 Operand::LValue(LValue::Var(vid))
@@ -284,32 +284,32 @@ impl FuncTransformer {
         then_block: &Expression<SemanticContext>,
         else_block: &Option<Box<Expression<SemanticContext>>>,
     ) -> Operand {
-        let then_bb = self.gen.new_bb();
-        let else_bb = self.gen.new_bb();
-        let merge_bb = self.gen.new_bb();
+        let then_bb = self.mir.new_bb();
+        let else_bb = self.mir.new_bb();
+        let merge_bb = self.mir.new_bb();
         let cond_val = self.expression(cond);
-        self.gen.term_if(cond_val, then_bb, else_bb);
+        self.mir.term_if(cond_val, then_bb, else_bb);
 
         // if the if expression has a type other than unit, then create a temporary
         // variable to store the resolved value.
-        let temp = self.gen.temp(then_block.get_type());
+        let temp = self.mir.temp(then_block.get_type());
 
-        self.gen.set_bb(then_bb);
+        self.mir.set_bb(then_bb);
         let val = self.expression(then_block);
-        self.gen.store(LValue::Temp(temp), RValue::Use(val));
-        self.gen.term_goto(merge_bb);
+        self.mir.store(LValue::Temp(temp), RValue::Use(val));
+        self.mir.term_goto(merge_bb);
 
         if let Some(else_block) = else_block {
-            self.gen.set_bb(else_bb);
+            self.mir.set_bb(else_bb);
             let val = self.expression(else_block);
-            self.gen.store(LValue::Temp(temp), RValue::Use(val));
-            self.gen.term_goto(merge_bb);
+            self.mir.store(LValue::Temp(temp), RValue::Use(val));
+            self.mir.term_goto(merge_bb);
         } else {
-            self.gen.set_bb(else_bb);
-            self.gen.term_goto(merge_bb);
+            self.mir.set_bb(else_bb);
+            self.mir.term_goto(merge_bb);
         }
 
-        self.gen.set_bb(merge_bb);
+        self.mir.set_bb(merge_bb);
         Operand::LValue(LValue::Temp(temp))
     }
 
@@ -323,7 +323,7 @@ impl FuncTransformer {
             BinaryOperator::Add => {
                 let left = self.expression(left);
                 let right = self.expression(right);
-                self.gen.add(left, right)
+                self.mir.add(left, right)
             }
             BinaryOperator::Sub => todo!(),
             BinaryOperator::Mul => todo!(),
