@@ -11,8 +11,12 @@ use log::debug;
 
 use crate::{
     compiler::{
-        ast::{BinaryOperator, Bind, Expression, Module, Return, RoutineDef, Statement, Type},
+        ast::{
+            BinaryOperator, Bind, Context, Expression, Module, Node, Return, RoutineDef, Statement,
+            Type,
+        },
         semantics::semanticnode::SemanticContext,
+        source::Offset,
         Span,
     },
     StringId,
@@ -77,27 +81,30 @@ impl MirBuilder {
         Operand::Constant(Constant::Bool(b))
     }
 
-    fn var(&mut self, name: StringId, mutable: bool, ty: &Type) -> VarId {
-        self.proc.add_var(name, mutable, ty, ScopeId::new(0))
+    fn var(&mut self, name: StringId, mutable: bool, ty: &Type, span: Span) -> VarId {
+        self.proc.add_var(name, mutable, ty, ScopeId::new(0), span)
     }
 
     fn temp(&mut self, ty: &Type) -> TempId {
         self.proc.add_temp(ty)
     }
 
-    fn temp_store(&mut self, rv: RValue, ty: &Type) -> Operand {
+    fn temp_store(&mut self, rv: RValue, ty: &Type, span: Span) -> Operand {
         let tv = LValue::Temp(self.temp(ty));
         debug!("Temp store: {:?} := {:?}", tv, rv);
 
-        self.store(tv.clone(), rv);
+        self.store(tv.clone(), rv, span);
 
         Operand::LValue(tv)
     }
 
-    fn store(&mut self, lv: LValue, rv: RValue) {
+    fn store(&mut self, lv: LValue, rv: RValue, span: Span) {
         let cid = self.current_bb.unwrap();
         let bb = self.proc.get_bb_mut(cid);
-        bb.add_stm(super::ir::Statement::new(StatementKind::Assign(lv, rv)));
+        bb.add_stm(super::ir::Statement::new(
+            StatementKind::Assign(lv, rv),
+            span,
+        ));
     }
 
     fn sub(&mut self) {
@@ -117,31 +124,40 @@ impl MirBuilder {
     }
 
     /// Terminates by returning to the caller function
-    fn term_return(&mut self) {
+    fn term_return(&mut self, span: Span) {
         debug!("Terminator: Return");
         let cid = self.current_bb.unwrap();
         let bb = self.proc.get_bb_mut(cid);
-        bb.set_terminator(Terminator::new(TerminatorKind::Return));
+        bb.set_terminator(Terminator::new(TerminatorKind::Return, span));
     }
 
     /// Terminates by going to the destination basic block
-    fn term_goto(&mut self, target: BasicBlockId) {
+    fn term_goto(&mut self, target: BasicBlockId, span: Span) {
         debug!("Goto: {:?}", target);
         let cid = self.current_bb.unwrap();
         let bb = self.proc.get_bb_mut(cid);
-        bb.set_terminator(Terminator::new(TerminatorKind::GoTo { target }))
+        bb.set_terminator(Terminator::new(TerminatorKind::GoTo { target }, span))
     }
 
     /// Terminates with a conditional go to
-    fn term_cond_goto(&mut self, cond: Operand, then_bb: BasicBlockId, else_bb: BasicBlockId) {
+    fn term_cond_goto(
+        &mut self,
+        cond: Operand,
+        then_bb: BasicBlockId,
+        else_bb: BasicBlockId,
+        span: Span,
+    ) {
         debug!("If {:?} then {:?} else {:?}", cond, then_bb, else_bb);
         let cid = self.current_bb.unwrap();
         let bb = self.proc.get_bb_mut(cid);
-        bb.set_terminator(Terminator::new(TerminatorKind::CondGoTo {
-            cond,
-            tru: then_bb,
-            fls: else_bb,
-        }));
+        bb.set_terminator(Terminator::new(
+            TerminatorKind::CondGoTo {
+                cond,
+                tru: then_bb,
+                fls: else_bb,
+            },
+            span,
+        ));
     }
 
     /// Terminates by calling the given function
@@ -164,6 +180,8 @@ impl FuncTransformer {
     }
 
     pub fn transform(mut self, func: &RoutineDef<SemanticContext>) -> Procedure {
+        self.mir.proc.set_span(func.context.span());
+
         // Create a new MIR Procedure
         // Create a BasicBlock for the function
         let bb = self.mir.new_bb();
@@ -173,7 +191,7 @@ impl FuncTransformer {
         func.body.iter().for_each(|stm| self.statement(stm));
 
         // Add the return from function as the terminator for the final basic block of the function
-        self.mir.term_return();
+        self.mir.term_return(span_end(func.context.span()));
         self.mir.proc
     }
 
@@ -195,22 +213,24 @@ impl FuncTransformer {
         let var = bind.get_id();
         let mutable = bind.is_mutable();
         let ty = bind.get_type();
-        let vid = self.mir.var(var, mutable, ty);
+        let vid = self.mir.var(var, mutable, ty, bind.context().span());
 
         let expr = self.expression(bind.get_rhs());
 
-        self.mir.store(LValue::Var(vid), RValue::Use(expr))
+        self.mir
+            .store(LValue::Var(vid), RValue::Use(expr), bind.context().span())
     }
 
     fn ret(&mut self, ret: &Return<SemanticContext>) {
         match ret.get_value() {
             Some(val) => {
                 let v = self.expression(val);
-                self.mir.store(LValue::ReturnPointer, RValue::Use(v));
+                self.mir
+                    .store(LValue::ReturnPointer, RValue::Use(v), val.context().span());
             }
             None => (),
         };
-        self.mir.term_return();
+        self.mir.term_return(ret.context().span());
     }
 
     /// This can return either an Operand or an RValue, if this is evaluating a constant or an identifier
@@ -220,7 +240,7 @@ impl FuncTransformer {
             Expression::I64(_, i) => self.mir.const_i64(*i),
             Expression::BinaryOp(ctx, op, left, right) => {
                 let rv = self.binary_op(*op, left, right);
-                self.mir.temp_store(rv, ctx.ty())
+                self.mir.temp_store(rv, ctx.ty(), ctx.span())
             }
             Expression::Null(_) => todo!(),
             Expression::U8(_, _) => todo!(),
@@ -296,9 +316,11 @@ impl FuncTransformer {
         // If there is an else block then jump to the else block on false
         // otherwise jump to the merge block
         if let Some(else_bb) = &else_bb {
-            self.mir.term_cond_goto(cond_val, then_bb, else_bb.1);
+            self.mir
+                .term_cond_goto(cond_val, then_bb, else_bb.1, cond.context().span());
         } else {
-            self.mir.term_cond_goto(cond_val, then_bb, merge_bb);
+            self.mir
+                .term_cond_goto(cond_val, then_bb, merge_bb, cond.context().span());
         }
 
         // Only create a temp location if this if expression can resolve to a
@@ -311,15 +333,27 @@ impl FuncTransformer {
 
         self.mir.set_bb(then_bb);
         let val = self.expression(then_block);
-        result.map(|t| self.mir.store(LValue::Temp(t), RValue::Use(val)));
-        self.mir.term_goto(merge_bb);
+        result.map(|t| {
+            self.mir.store(
+                LValue::Temp(t),
+                RValue::Use(val),
+                then_block.context().span(),
+            )
+        });
+        self.mir.term_goto(merge_bb, span_end(then_block.context().span()));
 
         // If there is an else block, then construct it
         if let Some((else_block, else_bb)) = else_bb {
             self.mir.set_bb(else_bb);
             let val = self.expression(else_block);
-            result.map(|t| self.mir.store(LValue::Temp(t), RValue::Use(val)));
-            self.mir.term_goto(merge_bb);
+            result.map(|t| {
+                self.mir.store(
+                    LValue::Temp(t),
+                    RValue::Use(val),
+                    else_block.context().span(),
+                )
+            });
+            self.mir.term_goto(merge_bb, span_end(else_block.context().span()));
         }
 
         self.mir.set_bb(merge_bb);
@@ -354,5 +388,22 @@ impl FuncTransformer {
             BinaryOperator::GrEq => todo!(),
             BinaryOperator::RawPointerOffset => todo!(),
         }
+    }
+}
+
+/// Returns a new span that covers only the last byte of the
+/// given span.
+///
+/// This is used to represent MIR instructions that are inserted
+/// after the an expression block as ended and which don't
+/// correspond to any code written by the User.  For example, the
+/// GoTo inserted at the end of a While loop to return to the top
+/// of the loop.
+fn span_end(span: Span) -> Span {
+    let high = span.high().as_u32();
+    if high == 0 {
+        Span::zero()
+    } else {
+        Span::new(Offset::new(high), Offset::new(high))
     }
 }

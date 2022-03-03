@@ -39,9 +39,13 @@ impl Procedure {
         }
     }
 
+    pub fn set_span(&mut self, span: Span) {
+        self.span = span;
+    }
+
     /// Add an argument to this procedure
-    pub fn add_arg(&mut self, name: StringId, ty: &Type) -> VarId {
-        let vd = VarDecl::new(name, false, ty, ScopeId::new(ROOT_SCOPE));
+    pub fn add_arg(&mut self, name: StringId, ty: &Type, span: Span) -> VarId {
+        let vd = VarDecl::new(name, false, ty, ScopeId::new(ROOT_SCOPE), span);
         self.vars.push(vd);
         let id = self.vars.len() - 1;
         VarId::new(id)
@@ -90,8 +94,8 @@ impl Procedure {
     }
 
     /// Add a new user defined variable to the procedure.
-    pub fn add_var(&mut self, name: StringId, mutable: bool, ty: &Type, scope: ScopeId) -> VarId {
-        let vd = VarDecl::new(name, mutable, ty, scope);
+    pub fn add_var(&mut self, name: StringId, mutable: bool, ty: &Type, scope: ScopeId, span: Span) -> VarId {
+        let vd = VarDecl::new(name, mutable, ty, scope, span);
         self.vars.push(vd);
         let id = self.vars.len() - 1;
 
@@ -117,11 +121,13 @@ impl Display for Procedure {
         // Print out the variables
         for idx in 0..self.vars.len() {
             let vid = VarId::new(idx);
+            f.write_str("let ")?;
+
             if self.vars[idx].mutable {
-                f.write_fmt(format_args!("let mut {}: {:?} // {}\n", vid, self.vars[idx].ty, self.vars[idx].name))?
-            } else {
-                f.write_fmt(format_args!("let {}: {:?} // {}\n", vid, self.vars[idx].ty, self.vars[idx].name))?
+                f.write_str("mut ")?
             }
+
+            f.write_fmt(format_args!("{}: {:?} // {} {}\n", vid, self.vars[idx].ty, self.vars[idx].name, self.vars[idx].span))?
         }
         f.write_str("\n")?;
         
@@ -227,15 +233,18 @@ pub struct VarDecl {
     ty: Type,
     /// What scope this variable was declared in
     scope: ScopeId,
+    /// The span of code where this variable was declared
+    span: Span
 }
 
 impl VarDecl {
-    pub fn new(name: StringId, mutable: bool, ty: &Type, scope: ScopeId) -> VarDecl {
+    pub fn new(name: StringId, mutable: bool, ty: &Type, scope: ScopeId, span: Span) -> VarDecl {
         VarDecl {
             name,
             mutable,
             ty: ty.clone(),
             scope,
+            span,
         }
     }
 }
@@ -307,10 +316,10 @@ impl BasicBlock {
 impl Display for BasicBlock {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for stm in &self.statements {
-            f.write_fmt(format_args!("{}\n", stm))?
+            f.write_fmt(format_args!("{}  // {}\n", stm, stm.span))?
         }
         match &self.terminator {
-            Some(term) => f.write_fmt(format_args!("{}\n", term)),
+            Some(term) => f.write_fmt(format_args!("{} // {}\n", term, term.span)),
             None => f.write_fmt(format_args!("MISSING TERMINATOR\n")),
         }
     }
@@ -329,10 +338,10 @@ pub struct Statement {
 }
 
 impl Statement {
-    pub fn new(kind: StatementKind) -> Statement {
+    pub fn new(kind: StatementKind, span: Span) -> Statement {
         Statement {
             kind,
-            span: Span::zero(),
+            span,
         }
     }
 }
@@ -488,10 +497,10 @@ pub struct Terminator {
 }
 
 impl Terminator {
-    pub fn new(kind: TerminatorKind) -> Terminator {
+    pub fn new(kind: TerminatorKind, span: Span) -> Terminator {
         Terminator {
             kind,
-            span: Span::zero(),
+            span,
         }
     }
 }
