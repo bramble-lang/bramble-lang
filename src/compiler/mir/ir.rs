@@ -163,7 +163,7 @@ impl Display for BasicBlockId {
 }
 
 /// Identifier for a user declared variable
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub struct VarId(usize);
 
 impl VarId {
