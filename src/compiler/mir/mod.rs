@@ -24,3 +24,12 @@ pub struct Module {
     funcs: Vec<Procedure>,
     span: Span,
 }
+
+#[derive(Debug)]
+pub enum MirError {}
+
+impl super::CompilerDisplay for MirError {
+    fn fmt(&self, sm: &super::SourceMap, st: &crate::StringTable) -> Result<String, super::CompilerDisplayError> {
+        todo!()
+    }
+}

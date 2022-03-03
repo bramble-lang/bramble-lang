@@ -15,7 +15,7 @@ use crate::{
             BinaryOperator, Bind, Context, Expression, Module, Node, Return, RoutineDef, Statement,
             Type,
         },
-        diagnostics::{EventStack, Logger},
+        diagnostics::{Event, EventStack, Logger, View, Writable},
         semantics::semanticnode::SemanticContext,
         source::Offset,
         Span,
@@ -23,7 +23,7 @@ use crate::{
     StringId,
 };
 
-use super::ir::*;
+use super::{ir::*, MirError};
 
 pub fn module_transform<'ctx>(
     module: &Module<SemanticContext>,
@@ -248,8 +248,8 @@ impl<'ctx> FuncTransformer<'ctx> {
     /// This can return either an Operand or an RValue, if this is evaluating a constant or an identifier
     /// then this returns an operand.  If this is evaluating an operation then it returns an RValue.
     fn expression(&mut self, expr: &Expression<SemanticContext>) -> Operand {
-        match expr {
-            Expression::I64(_, i) => self.mir.const_i64(*i),
+        let (event, op) = self.new_event().and_then(|| match expr {
+            Expression::I64(ctx, i) => self.mir.const_i64(*i),
             Expression::BinaryOp(ctx, op, left, right) => {
                 let rv = self.binary_op(*op, left, right);
                 self.mir.temp_store(rv, ctx.ty(), ctx.span())
@@ -309,7 +309,8 @@ impl<'ctx> FuncTransformer<'ctx> {
             Expression::TypeCast(_, _, _) => todo!(),
             Expression::UnaryOp(_, _, _) => todo!(),
             Expression::Yield(_, _) => todo!(),
-        }
+        });
+        op.view(|op| self.record(event.with_span(expr.context().span()), op))
     }
 
     fn if_expr(
@@ -318,6 +319,7 @@ impl<'ctx> FuncTransformer<'ctx> {
         then_block: &Expression<SemanticContext>,
         else_block: &Option<Box<Expression<SemanticContext>>>,
     ) -> Operand {
+        // TODO: record this as an event
         let then_bb = self.mir.new_bb();
         let else_bb = else_block.as_ref().map(|block| (block, self.mir.new_bb()));
         let merge_bb = self.mir.new_bb();
@@ -383,6 +385,7 @@ impl<'ctx> FuncTransformer<'ctx> {
         left: &Expression<SemanticContext>,
         right: &Expression<SemanticContext>,
     ) -> RValue {
+        // TODO: Record this as an event
         match op {
             BinaryOperator::Add => {
                 let left = self.expression(left);
@@ -402,6 +405,28 @@ impl<'ctx> FuncTransformer<'ctx> {
             BinaryOperator::GrEq => todo!(),
             BinaryOperator::RawPointerOffset => todo!(),
         }
+    }
+
+    /// Start a new event with no set Result. Events created after this poing and
+    /// before this [`Event`] is dropped will be descendents of this [`Event`].
+    fn new_event<'a, IR: Writable>(&self) -> Event<'a, IR, MirError> {
+        Event::new("mir-gen", Span::zero(), self.event_stack.clone())
+    }
+
+    /// Record the result of an event
+    fn record<IR: Writable>(&self, evt: Event<IR, MirError>, ir: IR) {
+        let event = evt.with_msg(Ok(ir));
+        self.logger.write(event)
+    }
+
+    /// Creates and records an event which does have any children.
+    fn record_terminal<IR: Writable>(&self, span: Span, ir: IR) {
+        self.logger.write(Event::<_, MirError>::new_with_result(
+            "mir-gen",
+            span,
+            Ok(ir),
+            self.event_stack.clone(),
+        ))
     }
 }
 

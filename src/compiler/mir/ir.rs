@@ -4,7 +4,7 @@
 use std::fmt::Display;
 
 use crate::{
-    compiler::{ast::Type, Span},
+    compiler::{ast::Type, Span, diagnostics::{View, Writable}},
     StringId,
 };
 
@@ -466,6 +466,22 @@ impl Display for Operand {
             Operand::LValue(lv) => format!("{}", lv),
         };
         f.write_str(&text)
+    }
+}
+
+impl View<Operand> for Operand {
+    fn view<F: FnOnce(&Self)>(self, f: F) -> Self {
+        f(&self);
+        self
+    }
+}
+
+impl Writable for &Operand {
+    fn write(&self, w: &dyn crate::compiler::diagnostics::Writer) {
+        match self {
+            Operand::Constant(_) => w.write_str("Constant"),
+            Operand::LValue(_) => w.write_str("LValue"),
+        }
     }
 }
 
