@@ -406,7 +406,6 @@ impl FuncTransformer {
                 array,
                 index,
             } => todo!(),
-            Expression::CustomType(_, _) => todo!(),
             Expression::Identifier(_, id) => {
                 // Look up Var ID using the Identifier String ID
                 let vid = self.mir.find_var(*id).unwrap();
@@ -414,6 +413,7 @@ impl FuncTransformer {
                 // Return a LValue::Var(VarId) as the result of this expression
                 Operand::LValue(LValue::Var(vid))
             }
+            Expression::CustomType(_, _) => todo!(),
             Expression::Path(_, _) => todo!(),
             Expression::IdentifierDeclare(_, _, _) => todo!(),
             Expression::RoutineCall(_, _, _, _) => todo!(),
