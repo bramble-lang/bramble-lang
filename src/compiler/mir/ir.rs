@@ -491,6 +491,7 @@ pub enum Constant {
     U64(u64),
     F64(f64),
     Bool(bool),
+    StringLiteral(StringId),
     Null,
 }
 
@@ -509,6 +510,7 @@ impl Display for Constant {
             Constant::U64(i) => f.write_fmt(format_args!("{}u64", i)),
             Constant::F64(v) => f.write_fmt(format_args!("{}f64", v)),
             Constant::Bool(b) => f.write_fmt(format_args!("{}", b)),
+            Constant::StringLiteral(sid) => f.write_fmt(format_args!("{}", sid)),
         }
     }
 }

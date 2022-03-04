@@ -113,6 +113,10 @@ impl MirBuilder {
         Operand::Constant(Constant::Bool(b))
     }
 
+    fn const_stringliteral(&mut self, s: StringId) -> Operand {
+        Operand::Constant(Constant::StringLiteral(s))
+    }
+
     fn const_null(&mut self) -> Operand {
         Operand::Constant(Constant::Null)
     }
@@ -288,7 +292,7 @@ impl FuncTransformer {
                 self.mir.temp_store(rv, ctx.ty(), ctx.span())
             }
             Expression::Boolean(_, b) => self.mir.const_bool(*b),
-            Expression::StringLiteral(_, _) => todo!(),
+            Expression::StringLiteral(_, sid) => self.mir.const_stringliteral(*sid),
             Expression::ArrayExpression(_, _, _) => todo!(),
             Expression::ArrayAt {
                 context,
