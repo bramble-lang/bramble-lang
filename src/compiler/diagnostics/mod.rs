@@ -44,6 +44,12 @@ pub trait Writer {
     /// Write a [`u64`] value to the current event
     fn write_u64(&self, u: u64);
 
+    /// Write a [`i64`] value to the current event
+    fn write_i64(&self, i: i64);
+
+    /// Write a [`bool`] value to the current event
+    fn write_bool(&self, b: bool);
+
     /// Write a [`Path`] value to the current event
     fn write_path(&self, p: &Path);
 

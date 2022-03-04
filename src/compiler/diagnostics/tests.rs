@@ -123,5 +123,13 @@ mod tests {
         fn write_error(&self, _e: &dyn crate::compiler::CompilerDisplay) {
             todo!()
         }
+
+        fn write_i64(&self, i: i64) {
+        todo!()
+    }
+
+        fn write_bool(&self, b: bool) {
+        todo!()
+    }
     }
 }

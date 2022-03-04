@@ -105,4 +105,12 @@ impl<'a> Writer for ConsoleWriter<'a> {
     fn write_u64(&self, u: u64) {
         print!("{}", u);
     }
+
+    fn write_i64(&self, i: i64) {
+        print!("{}", i);
+    }
+
+    fn write_bool(&self, b: bool) {
+        print!("{}", b);
+    }
 }

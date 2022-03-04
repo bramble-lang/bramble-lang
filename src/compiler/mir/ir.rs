@@ -479,7 +479,7 @@ impl View<Operand> for Operand {
 impl Writable for &Operand {
     fn write(&self, w: &dyn crate::compiler::diagnostics::Writer) {
         match self {
-            Operand::Constant(_) => w.write_str("Constant"),
+            Operand::Constant(c) => w.write_field("Constant", c),
             Operand::LValue(_) => w.write_str("LValue"),
         }
     }
@@ -490,6 +490,16 @@ pub enum Constant {
     Unit,
     I64(i64),
     Bool(bool),
+}
+
+impl Writable for Constant {
+    fn write(&self, w: &dyn crate::compiler::diagnostics::Writer) {
+        match self {
+            Constant::Unit => w.write_str("()"),
+            Constant::I64(i) => w.write_i64(*i),
+            Constant::Bool(b) => w.write_bool(*b),
+        }
+    }
 }
 
 impl Display for Constant {

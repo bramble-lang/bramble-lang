@@ -249,7 +249,7 @@ impl<'ctx> FuncTransformer<'ctx> {
     /// then this returns an operand.  If this is evaluating an operation then it returns an RValue.
     fn expression(&mut self, expr: &Expression<SemanticContext>) -> Operand {
         let (event, op) = self.new_event().and_then(|| match expr {
-            Expression::I64(ctx, i) => self.mir.const_i64(*i),
+            Expression::I64(_, i) => self.mir.const_i64(*i),
             Expression::BinaryOp(ctx, op, left, right) => {
                 let rv = self.binary_op(*op, left, right);
                 self.mir.temp_store(rv, ctx.ty(), ctx.span())
