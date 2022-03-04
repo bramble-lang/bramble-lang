@@ -2,7 +2,7 @@
 pub mod tests {
     use crate::{
         compiler::{
-            ast::{Expression, Module, PointerMut, Type, MAIN_MODULE, BinaryOperator},
+            ast::{BinaryOperator, Expression, Module, PointerMut, Type, MAIN_MODULE},
             diagnostics::Logger,
             lexer::{tokens::Token, LexerError},
             mir::{ir::*, transform},
@@ -140,7 +140,7 @@ pub mod tests {
             (BinaryOperator::LsEq, BinOp::Le, Some(Type::Bool)),
             (BinaryOperator::Gr, BinOp::Gt, Some(Type::Bool)),
             (BinaryOperator::GrEq, BinOp::Ge, Some(Type::Bool)),
-            ] {
+        ] {
             for (literal_ty, v, exp) in &[
                 (Type::I8, Expression::I8((), 1), Constant::I8(1)),
                 (Type::I16, Expression::I16((), 1), Constant::I16(1)),
@@ -179,6 +179,43 @@ pub mod tests {
                             )
                         );
                     }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn negate() {
+        let mut table = StringTable::new();
+        // this can only be used on signed types
+        for (literal_ty, v, exp) in &[
+            (Type::I8, Expression::I8((), 1), Constant::I8(1)),
+            (Type::I16, Expression::I16((), 1), Constant::I16(1)),
+            (Type::I32, Expression::I32((), 1), Constant::I32(1)),
+            (Type::I64, Expression::I64((), 1), Constant::I64(1)),
+            (Type::F64, Expression::F64((), 5.0), Constant::F64(5.0)),
+        ] {
+            let literal = to_code(v, &table);
+            let text = format!(
+                "
+                    fn test() {{ 
+                        let x: {literal_ty} := -{literal};
+                        return;
+                    }}
+                    ",
+            );
+            let module = compile(&text, &mut table);
+            let mirs = transform::module_transform(&module);
+            assert_eq!(1, mirs.len());
+
+            let bb = mirs[0].get_bb(BasicBlockId::new(0));
+            let stm = bb.get_stm(0);
+            match stm.kind() {
+                StatementKind::Assign(_, r) => {
+                    assert_eq!(
+                        *r,
+                        RValue::UnOp(UnOp::Negate, Operand::Constant(exp.clone()))
+                    );
                 }
             }
         }

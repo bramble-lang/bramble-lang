@@ -13,7 +13,7 @@ use crate::{
     compiler::{
         ast::{
             BinaryOperator, Bind, Context, Expression, Module, Node, Return, RoutineDef, Statement,
-            Type,
+            Type, UnaryOperator,
         },
         semantics::semanticnode::SemanticContext,
         source::Offset,
@@ -167,6 +167,11 @@ impl MirBuilder {
             StatementKind::Assign(lv, rv),
             span,
         ));
+    }
+
+    fn negate(&mut self, right: Operand) -> RValue {
+        debug!("Negate: {:?}", right);
+        RValue::UnOp(UnOp::Negate, right)
     }
 
     /// Add an addition operation to the current [`BasicBlock`].
@@ -380,7 +385,10 @@ impl FuncTransformer {
                 let rv = self.binary_op(*op, left, right);
                 self.mir.temp_store(rv, ctx.ty(), ctx.span())
             }
-            Expression::UnaryOp(_, _, _) => todo!(),
+            Expression::UnaryOp(ctx, op, right) => {
+                let rv = self.unary_op(*op, right);
+                self.mir.temp_store(rv, ctx.ty(), ctx.span())
+            },
             Expression::TypeCast(_, _, _) => todo!(),
             Expression::SizeOf(_, _) => todo!(),
             Expression::MemberAccess(_, _, _) => todo!(),
@@ -489,6 +497,19 @@ impl FuncTransformer {
         match result {
             Some(r) => Operand::LValue(LValue::Temp(r)),
             None => Operand::Constant(Constant::Unit),
+        }
+    }
+
+    fn unary_op(&mut self, op: UnaryOperator, right: &Expression<SemanticContext>) -> RValue {
+        match op {
+            UnaryOperator::Negate => {
+                let right = self.expression(right);
+                self.mir.negate(right)
+            },
+            UnaryOperator::Not => todo!(),
+            UnaryOperator::AddressConst => todo!(),
+            UnaryOperator::AddressMut => todo!(),
+            UnaryOperator::DerefRawPointer => todo!(),
         }
     }
 
