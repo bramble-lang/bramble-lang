@@ -105,6 +105,10 @@ impl MirBuilder {
         Operand::Constant(Constant::U64(i))
     }
 
+    fn const_f64(&mut self, f: f64) -> Operand {
+        Operand::Constant(Constant::F64(f))
+    }
+
     fn const_bool(&mut self, b: bool) -> Operand {
         Operand::Constant(Constant::Bool(b))
     }
@@ -273,12 +277,12 @@ impl FuncTransformer {
             Expression::U16(_, u) => self.mir.const_u16(*u),
             Expression::U32(_, u) => self.mir.const_u32(*u),
             Expression::U64(_, u) => self.mir.const_u64(*u),
+            Expression::F64(_, f) => self.mir.const_f64(*f),
             Expression::BinaryOp(ctx, op, left, right) => {
                 let rv = self.binary_op(*op, left, right);
                 self.mir.temp_store(rv, ctx.ty(), ctx.span())
             }
             Expression::Null(_) => todo!(),
-            Expression::F64(_, _) => todo!(),
             Expression::Boolean(_, b) => self.mir.const_bool(*b),
             Expression::StringLiteral(_, _) => todo!(),
             Expression::ArrayExpression(_, _, _) => todo!(),

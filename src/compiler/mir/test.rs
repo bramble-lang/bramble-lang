@@ -86,6 +86,7 @@ pub mod tests {
             (Type::U16, Expression::U16((), 1), Constant::U16(1)),
             (Type::U32, Expression::U32((), 1), Constant::U32(1)),
             (Type::U64, Expression::U64((), 1), Constant::U64(1)),
+            (Type::F64, Expression::F64((), 5.0), Constant::F64(5.0)),
             (Type::Bool, Expression::Boolean((), true), Constant::Bool(true)),
         ] {
             let text = format!(

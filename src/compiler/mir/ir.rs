@@ -489,6 +489,7 @@ pub enum Constant {
     U16(u16),
     U32(u32),
     U64(u64),
+    F64(f64),
     Bool(bool),
 }
 
@@ -504,6 +505,7 @@ impl Display for Constant {
             Constant::U16(i) => f.write_fmt(format_args!("{}u16", i)),
             Constant::U32(i) => f.write_fmt(format_args!("{}u32", i)),
             Constant::U64(i) => f.write_fmt(format_args!("{}u64", i)),
+            Constant::F64(v) => f.write_fmt(format_args!("{}f64", v)),
             Constant::Bool(b) => f.write_fmt(format_args!("{}", b)),
         }
     }

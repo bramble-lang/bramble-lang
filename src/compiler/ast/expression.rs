@@ -247,7 +247,7 @@ impl<I> Expression<I> {
             I16(_, v) => format!("{}i16", v),
             I32(_, v) => format!("{}i32", v),
             I64(_, v) => format!("{}i64", v),
-            F64(_, v) => format!("f64({})", v),
+            F64(_, v) => format!("{}f64", v),
             Boolean(_, v) => format!("{}", v),
             StringLiteral(_, v) => format!("\"{}\"", v),
             ArrayExpression(_, v, _) => format!(
