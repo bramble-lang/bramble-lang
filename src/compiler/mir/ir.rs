@@ -343,6 +343,7 @@ pub struct Statement {
 }
 
 impl Statement {
+    /// Creates a new statement that can be added to a [`BasicBlock`].
     pub fn new(kind: StatementKind, span: Span) -> Statement {
         Statement {
             kind,
@@ -350,6 +351,7 @@ impl Statement {
         }
     }
 
+    /// Returns the [`StatementKind`] of this statement.
     pub fn kind(&self) -> &StatementKind {
         &self.kind
     }
