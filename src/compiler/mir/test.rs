@@ -221,6 +221,39 @@ pub mod tests {
         }
     }
 
+    #[test]
+    fn not() {
+        let mut table = StringTable::new();
+        // this can only be used on signed types
+        for (literal_ty, v, exp) in &[
+            (Type::Bool, Expression::Boolean((), true), Constant::Bool(true)),
+        ] {
+            let literal = to_code(v, &table);
+            let text = format!(
+                "
+                    fn test() {{ 
+                        let x: {literal_ty} := !{literal};
+                        return;
+                    }}
+                    ",
+            );
+            let module = compile(&text, &mut table);
+            let mirs = transform::module_transform(&module);
+            assert_eq!(1, mirs.len());
+
+            let bb = mirs[0].get_bb(BasicBlockId::new(0));
+            let stm = bb.get_stm(0);
+            match stm.kind() {
+                StatementKind::Assign(_, r) => {
+                    assert_eq!(
+                        *r,
+                        RValue::UnOp(UnOp::Not, Operand::Constant(exp.clone()))
+                    );
+                }
+            }
+        }
+    }
+
     fn to_code(e: &Expression<()>, table: &StringTable) -> String {
         match e {
             Expression::StringLiteral(_, sid) => format!("\"{}\"", table.get(*sid).unwrap()),

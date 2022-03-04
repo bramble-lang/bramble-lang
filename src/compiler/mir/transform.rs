@@ -169,6 +169,11 @@ impl MirBuilder {
         ));
     }
 
+    fn not(&mut self, right: Operand) -> RValue {
+        debug!("Not: {:?}", right);
+        RValue::UnOp(UnOp::Not, right)
+    }
+
     fn negate(&mut self, right: Operand) -> RValue {
         debug!("Negate: {:?}", right);
         RValue::UnOp(UnOp::Negate, right)
@@ -506,7 +511,10 @@ impl FuncTransformer {
                 let right = self.expression(right);
                 self.mir.negate(right)
             },
-            UnaryOperator::Not => todo!(),
+            UnaryOperator::Not => {
+                let right = self.expression(right);
+                self.mir.not(right)
+            },
             UnaryOperator::AddressConst => todo!(),
             UnaryOperator::AddressMut => todo!(),
             UnaryOperator::DerefRawPointer => todo!(),
