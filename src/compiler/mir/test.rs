@@ -77,7 +77,7 @@ pub mod tests {
     }
 
     #[test]
-    fn constants() {
+    fn literals() {
         let mut table = StringTable::new();
         let hello = table.insert("hello".into());
         for (ty, v, exp) in &[
