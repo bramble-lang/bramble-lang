@@ -76,6 +76,7 @@ pub mod tests {
     #[test]
     fn address_of() {
         let mut table = StringTable::new();
+        let hello = table.insert("hello".into());
         for (op, ptr_mut) in [
             (UnaryOperator::AddressConst, PointerMut::Const),
             (UnaryOperator::AddressMut, PointerMut::Mut),
@@ -90,6 +91,8 @@ pub mod tests {
                 (Type::U32, Expression::U32((), 1)),
                 (Type::U64, Expression::U64((), 1)),
                 (Type::F64, Expression::F64((), 5.0)),
+                (Type::StringLiteral, Expression::StringLiteral((), hello)),
+                (Type::Bool, Expression::Boolean((), true)),
             ] {
                 let literal = to_code(v, &table);
                 let ptr_ty = Type::RawPointer(ptr_mut, Box::new(literal_ty.clone()));
