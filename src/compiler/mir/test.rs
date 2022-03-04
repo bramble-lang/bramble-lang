@@ -224,7 +224,6 @@ pub mod tests {
     #[test]
     fn not() {
         let mut table = StringTable::new();
-        // this can only be used on signed types
         for (literal_ty, v, exp) in &[
             (Type::Bool, Expression::Boolean((), true), Constant::Bool(true)),
         ] {
