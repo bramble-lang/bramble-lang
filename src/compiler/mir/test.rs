@@ -74,6 +74,53 @@ pub mod tests {
     }
 
     #[test]
+    fn address_of() {
+        let mut table = StringTable::new();
+        let hello = table.insert("hello".into());
+        for (op, ptr_mut) in [
+            (UnaryOperator::AddressConst, PointerMut::Const),
+            (UnaryOperator::AddressMut, PointerMut::Mut),
+        ] {
+            for (literal_ty, v) in &[
+                (Type::I8, Expression::I8((), 1)),
+                (Type::I16, Expression::I16((), 1)),
+                (Type::I32, Expression::I32((), 1)),
+                (Type::I64, Expression::I64((), 1)),
+                (Type::U8, Expression::U8((), 1)),
+                (Type::U16, Expression::U16((), 1)),
+                (Type::U32, Expression::U32((), 1)),
+                (Type::U64, Expression::U64((), 1)),
+                (Type::F64, Expression::F64((), 5.0)),
+                (Type::StringLiteral, Expression::StringLiteral((), hello)),
+                (Type::Bool, Expression::Boolean((), true)),
+            ] {
+                let literal = to_code(v, &table);
+                let ptr_ty = Type::RawPointer(ptr_mut, Box::new(literal_ty.clone()));
+                let text = format!(
+                    "
+                    fn test() {{ 
+                        let mut x: {literal_ty} := {literal};
+                        let p: {ptr_ty} := {op} x;
+                        return;
+                    }}
+                    ",
+                );
+                let module = compile(&text, &mut table);
+                let mirs = transform::module_transform(&module);
+                assert_eq!(1, mirs.len());
+
+                let bb = mirs[0].get_bb(BasicBlockId::new(0));
+                let stm = bb.get_stm(1);
+                match stm.kind() {
+                    StatementKind::Assign(_, r) => {
+                        assert_eq!(*r, RValue::AddressOf(LValue::Var(VarId::new(0))));
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
     fn literals() {
         let mut table = StringTable::new();
         let hello = table.insert("hello".into());
@@ -229,8 +276,16 @@ pub mod tests {
             (BinaryOperator::BOr, BinOp::Or),
         ] {
             for (literal_ty, v, exp) in &[
-                (Type::Bool, Expression::Boolean((), true), Constant::Bool(true)),
-                (Type::Bool, Expression::Boolean((), false), Constant::Bool(false)),
+                (
+                    Type::Bool,
+                    Expression::Boolean((), true),
+                    Constant::Bool(true),
+                ),
+                (
+                    Type::Bool,
+                    Expression::Boolean((), false),
+                    Constant::Bool(false),
+                ),
             ] {
                 let literal = to_code(v, &table);
                 let text = format!(
@@ -266,9 +321,11 @@ pub mod tests {
     #[test]
     fn not() {
         let mut table = StringTable::new();
-        for (literal_ty, v, exp) in &[
-            (Type::Bool, Expression::Boolean((), true), Constant::Bool(true)),
-        ] {
+        for (literal_ty, v, exp) in &[(
+            Type::Bool,
+            Expression::Boolean((), true),
+            Constant::Bool(true),
+        )] {
             let literal = to_code(v, &table);
             let text = format!(
                 "
@@ -286,10 +343,7 @@ pub mod tests {
             let stm = bb.get_stm(0);
             match stm.kind() {
                 StatementKind::Assign(_, r) => {
-                    assert_eq!(
-                        *r,
-                        RValue::UnOp(UnOp::Not, Operand::Constant(exp.clone()))
-                    );
+                    assert_eq!(*r, RValue::UnOp(UnOp::Not, Operand::Constant(exp.clone())));
                 }
             }
         }

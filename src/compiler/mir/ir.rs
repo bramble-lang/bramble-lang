@@ -446,7 +446,7 @@ pub enum RValue {
     Cast(Operand, Type),
 
     /// Getting the address of a variable in memory.
-    AddressOf(Operand),
+    AddressOf(LValue),
 }
 
 impl Display for RValue {
