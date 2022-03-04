@@ -89,6 +89,22 @@ impl MirBuilder {
         Operand::Constant(Constant::I64(i))
     }
 
+    fn const_u8(&mut self, i: u8) -> Operand {
+        Operand::Constant(Constant::U8(i))
+    }
+
+    fn const_u16(&mut self, i: u16) -> Operand {
+        Operand::Constant(Constant::U16(i))
+    }
+
+    fn const_u32(&mut self, i: u32) -> Operand {
+        Operand::Constant(Constant::U32(i))
+    }
+
+    fn const_u64(&mut self, i: u64) -> Operand {
+        Operand::Constant(Constant::U64(i))
+    }
+
     fn const_bool(&mut self, b: bool) -> Operand {
         Operand::Constant(Constant::Bool(b))
     }
@@ -253,15 +269,15 @@ impl FuncTransformer {
             Expression::I16(_, i) => self.mir.const_i16(*i),
             Expression::I32(_, i) => self.mir.const_i32(*i),
             Expression::I64(_, i) => self.mir.const_i64(*i),
+            Expression::U8(_, u) =>  self.mir.const_u8(*u),
+            Expression::U16(_, u) => self.mir.const_u16(*u),
+            Expression::U32(_, u) => self.mir.const_u32(*u),
+            Expression::U64(_, u) => self.mir.const_u64(*u),
             Expression::BinaryOp(ctx, op, left, right) => {
                 let rv = self.binary_op(*op, left, right);
                 self.mir.temp_store(rv, ctx.ty(), ctx.span())
             }
             Expression::Null(_) => todo!(),
-            Expression::U8(_, _) => todo!(),
-            Expression::U16(_, _) => todo!(),
-            Expression::U32(_, _) => todo!(),
-            Expression::U64(_, _) => todo!(),
             Expression::F64(_, _) => todo!(),
             Expression::Boolean(_, b) => self.mir.const_bool(*b),
             Expression::StringLiteral(_, _) => todo!(),
