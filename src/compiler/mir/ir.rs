@@ -481,6 +481,9 @@ impl Display for Operand {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Constant {
     Unit,
+    I8(i8),
+    I16(i16),
+    I32(i32),
     I64(i64),
     Bool(bool),
 }
@@ -489,6 +492,9 @@ impl Display for Constant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Constant::Unit => f.write_str("()"),
+            Constant::I8(i) => f.write_fmt(format_args!("{}i8", i)),
+            Constant::I16(i) => f.write_fmt(format_args!("{}i16", i)),
+            Constant::I32(i) => f.write_fmt(format_args!("{}i32", i)),
             Constant::I64(i) => f.write_fmt(format_args!("{}i64", i)),
             Constant::Bool(b) => f.write_fmt(format_args!("{}", b)),
         }

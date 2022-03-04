@@ -73,6 +73,18 @@ impl MirBuilder {
         self.proc.find_var(name)
     }
 
+    fn const_i8(&mut self, i: i8) -> Operand {
+        Operand::Constant(Constant::I8(i))
+    }
+
+    fn const_i16(&mut self, i: i16) -> Operand {
+        Operand::Constant(Constant::I16(i))
+    }
+
+    fn const_i32(&mut self, i: i32) -> Operand {
+        Operand::Constant(Constant::I32(i))
+    }
+
     fn const_i64(&mut self, i: i64) -> Operand {
         Operand::Constant(Constant::I64(i))
     }
@@ -237,6 +249,9 @@ impl FuncTransformer {
     /// then this returns an operand.  If this is evaluating an operation then it returns an RValue.
     fn expression(&mut self, expr: &Expression<SemanticContext>) -> Operand {
         match expr {
+            Expression::I8(_, i) => self.mir.const_i8(*i),
+            Expression::I16(_, i) => self.mir.const_i16(*i),
+            Expression::I32(_, i) => self.mir.const_i32(*i),
             Expression::I64(_, i) => self.mir.const_i64(*i),
             Expression::BinaryOp(ctx, op, left, right) => {
                 let rv = self.binary_op(*op, left, right);
@@ -247,9 +262,6 @@ impl FuncTransformer {
             Expression::U16(_, _) => todo!(),
             Expression::U32(_, _) => todo!(),
             Expression::U64(_, _) => todo!(),
-            Expression::I8(_, _) => todo!(),
-            Expression::I16(_, _) => todo!(),
-            Expression::I32(_, _) => todo!(),
             Expression::F64(_, _) => todo!(),
             Expression::Boolean(_, b) => self.mir.const_bool(*b),
             Expression::StringLiteral(_, _) => todo!(),

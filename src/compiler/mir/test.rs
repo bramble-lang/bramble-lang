@@ -2,11 +2,16 @@
 pub mod tests {
     use crate::{
         compiler::{
-            ast::{MAIN_MODULE, Module, Expression, Type},
+            ast::{Expression, Module, Type, MAIN_MODULE},
             diagnostics::Logger,
             lexer::{tokens::Token, LexerError},
+            mir::{
+                ir::{BasicBlockId, Constant, LValue, Operand, RValue, StatementKind},
+                transform,
+            },
             parser::Parser,
-            CompilerError, Lexer, SourceMap, mir::{transform, ir::{BasicBlockId, StatementKind, LValue, RValue, Operand, Constant}}, semantics::semanticnode::SemanticContext,
+            semantics::semanticnode::SemanticContext,
+            CompilerError, Lexer, SourceMap,
         },
         resolve_types, StringTable,
     };
@@ -72,23 +77,32 @@ pub mod tests {
 
     #[test]
     fn constants() {
-        let test = (Type::I64, 1, Constant::I64(1));
-        let text = format!("
-        fn test() -> {} {{ 
-            return {};
-        }}
-        ", test.0, test.1);
-        let exp = test.2;
-        let module = compile(&text);
-        let mirs = transform::module_transform(&module);
-        assert_eq!(1, mirs.len());
-        let bb = mirs[0].get_bb(BasicBlockId::new(0));
-        let stm = bb.get_stm(0);
-        match stm.kind() {
-            StatementKind::Assign(l, r) => {
-                assert_eq!(*l, LValue::ReturnPointer);
-                assert_eq!(*r, RValue::Use(Operand::Constant(exp)));
-            },
+        for (ty, v, exp) in &[
+            (Type::I8, Expression::I8((), 1), Constant::I8(1)),
+            (Type::I16, Expression::I16((), 1), Constant::I16(1)),
+            (Type::I32, Expression::I32((), 1), Constant::I32(1)),
+            (Type::I64, Expression::I64((), 1), Constant::I64(1)),
+            (Type::Bool, Expression::Boolean((), true), Constant::Bool(true)),
+        ] {
+            let text = format!(
+                "
+                    fn test() -> {} {{ 
+                        return {};
+                    }}
+                    ",
+                ty, v.root_str()
+            );
+            let module = compile(&text);
+            let mirs = transform::module_transform(&module);
+            assert_eq!(1, mirs.len());
+            let bb = mirs[0].get_bb(BasicBlockId::new(0));
+            let stm = bb.get_stm(0);
+            match stm.kind() {
+                StatementKind::Assign(l, r) => {
+                    assert_eq!(*l, LValue::ReturnPointer);
+                    assert_eq!(*r, RValue::Use(Operand::Constant(exp.clone())));
+                }
+            }
         }
     }
 }
