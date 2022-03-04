@@ -523,6 +523,8 @@ impl FuncTransformer {
                 if let Operand::LValue(lv) = right {
                     RValue::AddressOf(lv)
                 } else {
+                    // Type checking should insure that this branch never happens
+                    // so if it does, then there is a bug in the compiler.
                     panic!("AddressOf can only be applied to LValues")
                 }
             },
@@ -531,6 +533,8 @@ impl FuncTransformer {
                 if let Operand::LValue(lv) = right {
                     RValue::AddressOf(lv)
                 } else {
+                    // Type checking should insure that this branch never happens
+                    // so if it does, then there is a bug in the compiler.
                     panic!("AddressOf can only be applied to LValues")
                 }
             },
