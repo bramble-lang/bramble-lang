@@ -2,13 +2,10 @@
 pub mod tests {
     use crate::{
         compiler::{
-            ast::{Expression, Module, PointerMut, Type, MAIN_MODULE},
+            ast::{Expression, Module, PointerMut, Type, MAIN_MODULE, BinaryOperator},
             diagnostics::Logger,
             lexer::{tokens::Token, LexerError},
-            mir::{
-                ir::*,
-                transform,
-            },
+            mir::{ir::*, transform},
             parser::Parser,
             semantics::semanticnode::SemanticContext,
             CompilerError, Lexer, SourceMap,
@@ -90,7 +87,11 @@ pub mod tests {
             (Type::U32, Expression::U32((), 1), Constant::U32(1)),
             (Type::U64, Expression::U64((), 1), Constant::U64(1)),
             (Type::F64, Expression::F64((), 5.0), Constant::F64(5.0)),
-            (Type::StringLiteral, Expression::StringLiteral((), hello), Constant::StringLiteral(hello)),
+            (
+                Type::StringLiteral,
+                Expression::StringLiteral((), hello),
+                Constant::StringLiteral(hello),
+            ),
             (
                 Type::RawPointer(PointerMut::Const, Box::new(Type::I16)),
                 Expression::Null(()),
@@ -120,6 +121,62 @@ pub mod tests {
             match stm.kind() {
                 StatementKind::Assign(_, r) => {
                     assert_eq!(*r, RValue::Use(Operand::Constant(exp.clone())));
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn numerical_binary_ops() {
+        let mut table = StringTable::new();
+        for (op, exp_op, ty_override) in [
+            (BinaryOperator::Add, BinOp::Add, None),
+            (BinaryOperator::Sub, BinOp::Sub, None),
+            (BinaryOperator::Mul, BinOp::Mul, None),
+            (BinaryOperator::Div, BinOp::Div, None),
+            (BinaryOperator::Ls, BinOp::Lt, Some(Type::Bool)),
+            (BinaryOperator::LsEq, BinOp::Le, Some(Type::Bool)),
+            (BinaryOperator::Gr, BinOp::Gt, Some(Type::Bool)),
+            (BinaryOperator::GrEq, BinOp::Ge, Some(Type::Bool)),
+            ] {
+            for (literal_ty, v, exp) in &[
+                (Type::I8, Expression::I8((), 1), Constant::I8(1)),
+                (Type::I16, Expression::I16((), 1), Constant::I16(1)),
+                (Type::I32, Expression::I32((), 1), Constant::I32(1)),
+                (Type::I64, Expression::I64((), 1), Constant::I64(1)),
+                (Type::U8, Expression::U8((), 1), Constant::U8(1)),
+                (Type::U16, Expression::U16((), 1), Constant::U16(1)),
+                (Type::U32, Expression::U32((), 1), Constant::U32(1)),
+                (Type::U64, Expression::U64((), 1), Constant::U64(1)),
+                (Type::F64, Expression::F64((), 5.0), Constant::F64(5.0)),
+            ] {
+                let literal = to_code(v, &table);
+                let ty = ty_override.as_ref().unwrap_or(literal_ty);
+                let text = format!(
+                    "
+                    fn test() {{ 
+                        let x: {ty} := {literal} {op} {literal};
+                        return;
+                    }}
+                    ",
+                );
+                let module = compile(&text, &mut table);
+                let mirs = transform::module_transform(&module);
+                assert_eq!(1, mirs.len());
+
+                let bb = mirs[0].get_bb(BasicBlockId::new(0));
+                let stm = bb.get_stm(0);
+                match stm.kind() {
+                    StatementKind::Assign(_, r) => {
+                        assert_eq!(
+                            *r,
+                            RValue::BinOp(
+                                exp_op,
+                                Operand::Constant(exp.clone()),
+                                Operand::Constant(exp.clone())
+                            )
+                        );
+                    }
                 }
             }
         }
