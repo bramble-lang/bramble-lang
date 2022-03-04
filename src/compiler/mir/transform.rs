@@ -169,92 +169,92 @@ impl MirBuilder {
         ));
     }
 
-    /// Create a boolean not operation..
+    /// Add a boolean not to the current [`BasicBlock`].
     fn not(&mut self, right: Operand) -> RValue {
         debug!("Not: {:?}", right);
         RValue::UnOp(UnOp::Not, right)
     }
 
-    /// Create a negate operation..
+    /// Add a negate to the current [`BasicBlock`].
     fn negate(&mut self, right: Operand) -> RValue {
         debug!("Negate: {:?}", right);
         RValue::UnOp(UnOp::Negate, right)
     }
 
-    /// Create an addition operation operation..
+    /// Add an addition operation to the current [`BasicBlock`].
     fn add(&mut self, left: Operand, right: Operand) -> RValue {
         debug!("Add: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Add, left, right)
     }
 
-    /// Create a subtraction operation operation..
+    /// Add a subtraction operation to the current [`BasicBlock`].
     fn sub(&mut self, left: Operand, right: Operand) -> RValue  {
         debug!("Sub: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Sub, left, right)
     }
 
-    /// Create a multiply operation operation..
+    /// Add a multiply operation to the current [`BasicBlock`].
     fn mul(&mut self, left: Operand, right: Operand) -> RValue  {
         debug!("Mul: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Mul, left, right)
     }
 
-    /// Create a divide operation operation..
+    /// Add a divide operation to the current [`BasicBlock`].
     fn div(&mut self, left: Operand, right: Operand) -> RValue  {
         debug!("Div: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Div, left, right)
     }
 
-    /// Create a bitwise and operation operation..
+    /// Add a bitwise and operation to the current [`BasicBlock`].
     fn bitwise_and(&mut self, left: Operand, right: Operand) -> RValue  {
         debug!("And: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::And, left, right)
     }
 
-    /// Create a bitwise and operation operation..
+    /// Add a bitwise and operation to the current [`BasicBlock`].
     fn bitwise_or(&mut self, left: Operand, right: Operand) -> RValue  {
         debug!("Or: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Or, left, right)
     }
 
-    /// Create an equality test operation operation..
+    /// Add an equality test operation to the current [`BasicBlock`].
     fn eq(&mut self, left: Operand, right: Operand) -> RValue  {
         debug!("Eq: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Eq, left, right)
     }
 
-    /// Create a not equal test operation operation..
+    /// Add a not equal test operation to the current [`BasicBlock`].
     fn neq(&mut self, left: Operand, right: Operand) -> RValue  {
         debug!("Neq: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Ne, left, right)
     }
 
-    /// Create a less than test operation operation..
+    /// Add a less than test operation to the current [`BasicBlock`].
     fn lt(&mut self, left: Operand, right: Operand) -> RValue  {
         debug!("Less Than");
         debug!("Add: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Lt, left, right)
     }
 
-    /// Create a less than or equal to test operation operation..
+    /// Add a less than or equal to test operation to the current [`BasicBlock`].
     fn le(&mut self, left: Operand, right: Operand) -> RValue  {
         debug!("Less or Equal: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Le, left, right)
     }
 
-    /// Create a greater than test operation operation..
+    /// Add a greater than test operation to the current [`BasicBlock`].
     fn gt(&mut self, left: Operand, right: Operand) -> RValue  {
         debug!("Greater: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Gt, left, right)
     }
 
-    /// Create a greater than or equal to test operation operation..
+    /// Add a greater than or equal to test operation to the current [`BasicBlock`].
     fn ge(&mut self, left: Operand, right: Operand) -> RValue  {
         debug!("Greater or Equal: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Ge, left, right)
     }
 
-    /// Create a raw pointer offset operation operation..
+    /// Add a raw pointer offset operation to the current [`BasicBlock`].
     fn offset(&mut self, left: Operand, right: Operand) -> RValue  {
         debug!("Pointer Offset: {:?}, {:?}", left, right);
         todo!()

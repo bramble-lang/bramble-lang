@@ -2,7 +2,7 @@
 pub mod tests {
     use crate::{
         compiler::{
-            ast::{BinaryOperator, Expression, Module, PointerMut, Type, MAIN_MODULE},
+            ast::*,
             diagnostics::Logger,
             lexer::{tokens::Token, LexerError},
             mir::{ir::*, transform},
