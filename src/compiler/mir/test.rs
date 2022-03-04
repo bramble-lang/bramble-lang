@@ -2,7 +2,7 @@
 pub mod tests {
     use crate::{
         compiler::{
-            ast::{Expression, Module, Type, MAIN_MODULE},
+            ast::{Expression, Module, Type, MAIN_MODULE, PointerMut},
             diagnostics::Logger,
             lexer::{tokens::Token, LexerError},
             mir::{
@@ -87,12 +87,14 @@ pub mod tests {
             (Type::U32, Expression::U32((), 1), Constant::U32(1)),
             (Type::U64, Expression::U64((), 1), Constant::U64(1)),
             (Type::F64, Expression::F64((), 5.0), Constant::F64(5.0)),
+            (Type::RawPointer(PointerMut::Const, Box::new(Type::I16)), Expression::Null(()), Constant::Null),
             (Type::Bool, Expression::Boolean((), true), Constant::Bool(true)),
         ] {
             let text = format!(
                 "
-                    fn test() -> {} {{ 
-                        return {};
+                    fn test() {{ 
+                        let x: {} := {};
+                        return;
                     }}
                     ",
                 ty, v.root_str()
@@ -103,8 +105,7 @@ pub mod tests {
             let bb = mirs[0].get_bb(BasicBlockId::new(0));
             let stm = bb.get_stm(0);
             match stm.kind() {
-                StatementKind::Assign(l, r) => {
-                    assert_eq!(*l, LValue::ReturnPointer);
+                StatementKind::Assign(_, r) => {
                     assert_eq!(*r, RValue::Use(Operand::Constant(exp.clone())));
                 }
             }

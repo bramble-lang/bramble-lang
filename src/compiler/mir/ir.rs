@@ -491,12 +491,14 @@ pub enum Constant {
     U64(u64),
     F64(f64),
     Bool(bool),
+    Null,
 }
 
 impl Display for Constant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Constant::Unit => f.write_str("()"),
+            Constant::Null => f.write_str("null"),
             Constant::I8(i) => f.write_fmt(format_args!("{}i8", i)),
             Constant::I16(i) => f.write_fmt(format_args!("{}i16", i)),
             Constant::I32(i) => f.write_fmt(format_args!("{}i32", i)),

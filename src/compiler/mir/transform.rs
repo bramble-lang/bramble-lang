@@ -113,6 +113,10 @@ impl MirBuilder {
         Operand::Constant(Constant::Bool(b))
     }
 
+    fn const_null(&mut self) -> Operand {
+        Operand::Constant(Constant::Null)
+    }
+
     fn var(&mut self, name: StringId, mutable: bool, ty: &Type, span: Span) -> VarId {
         self.proc.add_var(name, mutable, ty, ScopeId::new(0), span)
     }
@@ -278,11 +282,11 @@ impl FuncTransformer {
             Expression::U32(_, u) => self.mir.const_u32(*u),
             Expression::U64(_, u) => self.mir.const_u64(*u),
             Expression::F64(_, f) => self.mir.const_f64(*f),
+            Expression::Null(_) => self.mir.const_null(),
             Expression::BinaryOp(ctx, op, left, right) => {
                 let rv = self.binary_op(*op, left, right);
                 self.mir.temp_store(rv, ctx.ty(), ctx.span())
             }
-            Expression::Null(_) => todo!(),
             Expression::Boolean(_, b) => self.mir.const_bool(*b),
             Expression::StringLiteral(_, _) => todo!(),
             Expression::ArrayExpression(_, _, _) => todo!(),
