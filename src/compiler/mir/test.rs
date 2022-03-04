@@ -8,7 +8,7 @@ pub mod tests {
             parser::Parser,
             CompilerError, Lexer, SourceMap, mir::transform, semantics::semanticnode::SemanticContext,
         },
-        resolve_types, StringTable, diagnostics::ConsoleWriter,
+        resolve_types, StringTable, diagnostics::{ConsoleWriter, JsonWriter},
     };
 
     type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
@@ -50,6 +50,11 @@ pub mod tests {
         let (sm, st, module) = compile(text, &logger);
         let cw = ConsoleWriter::new(&sm, &st);
         logger.add_writer(&cw);
+
+        let file = std::fs::File::create("./target/test.json").unwrap();
+        let jw = JsonWriter::new(file, &sm, &st);
+        logger.add_writer(&jw);
+
         let mirs = transform::module_transform(&module, &logger);
         for mir in mirs {
             println!("{}", mir);
@@ -68,8 +73,14 @@ pub mod tests {
         ";
         let mut logger = Logger::new();
         let (sm, st, module) = compile(text, &logger);
+
         let cw = ConsoleWriter::new(&sm, &st);
         logger.add_writer(&cw);
+
+        let file = std::fs::File::create("./target/test.json").unwrap();
+        let jw = JsonWriter::new(file, &sm, &st);
+        logger.add_writer(&jw);
+
         logger.enable();
         let mirs = transform::module_transform(&module, &mut logger);
         for mir in mirs {
