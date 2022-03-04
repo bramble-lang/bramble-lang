@@ -302,6 +302,11 @@ impl BasicBlock {
         self.terminator = Some(term);
     }
 
+    /// Get the [`Statement`] at the given index
+    pub fn get_stm(&self, idx: usize) -> &Statement {
+        &self.statements[idx]
+    }
+
     fn add_span(&mut self, span: Span) {
         // Expand the span of this basic block to cover the new statement and the
         // previous statements
@@ -338,11 +343,17 @@ pub struct Statement {
 }
 
 impl Statement {
+    /// Creates a new statement that can be added to a [`BasicBlock`].
     pub fn new(kind: StatementKind, span: Span) -> Statement {
         Statement {
             kind,
             span,
         }
+    }
+
+    /// Returns the [`StatementKind`] of this statement.
+    pub fn kind(&self) -> &StatementKind {
+        &self.kind
     }
 }
 
@@ -472,16 +483,36 @@ impl Display for Operand {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Constant {
     Unit,
+    I8(i8),
+    I16(i16),
+    I32(i32),
     I64(i64),
+    U8(u8),
+    U16(u16),
+    U32(u32),
+    U64(u64),
+    F64(f64),
     Bool(bool),
+    StringLiteral(StringId),
+    Null,
 }
 
 impl Display for Constant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Constant::Unit => f.write_str("()"),
+            Constant::Null => f.write_str("null"),
+            Constant::I8(i) => f.write_fmt(format_args!("{}i8", i)),
+            Constant::I16(i) => f.write_fmt(format_args!("{}i16", i)),
+            Constant::I32(i) => f.write_fmt(format_args!("{}i32", i)),
             Constant::I64(i) => f.write_fmt(format_args!("{}i64", i)),
+            Constant::U8(i) => f.write_fmt(format_args!("{}u8", i)),
+            Constant::U16(i) => f.write_fmt(format_args!("{}u16", i)),
+            Constant::U32(i) => f.write_fmt(format_args!("{}u32", i)),
+            Constant::U64(i) => f.write_fmt(format_args!("{}u64", i)),
+            Constant::F64(v) => f.write_fmt(format_args!("{}f64", v)),
             Constant::Bool(b) => f.write_fmt(format_args!("{}", b)),
+            Constant::StringLiteral(sid) => f.write_fmt(format_args!("{}", sid)),
         }
     }
 }
