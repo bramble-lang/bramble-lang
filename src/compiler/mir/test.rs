@@ -222,6 +222,48 @@ pub mod tests {
     }
 
     #[test]
+    fn boolean_binary_ops() {
+        let mut table = StringTable::new();
+        for (op, exp_op) in [
+            (BinaryOperator::BAnd, BinOp::And),
+            (BinaryOperator::BOr, BinOp::Or),
+        ] {
+            for (literal_ty, v, exp) in &[
+                (Type::Bool, Expression::Boolean((), true), Constant::Bool(true)),
+                (Type::Bool, Expression::Boolean((), false), Constant::Bool(false)),
+            ] {
+                let literal = to_code(v, &table);
+                let text = format!(
+                    "
+                    fn test() {{ 
+                        let x: {literal_ty} := {literal} {op} {literal};
+                        return;
+                    }}
+                    ",
+                );
+                let module = compile(&text, &mut table);
+                let mirs = transform::module_transform(&module);
+                assert_eq!(1, mirs.len());
+
+                let bb = mirs[0].get_bb(BasicBlockId::new(0));
+                let stm = bb.get_stm(0);
+                match stm.kind() {
+                    StatementKind::Assign(_, r) => {
+                        assert_eq!(
+                            *r,
+                            RValue::BinOp(
+                                exp_op,
+                                Operand::Constant(exp.clone()),
+                                Operand::Constant(exp.clone())
+                            )
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
     fn not() {
         let mut table = StringTable::new();
         for (literal_ty, v, exp) in &[
