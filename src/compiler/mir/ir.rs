@@ -302,6 +302,11 @@ impl BasicBlock {
         self.terminator = Some(term);
     }
 
+    /// Get the [`Statement`] at the given index
+    pub fn get_stm(&self, idx: usize) -> &Statement {
+        &self.statements[idx]
+    }
+
     fn add_span(&mut self, span: Span) {
         // Expand the span of this basic block to cover the new statement and the
         // previous statements
@@ -343,6 +348,10 @@ impl Statement {
             kind,
             span,
         }
+    }
+
+    pub fn kind(&self) -> &StatementKind {
+        &self.kind
     }
 }
 
