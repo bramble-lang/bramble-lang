@@ -134,6 +134,8 @@ pub mod tests {
             (BinaryOperator::Sub, BinOp::Sub, None),
             (BinaryOperator::Mul, BinOp::Mul, None),
             (BinaryOperator::Div, BinOp::Div, None),
+            (BinaryOperator::Eq, BinOp::Eq, Some(Type::Bool)),
+            (BinaryOperator::NEq, BinOp::Ne, Some(Type::Bool)),
             (BinaryOperator::Ls, BinOp::Lt, Some(Type::Bool)),
             (BinaryOperator::LsEq, BinOp::Le, Some(Type::Bool)),
             (BinaryOperator::Gr, BinOp::Gt, Some(Type::Bool)),
