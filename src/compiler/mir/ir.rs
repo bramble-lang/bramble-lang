@@ -440,7 +440,7 @@ pub enum RValue {
     BinOp(BinOp, Operand, Operand),
 
     /// Unary instructions that are available on the CPU
-    UnOp(Operand),
+    UnOp(UnOp, Operand),
 
     /// Casting an operand to a new type
     Cast(Operand, Type),
@@ -454,7 +454,7 @@ impl Display for RValue {
         let text = match self {
             RValue::Use(o) => format!("Use({})", o),
             RValue::BinOp(op, l, r) => format!("{}({}, {})", op, l, r),
-            RValue::UnOp(o) => format!("({})", o),
+            RValue::UnOp(op, o) => format!("{}({})", op, o),
             RValue::Cast(v, t) => format!("{} as {:?}", v, t),
             RValue::AddressOf(o) => format!("AddressOf({})", o),
         };

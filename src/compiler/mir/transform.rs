@@ -13,7 +13,7 @@ use crate::{
     compiler::{
         ast::{
             BinaryOperator, Bind, Context, Expression, Module, Node, Return, RoutineDef, Statement,
-            Type,
+            Type, UnaryOperator,
         },
         semantics::semanticnode::SemanticContext,
         source::Offset,
@@ -169,6 +169,18 @@ impl MirBuilder {
         ));
     }
 
+    /// Add a boolean not to the current [`BasicBlock`].
+    fn not(&mut self, right: Operand) -> RValue {
+        debug!("Not: {:?}", right);
+        RValue::UnOp(UnOp::Not, right)
+    }
+
+    /// Add a negate to the current [`BasicBlock`].
+    fn negate(&mut self, right: Operand) -> RValue {
+        debug!("Negate: {:?}", right);
+        RValue::UnOp(UnOp::Negate, right)
+    }
+
     /// Add an addition operation to the current [`BasicBlock`].
     fn add(&mut self, left: Operand, right: Operand) -> RValue {
         debug!("Add: {:?}, {:?}", left, right);
@@ -177,73 +189,74 @@ impl MirBuilder {
 
     /// Add a subtraction operation to the current [`BasicBlock`].
     fn sub(&mut self, left: Operand, right: Operand) -> RValue  {
-        debug!("Sub");
+        debug!("Sub: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Sub, left, right)
     }
 
     /// Add a multiply operation to the current [`BasicBlock`].
     fn mul(&mut self, left: Operand, right: Operand) -> RValue  {
-        debug!("Mul");
+        debug!("Mul: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Mul, left, right)
     }
 
     /// Add a divide operation to the current [`BasicBlock`].
     fn div(&mut self, left: Operand, right: Operand) -> RValue  {
-        debug!("Div");
+        debug!("Div: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Div, left, right)
     }
 
     /// Add a bitwise and operation to the current [`BasicBlock`].
     fn bitwise_and(&mut self, left: Operand, right: Operand) -> RValue  {
-        debug!("And");
+        debug!("And: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::And, left, right)
     }
 
     /// Add a bitwise and operation to the current [`BasicBlock`].
     fn bitwise_or(&mut self, left: Operand, right: Operand) -> RValue  {
-        debug!("Or");
+        debug!("Or: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Or, left, right)
     }
 
     /// Add an equality test operation to the current [`BasicBlock`].
     fn eq(&mut self, left: Operand, right: Operand) -> RValue  {
-        debug!("Eq");
+        debug!("Eq: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Eq, left, right)
     }
 
     /// Add a not equal test operation to the current [`BasicBlock`].
     fn neq(&mut self, left: Operand, right: Operand) -> RValue  {
-        debug!("Neq");
+        debug!("Neq: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Ne, left, right)
     }
 
     /// Add a less than test operation to the current [`BasicBlock`].
     fn lt(&mut self, left: Operand, right: Operand) -> RValue  {
         debug!("Less Than");
+        debug!("Add: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Lt, left, right)
     }
 
     /// Add a less than or equal to test operation to the current [`BasicBlock`].
     fn le(&mut self, left: Operand, right: Operand) -> RValue  {
-        debug!("Less or Equal");
+        debug!("Less or Equal: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Le, left, right)
     }
 
     /// Add a greater than test operation to the current [`BasicBlock`].
     fn gt(&mut self, left: Operand, right: Operand) -> RValue  {
-        debug!("Greater");
+        debug!("Greater: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Gt, left, right)
     }
 
     /// Add a greater than or equal to test operation to the current [`BasicBlock`].
     fn ge(&mut self, left: Operand, right: Operand) -> RValue  {
-        debug!("Greater or Equal");
+        debug!("Greater or Equal: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Ge, left, right)
     }
 
     /// Add a raw pointer offset operation to the current [`BasicBlock`].
     fn offset(&mut self, left: Operand, right: Operand) -> RValue  {
-        debug!("Pointer Offset");
+        debug!("Pointer Offset: {:?}, {:?}", left, right);
         todo!()
     }
 
@@ -380,7 +393,10 @@ impl FuncTransformer {
                 let rv = self.binary_op(*op, left, right);
                 self.mir.temp_store(rv, ctx.ty(), ctx.span())
             }
-            Expression::UnaryOp(_, _, _) => todo!(),
+            Expression::UnaryOp(ctx, op, right) => {
+                let rv = self.unary_op(*op, right);
+                self.mir.temp_store(rv, ctx.ty(), ctx.span())
+            },
             Expression::TypeCast(_, _, _) => todo!(),
             Expression::SizeOf(_, _) => todo!(),
             Expression::MemberAccess(_, _, _) => todo!(),
@@ -489,6 +505,22 @@ impl FuncTransformer {
         match result {
             Some(r) => Operand::LValue(LValue::Temp(r)),
             None => Operand::Constant(Constant::Unit),
+        }
+    }
+
+    fn unary_op(&mut self, op: UnaryOperator, right: &Expression<SemanticContext>) -> RValue {
+        match op {
+            UnaryOperator::Negate => {
+                let right = self.expression(right);
+                self.mir.negate(right)
+            },
+            UnaryOperator::Not => {
+                let right = self.expression(right);
+                self.mir.not(right)
+            },
+            UnaryOperator::AddressConst => todo!(),
+            UnaryOperator::AddressMut => todo!(),
+            UnaryOperator::DerefRawPointer => todo!(),
         }
     }
 
