@@ -518,8 +518,22 @@ impl FuncTransformer {
                 let right = self.expression(right);
                 self.mir.not(right)
             },
-            UnaryOperator::AddressConst => todo!(),
-            UnaryOperator::AddressMut => todo!(),
+            UnaryOperator::AddressConst => {
+                let right = self.expression(right);
+                if let Operand::LValue(lv) = right {
+                    RValue::AddressOf(lv)
+                } else {
+                    panic!("AddressOf can only be applied to LValues")
+                }
+            },
+            UnaryOperator::AddressMut => {
+                let right = self.expression(right);
+                if let Operand::LValue(lv) = right {
+                    RValue::AddressOf(lv)
+                } else {
+                    panic!("AddressOf can only be applied to LValues")
+                }
+            },
             UnaryOperator::DerefRawPointer => todo!(),
         }
     }
