@@ -6,7 +6,7 @@ pub mod tests {
             diagnostics::Logger,
             lexer::{tokens::Token, LexerError},
             mir::{
-                ir::{BasicBlockId, Constant, LValue, Operand, RValue, StatementKind},
+                ir::*,
                 transform,
             },
             parser::Parser,

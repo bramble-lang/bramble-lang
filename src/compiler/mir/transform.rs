@@ -54,6 +54,8 @@ struct MirBuilder {
 }
 
 impl MirBuilder {
+    /// Creates a new [`MirBuilder`], which is used to construct the MIR representation
+    /// of a function.
     pub fn new() -> MirBuilder {
         MirBuilder {
             proc: Procedure::new(&Type::Unit, Span::zero()),
@@ -61,10 +63,13 @@ impl MirBuilder {
         }
     }
 
+    /// Add a new [`BasicBlock`] to this function.
     fn new_bb(&mut self) -> BasicBlockId {
         self.proc.new_bb()
     }
 
+    /// Change the active [`BasicBlock`]. After this call, all instructions added
+    /// to the function will be appended to the [`BasicBlock`] specified by `bb`.
     fn set_bb(&mut self, bb: BasicBlockId) {
         self.current_bb = Some(bb)
     }
@@ -73,62 +78,77 @@ impl MirBuilder {
         self.proc.find_var(name)
     }
 
+    /// Create an [`i8`] constant
     fn const_i8(&mut self, i: i8) -> Operand {
         Operand::Constant(Constant::I8(i))
     }
 
+    /// Create an [`i16`] constant
     fn const_i16(&mut self, i: i16) -> Operand {
         Operand::Constant(Constant::I16(i))
     }
 
+    /// Create an [`i32`] constant
     fn const_i32(&mut self, i: i32) -> Operand {
         Operand::Constant(Constant::I32(i))
     }
 
+    /// Create an [`i64`] constant
     fn const_i64(&mut self, i: i64) -> Operand {
         Operand::Constant(Constant::I64(i))
     }
 
+    /// Create a [`u8`] constant
     fn const_u8(&mut self, i: u8) -> Operand {
         Operand::Constant(Constant::U8(i))
     }
 
+    /// Create a [`u16`] constant
     fn const_u16(&mut self, i: u16) -> Operand {
         Operand::Constant(Constant::U16(i))
     }
 
+    /// Create a [`u32`] constant
     fn const_u32(&mut self, i: u32) -> Operand {
         Operand::Constant(Constant::U32(i))
     }
 
+    /// Create a [`u64`] constant
     fn const_u64(&mut self, i: u64) -> Operand {
         Operand::Constant(Constant::U64(i))
     }
 
+    /// Create an [`f64`] constant
     fn const_f64(&mut self, f: f64) -> Operand {
         Operand::Constant(Constant::F64(f))
     }
 
+    /// Create a [`bool`] constant
     fn const_bool(&mut self, b: bool) -> Operand {
         Operand::Constant(Constant::Bool(b))
     }
 
+    /// Create a reference to a string literal
     fn const_stringliteral(&mut self, s: StringId) -> Operand {
         Operand::Constant(Constant::StringLiteral(s))
     }
 
+    /// Create a `null` value
     fn const_null(&mut self) -> Operand {
         Operand::Constant(Constant::Null)
     }
 
+    /// Add a new user declared variable to this function's stack
     fn var(&mut self, name: StringId, mutable: bool, ty: &Type, span: Span) -> VarId {
         self.proc.add_var(name, mutable, ty, ScopeId::new(0), span)
     }
 
+    /// Add a new temporary variable to this function's stack
     fn temp(&mut self, ty: &Type) -> TempId {
         self.proc.add_temp(ty)
     }
 
+    /// Create a new temporary variable and store the [`RValue`] in it.
     fn temp_store(&mut self, rv: RValue, ty: &Type, span: Span) -> Operand {
         let tv = LValue::Temp(self.temp(ty));
         debug!("Temp store: {:?} := {:?}", tv, rv);
@@ -138,6 +158,8 @@ impl MirBuilder {
         Operand::LValue(tv)
     }
 
+    /// Store the given [`RValue`] in the location specified by the given
+    /// [`LValue`].
     fn store(&mut self, lv: LValue, rv: RValue, span: Span) {
         let cid = self.current_bb.unwrap();
         let bb = self.proc.get_bb_mut(cid);
@@ -147,17 +169,19 @@ impl MirBuilder {
         ));
     }
 
+    /// Add a subtraction operation to the current [`BasicBlock`].
     fn sub(&mut self) {
         debug!("Sub");
         todo!()
     }
 
+    /// Add a multiply operation to the current [`BasicBlock`].
     fn mul(&mut self) {
         debug!("Mul");
         todo!()
     }
 
-    /// Add two operands together
+    /// Add an addition operation to the current [`BasicBlock`].
     fn add(&mut self, left: Operand, right: Operand) -> RValue {
         debug!("Add: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Add, left, right)
