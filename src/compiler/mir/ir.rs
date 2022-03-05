@@ -134,7 +134,7 @@ impl Display for Procedure {
         // Print the temporary variables
         for idx in 0..self.temps.len() {
             let tid = TempId::new(idx);
-            f.write_fmt(format_args!("let mut {}: {:?}\n", tid, self.temps[idx].ty))?
+            f.write_fmt(format_args!("let mut {}: {:?} // {}\n", tid, self.temps[idx].ty, self.temps[idx].span))?
         }
 
         // Print all the basic blocks
