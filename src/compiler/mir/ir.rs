@@ -103,8 +103,8 @@ impl Procedure {
     }
 
     /// Add a new temporary variable to the procedures stack
-    pub fn add_temp(&mut self, ty: &Type) -> TempId {
-        let td = TempDecl::new(ty);
+    pub fn add_temp(&mut self, ty: &Type, span: Span) -> TempId {
+        let td = TempDecl::new(ty, span);
         self.temps.push(td);
         let id = self.temps.len() - 1;
         TempId::new(id)
@@ -255,11 +255,13 @@ impl VarDecl {
 pub struct TempDecl {
     /// The type of this variable
     ty: Type,
+    /// The subexpression that this temp variable represents
+    span: Span,
 }
 
 impl TempDecl {
-    pub fn new(ty: &Type) -> TempDecl {
-        TempDecl { ty: ty.clone() }
+    pub fn new(ty: &Type, span: Span) -> TempDecl {
+        TempDecl { ty: ty.clone(), span }
     }
 }
 

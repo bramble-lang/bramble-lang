@@ -144,13 +144,13 @@ impl MirBuilder {
     }
 
     /// Add a new temporary variable to this function's stack
-    fn temp(&mut self, ty: &Type) -> TempId {
-        self.proc.add_temp(ty)
+    fn temp(&mut self, ty: &Type, span: Span) -> TempId {
+        self.proc.add_temp(ty, span)
     }
 
     /// Create a new temporary variable and store the [`RValue`] in it.
     fn temp_store(&mut self, rv: RValue, ty: &Type, span: Span) -> Operand {
-        let tv = LValue::Temp(self.temp(ty));
+        let tv = LValue::Temp(self.temp(ty, span));
         debug!("Temp store: {:?} := {:?}", tv, rv);
 
         self.store(tv.clone(), rv, span);
@@ -466,10 +466,10 @@ impl FuncTransformer {
                 .term_cond_goto(cond_val, then_bb, merge_bb, cond.context().span());
         }
 
-        // Only create a temp location if this if expression can resolve to a
+        // Only create a temp location if this If Expression can resolve to a
         // value
         let result = if else_block.is_some() && then_block.get_type() != Type::Unit {
-            Some(self.mir.temp(then_block.get_type()))
+            Some(self.mir.temp(then_block.get_type(), then_block.context().span()))
         } else {
             None
         };
