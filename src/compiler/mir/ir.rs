@@ -109,6 +109,11 @@ impl Procedure {
         let id = self.temps.len() - 1;
         TempId::new(id)
     }
+
+    /// Returns the number of [`BasicBlock`]s in the procedure
+    pub fn len(&self) -> usize {
+        self.blocks.len()
+    }
 }
 
 impl Display for Procedure {
@@ -307,6 +312,11 @@ impl BasicBlock {
     /// Get the [`Statement`] at the given index
     pub fn get_stm(&self, idx: usize) -> &Statement {
         &self.statements[idx]
+    }
+
+    /// Get the [`Terminator`] for this basic block
+    pub fn get_term(&self) -> Option<&Terminator> {
+        self.terminator.as_ref()
     }
 
     fn add_span(&mut self, span: Span) {
@@ -535,6 +545,11 @@ impl Terminator {
             kind,
             span,
         }
+    }
+
+    /// Returns the [`TerminatorKind`] of this terminator
+    pub fn kind(&self) -> &TerminatorKind {
+        &self.kind
     }
 }
 

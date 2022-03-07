@@ -38,7 +38,7 @@ pub mod tests {
     }
 
     #[test]
-    fn basic() {
+    fn print_mir() {
         let text = "
         fn test() -> i64 {
             let x: i64 := 5;
@@ -56,13 +56,33 @@ pub mod tests {
     }
 
     #[test]
-    fn if_no_else() {
+    fn print_mir_for_if_no_else() {
         let text = "
         fn test() -> i64 {
             let x: i64 := 5;
             let b: bool := true;
             if (b) {};
             return 1 + 2 + 3 + x;
+        }
+        ";
+        let mut table = StringTable::new();
+        let module = compile(text, &mut table);
+        let mirs = transform::module_transform(&module);
+        for mir in mirs {
+            println!("{}", mir);
+        }
+    }
+
+    #[test]
+    fn print_mir_for_while_expr() {
+        let text = "
+        fn test() -> i64 {
+            let x: i64 := 5;
+            let b: bool := true;
+            while (b && false) {
+                let y: i64 := 6 + x;
+            };
+            return 0;
         }
         ";
         let mut table = StringTable::new();
@@ -346,6 +366,45 @@ pub mod tests {
                     assert_eq!(*r, RValue::UnOp(UnOp::Not, Operand::Constant(exp.clone())));
                 }
             }
+        }
+    }
+
+    #[test]
+    fn while_expr() {
+        let text = "
+        fn test() -> i64 {
+            let x: i64 := 5;
+            let b: bool := true;
+            while (b && false) {
+                let y: i64 := 6 + x;
+            };
+            return 0;
+        }
+        ";
+        let mut table = StringTable::new();
+        let module = compile(text, &mut table);
+        let mirs = transform::module_transform(&module);
+        let mir = &mirs[0];
+
+        // Check that the right number of BBs are created
+        assert_eq!(mir.len(), 4);
+
+        // Check first transition into cond BB
+        assert_eq!(mir.get_bb(BasicBlockId::new(0)).get_term().unwrap().kind(), &TerminatorKind::GoTo{target: BasicBlockId::new(1)});
+
+        // Check that cond BB has a cond goto into the body bb or the exit bb
+        if let TerminatorKind::CondGoTo{cond: _, tru, fls } = mir.get_bb(BasicBlockId::new(1)).get_term().unwrap().kind() {
+            assert_eq!(*tru, BasicBlockId::new(2));
+            assert_eq!(*fls, BasicBlockId::new(3));
+        } else {
+            panic!("Expected a conditional go to")
+        }
+
+        // Check that the body BB always goes to the cond bb
+        if let TerminatorKind::GoTo{target} = mir.get_bb(BasicBlockId::new(2)).get_term().unwrap().kind() {
+            assert_eq!(*target, BasicBlockId::new(1));
+        } else {
+            panic!("While body should always return to conditional BB")
         }
     }
 
