@@ -400,12 +400,12 @@ impl FuncTransformer {
             Expression::TypeCast(_, _, _) => todo!(),
             Expression::SizeOf(_, _) => todo!(),
             Expression::MemberAccess(_, _, _) => todo!(),
-            Expression::ArrayExpression(_, _, _) => todo!(),
+            Expression::ArrayExpression(ctx, els, sz) => self.array_expr(els, *sz, ctx.span()),
             Expression::ArrayAt {
                 context,
                 array,
                 index,
-            } => todo!(),
+            } => self.array_at(array, index, context.span()),
             Expression::Identifier(_, id) => {
                 // Look up Var ID using the Identifier String ID
                 let vid = self.mir.find_var(*id).unwrap();
@@ -441,6 +441,17 @@ impl FuncTransformer {
             }
             Expression::Yield(_, _) => todo!(),
         }
+    }
+
+    fn array_at(&mut self, array: &Expression<SemanticContext>, index: &Expression<SemanticContext>, span: Span) -> Operand {
+        Operand::Constant(Constant::Unit)
+    }
+
+    fn array_expr(&mut self, elements: &[Expression<SemanticContext>], sz: usize, span: Span) -> Operand {
+        // Create a temporary place on the stack for the array expression
+        // Compute the value of each element expression and store in the stack variable
+        // Return the temporary variable as the value of the array expression
+        Operand::Constant(Constant::Unit)
     }
 
     fn while_expr(&mut self, cond: &Expression<SemanticContext>, body: &Expression<SemanticContext>, span: Span) -> Operand {

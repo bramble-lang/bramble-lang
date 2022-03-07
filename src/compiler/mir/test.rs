@@ -56,6 +56,22 @@ pub mod tests {
     }
 
     #[test]
+    fn print_mir_for_array_expression() {
+        let text = "
+        fn test() -> i64 {
+            let x: [i64; 2] := [1, 2];
+            return x[0];
+        }
+        ";
+        let mut table = StringTable::new();
+        let module = compile(text, &mut table);
+        let mirs = transform::module_transform(&module);
+        for mir in mirs {
+            println!("{}", mir);
+        }
+    }
+
+    #[test]
     fn print_mir_for_if_no_else() {
         let text = "
         fn test() -> i64 {

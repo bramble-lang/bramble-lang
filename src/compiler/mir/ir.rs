@@ -424,7 +424,7 @@ impl Display for LValue {
 /// such as a reference, array, or structure.
 #[derive(Debug, PartialEq, Clone)]
 pub enum Accessor {
-    Index(u64),
+    Index(Box<LValue>),
     Field(StringId, Type),
     Deref,
 }
