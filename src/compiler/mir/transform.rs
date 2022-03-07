@@ -169,6 +169,10 @@ impl MirBuilder {
         ));
     }
 
+    fn array_at(&mut self, array: LValue, index: Operand) -> LValue {
+        LValue::Access(Box::new(array), Accessor::Index(Box::new(index)))
+    }
+
     /// Add a boolean not to the current [`BasicBlock`].
     fn not(&mut self, right: Operand) -> RValue {
         debug!("Not: {:?}", right);
@@ -400,7 +404,7 @@ impl FuncTransformer {
             Expression::TypeCast(_, _, _) => todo!(),
             Expression::SizeOf(_, _) => todo!(),
             Expression::MemberAccess(_, _, _) => todo!(),
-            Expression::ArrayExpression(ctx, els, sz) => self.array_expr(els, *sz, ctx.span()),
+            Expression::ArrayExpression(ctx, els, sz) => self.array_expr(ctx.ty(), els, *sz, ctx.span()),
             Expression::ArrayAt {
                 context,
                 array,
@@ -455,10 +459,7 @@ impl FuncTransformer {
             // Compute the index expression to find out the position to read from
             let index_mir = self.expression(index);
             // Return the array at memory location
-            Operand::LValue(LValue::Access(
-                Box::new(array_mir),
-                Accessor::Index(Box::new(index_mir)),
-            ))
+            Operand::LValue(self.mir.array_at(array_mir, index_mir))
         } else {
             // The type resolver stage will make sure that the left operand of the index operation
             // must be a location (LValue) expression. Therefore, if this branch is ever reached then
@@ -470,14 +471,27 @@ impl FuncTransformer {
 
     fn array_expr(
         &mut self,
+        ty: &Type,
         elements: &[Expression<SemanticContext>],
         sz: usize,
         span: Span,
     ) -> Operand {
         // Create a temporary place on the stack for the array expression
+        let temp = LValue::Temp(self.mir.temp(ty, span));
+
         // Compute the value of each element expression and store in the stack variable
+        for idx in 0..sz {
+            let idx_mir = self.mir.const_i64(idx as i64);
+            let array_el_loc = self.mir.array_at(temp.clone(), idx_mir);
+
+            let el = self.expression(&elements[idx]);
+            let el_span = elements[idx].context().span();
+
+            self.mir.store(array_el_loc, RValue::Use(el), el_span);
+        }
+
         // Return the temporary variable as the value of the array expression
-        Operand::Constant(Constant::Unit)
+        Operand::LValue(temp)
     }
 
     fn while_expr(

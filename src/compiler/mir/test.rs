@@ -110,6 +110,55 @@ pub mod tests {
     }
 
     #[test]
+    fn array_expression() {
+        let text = "
+        fn test() -> i64 {
+            let x: [i64; 2] := [1, 2];
+            return x[0];
+        }
+        ";
+        let mut table = StringTable::new();
+        let module = compile(text, &mut table);
+        let mir = &transform::module_transform(&module)[0];
+
+        let bb = mir.get_bb(BasicBlockId::new(0));
+        let first = bb.get_stm(0);
+        let second = bb.get_stm(1);
+
+        match first.kind() {
+            StatementKind::Assign(lv, rv) => {
+                assert_eq!(
+                    lv,
+                    &LValue::Access(Box::new(
+                        LValue::Temp(TempId::new(0))),
+                        Accessor::Index(Box::new(Operand::Constant(Constant::I64(0))))
+                    )
+                );
+                assert_eq!(
+                    rv,
+                    &RValue::Use(Operand::Constant(Constant::I64(1)))
+                );
+            }
+        }
+
+        match second.kind() {
+            StatementKind::Assign(lv, rv) => {
+                assert_eq!(
+                    lv,
+                    &LValue::Access(Box::new(
+                        LValue::Temp(TempId::new(0))),
+                        Accessor::Index(Box::new(Operand::Constant(Constant::I64(1))))
+                    )
+                );
+                assert_eq!(
+                    rv,
+                    &RValue::Use(Operand::Constant(Constant::I64(2)))
+                );
+            }
+        }
+    }
+
+    #[test]
     fn array_access() {
         let text = "
         fn test() -> i64 {
