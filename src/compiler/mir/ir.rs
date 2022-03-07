@@ -314,6 +314,7 @@ impl BasicBlock {
         &self.statements[idx]
     }
 
+    /// Get the [`Terminator`] for this basic block
     pub fn get_term(&self) -> Option<&Terminator> {
         self.terminator.as_ref()
     }
