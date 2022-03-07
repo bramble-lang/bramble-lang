@@ -38,7 +38,7 @@ pub mod tests {
     }
 
     #[test]
-    fn basic() {
+    fn print_mir() {
         let text = "
         fn test() -> i64 {
             let x: i64 := 5;
@@ -56,7 +56,7 @@ pub mod tests {
     }
 
     #[test]
-    fn if_no_else() {
+    fn print_mir_for_if_no_else() {
         let text = "
         fn test() -> i64 {
             let x: i64 := 5;
@@ -74,7 +74,7 @@ pub mod tests {
     }
 
     #[test]
-    fn viz_while_expr() {
+    fn print_mir_for_while_expr() {
         let text = "
         fn test() -> i64 {
             let x: i64 := 5;
