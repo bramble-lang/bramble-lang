@@ -445,13 +445,14 @@ impl FuncTransformer {
 
     fn array_at(&mut self, array: &Expression<SemanticContext>, index: &Expression<SemanticContext>, span: Span) -> Operand {
         // resolve the array expression to find out where in memory to begin the indexing operation
-        let array_mir = self.expression(array);
-        let array_temp = self.mir.temp_store(RValue::Use(array_mir), array.get_type(), array.context().span());
-
+        if let Operand::LValue(array_mir) = self.expression(array) {
         // Compute the index expression to find out the position to read from
-        let index_mir = self.expression(index);
+            let index_mir = self.expression(index);
         // Return the array at memory location
-        Operand::LValue(LValue::Access(Box::new(array_temp), Accessor::Index(Box::new(index_mir))))
+            Operand::LValue(LValue::Access(Box::new(array_mir), Accessor::Index(Box::new(index_mir))))
+        } else {
+            panic!("Array expressions must resolve to Location Expressions")
+        }
     }
 
     fn array_expr(&mut self, elements: &[Expression<SemanticContext>], sz: usize, span: Span) -> Operand {
