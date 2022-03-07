@@ -481,11 +481,13 @@ impl FuncTransformer {
 
         // Compute the value of each element expression and store in the stack variable
         for idx in 0..sz {
-            let el_span = elements[idx].context().span();
-            let el = self.expression(&elements[idx]);
             let idx_mir = self.mir.const_i64(idx as i64);
-            let array_el = self.mir.array_at(temp.clone(), idx_mir);
-            self.mir.store(array_el, RValue::Use(el), el_span);
+            let array_el_loc = self.mir.array_at(temp.clone(), idx_mir);
+
+            let el = self.expression(&elements[idx]);
+            let el_span = elements[idx].context().span();
+
+            self.mir.store(array_el_loc, RValue::Use(el), el_span);
         }
 
         // Return the temporary variable as the value of the array expression
