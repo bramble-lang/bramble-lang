@@ -402,7 +402,7 @@ pub enum LValue {
 
     /// Represents accessing data via some form of transformation (e.g., array index,
     /// dereferencing a raw pointer, or the field of a structure)
-    Access(Box<LValue>, Accessor),
+    Access(Box<Operand>, Accessor),
 
     /// Where to store the result of a procedure so that the caller can get the result.
     ReturnPointer,
@@ -424,7 +424,7 @@ impl Display for LValue {
 /// such as a reference, array, or structure.
 #[derive(Debug, PartialEq, Clone)]
 pub enum Accessor {
-    Index(Box<LValue>),
+    Index(Box<Operand>),
     Field(StringId, Type),
     Deref,
 }
