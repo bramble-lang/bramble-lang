@@ -188,74 +188,74 @@ impl MirBuilder {
     }
 
     /// Add a subtraction operation to the current [`BasicBlock`].
-    fn sub(&mut self, left: Operand, right: Operand) -> RValue  {
+    fn sub(&mut self, left: Operand, right: Operand) -> RValue {
         debug!("Sub: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Sub, left, right)
     }
 
     /// Add a multiply operation to the current [`BasicBlock`].
-    fn mul(&mut self, left: Operand, right: Operand) -> RValue  {
+    fn mul(&mut self, left: Operand, right: Operand) -> RValue {
         debug!("Mul: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Mul, left, right)
     }
 
     /// Add a divide operation to the current [`BasicBlock`].
-    fn div(&mut self, left: Operand, right: Operand) -> RValue  {
+    fn div(&mut self, left: Operand, right: Operand) -> RValue {
         debug!("Div: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Div, left, right)
     }
 
     /// Add a bitwise and operation to the current [`BasicBlock`].
-    fn bitwise_and(&mut self, left: Operand, right: Operand) -> RValue  {
+    fn bitwise_and(&mut self, left: Operand, right: Operand) -> RValue {
         debug!("And: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::And, left, right)
     }
 
     /// Add a bitwise and operation to the current [`BasicBlock`].
-    fn bitwise_or(&mut self, left: Operand, right: Operand) -> RValue  {
+    fn bitwise_or(&mut self, left: Operand, right: Operand) -> RValue {
         debug!("Or: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Or, left, right)
     }
 
     /// Add an equality test operation to the current [`BasicBlock`].
-    fn eq(&mut self, left: Operand, right: Operand) -> RValue  {
+    fn eq(&mut self, left: Operand, right: Operand) -> RValue {
         debug!("Eq: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Eq, left, right)
     }
 
     /// Add a not equal test operation to the current [`BasicBlock`].
-    fn neq(&mut self, left: Operand, right: Operand) -> RValue  {
+    fn neq(&mut self, left: Operand, right: Operand) -> RValue {
         debug!("Neq: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Ne, left, right)
     }
 
     /// Add a less than test operation to the current [`BasicBlock`].
-    fn lt(&mut self, left: Operand, right: Operand) -> RValue  {
+    fn lt(&mut self, left: Operand, right: Operand) -> RValue {
         debug!("Less Than");
         debug!("Add: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Lt, left, right)
     }
 
     /// Add a less than or equal to test operation to the current [`BasicBlock`].
-    fn le(&mut self, left: Operand, right: Operand) -> RValue  {
+    fn le(&mut self, left: Operand, right: Operand) -> RValue {
         debug!("Less or Equal: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Le, left, right)
     }
 
     /// Add a greater than test operation to the current [`BasicBlock`].
-    fn gt(&mut self, left: Operand, right: Operand) -> RValue  {
+    fn gt(&mut self, left: Operand, right: Operand) -> RValue {
         debug!("Greater: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Gt, left, right)
     }
 
     /// Add a greater than or equal to test operation to the current [`BasicBlock`].
-    fn ge(&mut self, left: Operand, right: Operand) -> RValue  {
+    fn ge(&mut self, left: Operand, right: Operand) -> RValue {
         debug!("Greater or Equal: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Ge, left, right)
     }
 
     /// Add a raw pointer offset operation to the current [`BasicBlock`].
-    fn offset(&mut self, left: Operand, right: Operand) -> RValue  {
+    fn offset(&mut self, left: Operand, right: Operand) -> RValue {
         debug!("Pointer Offset: {:?}, {:?}", left, right);
         todo!()
     }
@@ -396,7 +396,7 @@ impl FuncTransformer {
             Expression::UnaryOp(ctx, op, right) => {
                 let rv = self.unary_op(*op, right);
                 self.mir.temp_store(rv, ctx.ty(), ctx.span())
-            },
+            }
             Expression::TypeCast(_, _, _) => todo!(),
             Expression::SizeOf(_, _) => todo!(),
             Expression::MemberAccess(_, _, _) => todo!(),
@@ -443,26 +443,50 @@ impl FuncTransformer {
         }
     }
 
-    fn array_at(&mut self, array: &Expression<SemanticContext>, index: &Expression<SemanticContext>, span: Span) -> Operand {
+    /// Transform an Array At operation to its MIR form and return the Location Expression as
+    /// an [`Operand::LValue`]. This operand can then be used in other MIR operations.
+    fn array_at(
+        &mut self,
+        array: &Expression<SemanticContext>,
+        index: &Expression<SemanticContext>,
+        span: Span,
+    ) -> Operand {
         // resolve the array expression to find out where in memory to begin the indexing operation
         if let Operand::LValue(array_mir) = self.expression(array) {
-        // Compute the index expression to find out the position to read from
+            // Compute the index expression to find out the position to read from
             let index_mir = self.expression(index);
-        // Return the array at memory location
-            Operand::LValue(LValue::Access(Box::new(array_mir), Accessor::Index(Box::new(index_mir))))
+            // Return the array at memory location
+            Operand::LValue(LValue::Access(
+                Box::new(array_mir),
+                Accessor::Index(Box::new(index_mir)),
+            ))
         } else {
+            // The type resolver stage will make sure that the left operand of the index operation
+            // must be a location (LValue) expression. Therefore, if this branch is ever reached then
+            // there is a critical bug in the Type Resolver logic and we should panic and not allow
+            // the compiler to go any further.
             panic!("Array expressions must resolve to Location Expressions")
         }
     }
 
-    fn array_expr(&mut self, elements: &[Expression<SemanticContext>], sz: usize, span: Span) -> Operand {
+    fn array_expr(
+        &mut self,
+        elements: &[Expression<SemanticContext>],
+        sz: usize,
+        span: Span,
+    ) -> Operand {
         // Create a temporary place on the stack for the array expression
         // Compute the value of each element expression and store in the stack variable
         // Return the temporary variable as the value of the array expression
         Operand::Constant(Constant::Unit)
     }
 
-    fn while_expr(&mut self, cond: &Expression<SemanticContext>, body: &Expression<SemanticContext>, span: Span) -> Operand {
+    fn while_expr(
+        &mut self,
+        cond: &Expression<SemanticContext>,
+        body: &Expression<SemanticContext>,
+        span: Span,
+    ) -> Operand {
         // Create a block that will evaluate the conditional
         // the conditional has to be reevaluated on every iteration of the loop, therefore it has its own BB
         let cond_bb = self.mir.new_bb();
@@ -477,17 +501,18 @@ impl FuncTransformer {
         // Construct the condition evaluation BB
         self.mir.set_bb(cond_bb);
         let cond_val = self.expression(cond);
-        self.mir.term_cond_goto(cond_val, body_bb, exit_bb, cond.context().span());
+        self.mir
+            .term_cond_goto(cond_val, body_bb, exit_bb, cond.context().span());
 
         // Construct the while loop body BB
         self.mir.set_bb(body_bb);
-        self.expression(body);  // While loops always resolve to Unit value, so ignore the result of this expression
+        self.expression(body); // While loops always resolve to Unit value, so ignore the result of this expression
         self.mir.term_goto(cond_bb, span_end(body.context().span()));
 
         // Set the exit_bb as the current BB to continue constructing the MIR after the while loop
         self.mir.set_bb(exit_bb);
 
-        Operand::Constant(Constant::Unit)  // All while loops resolve to Unit value
+        Operand::Constant(Constant::Unit) // All while loops resolve to Unit value
     }
 
     fn if_expr(
@@ -516,7 +541,10 @@ impl FuncTransformer {
         // Only create a temp location if this If Expression can resolve to a
         // value
         let result = if else_block.is_some() && then_block.get_type() != Type::Unit {
-            Some(self.mir.temp(then_block.get_type(), then_block.context().span()))
+            Some(
+                self.mir
+                    .temp(then_block.get_type(), then_block.context().span()),
+            )
         } else {
             None
         };
@@ -560,11 +588,11 @@ impl FuncTransformer {
             UnaryOperator::Negate => {
                 let right = self.expression(right);
                 self.mir.negate(right)
-            },
+            }
             UnaryOperator::Not => {
                 let right = self.expression(right);
                 self.mir.not(right)
-            },
+            }
             UnaryOperator::AddressConst | UnaryOperator::AddressMut => {
                 let right = self.expression(right);
                 if let Operand::LValue(lv) = right {
@@ -574,7 +602,7 @@ impl FuncTransformer {
                     // so if it does, then there is a bug in the compiler.
                     panic!("AddressOf can only be applied to LValues")
                 }
-            },
+            }
             UnaryOperator::DerefRawPointer => todo!(),
         }
     }
@@ -650,7 +678,7 @@ impl FuncTransformer {
                 let left = self.expression(left);
                 let right = self.expression(right);
                 self.mir.offset(left, right)
-            },
+            }
         }
     }
 }

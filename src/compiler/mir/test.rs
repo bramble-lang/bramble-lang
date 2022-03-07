@@ -97,8 +97,8 @@ pub mod tests {
     fn print_mir_for_array_expression() {
         let text = "
         fn test() -> i64 {
-            let x: [i64; 2] := [1, 2];
-            return x[0];
+            let x: [[i64; 2]; 2] := [[1, 2], [3, 4]];
+            return x[1][0];
         }
         ";
         let mut table = StringTable::new();
@@ -132,6 +132,38 @@ pub mod tests {
                     &RValue::Use(Operand::LValue(LValue::Access(
                         Box::new(LValue::Var(VarId::new(0))),
                         Accessor::Index(Box::new(Operand::Constant(Constant::I64(0))))
+                    )))
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn double_array_access() {
+        let text = "
+        fn test() -> i64 {
+            let x: [[i64; 2]; 2] := [[1, 2], [3, 4]];
+            return x[0][1];
+        }
+        ";
+        let mut table = StringTable::new();
+        let module = compile(text, &mut table);
+        let mir = &transform::module_transform(&module)[0];
+
+        let bb = mir.get_bb(BasicBlockId::new(0));
+        let last = bb.get_stm(bb.len() - 1);
+
+        match last.kind() {
+            StatementKind::Assign(lv, rv) => {
+                assert_eq!(lv, &LValue::ReturnPointer);
+                assert_eq!(
+                    rv,
+                    &RValue::Use(Operand::LValue(LValue::Access(
+                        Box::new(LValue::Access(
+                            Box::new(LValue::Var(VarId::new(0))),
+                            Accessor::Index(Box::new(Operand::Constant(Constant::I64(0))))
+                        )),
+                        Accessor::Index(Box::new(Operand::Constant(Constant::I64(1))))
                     )))
                 );
             }
