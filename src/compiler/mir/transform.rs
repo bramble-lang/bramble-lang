@@ -636,8 +636,8 @@ impl FuncTransformer {
     }
 }
 
-/// Returns a new span that covers only the first byte of the
-/// given span.
+/// Returns a new span that represents the 0-width point immediately
+/// preceeding the given span.
 ///
 /// This is used to represent MIR instructions that are inserted
 /// before the an expression block has started and which don't
@@ -653,8 +653,8 @@ fn span_begin(span: Span) -> Span {
     }
 }
 
-/// Returns a new span that covers only the last byte of the
-/// given span.
+/// Returns a new span that represents the 0-width point immediately
+/// following the givne span.
 ///
 /// This is used to represent MIR instructions that are inserted
 /// after the an expression block has ended and which don't
