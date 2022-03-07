@@ -428,7 +428,7 @@ impl FuncTransformer {
                 context,
                 cond,
                 body,
-            } => todo!(),
+            } => self.while_expr(cond, body),
             Expression::ExpressionBlock(_, block, expr) => {
                 for stm in block {
                     self.statement(stm);
@@ -441,6 +441,10 @@ impl FuncTransformer {
             }
             Expression::Yield(_, _) => todo!(),
         }
+    }
+
+    fn while_expr(&mut self, cond: &Expression<SemanticContext>, body: &Expression<SemanticContext>) -> Operand {
+        Operand::Constant(Constant::Unit)
     }
 
     fn if_expr(

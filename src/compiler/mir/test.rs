@@ -74,6 +74,26 @@ pub mod tests {
     }
 
     #[test]
+    fn while_expr() {
+        let text = "
+        fn test() -> i64 {
+            let x: i64 := 5;
+            let b: bool := true;
+            while (b) {
+                let y: i64 := 6 + x;
+            };
+            return 0;
+        }
+        ";
+        let mut table = StringTable::new();
+        let module = compile(text, &mut table);
+        let mirs = transform::module_transform(&module);
+        for mir in mirs {
+            println!("{}", mir);
+        }
+    }
+
+    #[test]
     fn address_of() {
         let mut table = StringTable::new();
         let hello = table.insert("hello".into());
