@@ -329,7 +329,7 @@ impl BasicBlock {
         }
     }
 
-    /// Returns the number of statements in this basic block
+    /// Returns the number of [`Statements`](Statement) in this basic block
     pub fn len(&self) -> usize {
         self.statements.len()
     }
