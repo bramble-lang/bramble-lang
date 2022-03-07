@@ -79,7 +79,7 @@ pub mod tests {
         fn test() -> i64 {
             let x: i64 := 5;
             let b: bool := true;
-            while (b) {
+            while (b && false) {
                 let y: i64 := 6 + x;
             };
             return 0;

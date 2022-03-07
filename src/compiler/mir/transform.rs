@@ -428,7 +428,7 @@ impl FuncTransformer {
                 context,
                 cond,
                 body,
-            } => self.while_expr(cond, body),
+            } => self.while_expr(cond, body, context.span()),
             Expression::ExpressionBlock(_, block, expr) => {
                 for stm in block {
                     self.statement(stm);
@@ -443,8 +443,32 @@ impl FuncTransformer {
         }
     }
 
-    fn while_expr(&mut self, cond: &Expression<SemanticContext>, body: &Expression<SemanticContext>) -> Operand {
-        Operand::Constant(Constant::Unit)
+    fn while_expr(&mut self, cond: &Expression<SemanticContext>, body: &Expression<SemanticContext>, span: Span) -> Operand {
+        // Create a block that will evaluate the conditional
+        // the conditional has to be reevaluated on every iteration of the loop, therefore it has its own BB
+        let cond_bb = self.mir.new_bb();
+        // Create a block for the while body
+        let body_bb = self.mir.new_bb();
+        // Create a block for exiting the while loop
+        let exit_bb = self.mir.new_bb();
+
+        // Have the BB prior to the while loop enter into the Conditional BB
+        self.mir.term_goto(cond_bb, span_begin(span));
+
+        // Construct the condition evaluation BB
+        self.mir.set_bb(cond_bb);
+        let cond_val = self.expression(cond);
+        self.mir.term_cond_goto(cond_val, body_bb, exit_bb, cond.context().span());
+
+        // Construct the while loop body BB
+        self.mir.set_bb(body_bb);
+        self.expression(body);  // While loops always resolve to Unit value, so ignore the result of this expression
+        self.mir.term_goto(cond_bb, span_end(body.context().span()));
+
+        // Set the exit_bb as the current BB to continue constructing the MIR after the while loop
+        self.mir.set_bb(exit_bb);
+
+        Operand::Constant(Constant::Unit)  // All while loops resolve to Unit value
     }
 
     fn if_expr(
@@ -612,11 +636,28 @@ impl FuncTransformer {
     }
 }
 
+/// Returns a new span that covers only the first byte of the
+/// given span.
+///
+/// This is used to represent MIR instructions that are inserted
+/// before the an expression block has started and which don't
+/// correspond to any code written by the User.  For example, the
+/// GoTo that transitions from the code before a while loop into the
+/// BasicBlock of the while loop's condition expression.
+fn span_begin(span: Span) -> Span {
+    let low = span.low().as_u32();
+    if low == 0 {
+        Span::zero()
+    } else {
+        Span::new(Offset::new(low), Offset::new(low))
+    }
+}
+
 /// Returns a new span that covers only the last byte of the
 /// given span.
 ///
 /// This is used to represent MIR instructions that are inserted
-/// after the an expression block as ended and which don't
+/// after the an expression block has ended and which don't
 /// correspond to any code written by the User.  For example, the
 /// GoTo inserted at the end of a While loop to return to the top
 /// of the loop.
