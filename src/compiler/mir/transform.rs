@@ -169,6 +169,10 @@ impl MirBuilder {
         ));
     }
 
+    fn array_at(&mut self, array: LValue, index: Operand) -> LValue {
+        LValue::Access(Box::new(array), Accessor::Index(Box::new(index)))
+    }
+
     /// Add a boolean not to the current [`BasicBlock`].
     fn not(&mut self, right: Operand) -> RValue {
         debug!("Not: {:?}", right);
@@ -455,10 +459,7 @@ impl FuncTransformer {
             // Compute the index expression to find out the position to read from
             let index_mir = self.expression(index);
             // Return the array at memory location
-            Operand::LValue(LValue::Access(
-                Box::new(array_mir),
-                Accessor::Index(Box::new(index_mir)),
-            ))
+            Operand::LValue(self.mir.array_at(array_mir, index_mir))
         } else {
             // The type resolver stage will make sure that the left operand of the index operation
             // must be a location (LValue) expression. Therefore, if this branch is ever reached then
@@ -476,18 +477,19 @@ impl FuncTransformer {
         span: Span,
     ) -> Operand {
         // Create a temporary place on the stack for the array expression
-        let temp = self.mir.temp(ty, span);
+        let temp = LValue::Temp(self.mir.temp(ty, span));
 
         // Compute the value of each element expression and store in the stack variable
         for idx in 0..sz {
             let el_span = elements[idx].context().span();
             let el = self.expression(&elements[idx]);
-            let array_el = LValue::Access(Box::new(LValue::Temp(temp)), Accessor::Index(Box::new(Operand::Constant(Constant::I64(idx as i64)))));
+            let idx_mir = self.mir.const_i64(idx as i64);
+            let array_el = self.mir.array_at(temp.clone(), idx_mir);
             self.mir.store(array_el, RValue::Use(el), el_span);
         }
 
         // Return the temporary variable as the value of the array expression
-        Operand::LValue(LValue::Temp(temp))
+        Operand::LValue(temp)
     }
 
     fn while_expr(
