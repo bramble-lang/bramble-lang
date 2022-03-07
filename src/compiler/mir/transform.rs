@@ -400,7 +400,7 @@ impl FuncTransformer {
             Expression::TypeCast(_, _, _) => todo!(),
             Expression::SizeOf(_, _) => todo!(),
             Expression::MemberAccess(_, _, _) => todo!(),
-            Expression::ArrayExpression(ctx, els, sz) => self.array_expr(els, *sz, ctx.span()),
+            Expression::ArrayExpression(ctx, els, sz) => self.array_expr(ctx.ty(), els, *sz, ctx.span()),
             Expression::ArrayAt {
                 context,
                 array,
@@ -470,14 +470,24 @@ impl FuncTransformer {
 
     fn array_expr(
         &mut self,
+        ty: &Type,
         elements: &[Expression<SemanticContext>],
         sz: usize,
         span: Span,
     ) -> Operand {
         // Create a temporary place on the stack for the array expression
+        let temp = self.mir.temp(ty, span);
+
         // Compute the value of each element expression and store in the stack variable
+        for idx in 0..sz {
+            let el_span = elements[idx].context().span();
+            let el = self.expression(&elements[idx]);
+            let array_el = LValue::Access(Box::new(LValue::Temp(temp)), Accessor::Index(Box::new(Operand::Constant(Constant::I64(idx as i64)))));
+            self.mir.store(array_el, RValue::Use(el), el_span);
+        }
+
         // Return the temporary variable as the value of the array expression
-        Operand::Constant(Constant::Unit)
+        Operand::LValue(LValue::Temp(temp))
     }
 
     fn while_expr(
