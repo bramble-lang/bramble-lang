@@ -94,6 +94,83 @@ pub mod tests {
     }
 
     #[test]
+    fn print_mir_for_array_expression() {
+        let text = "
+        fn test() -> i64 {
+            let x: [[i64; 2]; 2] := [[1, 2], [3, 4]];
+            return x[1][0];
+        }
+        ";
+        let mut table = StringTable::new();
+        let module = compile(text, &mut table);
+        let mirs = transform::module_transform(&module);
+        for mir in mirs {
+            println!("{}", mir);
+        }
+    }
+
+    #[test]
+    fn array_access() {
+        let text = "
+        fn test() -> i64 {
+            let x: [i64; 2] := [1, 2];
+            return x[0];
+        }
+        ";
+        let mut table = StringTable::new();
+        let module = compile(text, &mut table);
+        let mir = &transform::module_transform(&module)[0];
+
+        let bb = mir.get_bb(BasicBlockId::new(0));
+        let last = bb.get_stm(bb.len() - 1);
+
+        match last.kind() {
+            StatementKind::Assign(lv, rv) => {
+                assert_eq!(lv, &LValue::ReturnPointer);
+                assert_eq!(
+                    rv,
+                    &RValue::Use(Operand::LValue(LValue::Access(
+                        Box::new(LValue::Var(VarId::new(0))),
+                        Accessor::Index(Box::new(Operand::Constant(Constant::I64(0))))
+                    )))
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn double_array_access() {
+        let text = "
+        fn test() -> i64 {
+            let x: [[i64; 2]; 2] := [[1, 2], [3, 4]];
+            return x[0][1];
+        }
+        ";
+        let mut table = StringTable::new();
+        let module = compile(text, &mut table);
+        let mir = &transform::module_transform(&module)[0];
+
+        let bb = mir.get_bb(BasicBlockId::new(0));
+        let last = bb.get_stm(bb.len() - 1);
+
+        match last.kind() {
+            StatementKind::Assign(lv, rv) => {
+                assert_eq!(lv, &LValue::ReturnPointer);
+                assert_eq!(
+                    rv,
+                    &RValue::Use(Operand::LValue(LValue::Access(
+                        Box::new(LValue::Access(
+                            Box::new(LValue::Var(VarId::new(0))),
+                            Accessor::Index(Box::new(Operand::Constant(Constant::I64(0))))
+                        )),
+                        Accessor::Index(Box::new(Operand::Constant(Constant::I64(1))))
+                    )))
+                );
+            }
+        }
+    }
+
+    #[test]
     fn address_of() {
         let mut table = StringTable::new();
         let hello = table.insert("hello".into());
@@ -390,10 +467,17 @@ pub mod tests {
         assert_eq!(mir.len(), 4);
 
         // Check first transition into cond BB
-        assert_eq!(mir.get_bb(BasicBlockId::new(0)).get_term().unwrap().kind(), &TerminatorKind::GoTo{target: BasicBlockId::new(1)});
+        assert_eq!(
+            mir.get_bb(BasicBlockId::new(0)).get_term().unwrap().kind(),
+            &TerminatorKind::GoTo {
+                target: BasicBlockId::new(1)
+            }
+        );
 
         // Check that cond BB has a cond goto into the body bb or the exit bb
-        if let TerminatorKind::CondGoTo{cond: _, tru, fls } = mir.get_bb(BasicBlockId::new(1)).get_term().unwrap().kind() {
+        if let TerminatorKind::CondGoTo { cond: _, tru, fls } =
+            mir.get_bb(BasicBlockId::new(1)).get_term().unwrap().kind()
+        {
             assert_eq!(*tru, BasicBlockId::new(2));
             assert_eq!(*fls, BasicBlockId::new(3));
         } else {
@@ -401,7 +485,9 @@ pub mod tests {
         }
 
         // Check that the body BB always goes to the cond bb
-        if let TerminatorKind::GoTo{target} = mir.get_bb(BasicBlockId::new(2)).get_term().unwrap().kind() {
+        if let TerminatorKind::GoTo { target } =
+            mir.get_bb(BasicBlockId::new(2)).get_term().unwrap().kind()
+        {
             assert_eq!(*target, BasicBlockId::new(1));
         } else {
             panic!("While body should always return to conditional BB")

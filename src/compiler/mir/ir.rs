@@ -328,6 +328,11 @@ impl BasicBlock {
             self.span = Some(span);
         }
     }
+
+    /// Returns the number of [`Statements`](Statement) in this basic block
+    pub fn len(&self) -> usize {
+        self.statements.len()
+    }
 }
 
 impl Display for BasicBlock {
@@ -424,7 +429,7 @@ impl Display for LValue {
 /// such as a reference, array, or structure.
 #[derive(Debug, PartialEq, Clone)]
 pub enum Accessor {
-    Index(u64),
+    Index(Box<Operand>),
     Field(StringId, Type),
     Deref,
 }
