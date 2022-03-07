@@ -328,6 +328,11 @@ impl BasicBlock {
             self.span = Some(span);
         }
     }
+
+    /// Returns the number of statements in this basic block
+    pub fn len(&self) -> usize {
+        self.statements.len()
+    }
 }
 
 impl Display for BasicBlock {
