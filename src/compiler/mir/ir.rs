@@ -3,8 +3,6 @@
 
 use std::fmt::Display;
 
-use simplelog::TermLogger;
-
 use crate::{
     compiler::{ast::Type, Span},
     StringId,
