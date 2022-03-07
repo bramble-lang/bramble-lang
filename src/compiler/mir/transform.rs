@@ -405,7 +405,7 @@ impl FuncTransformer {
                 context,
                 array,
                 index,
-            } => self.array_at(array, index, context.span()),
+            } => self.array_at(array, index),
             Expression::Identifier(_, id) => {
                 // Look up Var ID using the Identifier String ID
                 let vid = self.mir.find_var(*id).unwrap();
@@ -449,7 +449,6 @@ impl FuncTransformer {
         &mut self,
         array: &Expression<SemanticContext>,
         index: &Expression<SemanticContext>,
-        span: Span,
     ) -> Operand {
         // resolve the array expression to find out where in memory to begin the indexing operation
         if let Operand::LValue(array_mir) = self.expression(array) {
