@@ -1,7 +1,5 @@
 #[cfg(test)]
 pub mod tests {
-    use std::thread::AccessError;
-
     use crate::{
         compiler::{
             ast::*,
