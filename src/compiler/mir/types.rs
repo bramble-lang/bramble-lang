@@ -38,7 +38,7 @@ impl TypeTable {
     /// be added as [`MirStructDef::Declared`].
     pub fn add(&mut self, ty: &Type) -> TypeId {
         // Check if ty is already in the table
-        if let Some(id) = self.get(ty) {
+        if let Some(id) = self.find(ty) {
             return id;
         }
 
@@ -80,7 +80,7 @@ impl TypeTable {
     /// Searches the table for the given [`Type`] and returns the [`TypeId`] if found. [`Type::Custom`]
     /// this will search through the table for a type with the same canonical path, it may return as
     /// [`MirStructDef::Declared`] or [`MirStructDef::Defined`].
-    pub fn get(&self, ty: &Type) -> Option<TypeId> {
+    pub fn find(&self, ty: &Type) -> Option<TypeId> {
         // If ty is not found, then return None
         let mir_ty = match ty {
             Type::Unit
@@ -103,7 +103,7 @@ impl TypeTable {
             }
             Type::Array(el_ty, sz) => {
                 // If ty is an array type, then get the TypeId for the element type and search the table for a matching (TypeId, size) tuple
-                let el_ty_id = self.get(el_ty)?;
+                let el_ty_id = self.find(el_ty)?;
                 MirTypeDef::Array {
                     ty: el_ty_id,
                     sz: *sz,
@@ -111,7 +111,7 @@ impl TypeTable {
             }
             Type::RawPointer(mutable, target) => {
                 // If ty is a raw pointer, then get the TypeId for the target type and search for a pointer to the type id
-                let target_id = self.get(target)?;
+                let target_id = self.find(target)?;
                 MirTypeDef::RawPointer {
                     mutable: *mutable,
                     target: target_id,
