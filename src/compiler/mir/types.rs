@@ -324,4 +324,38 @@ mod tests {
             assert_eq!(actual, &expected)
         }
     }
+
+    #[test]
+    fn add_raw_pointer_type() {
+        let mut table = TypeTable::new();
+        for ty in [
+            Type::Unit,
+            Type::Null,
+            Type::U8,
+            Type::U16,
+            Type::U32,
+            Type::U64,
+            Type::I8,
+            Type::I16,
+            Type::I32,
+            Type::I64,
+            Type::F64,
+            Type::Bool,
+            Type::StringLiteral,
+        ] {
+            for mutable in [PointerMut::Const, PointerMut::Mut] {
+                let expected = MirTypeDef::RawPointer {
+                    mutable,
+                    target: table.find(&ty).unwrap(),
+                };
+
+                let ptr = Type::RawPointer(mutable, Box::new(ty.clone()));
+                let tid = table.add(&ptr);
+
+                let actual = table.get(tid);
+
+                assert_eq!(actual, &expected)
+            }
+        }
+    }
 }
