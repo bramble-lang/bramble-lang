@@ -1,5 +1,7 @@
 //! The system for keeping track of and defining types in the Bramble MIR.
 
+use std::fmt::Display;
+
 use crate::{
     compiler::{
         ast::{Node, Parameter, Path, PointerMut, StructDef, Type},
@@ -335,6 +337,12 @@ pub struct FieldId(u32);
 impl FieldId {
     pub fn new(id: u32) -> FieldId {
         FieldId(id)
+    }
+}
+
+impl Display for FieldId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{}", self.0))
     }
 }
 

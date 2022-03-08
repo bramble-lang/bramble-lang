@@ -453,7 +453,7 @@ impl Display for Accessor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let text = match self {
             Accessor::Index(i) => format!("[{}]", i),
-            Accessor::Field(f, _) => format!(".{}", f.0),
+            Accessor::Field(f, _) => format!(".{}", f),
             Accessor::Deref => format!("Deref()"),
         };
         f.write_str(&text)
