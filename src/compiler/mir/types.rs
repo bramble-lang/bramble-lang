@@ -1,7 +1,10 @@
 //! The system for keeping track of and defining types in the Bramble MIR.
 
 use crate::{
-    compiler::{ast::{Path, PointerMut, Type, StructDef}, semantics::semanticnode::SemanticContext},
+    compiler::{
+        ast::{Path, PointerMut, StructDef, Type},
+        semantics::semanticnode::SemanticContext,
+    },
     StringId,
 };
 
@@ -35,10 +38,27 @@ impl TypeTable {
     /// be added as [`MirStructDef::Declared`].
     pub fn add(&mut self, ty: &Type) -> TypeId {
         // Check if ty is already in the table
-        // if not, then add every component type
+        if let Some(id) = self.get(ty) {
+            return id;
+        }
+
         // Create a MirType using the referenced TypeIds and add to the table
+        let mir_ty = match ty {
+            Type::Array(el, sz) => MirTypeDef::Array {
+                ty: self.add(el),
+                sz: *sz,
+            },
+            Type::RawPointer(mutable, target) => MirTypeDef::RawPointer {
+                mutable: *mutable,
+                target: self.add(target),
+            },
+            Type::Custom(path) => todo!(),
+            _ => panic!("Base types must be in the type table before any other type is added"),
+        };
+        self.table.push(mir_ty);
+
         // Return the index of the new type as a TypeId
-        todo!()
+        TypeId(self.table.len() as u32 - 1)
     }
 
     /// Adds the definition for the given structure. This will use the path in the
@@ -47,20 +67,76 @@ impl TypeTable {
         // Search the table for a structure with the same canonical path
         // If no match found, then create a new structure entry and add to the table
         // If a match is found
-            // check if it is already Defined
-            // If it is, then return an error
-            // otherwise, add the definition
+        // check if it is already Defined
+        // If it is, then return an error
+        // otherwise, add the definition
         todo!()
     }
 
-    /// Searches the table for the given [`Type`] and returns the [`TypeId`] if found.
+    /// Searches the table for the given [`Type`] and returns the [`TypeId`] if found. [`Type::Custom`]
+    /// this will search through the table for a type with the same canonical path, it may return as
+    /// [`MirStructDef::Declared`] or [`MirStructDef::Defined`].
     pub fn get(&self, ty: &Type) -> Option<TypeId> {
-        // If ty is a base type, then convert to MirBaseType and find in the table
-        // If ty is an array type, then get the TypeId for the element type and search the table for a matching (TypeId, size) tuple
-        // If ty is a raw pointer, then get the TypeId for the target type and search for a pointer to the type id
-        // if ty is a structure, then search for an entry with a matching canonical path
         // If ty is not found, then return None
-        todo!()
+        let mir_ty = match ty {
+            Type::Unit
+            | Type::Null
+            | Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64
+            | Type::I8
+            | Type::I16
+            | Type::I32
+            | Type::I64
+            | Type::F64
+            | Type::Bool
+            | Type::StringLiteral => {
+                // If ty is a base type, then convert to MirBaseType and find in the table
+                let base =
+                    MirBaseType::parse(ty).expect("Should never be able to get a non-base type");
+                MirTypeDef::Base(base)
+            }
+            Type::Array(el_ty, sz) => {
+                // If ty is an array type, then get the TypeId for the element type and search the table for a matching (TypeId, size) tuple
+                let el_ty_id = self.get(el_ty)?;
+                MirTypeDef::Array {
+                    ty: el_ty_id,
+                    sz: *sz,
+                }
+            }
+            Type::RawPointer(mutable, target) => {
+                // If ty is a raw pointer, then get the TypeId for the target type and search for a pointer to the type id
+                let target_id = self.get(target)?;
+                MirTypeDef::RawPointer {
+                    mutable: *mutable,
+                    target: target_id,
+                }
+            }
+            Type::Custom(path) => {
+                // if ty is a structure, then search for an entry with a matching canonical path
+                MirTypeDef::Structure {
+                    path: path.clone(),
+                    def: MirStructDef::Declared,
+                }
+            }
+
+            /// Unnecessary
+            Type::StructDef(_) => todo!(),
+            Type::FunctionDef(_, _) => todo!(),
+            Type::CoroutineDef(_, _) => todo!(),
+            Type::Coroutine(_) => todo!(),
+            Type::ExternDecl(_, _, _) => todo!(),
+            Type::Unknown => todo!(),
+        };
+
+        for idx in 0..self.table.len() {
+            if self.table[idx] == mir_ty {
+                return Some(TypeId(idx as u32));
+            }
+        }
+
+        None
     }
 
     /// Will return true if every Structure is [`MirStructDef::Defined`] and every referenced
@@ -92,13 +168,68 @@ pub enum MirBaseType {
     StringLiteral,
 }
 
+impl MirBaseType {
+    fn parse(ty: &Type) -> Option<Self> {
+        let base = match ty {
+            Type::Unit => Self::Unit,
+            Type::Null => Self::Null,
+            Type::U8 => Self::U8,
+            Type::U16 => Self::U16,
+            Type::U32 => Self::U32,
+            Type::U64 => Self::U64,
+            Type::I8 => Self::I8,
+            Type::I16 => Self::I16,
+            Type::I32 => Self::I32,
+            Type::I64 => Self::I64,
+            Type::F64 => Self::F64,
+            Type::Bool => Self::Bool,
+            Type::StringLiteral => Self::StringLiteral,
+
+            _ => return None,
+        };
+        Some(base)
+    }
+}
+
 /// Defines a single type that exists within a Bramble program.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub enum MirTypeDef {
     Base(MirBaseType),
     Array { ty: TypeId, sz: usize },
     RawPointer { mutable: PointerMut, target: TypeId },
     Structure { path: Path, def: MirStructDef },
+}
+
+impl PartialEq for MirTypeDef {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Base(l0), Self::Base(r0)) => l0 == r0,
+            (Self::Array { ty: l_ty, sz: l_sz }, Self::Array { ty: r_ty, sz: r_sz }) => {
+                l_ty == r_ty && l_sz == r_sz
+            }
+            (
+                Self::RawPointer {
+                    mutable: l_mutable,
+                    target: l_target,
+                },
+                Self::RawPointer {
+                    mutable: r_mutable,
+                    target: r_target,
+                },
+            ) => l_mutable == r_mutable && l_target == r_target,
+            (
+                Self::Structure {
+                    path: l_path,
+                    def: _l_def,
+                },
+                Self::Structure {
+                    path: r_path,
+                    def: _r_def,
+                },
+            ) => l_path == r_path,
+            _ => false,
+        }
+    }
 }
 
 /// The Unique Identifier for a type within a Bramble program. Every type,
