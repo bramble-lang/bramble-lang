@@ -33,6 +33,10 @@ impl TypeTable {
         TypeTable { table }
     }
 
+    pub fn get(&self, id: TypeId) -> &MirTypeDef {
+        &self.table[id.0 as usize]
+    }
+
     /// Adds the given [`Type`] to the type table. If this type references any type which is
     /// not in the table then it will also add the referenced type to the table. Structures will
     /// be added as [`MirStructDef::Declared`].
@@ -260,4 +264,64 @@ pub enum MirStructDef {
 pub struct Field {
     pub name: StringId,
     pub ty: TypeId,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn base_types() {
+        let table = TypeTable::new();
+
+        for ty in [
+            Type::Unit,
+            Type::Null,
+            Type::U8,
+            Type::U16,
+            Type::U32,
+            Type::U64,
+            Type::I8,
+            Type::I16,
+            Type::I32,
+            Type::I64,
+            Type::F64,
+            Type::Bool,
+            Type::StringLiteral,
+        ] {
+            table.find(&ty).unwrap();
+        }
+    }
+
+    #[test]
+    fn add_array_type() {
+        let mut table = TypeTable::new();
+        for ty in [
+            Type::Unit,
+            Type::Null,
+            Type::U8,
+            Type::U16,
+            Type::U32,
+            Type::U64,
+            Type::I8,
+            Type::I16,
+            Type::I32,
+            Type::I64,
+            Type::F64,
+            Type::Bool,
+            Type::StringLiteral,
+        ] {
+            let expected = MirTypeDef::Array {
+                ty: table.find(&ty).unwrap(),
+                sz: 4,
+            };
+
+            let arr = Type::Array(Box::new(ty), 4);
+            let tid = table.add(&arr);
+
+            let actual = table.get(tid);
+
+            assert_eq!(actual, &expected)
+        }
+    }
 }
