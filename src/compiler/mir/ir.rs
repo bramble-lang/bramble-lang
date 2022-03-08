@@ -8,6 +8,8 @@ use crate::{
     StringId,
 };
 
+use super::types::FieldId;
+
 const ROOT_SCOPE: usize = 0;
 
 /// Procedure
@@ -455,15 +457,6 @@ impl Display for Accessor {
             Accessor::Deref => format!("Deref()"),
         };
         f.write_str(&text)
-    }
-}
-
-#[derive(Debug, PartialEq, Copy, Clone)]
-pub struct FieldId(u32);
-
-impl FieldId {
-    pub fn new(id: u32) -> FieldId {
-        FieldId(id)
     }
 }
 

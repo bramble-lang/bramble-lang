@@ -309,10 +309,33 @@ pub enum MirStructDef {
     Defined(Vec<Field>),
 }
 
+impl MirStructDef {
+    /// If this structure has a matching field, then return the [`FieldId`].
+    /// Otherwise, return [`Option::None`].  This will also return [`Option::None`] if
+    /// this structure is in the [`MirStructDef::Declared`] state.
+    pub fn get_field_id(&self, name: StringId) -> Option<FieldId> {
+        match self {
+            Self::Declared => None,
+            Self::Defined(fields) => {
+                fields.iter().position(|f| f.name == name).map(|fid| FieldId::new(fid as u32))
+            }
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Field {
     pub name: StringId,
     pub ty: TypeId,
+}
+
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub struct FieldId(u32);
+
+impl FieldId {
+    pub fn new(id: u32) -> FieldId {
+        FieldId(id)
+    }
 }
 
 #[cfg(test)]
