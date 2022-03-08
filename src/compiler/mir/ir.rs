@@ -430,7 +430,7 @@ impl Display for LValue {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Accessor {
     Index(Box<Operand>),
-    Field(StringId, Type),
+    Field(FieldId, Type),
     Deref,
 }
 
@@ -442,6 +442,15 @@ impl Display for Accessor {
             Accessor::Deref => format!("Deref()"),
         };
         f.write_str(&text)
+    }
+}
+
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub struct FieldId(u32);
+
+impl FieldId {
+    pub fn new(id: u32) -> FieldId {
+        FieldId(id)
     }
 }
 
