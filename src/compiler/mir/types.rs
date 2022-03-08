@@ -2,7 +2,7 @@
 
 use crate::{
     compiler::{
-        ast::{Node, Path, PointerMut, StructDef, Type, Parameter},
+        ast::{Node, Parameter, Path, PointerMut, StructDef, Type},
         semantics::semanticnode::SemanticContext,
     },
     StringId,
@@ -90,12 +90,10 @@ impl TypeTable {
         }
 
         // Search the table for a structure with the same canonical path
-        if let Some(id) = self.find(&Type::Custom(sd.context().canonical_path().clone())) {
-            // If a match is found
-            // check if it is already Defined
-            // If it is, then return an error
-            // otherwise, add the definition
+        if let Some(id) = self.find_by_path(sd.context().canonical_path()) {
             if let MirTypeDef::Structure { def, .. } = self.get_mut(id) {
+                // If a match is found
+                // check if it is not defined
                 if *def == MirStructDef::Declared {
                     *def = MirStructDef::Defined(fields);
                     id
@@ -103,20 +101,42 @@ impl TypeTable {
                     panic!("Structure already defined")
                 }
             } else {
+                // If it is, then return an error
                 panic!("Expected a structure")
             }
         } else {
             // If no match found, then create a new structure entry and add to the table
-            todo!()
+            self.table.push(MirTypeDef::Structure {
+                path: sd.context().canonical_path().clone(),
+                def: MirStructDef::Defined(fields),
+            });
+            TypeId(self.table.len() as u32 - 1)
         }
     }
 
     fn to_field(&mut self, p: &Parameter<SemanticContext>) -> Field {
         let id = self.add(&p.ty);
-        Field{
+        Field {
             name: p.name,
             ty: id,
         }
+    }
+
+    /// Given a [`Path`] this will search the table for a user defined type
+    /// with a matching canonical path.
+    pub fn find_by_path(&self, path: &Path) -> Option<TypeId> {
+        // If the given path is not canonical then return None
+        if !path.is_canonical() {
+            return None;
+        }
+
+        self.table
+            .iter()
+            .position(|ty| match ty {
+                MirTypeDef::Structure { path: p, .. } => p == path,
+                _ => false,
+            })
+            .map(|idx| TypeId(idx as u32))
     }
 
     /// Searches the table for the given [`Type`] and returns the [`TypeId`] if found. [`Type::Custom`]
@@ -435,7 +455,39 @@ mod tests {
         assert_eq!(actual, &expected);
         match actual {
             MirTypeDef::Structure { def, .. } => {
-                assert_eq!(def,&MirStructDef::Defined(vec![mir_field]))
+                assert_eq!(def, &MirStructDef::Defined(vec![mir_field]))
+            }
+            _ => panic!("Expected structure"),
+        }
+    }
+
+    #[test]
+    fn define_struct_that_is_not_declared() {
+        let mut table = TypeTable::new();
+
+        let path: Path = vec![Element::CanonicalRoot, Element::Id(StringId::new())].into();
+
+        // Test adding a definition to the structure
+        let mut sm = SemanticContext::new_local(0, ParserContext::new(Span::zero()), Type::Unit);
+        sm.set_canonical_path(path.clone());
+        let field = Parameter::new(sm.clone(), StringId::new(), &Type::I64);
+        let sd = StructDef::new(StringId::new(), sm, vec![field]);
+
+        let def_id = table.add_struct_def(&sd);
+
+        let actual = table.get(def_id);
+        let mir_field = Field {
+            name: StringId::new(),
+            ty: table.find(&Type::I64).unwrap(),
+        };
+        let expected = MirTypeDef::Structure {
+            path: path.clone(),
+            def: MirStructDef::Defined(vec![mir_field]),
+        };
+        assert_eq!(actual, &expected);
+        match actual {
+            MirTypeDef::Structure { def, .. } => {
+                assert_eq!(def, &MirStructDef::Defined(vec![mir_field]))
             }
             _ => panic!("Expected structure"),
         }
