@@ -403,7 +403,7 @@ impl FuncTransformer {
             }
             Expression::TypeCast(_, _, _) => todo!(),
             Expression::SizeOf(_, _) => todo!(),
-            Expression::MemberAccess(_, _, _) => todo!(),
+            Expression::MemberAccess(_, base, field) => self.member_access(base, *field),
             Expression::ArrayExpression(ctx, els, sz) => self.array_expr(ctx.ty(), els, *sz, ctx.span()),
             Expression::ArrayAt {
                 context,
@@ -445,6 +445,13 @@ impl FuncTransformer {
             }
             Expression::Yield(_, _) => todo!(),
         }
+    }
+
+    fn member_access(&mut self, base: &Expression<SemanticContext>, field: StringId) -> Operand {
+        // Get the Index of the Field and convert to a `FieldId`
+        // Evaluate `base`
+        // Access the ith field of the result of `base`
+        todo!()
     }
 
     /// Transform an Array At operation to its MIR form and return the Location Expression as
