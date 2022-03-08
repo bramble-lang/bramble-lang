@@ -56,10 +56,16 @@ impl TypeTable {
                 mutable: *mutable,
                 target: self.add(target),
             },
-            Type::Custom(path) => MirTypeDef::Structure {
-                path: path.clone(),
-                def: MirStructDef::Declared,
-            },
+            Type::Custom(path) => {
+                if path.is_canonical() {
+                    MirTypeDef::Structure {
+                        path: path.clone(),
+                        def: MirStructDef::Declared,
+                    }
+                } else {
+                    panic!("Exected canonical path on custom type")
+                }
+            }
             _ => panic!("Base types must be in the type table before any other type is added"),
         };
 
@@ -129,8 +135,8 @@ impl TypeTable {
                 }
             }
 
-            /// Unnecessary
-            _ => panic!("Invalid Type: {:?}", ty)
+            // Unnecessary
+            _ => panic!("Invalid Type: {:?}", ty),
         };
 
         for idx in 0..self.table.len() {
@@ -263,6 +269,8 @@ pub struct Field {
 
 #[cfg(test)]
 mod tests {
+    use crate::compiler::{ast::Element, parser::ParserContext, Span};
+
     use super::*;
 
     #[test]
@@ -352,5 +360,25 @@ mod tests {
                 assert_eq!(actual, &expected)
             }
         }
+    }
+
+    #[test]
+    fn add_structure_def() {
+        let mut table = TypeTable::new();
+
+
+        let path: Path = vec![Element::CanonicalRoot, Element::Id(StringId::new())].into();
+        let decl = table.add(&Type::Custom(path.clone()));
+
+        let actual = table.get(decl);
+
+        let expected = MirTypeDef::Structure{
+            path: path.clone(),
+            def: MirStructDef::Declared,
+        };
+        assert_eq!(actual, &expected);
+
+        // Test adding a definition to the structure
+        let sd = StructDef::new(StringId::new(), SemanticContext::new_local(0, ParserContext::new(Span::zero()), Type::Unit), vec![]);
     }
 }
