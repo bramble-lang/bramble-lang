@@ -130,12 +130,7 @@ impl TypeTable {
             }
 
             /// Unnecessary
-            Type::StructDef(_) => todo!(),
-            Type::FunctionDef(_, _) => todo!(),
-            Type::CoroutineDef(_, _) => todo!(),
-            Type::Coroutine(_) => todo!(),
-            Type::ExternDecl(_, _, _) => todo!(),
-            Type::Unknown => todo!(),
+            _ => panic!("Invalid Type: {:?}", ty)
         };
 
         for idx in 0..self.table.len() {
