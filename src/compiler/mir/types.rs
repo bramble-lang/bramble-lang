@@ -2,7 +2,7 @@
 
 use crate::{
     compiler::{
-        ast::{Path, PointerMut, StructDef, Type},
+        ast::{Node, Path, PointerMut, StructDef, Type, Parameter},
         semantics::semanticnode::SemanticContext,
     },
     StringId,
@@ -35,6 +35,10 @@ impl TypeTable {
 
     pub fn get(&self, id: TypeId) -> &MirTypeDef {
         &self.table[id.0 as usize]
+    }
+
+    fn get_mut(&mut self, id: TypeId) -> &mut MirTypeDef {
+        &mut self.table[id.0 as usize]
     }
 
     /// Adds the given [`Type`] to the type table. If this type references any type which is
@@ -77,14 +81,42 @@ impl TypeTable {
 
     /// Adds the definition for the given structure. This will use the path in the
     /// [`SemanticContext`] as the canonical path for the structure.
-    pub fn add_struct_def(&mut self, def: &StructDef<SemanticContext>) -> TypeId {
+    pub fn add_struct_def(&mut self, sd: &StructDef<SemanticContext>) -> TypeId {
+        // Convert the fields of the structure to MIR Fields
+        let mut fields = vec![];
+        for sf in sd.get_fields().iter() {
+            let field = self.to_field(sf);
+            fields.push(field);
+        }
+
         // Search the table for a structure with the same canonical path
-        // If no match found, then create a new structure entry and add to the table
-        // If a match is found
-        // check if it is already Defined
-        // If it is, then return an error
-        // otherwise, add the definition
-        todo!()
+        if let Some(id) = self.find(&Type::Custom(sd.context().canonical_path().clone())) {
+            // If a match is found
+            // check if it is already Defined
+            // If it is, then return an error
+            // otherwise, add the definition
+            if let MirTypeDef::Structure { def, .. } = self.get_mut(id) {
+                if *def == MirStructDef::Declared {
+                    *def = MirStructDef::Defined(fields);
+                    id
+                } else {
+                    panic!("Structure already defined")
+                }
+            } else {
+                panic!("Expected a structure")
+            }
+        } else {
+            // If no match found, then create a new structure entry and add to the table
+            todo!()
+        }
+    }
+
+    fn to_field(&mut self, p: &Parameter<SemanticContext>) -> Field {
+        let id = self.add(&p.ty);
+        Field{
+            name: p.name,
+            ty: id,
+        }
     }
 
     /// Searches the table for the given [`Type`] and returns the [`TypeId`] if found. [`Type::Custom`]
@@ -269,7 +301,11 @@ pub struct Field {
 
 #[cfg(test)]
 mod tests {
-    use crate::compiler::{ast::Element, parser::ParserContext, Span};
+    use crate::compiler::{
+        ast::{Element, Parameter},
+        parser::ParserContext,
+        Span,
+    };
 
     use super::*;
 
@@ -363,22 +399,45 @@ mod tests {
     }
 
     #[test]
-    fn add_structure_def() {
+    fn define_struct_that_is_declared() {
         let mut table = TypeTable::new();
 
-
         let path: Path = vec![Element::CanonicalRoot, Element::Id(StringId::new())].into();
-        let decl = table.add(&Type::Custom(path.clone()));
+        let decl_id = table.add(&Type::Custom(path.clone()));
 
-        let actual = table.get(decl);
+        let actual = table.get(decl_id);
 
-        let expected = MirTypeDef::Structure{
+        let mut expected = MirTypeDef::Structure {
             path: path.clone(),
             def: MirStructDef::Declared,
         };
         assert_eq!(actual, &expected);
 
         // Test adding a definition to the structure
-        let sd = StructDef::new(StringId::new(), SemanticContext::new_local(0, ParserContext::new(Span::zero()), Type::Unit), vec![]);
+        let mut sm = SemanticContext::new_local(0, ParserContext::new(Span::zero()), Type::Unit);
+        sm.set_canonical_path(path.clone());
+        let field = Parameter::new(sm.clone(), StringId::new(), &Type::I64);
+        let sd = StructDef::new(StringId::new(), sm, vec![field]);
+
+        let def_id = table.add_struct_def(&sd);
+
+        assert_eq!(decl_id, def_id);
+
+        let actual = table.get(def_id);
+        let mir_field = Field {
+            name: StringId::new(),
+            ty: table.find(&Type::I64).unwrap(),
+        };
+        expected = MirTypeDef::Structure {
+            path: path.clone(),
+            def: MirStructDef::Defined(vec![mir_field]),
+        };
+        assert_eq!(actual, &expected);
+        match actual {
+            MirTypeDef::Structure { def, .. } => {
+                assert_eq!(def,&MirStructDef::Defined(vec![mir_field]))
+            }
+            _ => panic!("Expected structure"),
+        }
     }
 }
