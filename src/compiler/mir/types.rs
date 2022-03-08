@@ -52,9 +52,13 @@ impl TypeTable {
                 mutable: *mutable,
                 target: self.add(target),
             },
-            Type::Custom(path) => todo!(),
+            Type::Custom(path) => MirTypeDef::Structure {
+                path: path.clone(),
+                def: MirStructDef::Declared,
+            },
             _ => panic!("Base types must be in the type table before any other type is added"),
         };
+
         self.table.push(mir_ty);
 
         // Return the index of the new type as a TypeId
