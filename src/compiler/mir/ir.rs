@@ -276,7 +276,7 @@ pub struct ArgDecl {
 }
 
 impl ArgDecl {
-    pub fn new(name: StringId, ty: &Type, span: Span) -> ArgDecl {
+    fn new(name: StringId, ty: &Type, span: Span) -> ArgDecl {
         ArgDecl {
             name,
             ty: ty.clone(),
