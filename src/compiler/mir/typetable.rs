@@ -339,13 +339,14 @@ impl MirStructDef {
     /// If this structure has a matching field, then return the [`FieldId`].
     /// Otherwise, return [`Option::None`].  This will also return [`Option::None`] if
     /// this structure is in the [`MirStructDef::Declared`] state.
-    pub fn get_field_id(&self, name: StringId) -> Option<FieldId> {
+    pub fn find_field(&self, name: StringId) -> Option<(FieldId, &Field)> {
         match self {
             Self::Declared => None,
             Self::Defined(fields) => fields
                 .iter()
-                .position(|f| f.name == name)
-                .map(|fid| FieldId::new(fid as u32)),
+                .enumerate()
+                .find(|(_, f)| f.name == name)
+                .map(|(fid, f)| (FieldId::new(fid as u32), f)),
         }
     }
 }
