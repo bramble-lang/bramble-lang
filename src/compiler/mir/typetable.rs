@@ -112,14 +112,6 @@ impl TypeTable {
         }
     }
 
-    fn to_field(&mut self, p: &Parameter<SemanticContext>) -> Field {
-        let id = self.add(&p.ty);
-        Field {
-            name: p.name,
-            ty: id,
-        }
-    }
-
     /// Given a [`Path`] this will search the table for a user defined type
     /// with a matching canonical path.
     pub fn find_by_path(&self, path: &Path) -> Option<TypeId> {
@@ -229,6 +221,15 @@ impl TypeTable {
         }
         true
     }
+
+    /// Converts a [`Parameter`] to a [`Field`].
+    fn to_field(&mut self, p: &Parameter<SemanticContext>) -> Field {
+        let id = self.add(&p.ty);
+        Field {
+            name: p.name,
+            ty: id,
+        }
+    }
 }
 
 /// These are the most basic types available and correspond to the arithmetic and operand
@@ -283,6 +284,8 @@ pub enum MirTypeDef {
 }
 
 impl PartialEq for MirTypeDef {
+    /// Checks if two MirTypeDef values are logically the same type. Two [`MirTypeDef::Structure`] values
+    /// are equal if their [`Paths`](Path) are equal.
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Base(l0), Self::Base(r0)) => l0 == r0,
@@ -299,16 +302,9 @@ impl PartialEq for MirTypeDef {
                     target: r_target,
                 },
             ) => l_mutable == r_mutable && l_target == r_target,
-            (
-                Self::Structure {
-                    path: l_path,
-                    def: _l_def,
-                },
-                Self::Structure {
-                    path: r_path,
-                    def: _r_def,
-                },
-            ) => l_path == r_path,
+            (Self::Structure { path: l_path, .. }, Self::Structure { path: r_path, .. }) => {
+                l_path == r_path
+            }
             _ => false,
         }
     }
@@ -349,12 +345,18 @@ impl MirStructDef {
     }
 }
 
+/// Represents a field in a structure definition. This encode the name of the field
+/// and the type of the field.  The position of the field, in memory layout, is encoded
+/// by [`MirStructDef::Defined`] by storing the fields as an ordered vector.
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Field {
     pub name: StringId,
     pub ty: TypeId,
 }
 
+/// Identifies a specific field within a [`MirTypeDef::Structure`]. To be useful, the [`FieldId`]
+/// must be coupled with a [`TypeId`] that refers to a [`MirTypeDef::Structure`] type in the
+/// [`TypeTable`]. This [`FieldId`] uniquely identifies a specific field in the structure referred to by [`TypeId`].
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub struct FieldId(u32);
 
