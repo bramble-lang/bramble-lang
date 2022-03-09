@@ -44,7 +44,7 @@ pub fn get_files(path: &Path, ext: &str) -> Result<Vec<PathBuf>, std::io::Error>
 }
 
 pub fn read_manifests(args: &ArgMatches) -> NResult<Vec<Manifest>> {
-    let imports: Vec<_> = get_imports(&args)
+    let imports: Vec<_> = get_imports(args)
         .into_iter()
         .map(|im| {
             std::fs::File::open(im)

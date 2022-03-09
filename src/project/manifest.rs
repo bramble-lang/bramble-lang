@@ -55,11 +55,7 @@ impl Manifest {
             .collect();
 
         // Get list of all structures contained within the module
-        let structs: Vec<_> = module
-            .deep_get_structs()
-            .into_iter()
-            .map(|s| s.clone())
-            .collect();
+        let structs: Vec<_> = module.deep_get_structs().into_iter().cloned().collect();
 
         // Create the manifest
         Self::new(sm, st, &routines, &structs)

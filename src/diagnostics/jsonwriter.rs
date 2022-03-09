@@ -164,12 +164,13 @@ impl From<&SourceMap> for JsonSourceMap {
     fn from(sm: &SourceMap) -> Self {
         let mut map = vec![];
         for idx in 0..sm.len() {
-            sm.get(idx)
+            if let Some(entry) = sm.get(idx)
                 .map(|entry| JsonSourceMapEntry {
                     source: entry.path().clone(),
                     span: entry.span().into(),
-                })
-                .map(|json_entry| map.push(json_entry));
+                }) {
+                    map.push(entry)
+                }
         }
         JsonSourceMap { map }
     }

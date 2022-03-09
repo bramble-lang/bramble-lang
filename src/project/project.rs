@@ -46,8 +46,7 @@ impl CompilerDisplay for ProjectError {
 pub fn get_project_name(src: &Path) -> Result<&str, String> {
     if src.is_file() || src.is_dir() {
         src.file_stem()
-            .map(|name| name.to_str())
-            .flatten()
+            .and_then(|name| name.to_str())
             .ok_or_else(|| "Could not extract name from given path".into())
     } else {
         Err("Given path is neither a directory or a file".into())
