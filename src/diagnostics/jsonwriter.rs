@@ -43,7 +43,7 @@ impl<'a, W: Write> JsonWriter<'a, W> {
             event_comma_prefix: Cell::new(false),
         };
 
-        jw.writer.borrow_mut().write("[".as_bytes()).unwrap();
+        jw.writer.borrow_mut().write_all("[".as_bytes()).unwrap();
 
         jw
     }
@@ -51,31 +51,31 @@ impl<'a, W: Write> JsonWriter<'a, W> {
 
 impl<'a, W: Write> Drop for JsonWriter<'a, W> {
     fn drop(&mut self) {
-        self.writer.borrow_mut().write("]".as_bytes()).unwrap();
+        self.writer.borrow_mut().write_all("]".as_bytes()).unwrap();
     }
 }
 
 impl<'a, W: Write> Writer for JsonWriter<'a, W> {
     fn write_span(&self, field: &str, span: crate::compiler::Span) {
         if self.comma_prefix.get() {
-            self.writer.borrow_mut().write(", ".as_bytes()).unwrap();
+            self.writer.borrow_mut().write_all(", ".as_bytes()).unwrap();
         } else {
             self.comma_prefix.set(true);
         }
 
         let field = format!("\"{}\": [{}, {}]", field, span.low(), span.high());
-        self.writer.borrow_mut().write(field.as_bytes()).unwrap();
+        self.writer.borrow_mut().write_all(field.as_bytes()).unwrap();
     }
 
     fn write_field(&self, label: &str, s: &dyn crate::compiler::diagnostics::Writable) {
         if self.comma_prefix.get() {
-            self.writer.borrow_mut().write(", ".as_bytes()).unwrap();
+            self.writer.borrow_mut().write_all(", ".as_bytes()).unwrap();
         } else {
             self.comma_prefix.set(true);
         }
 
         let field = format!("\"{}\": ", label);
-        self.writer.borrow_mut().write(field.as_bytes()).unwrap();
+        self.writer.borrow_mut().write_all(field.as_bytes()).unwrap();
         s.write(self);
     }
 
@@ -85,17 +85,17 @@ impl<'a, W: Write> Writer for JsonWriter<'a, W> {
 
     fn write_str(&self, s: &str) {
         let js = format!("\"{}\"", s);
-        self.writer.borrow_mut().write(js.as_bytes()).unwrap();
+        self.writer.borrow_mut().write_all(js.as_bytes()).unwrap();
     }
 
     fn write_u64(&self, u: u64) {
         let js = format!("{}", u);
-        self.writer.borrow_mut().write(js.as_bytes()).unwrap();
+        self.writer.borrow_mut().write_all(js.as_bytes()).unwrap();
     }
 
     fn write_stringid(&self, s: crate::StringId) {
         let val = self.string_table.get(s).unwrap();
-        self.writer.borrow_mut().write(val.as_bytes()).unwrap();
+        self.writer.borrow_mut().write_all(val.as_bytes()).unwrap();
     }
 
     fn write_error(&self, e: &dyn crate::compiler::CompilerDisplay) {
@@ -105,21 +105,21 @@ impl<'a, W: Write> Writer for JsonWriter<'a, W> {
 
     fn write_text(&self, s: &str) {
         let js = format!("{}", s);
-        self.writer.borrow_mut().write(js.as_bytes()).unwrap();
+        self.writer.borrow_mut().write_all(js.as_bytes()).unwrap();
     }
 
     fn start_event(&self) {
         if self.event_comma_prefix.get() {
-            self.writer.borrow_mut().write(",\n".as_bytes()).unwrap();
+            self.writer.borrow_mut().write_all(",\n".as_bytes()).unwrap();
         } else {
             self.event_comma_prefix.set(true);
         }
 
-        self.writer.borrow_mut().write("{".as_bytes()).unwrap();
+        self.writer.borrow_mut().write_all("{".as_bytes()).unwrap();
     }
 
     fn stop_event(&self) {
-        self.writer.borrow_mut().write("}".as_bytes()).unwrap();
+        self.writer.borrow_mut().write_all("}".as_bytes()).unwrap();
         self.comma_prefix.set(false);
     }
 
