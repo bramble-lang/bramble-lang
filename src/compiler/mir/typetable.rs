@@ -185,7 +185,8 @@ impl TypeTable {
                 }
             }
 
-            // Unnecessary
+            // The presence of this wildcard points indicates that the Type enum has variants that no longer make sense
+            // and should be refactored out.
             _ => panic!("Invalid Type: {:?}", ty),
         };
 
