@@ -199,7 +199,7 @@ impl TypeTable {
     /// Will return true if every Structure is [`MirStructDef::Defined`] and every referenced
     /// [`TypeId`] is within the bounds of the table.
     pub fn is_complete(&self) -> bool {
-        // Iterate through every entry in the table
+        // Check that every entry is fully defined
         for entry in &self.table {
             if !self.is_defined(entry) {
                 return false;
