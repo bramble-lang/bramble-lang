@@ -20,9 +20,8 @@ const USER_MAIN_FN: &str = "my_main";
 fn main() -> Result<(), i32> {
     let config = configure_cli().get_matches();
 
-    match get_log_level(&config) {
-        Some(level) => configure_logging(level).expect("Failed to configure logger."),
-        None => (),
+    if let Some(level) = get_log_level(&config) {
+        configure_logging(level).expect("Failed to configure logger.")
     }
 
     let string_table = StringTable::new();
@@ -31,8 +30,9 @@ fn main() -> Result<(), i32> {
         .value_of("input")
         .expect("Expected an input source file to compile");
     let src_path = Path::new(input);
-    let project_name = get_project_name(&src_path).expect(&format!("Could not open {:?}", src_path));
-    let source_map = build_source_map(&src_path, BRAID_FILE_EXT).unwrap();
+    let project_name =
+        get_project_name(src_path).unwrap_or_else(|_| panic!("Could not open {:?}", src_path));
+    let source_map = build_source_map(src_path, BRAID_FILE_EXT).unwrap();
 
     let manifests: Vec<_> = match read_manifests(&config) {
         Ok(imports) => imports,
@@ -155,12 +155,13 @@ fn main() -> Result<(), i32> {
             return Err(ERR_LLVM_IR_ERROR);
         }
     }
-   
+
     if emit_llvm_ir(&config) {
         llvm.emit_llvm_ir(Path::new("./target/output.ll"));
     }
 
-    llvm.emit_object_code(Path::new(output_target), emit_asm(&config)).unwrap();
+    llvm.emit_object_code(Path::new(output_target), emit_asm(&config))
+        .unwrap();
 
     if config.is_present("manifest") {
         let manifest = Manifest::extract(&semantic_ast, &source_map, &string_table).unwrap();

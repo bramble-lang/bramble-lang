@@ -194,7 +194,7 @@ impl<'a> TypeResolver<'a> {
             Ok(RoutineDef {
                 context: ctx.with_sym(sym),
                 def: def.clone(),
-                name: name.clone(),
+                name: *name,
                 params: resolved_params,
                 ret_ty: ret_ty.clone(),
                 body: resolved_body,
@@ -227,7 +227,7 @@ impl<'a> TypeResolver<'a> {
             let ctx = struct_def.context().with_type(Type::Unit);
 
             Ok(StructDef::new(
-                struct_def.get_name().clone(),
+                struct_def.get_name(),
                 ctx,
                 resolved_fields,
             ))
@@ -483,7 +483,7 @@ impl<'a> TypeResolver<'a> {
             }
             Expression::StringLiteral(ctx, v) => {
                 let ctx = ctx.with_type(Type::StringLiteral);
-                Ok(Expression::StringLiteral(ctx, v.clone()))
+                Ok(Expression::StringLiteral(ctx, *v))
             }
             Expression::ArrayExpression(ctx, elements, len) => {
                 // Resolve the types for each element in the array value
@@ -574,7 +574,7 @@ impl<'a> TypeResolver<'a> {
             }
             Expression::IdentifierDeclare(ctx, name, p) => {
                 let ctx = ctx.with_type(p.clone());
-                Ok(Expression::IdentifierDeclare(ctx, name.clone(), p.clone()))
+                Ok(Expression::IdentifierDeclare(ctx, *name, p.clone()))
             }
             Expression::Identifier(ctx, id) => {
                 let ctx = match self
@@ -587,7 +587,7 @@ impl<'a> TypeResolver<'a> {
                         ctx.with_type(p.clone()).with_addressable(*is_mutable)
                     }
                 };
-                Ok(Expression::Identifier(ctx, id.clone()))
+                Ok(Expression::Identifier(ctx, *id))
             }
             Expression::Path(..) => {
                 todo!("Check to make sure that each identifier in the path is a valid module or a item in that module");
@@ -605,7 +605,7 @@ impl<'a> TypeResolver<'a> {
                             .map_err(|e| CompilerError::new(ctx.span(), e))?;
 
                         // Record the span of the struct definition as a reference for resolving the type of the member access
-                        struct_def.span.map(|s| refs.push(s));
+                        if let Some(s) = struct_def.span{ refs.push(s)};
 
                         let member_ty = struct_def
                             .ty
@@ -626,7 +626,7 @@ impl<'a> TypeResolver<'a> {
                             ctx.with_type(member_ty.clone())
                         };
 
-                        Ok(Expression::MemberAccess(ctx, Box::new(src), member.clone()))
+                        Ok(Expression::MemberAccess(ctx, Box::new(src), *member))
                     }
                     _ => Err(CompilerError::new(
                         ctx.span(),
@@ -753,7 +753,7 @@ impl<'a> TypeResolver<'a> {
                     .map_err(|e| CompilerError::new(ctx.span(), e))?;
 
                 // record the reference span for this routine definition as a source for type resolution
-                symbol.span.map(|s| refs.push(s));
+                if let Some(s) = symbol.span{ refs.push(s)};
 
                 // if the routine is external, then change the call type to extern
                 let call = if symbol.is_extern {
@@ -839,7 +839,7 @@ impl<'a> TypeResolver<'a> {
                     .map_err(|e| CompilerError::new(ctx.span(), e))?;
 
                 // Record the span of the struct definition as a reference for resolving the type of the member access
-                struct_def.span.map(|s| refs.push(s));
+                if let Some(s) = struct_def.span{ refs.push(s)};
 
                 let struct_def_ty = struct_def.ty.clone();
                 let expected_num_params = struct_def_ty
@@ -874,7 +874,7 @@ impl<'a> TypeResolver<'a> {
                             ),
                         ));
                     }
-                    resolved_params.push((pn.clone(), param));
+                    resolved_params.push((*pn, param));
                 }
 
                 let ctx = ctx.with_type(Type::Custom(struct_name.clone()));
@@ -1081,9 +1081,7 @@ impl<'a> TypeResolver<'a> {
     }
 
     fn get_current_path(&self) -> Result<Path, SemanticError> {
-        self.symbols
-            .to_path()
-            .ok_or_else(|| SemanticError::PathNotValid)
+        self.symbols.to_path().ok_or(SemanticError::PathNotValid)
     }
 
     fn extract_routine_type_info<'b>(
@@ -1119,8 +1117,8 @@ impl<'a> TypeResolver<'a> {
 
     fn check_for_invalid_routine_parameters<'b>(
         routine_path: &Path,
-        given: &'b Vec<SemanticNode>,
-        expected_types: &'b Vec<Type>,
+        given: &'b [SemanticNode],
+        expected_types: &'b [Type],
         has_varargs: HasVarArgs,
     ) -> Result<(), SemanticError> {
         let mut mismatches = vec![];
@@ -1165,7 +1163,7 @@ impl<'a> TypeResolver<'a> {
             ));
         }
 
-        if params.len() > 0 {
+        if !params.is_empty() {
             return Err(CompilerError::new(
                 routine.span(),
                 SemanticError::MainFnInvalidParams,
