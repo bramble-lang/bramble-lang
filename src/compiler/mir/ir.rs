@@ -8,6 +8,8 @@ use crate::{
     StringId,
 };
 
+use super::typetable::FieldId;
+
 const ROOT_SCOPE: usize = 0;
 
 /// Procedure
@@ -81,7 +83,7 @@ impl Procedure {
     pub fn find_var(&self, name: StringId) -> Option<VarId> {
         for idx in 0..self.vars.len() {
             if self.vars[idx].name == name {
-                return Some(VarId::new(idx))
+                return Some(VarId::new(idx));
             }
         }
 
@@ -94,7 +96,14 @@ impl Procedure {
     }
 
     /// Add a new user defined variable to the procedure.
-    pub fn add_var(&mut self, name: StringId, mutable: bool, ty: &Type, scope: ScopeId, span: Span) -> VarId {
+    pub fn add_var(
+        &mut self,
+        name: StringId,
+        mutable: bool,
+        ty: &Type,
+        scope: ScopeId,
+        span: Span,
+    ) -> VarId {
         let vd = VarDecl::new(name, mutable, ty, scope, span);
         self.vars.push(vd);
         let id = self.vars.len() - 1;
@@ -132,14 +141,20 @@ impl Display for Procedure {
                 f.write_str("mut ")?
             }
 
-            f.write_fmt(format_args!("{}: {:?} // {} {}\n", vid, self.vars[idx].ty, self.vars[idx].name, self.vars[idx].span))?
+            f.write_fmt(format_args!(
+                "{}: {:?} // {} {}\n",
+                vid, self.vars[idx].ty, self.vars[idx].name, self.vars[idx].span
+            ))?
         }
         f.write_str("\n")?;
-        
+
         // Print the temporary variables
         for idx in 0..self.temps.len() {
             let tid = TempId::new(idx);
-            f.write_fmt(format_args!("let mut {}: {:?} // {}\n", tid, self.temps[idx].ty, self.temps[idx].span))?
+            f.write_fmt(format_args!(
+                "let mut {}: {:?} // {}\n",
+                tid, self.temps[idx].ty, self.temps[idx].span
+            ))?
         }
 
         // Print all the basic blocks
@@ -239,7 +254,7 @@ pub struct VarDecl {
     /// What scope this variable was declared in
     scope: ScopeId,
     /// The span of code where this variable was declared
-    span: Span
+    span: Span,
 }
 
 impl VarDecl {
@@ -266,7 +281,10 @@ pub struct TempDecl {
 
 impl TempDecl {
     pub fn new(ty: &Type, span: Span) -> TempDecl {
-        TempDecl { ty: ty.clone(), span }
+        TempDecl {
+            ty: ty.clone(),
+            span,
+        }
     }
 }
 
@@ -362,10 +380,7 @@ pub struct Statement {
 impl Statement {
     /// Creates a new statement that can be added to a [`BasicBlock`].
     pub fn new(kind: StatementKind, span: Span) -> Statement {
-        Statement {
-            kind,
-            span,
-        }
+        Statement { kind, span }
     }
 
     /// Returns the [`StatementKind`] of this statement.
@@ -430,7 +445,7 @@ impl Display for LValue {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Accessor {
     Index(Box<Operand>),
-    Field(StringId, Type),
+    Field(FieldId, Type),
     Deref,
 }
 
@@ -546,10 +561,7 @@ pub struct Terminator {
 
 impl Terminator {
     pub fn new(kind: TerminatorKind, span: Span) -> Terminator {
-        Terminator {
-            kind,
-            span,
-        }
+        Terminator { kind, span }
     }
 
     /// Returns the [`TerminatorKind`] of this terminator

@@ -18,6 +18,7 @@ use super::Span;
 
 mod ir;
 mod test;
+mod typetable;
 pub mod transform;
 
 pub struct Module {
