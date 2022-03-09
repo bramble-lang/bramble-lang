@@ -48,7 +48,7 @@ impl Procedure {
         self.span = span;
     }
 
-    /// Add an argument to this procedure
+    /// Add an argument to this procedure's argument list and make the argument available as a variable.
     pub fn add_arg(&mut self, name: StringId, ty: &Type, span: Span) -> ArgId {
         // Add the given argument to the set of variables
         self.add_var(name, false, ty, ScopeId::new(0), span);
