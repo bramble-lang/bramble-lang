@@ -236,7 +236,7 @@ impl SourceMapEntry {
                 // Read the span from the file
                 let mut buf = vec![0; len as usize];
                 file.seek(SeekFrom::Start(local_low))?;
-                file.read(&mut buf)?;
+                file.read_exact(&mut buf)?;
 
                 String::from_utf8(buf)?
             }
