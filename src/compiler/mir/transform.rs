@@ -48,16 +48,16 @@ pub fn module_transform(module: &Module<SemanticContext>) -> Vec<Procedure> {
 /// MIR operations are applied to that [`BasicBlock`]. This also provides a simplfied
 /// interface for constructing the MIR operands, operations, and statements, to
 /// simplify the code that traverses input ASTs and transforms them into MIR.
-struct MirBuilder {
+struct MirProcedureBuilder {
     proc: Procedure,
     current_bb: Option<BasicBlockId>,
 }
 
-impl MirBuilder {
+impl MirProcedureBuilder {
     /// Creates a new [`MirBuilder`], which is used to construct the MIR representation
     /// of a function.
-    pub fn new() -> MirBuilder {
-        MirBuilder {
+    pub fn new() -> MirProcedureBuilder {
+        MirProcedureBuilder {
             proc: Procedure::new(&Type::Unit, Span::zero()),
             current_bb: None,
         }
@@ -316,13 +316,13 @@ impl MirBuilder {
 
 /// Transform a single function to the MIR form
 struct FuncTransformer {
-    mir: MirBuilder,
+    mir: MirProcedureBuilder,
 }
 
 impl FuncTransformer {
     pub fn new() -> FuncTransformer {
         FuncTransformer {
-            mir: MirBuilder::new(),
+            mir: MirProcedureBuilder::new(),
         }
     }
 
