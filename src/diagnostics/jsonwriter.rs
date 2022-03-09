@@ -169,7 +169,7 @@ impl From<&SourceMap> for JsonSourceMap {
                     source: entry.path().clone(),
                     span: entry.span().into(),
                 })
-                .and_then(|json_entry| Some(map.push(json_entry)));
+                .map(|json_entry| map.push(json_entry));
         }
         JsonSourceMap { map }
     }

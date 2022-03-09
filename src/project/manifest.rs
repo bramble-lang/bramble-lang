@@ -112,7 +112,7 @@ impl ManifestRoutineDef {
         sm: &SourceMap,
         st: &StringTable,
     ) -> Result<Self, ManifestError> {
-        let name = st.get(rd.name)?.into();
+        let name = st.get(rd.name)?;
         let params = rd
             .params
             .iter()
