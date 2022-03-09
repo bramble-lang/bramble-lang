@@ -126,7 +126,7 @@ impl Procedure {
         TempId::new(id)
     }
 
-    /// Returns the number of [`BasicBlock`]s in the procedure
+    /// Returns the number of [`BasicBlocks`](BasicBlock) in the procedure
     pub fn len(&self) -> usize {
         self.blocks.len()
     }
