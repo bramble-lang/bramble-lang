@@ -318,6 +318,12 @@ impl PartialEq for MirTypeDef {
 /// The Unique Identifier for a type within a Bramble program. Every type,
 /// including base types, is given a TypeId.  MIR uses the TypeId to annotate
 /// the types of MIR values and variables.
+/// 
+/// [`TypeId`] is implemented as a single [`u32`] to conserve memory and to
+/// optimize comparison operations. Using this design requires that all types,
+/// including base types, be added to the [`TypeTable`], but because the implementation
+/// of [`TypeTable`] and [`TypeId`] is completely invisible to users, this
+/// was deemed acceptable.
 #[derive(Debug, PartialEq, PartialOrd, Clone, Copy)]
 pub struct TypeId(u32);
 
