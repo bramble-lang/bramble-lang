@@ -8,7 +8,7 @@ use crate::{
     StringId,
 };
 
-use super::types::FieldId;
+use super::typetable::FieldId;
 
 const ROOT_SCOPE: usize = 0;
 
