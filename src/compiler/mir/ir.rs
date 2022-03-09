@@ -20,7 +20,7 @@ pub struct Procedure {
     blocks: Vec<BasicBlock>,
     /// The return type of this function
     ret_ty: Type,
-    /// The argument set for the function
+    /// The argument list for the function
     args: Vec<ArgDecl>,
     /// The set of all user declared variables from within this function
     vars: Vec<VarDecl>,
