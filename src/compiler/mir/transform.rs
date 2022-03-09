@@ -501,19 +501,22 @@ impl<'a> FuncTransformer<'a> {
         // Get the Index of the Field and convert to a `FieldId`
         let ty = base.context().ty();
         let mir_ty = self.project.get_type(ty).unwrap();
-        if let MirTypeDef::Structure { def, .. } = self.project.types.get(mir_ty) {
-            if let Operand::LValue(base_mir) = self.expression(base) {
-                let (field_id, field_mir) = def.find_field(field).unwrap();
-                let access =
-                    LValue::Access(Box::new(base_mir), Accessor::Field(field_id, field_mir.ty));
-                Operand::LValue(access)
-            } else {
-                // Base expression must be a location expression
-                panic!("Base expression must be a location expression")
-            }
+
+        let def = if let MirTypeDef::Structure { def, .. } = self.project.types.get(mir_ty) {
+            def
         } else {
             // Trying to access a field on a non-structure type.
             panic!("Trying to access a field on a non-structure type")
+        };
+
+        if let Operand::LValue(base_mir) = self.expression(base) {
+            let (field_id, field_mir) = def.find_field(field).unwrap();
+            let access =
+                LValue::Access(Box::new(base_mir), Accessor::Field(field_id, field_mir.ty));
+            Operand::LValue(access)
+        } else {
+            // Base expression must be a location expression
+            panic!("Base expression must be a location expression")
         }
     }
 
