@@ -591,8 +591,15 @@ mod tests {
 
 #[derive(Debug)]
 pub enum TypeTableError {
+    /// The user gave a relative path rather than a canonical path
     ExpectedCanonicalPath,
+
+    /// A base type (e.g., u32) is missing from the table
     BaseTypesMissing,
+
+    /// Attempting to add a definition to a structure that already has a definition
     StrutureAlreadyDefined,
+
+    /// Attempting to add a definition to a type that is not a structure
     ExpectedStructure,
 }
