@@ -93,7 +93,7 @@ impl TypeTable {
         let fields = sd.get_fields().iter().map(|f| self.to_field(f)).collect::<Result<_, _>>()?;
 
         // Search the table for a structure with the same canonical path
-        if let Some(id) = self.find_by_path(sd.context().canonical_path()) {
+        if let Some(id) = self.find_by_path(sd.context().canonical_path())? {
             if let MirTypeDef::Structure { def, .. } = self.get_mut(id) {
                 // If a match is found
                 // check if it is not defined
@@ -119,19 +119,19 @@ impl TypeTable {
 
     /// Given a [`Path`] this will search the table for a user defined type
     /// with a matching canonical path.
-    pub fn find_by_path(&self, path: &Path) -> Option<TypeId> {
+    pub fn find_by_path(&self, path: &Path) -> Result<Option<TypeId>, TypeTableError> {
         // If the given path is not canonical then return None
         if !path.is_canonical() {
-            return None;
+            return Err(TypeTableError::ExpectedCanonicalPath);
         }
 
-        self.table
+        Ok(self.table
             .iter()
             .position(|ty| match ty {
                 MirTypeDef::Structure { path: p, .. } => p == path,
                 _ => false,
             })
-            .map(|idx| TypeId(idx as u32))
+            .map(|idx| TypeId(idx as u32)))
     }
 
     /// Searches the table for the given [`Type`] and returns the [`TypeId`] if found. [`Type::Custom`]
