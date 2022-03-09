@@ -1133,9 +1133,7 @@ impl<'a> TypeResolver<'a> {
             }
         }
 
-        if !has_varargs && mismatches.is_empty() && given.len() == expected_types.len() {
-            Ok(())
-        } else if has_varargs && mismatches.is_empty() && given.len() >= expected_types.len() {
+        if mismatches.is_empty() && given.len() >= expected_types.len() {
             Ok(())
         } else {
             let errors: Vec<_> = mismatches
