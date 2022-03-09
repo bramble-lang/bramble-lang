@@ -64,7 +64,7 @@ pub fn read_manifests(args: &ArgMatches) -> NResult<Vec<Manifest>> {
         }
     }
 
-    if errs.len() == 0 {
+    if errs.is_empty() {
         Ok(oks)
     } else {
         Err(errs)

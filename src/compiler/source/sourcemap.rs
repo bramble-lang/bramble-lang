@@ -146,7 +146,7 @@ impl SourceMap {
     pub fn text_in_span(&self, span: Span) -> Result<String, SourceError> {
         let files = self.files_in_span(span);
 
-        if files.len() == 0 {
+        if files.is_empty() {
             // return error
             return Err(SourceError::SourceNotFound(span));
         }

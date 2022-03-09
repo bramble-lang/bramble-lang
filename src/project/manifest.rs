@@ -292,7 +292,7 @@ fn string_to_path(st: &StringTable, p: &str) -> Result<Path, ManifestError> {
     /// Tests that an element is a valid identifier
     fn is_element_valid(el: &str) -> Result<(), ManifestError> {
         let cs = el.chars().collect::<Vec<_>>();
-        if cs.len() == 0 {
+        if cs.is_empty() {
             // Element must have at least one character
             Err(ManifestError::PathElementIsEmpty)
         } else {

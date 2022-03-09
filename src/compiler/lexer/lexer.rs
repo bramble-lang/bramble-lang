@@ -50,7 +50,7 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
             s.push(self.lexer.chars[i].char());
         }
 
-        if s.len() == 0 {
+        if s.is_empty() {
             None
         } else {
             // Compute the Span

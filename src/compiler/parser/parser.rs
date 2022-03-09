@@ -161,7 +161,7 @@ impl<'a> Parser<'a> {
             }
         }
 
-        if modules.len() == 0 && items.len() == 0 {
+        if modules.is_empty() && items.is_empty() {
             Ok(None)
         } else {
             Ok(Some((modules, items)))
@@ -174,7 +174,7 @@ impl<'a> Parser<'a> {
                 .and_then(|| match stream.next_if(&Lex::Extern) {
                     Some(extern_tok) => match self.function_decl(stream, true)? {
                         Some((fn_ctx, fn_name, params, has_varargs, fn_type)) => {
-                            if has_varargs && params.len() == 0 {
+                            if has_varargs && params.is_empty() {
                                 err!(fn_ctx.span(), ParserError::ExternInvalidVarArgs)
                             } else {
                                 let ctx = stream

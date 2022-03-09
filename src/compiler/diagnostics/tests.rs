@@ -97,7 +97,7 @@ mod tests {
         fn write_field(&self, label: &str, s: &dyn crate::compiler::diagnostics::Writable) {
             self.buf.borrow_mut().push_str(&format!("{}: ", label));
             s.write(self);
-            self.buf.borrow_mut().push_str(&", ".into());
+            self.buf.borrow_mut().push_str(", ");
         }
 
         fn write_stringid(&self, _s: crate::StringId) {

@@ -496,7 +496,7 @@ impl<'a> TypeResolver<'a> {
 
                 // Check that they are homogenous
                 let el_ty;
-                if nelements.len() == 0 {
+                if nelements.is_empty() {
                     return Err(CompilerError::new(
                         ctx.span(),
                         SemanticError::ArrayInvalidSize(nelements.len()),
@@ -1132,9 +1132,9 @@ impl<'a> TypeResolver<'a> {
             }
         }
 
-        if !has_varargs && mismatches.len() == 0 && given.len() == expected_types.len() {
+        if !has_varargs && mismatches.is_empty() && given.len() == expected_types.len() {
             Ok(())
-        } else if has_varargs && mismatches.len() == 0 && given.len() >= expected_types.len() {
+        } else if has_varargs && mismatches.is_empty() && given.len() >= expected_types.len() {
             Ok(())
         } else {
             let errors: Vec<_> = mismatches

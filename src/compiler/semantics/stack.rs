@@ -140,7 +140,7 @@ impl<'a> SymbolTableScopeStack {
 
     pub fn leave_scope(&mut self) -> SymbolTable {
         // If the head is None and the Stack is empty, then panic
-        if self.head.is_none() && self.stack.len() == 0 {
+        if self.head.is_none() && self.stack.is_empty() {
             panic!("There are no scopes to leave")
         }
 

@@ -81,6 +81,10 @@ impl Path {
         self.path.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.path.is_empty()
+    }
+
     pub fn first(&self) -> Option<&Element> {
         self.path.first()
     }
@@ -91,7 +95,7 @@ impl Path {
 
     pub fn push(&mut self, step: Element) {
         // Check if this is the creation of a canonical path
-        if self.path.len() == 0 && step == Element::CanonicalRoot {
+        if self.path.is_empty() && step == Element::CanonicalRoot {
             self.is_canonical = true;
         } else {
             self.path.push(step)
@@ -168,7 +172,7 @@ impl Path {
             for step in path.iter() {
                 if *step == Element::Super {
                     merged.pop().ok_or(PathCanonizationError::SubceedingRoot)?;
-                    if merged.len() == 0 {
+                    if merged.is_empty() {
                         return Err(PathCanonizationError::SubceedingRoot);
                     }
                 } else {
