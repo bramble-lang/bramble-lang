@@ -596,12 +596,12 @@ impl<'a> TypeResolver<'a> {
                 // Get the type of src and look up its struct definition
                 // Check the struct definition for the type of `member`
                 // if it exists, if it does not exist then return an error
-                let src = self.analyze_expression(&src)?;
+                let src = self.analyze_expression(src)?;
                 match src.get_type() {
                     Type::Custom(struct_name) => {
                         let (struct_def, _) = self
                             .symbols
-                            .lookup_symbol_by_path(&struct_name)
+                            .lookup_symbol_by_path(struct_name)
                             .map_err(|e| CompilerError::new(ctx.span(), e))?;
 
                         // Record the span of the struct definition as a reference for resolving the type of the member access
@@ -635,12 +635,12 @@ impl<'a> TypeResolver<'a> {
                 }
             }
             Expression::BinaryOp(ctx, op, l, r) => {
-                let (ty, l, r) = self.binary_op(*op, &l, &r)?;
+                let (ty, l, r) = self.binary_op(*op, l, r)?;
                 let ctx = ctx.with_type(ty);
                 Ok(Expression::BinaryOp(ctx, *op, Box::new(l), Box::new(r)))
             }
             Expression::UnaryOp(ctx, op, operand) => {
-                let (ty, addry, operand) = self.unary_op(*op, &operand)?;
+                let (ty, addry, operand) = self.unary_op(*op, operand)?;
                 let ctx = ctx.with_type(ty);
                 let ctx = match addry {
                     Addressability::Addressable => ctx.with_addressable(false),
@@ -655,13 +655,13 @@ impl<'a> TypeResolver<'a> {
                 if_arm,
                 else_arm,
             } => {
-                let cond = self.analyze_expression(&cond)?;
+                let cond = self.analyze_expression(cond)?;
                 if cond.get_type() == Type::Bool {
-                    let if_arm = self.analyze_expression(&if_arm)?;
+                    let if_arm = self.analyze_expression(if_arm)?;
 
                     let else_arm = else_arm
                         .as_ref()
-                        .map(|e| self.analyze_expression(&e))
+                        .map(|e| self.analyze_expression(e))
                         .map_or(Ok(None), |r| r.map(|x| Some(Box::new(x))))?;
 
                     let else_arm_ty = else_arm
@@ -699,9 +699,9 @@ impl<'a> TypeResolver<'a> {
                 body,
                 ..
             } => {
-                let cond = self.analyze_expression(&cond)?;
+                let cond = self.analyze_expression(cond)?;
                 if cond.get_type() == Type::Bool {
-                    let body = self.analyze_expression(&body)?;
+                    let body = self.analyze_expression(body)?;
 
                     if body.get_type() == Type::Unit {
                         let ctx = ctx.with_type(Type::Unit);
@@ -724,7 +724,7 @@ impl<'a> TypeResolver<'a> {
                 }
             }
             Expression::Yield(ctx, exp) => {
-                let exp = self.analyze_expression(&exp)?;
+                let exp = self.analyze_expression(exp)?;
                 let ctx = match exp.get_type() {
                     Type::Coroutine(ret_ty) => ctx.with_type(*ret_ty.clone()),
                     _ => {
@@ -788,9 +788,9 @@ impl<'a> TypeResolver<'a> {
                     ))
                 } else {
                     match Self::check_for_invalid_routine_parameters(
-                        &routine_path,
+                        routine_path,
                         &resolved_params,
-                        &expected_param_tys,
+                        expected_param_tys,
                         has_varargs,
                     ) {
                         Err(msg) => Err(CompilerError::new(ctx.span(), msg)),
@@ -835,7 +835,7 @@ impl<'a> TypeResolver<'a> {
                 // match their respective members in the struct
                 let (struct_def, canonical_path) = self
                     .symbols
-                    .lookup_symbol_by_path(&struct_name)
+                    .lookup_symbol_by_path(struct_name)
                     .map_err(|e| CompilerError::new(ctx.span(), e))?;
 
                 // Record the span of the struct definition as a reference for resolving the type of the member access
