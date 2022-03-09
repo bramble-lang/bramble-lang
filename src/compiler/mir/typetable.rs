@@ -383,7 +383,7 @@ pub struct Field {
 pub struct FieldId(u32);
 
 impl FieldId {
-    fn new(id: u32) -> FieldId {
+    pub(super) fn new(id: u32) -> FieldId {
         FieldId(id)
     }
 }

@@ -24,9 +24,7 @@ use crate::{
 
 use super::{ir::*, typetable::*};
 
-pub fn module_transform(module: &Module<SemanticContext>) -> Vec<Procedure> {
-    let mut project = MirProject::new();
-
+pub fn module_transform(module: &Module<SemanticContext>, project: &mut MirProject) -> Vec<Procedure> {
     // Add all the types in this module
     module.get_structs().iter().for_each(|sd| {
         if let Item::Struct(sd) = sd {
@@ -53,7 +51,7 @@ pub fn module_transform(module: &Module<SemanticContext>) -> Vec<Procedure> {
 }
 
 /// Manages all of the Types and Functions which exist within a single project
-struct MirProject {
+pub struct MirProject {
     types: TypeTable,
 }
 

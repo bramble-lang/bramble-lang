@@ -5,7 +5,10 @@ pub mod tests {
             ast::*,
             diagnostics::Logger,
             lexer::{tokens::Token, LexerError},
-            mir::{ir::*, transform},
+            mir::{
+                ir::*,
+                transform::{self, MirProject}, typetable::FieldId,
+            },
             parser::Parser,
             semantics::semanticnode::SemanticContext,
             CompilerError, Lexer, SourceMap,
@@ -49,7 +52,8 @@ pub mod tests {
         ";
         let mut table = StringTable::new();
         let module = compile(text, &mut table);
-        let mirs = transform::module_transform(&module);
+        let mut project = MirProject::new();
+        let mirs = transform::module_transform(&module, &mut project);
         for mir in mirs {
             println!("{}", mir);
         }
@@ -67,7 +71,8 @@ pub mod tests {
         ";
         let mut table = StringTable::new();
         let module = compile(text, &mut table);
-        let mirs = transform::module_transform(&module);
+        let mut project = MirProject::new();
+        let mirs = transform::module_transform(&module, &mut project);
         for mir in mirs {
             println!("{}", mir);
         }
@@ -87,7 +92,8 @@ pub mod tests {
         ";
         let mut table = StringTable::new();
         let module = compile(text, &mut table);
-        let mirs = transform::module_transform(&module);
+        let mut project = MirProject::new();
+        let mirs = transform::module_transform(&module, &mut project);
         for mir in mirs {
             println!("{}", mir);
         }
@@ -103,7 +109,8 @@ pub mod tests {
         ";
         let mut table = StringTable::new();
         let module = compile(text, &mut table);
-        let mirs = transform::module_transform(&module);
+        let mut project = MirProject::new();
+        let mirs = transform::module_transform(&module, &mut project);
         for mir in mirs {
             println!("{}", mir);
         }
@@ -123,7 +130,8 @@ pub mod tests {
         ";
         let mut table = StringTable::new();
         let module = compile(text, &mut table);
-        let mirs = transform::module_transform(&module);
+        let mut project = MirProject::new();
+        let mirs = transform::module_transform(&module, &mut project);
         for mir in mirs {
             println!("{}", mir);
         }
@@ -139,7 +147,8 @@ pub mod tests {
         ";
         let mut table = StringTable::new();
         let module = compile(text, &mut table);
-        let mir = &transform::module_transform(&module)[0];
+        let mut project = MirProject::new();
+        let mir = &transform::module_transform(&module, &mut project)[0];
 
         let bb = mir.get_bb(BasicBlockId::new(0));
         let first = bb.get_stm(0);
@@ -182,7 +191,8 @@ pub mod tests {
         ";
         let mut table = StringTable::new();
         let module = compile(text, &mut table);
-        let mir = &transform::module_transform(&module)[0];
+        let mut project = MirProject::new();
+        let mir = &transform::module_transform(&module, &mut project)[0];
 
         let bb = mir.get_bb(BasicBlockId::new(0));
         let last = bb.get_stm(bb.len() - 1);
@@ -211,7 +221,8 @@ pub mod tests {
         ";
         let mut table = StringTable::new();
         let module = compile(text, &mut table);
-        let mir = &transform::module_transform(&module)[0];
+        let mut project = MirProject::new();
+        let mir = &transform::module_transform(&module, &mut project)[0];
 
         let bb = mir.get_bb(BasicBlockId::new(0));
         let last = bb.get_stm(bb.len() - 1);
@@ -266,7 +277,8 @@ pub mod tests {
                     ",
                 );
                 let module = compile(&text, &mut table);
-                let mirs = transform::module_transform(&module);
+                let mut project = MirProject::new();
+                let mirs = transform::module_transform(&module, &mut project);
                 assert_eq!(1, mirs.len());
 
                 let bb = mirs[0].get_bb(BasicBlockId::new(0));
@@ -321,7 +333,8 @@ pub mod tests {
                 to_code(v, &table),
             );
             let module = compile(&text, &mut table);
-            let mirs = transform::module_transform(&module);
+            let mut project = MirProject::new();
+            let mirs = transform::module_transform(&module, &mut project);
             assert_eq!(1, mirs.len());
             let bb = mirs[0].get_bb(BasicBlockId::new(0));
             let stm = bb.get_stm(0);
@@ -370,7 +383,8 @@ pub mod tests {
                     ",
                 );
                 let module = compile(&text, &mut table);
-                let mirs = transform::module_transform(&module);
+                let mut project = MirProject::new();
+                let mirs = transform::module_transform(&module, &mut project);
                 assert_eq!(1, mirs.len());
 
                 let bb = mirs[0].get_bb(BasicBlockId::new(0));
@@ -412,7 +426,8 @@ pub mod tests {
                     ",
             );
             let module = compile(&text, &mut table);
-            let mirs = transform::module_transform(&module);
+            let mut project = MirProject::new();
+            let mirs = transform::module_transform(&module, &mut project);
             assert_eq!(1, mirs.len());
 
             let bb = mirs[0].get_bb(BasicBlockId::new(0));
@@ -457,7 +472,8 @@ pub mod tests {
                     ",
                 );
                 let module = compile(&text, &mut table);
-                let mirs = transform::module_transform(&module);
+                let mut project = MirProject::new();
+                let mirs = transform::module_transform(&module, &mut project);
                 assert_eq!(1, mirs.len());
 
                 let bb = mirs[0].get_bb(BasicBlockId::new(0));
@@ -496,7 +512,8 @@ pub mod tests {
                     ",
             );
             let module = compile(&text, &mut table);
-            let mirs = transform::module_transform(&module);
+            let mut project = MirProject::new();
+            let mirs = transform::module_transform(&module, &mut project);
             assert_eq!(1, mirs.len());
 
             let bb = mirs[0].get_bb(BasicBlockId::new(0));
@@ -523,7 +540,8 @@ pub mod tests {
         ";
         let mut table = StringTable::new();
         let module = compile(text, &mut table);
-        let mirs = transform::module_transform(&module);
+        let mut project = MirProject::new();
+        let mirs = transform::module_transform(&module, &mut project);
         let mir = &mirs[0];
 
         // Check that the right number of BBs are created
@@ -571,7 +589,9 @@ pub mod tests {
         ";
         let mut table = StringTable::new();
         let module = compile(text, &mut table);
-        let mirs = transform::module_transform(&module);
+
+        let mut project = MirProject::new();
+        let mirs = transform::module_transform(&module, &mut project);
         assert_eq!(mirs.len(), 1);
 
         let mir = &mirs[0];
@@ -589,7 +609,13 @@ pub mod tests {
                 ),
             ) => {
                 assert_eq!(lv, rv);
-                assert_eq!(lfty, rfty);
+                
+                let expected_ty = project.get_type(&Type::I64).unwrap();
+                assert_eq!(*lfty, expected_ty);
+                assert_eq!(*rfty, expected_ty);
+
+                assert_eq!(*lfid, FieldId::new(0));
+                assert_eq!(*rfid, FieldId::new(1));
             }
             _ => panic!(),
         }
