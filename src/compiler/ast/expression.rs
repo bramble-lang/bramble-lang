@@ -238,7 +238,7 @@ impl<I> Expression<I> {
     pub fn root_str(&self) -> String {
         use Expression::*;
         match self {
-            Null(_) => format!("null"),
+            Null(_) => "null".into(),
             U8(_, v) => format!("{}u8", v),
             U16(_, v) => format!("{}u16", v),
             U32(_, v) => format!("{}u32", v),
@@ -272,7 +272,7 @@ impl<I> Expression<I> {
             While { .. } => "while".into(),
             ExpressionBlock(..) => "expression block".into(),
             Yield(_, _) => "yield".into(),
-            TypeCast(_, _e, _ty) => format!("type cast"),
+            TypeCast(_, _e, _ty) => "type cast".into(),
         }
     }
 }

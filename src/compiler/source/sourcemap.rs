@@ -146,7 +146,7 @@ impl SourceMap {
     pub fn text_in_span(&self, span: Span) -> Result<String, SourceError> {
         let files = self.files_in_span(span);
 
-        if files.len() == 0 {
+        if files.is_empty() {
             // return error
             return Err(SourceError::SourceNotFound(span));
         }
@@ -223,7 +223,7 @@ impl SourceMapEntry {
         let span = self
             .span
             .intersection(span)
-            .ok_or(SourceError::UnexpectedEof)?;
+            .ok_or_else(|| SourceError::UnexpectedEof)?;
         let local_low = span.low().to_local(self.span.low());
         let local_high = span.high().to_local(self.span.low());
 
@@ -236,7 +236,7 @@ impl SourceMapEntry {
                 // Read the span from the file
                 let mut buf = vec![0; len as usize];
                 file.seek(SeekFrom::Start(local_low))?;
-                file.read(&mut buf)?;
+                file.read_exact(&mut buf)?;
 
                 String::from_utf8(buf)?
             }

@@ -57,13 +57,14 @@ impl<'a> Parser<'a> {
         // give it span that covers the entire set of tokens
         let (file_module_event, result) = self.new_event(Span::zero()).and_then(|| {
             ctx_over_tokens(&tokens)
-                .ok_or(CompilerError::new(Span::zero(), ParserError::EmptyProject))
+                .ok_or_else(|| CompilerError::new(Span::zero(), ParserError::EmptyProject))
                 .and_then(|module_ctx| {
                     let mut module = Module::new(name, module_ctx);
 
                     // Create the token stream.
-                    let mut stream = TokenStream::new(&tokens, self.logger)
-                        .ok_or(CompilerError::new(Span::zero(), ParserError::EmptyProject))?;
+                    let mut stream = TokenStream::new(&tokens, self.logger).ok_or_else(|| {
+                        CompilerError::new(Span::zero(), ParserError::EmptyProject)
+                    })?;
 
                     while stream.peek().is_some() {
                         let start_index = stream.index();
@@ -161,7 +162,7 @@ impl<'a> Parser<'a> {
             }
         }
 
-        if modules.len() == 0 && items.len() == 0 {
+        if modules.is_empty() && items.is_empty() {
             Ok(None)
         } else {
             Ok(Some((modules, items)))
@@ -174,7 +175,7 @@ impl<'a> Parser<'a> {
                 .and_then(|| match stream.next_if(&Lex::Extern) {
                     Some(extern_tok) => match self.function_decl(stream, true)? {
                         Some((fn_ctx, fn_name, params, has_varargs, fn_type)) => {
-                            if has_varargs && params.len() == 0 {
+                            if has_varargs && params.is_empty() {
                                 err!(fn_ctx.span(), ParserError::ExternInvalidVarArgs)
                             } else {
                                 let ctx = stream
@@ -288,10 +289,9 @@ impl<'a> Parser<'a> {
 
             stream
                 .next_if_id()
-                .ok_or(CompilerError::new(
-                    fn_ctx.span(),
-                    ParserError::FnExpectedIdentifierAfterFn,
-                ))
+                .ok_or_else(|| {
+                    CompilerError::new(fn_ctx.span(), ParserError::FnExpectedIdentifierAfterFn)
+                })
                 .and_then(|(fn_name, fn_def_span)| {
                     fn_ctx = fn_ctx.extend(fn_def_span);
 
@@ -300,10 +300,9 @@ impl<'a> Parser<'a> {
                     let fn_ctx = params_ctx.join(fn_ctx);
 
                     let (fn_type, fn_type_ctx) = if stream.next_if(&Lex::LArrow).is_some() {
-                        self.consume_type(stream)?.ok_or(CompilerError::new(
-                            fn_ctx.span(),
-                            ParserError::FnExpectedTypeAfterArrow,
-                        ))?
+                        self.consume_type(stream)?.ok_or_else(|| {
+                            CompilerError::new(fn_ctx.span(), ParserError::FnExpectedTypeAfterArrow)
+                        })?
                     } else {
                         (Type::Unit, fn_ctx)
                     };
@@ -579,10 +578,9 @@ impl<'a> Parser<'a> {
                     Some(star) => match stream.next_if_one_of(&[Lex::Mut, Lex::Const]) {
                         Some(m) if m.sym == Lex::Mut => {
                             let ctx = star.to_ctx();
-                            let ty = self.consume_type(stream)?.ok_or(CompilerError::new(
-                                ctx.span(),
-                                ParserError::RawPointerExpectedType,
-                            ))?;
+                            let ty = self.consume_type(stream)?.ok_or_else(|| {
+                                CompilerError::new(ctx.span(), ParserError::RawPointerExpectedType)
+                            })?;
                             let ctx = ctx.join(ty.1);
                             Ok(Some((
                                 Type::RawPointer(PointerMut::Mut, Box::new(ty.0)),
@@ -591,10 +589,9 @@ impl<'a> Parser<'a> {
                         }
                         Some(c) if c.sym == Lex::Const => {
                             let ctx = star.to_ctx();
-                            let ty = self.consume_type(stream)?.ok_or(CompilerError::new(
-                                ctx.span(),
-                                ParserError::RawPointerExpectedType,
-                            ))?;
+                            let ty = self.consume_type(stream)?.ok_or_else(|| {
+                                CompilerError::new(ctx.span(), ParserError::RawPointerExpectedType)
+                            })?;
                             let ctx = ctx.join(ty.1);
                             Ok(Some((
                                 Type::RawPointer(PointerMut::Const, Box::new(ty.0)),
@@ -630,17 +627,18 @@ impl<'a> Parser<'a> {
                     Some(lbracket) => {
                         let ctx = lbracket.to_ctx();
                         self.consume_type(stream)?
-                            .ok_or(CompilerError::new(
-                                ctx.span(),
-                                ParserError::ArrayDeclExpectedType,
-                            ))
+                            .ok_or_else(|| {
+                                CompilerError::new(ctx.span(), ParserError::ArrayDeclExpectedType)
+                            })
                             .and_then(|(element_ty, _)| {
                                 stream.next_must_be(&Lex::Semicolon)?;
 
-                                let len = self.expression(stream)?.ok_or(CompilerError::new(
-                                    ctx.span(),
-                                    ParserError::ArrayDeclExpectedSize,
-                                ))?;
+                                let len = self.expression(stream)?.ok_or_else(|| {
+                                    CompilerError::new(
+                                        ctx.span(),
+                                        ParserError::ArrayDeclExpectedSize,
+                                    )
+                                })?;
                                 let len = match len {
                                     Expression::U8(_, l) => l as usize,
                                     Expression::U16(_, l) => l as usize,

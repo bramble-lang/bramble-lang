@@ -88,7 +88,7 @@ impl SyntaxGenerator {
             self.ty();
         }
 
-        print!(" {{\n");
+        println!(" {{");
         for _ in 0..breadth(max_breadth) {
             let max_depth = new_max_depth(depth, max_depth);
             self.statement(max_depth, depth + 1);
@@ -125,7 +125,7 @@ impl SyntaxGenerator {
         self.ty();
         print!(" := ");
         self.expression(max_depth, depth);
-        print!(";\n");
+        println!(";");
     }
 
     fn expression(&mut self, max_depth: u32, depth: u32) {

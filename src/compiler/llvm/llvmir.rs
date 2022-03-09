@@ -123,7 +123,7 @@ impl<'ctx> IrGen<'ctx> {
                 RelocMode::Default,
                 CodeModel::Default,
             )
-            .ok_or("Could not create a target machine for compilation")?;
+            .ok_or_else(|| "Could not create a target machine for compilation")?;
         let data = machine.get_target_data();
 
         // Configure the module
@@ -188,7 +188,7 @@ impl<'ctx> IrGen<'ctx> {
         let main_path = Self::find_user_main(m, user_main, base_path, &mut matches);
         if matches.len() == 1 {
             Ok(Some(matches[0].clone()))
-        } else if matches.len() == 0 {
+        } else if matches.is_empty() {
             Ok(None)
         } else {
             Err(format!(
