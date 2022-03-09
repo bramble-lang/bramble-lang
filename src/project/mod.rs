@@ -32,12 +32,12 @@ impl CompilerDisplay for ManifestError {
     fn fmt(&self, sm: &SourceMap, st: &crate::StringTable) -> Result<String, CompilerDisplayError> {
         Ok(match self {
             ManifestError::StringIdNotFound => {
-                format!("Could not write Manifest file: StringId was not found in StringTable")
+                "Could not write Manifest file: StringId was not found in StringTable".into()
             }
             ManifestError::CannotConvertType(ty) => {
                 format!("Cannot convert type: {}", ty.fmt(sm, st)?)
             }
-            ManifestError::PathElementIsEmpty => format!("Path element is empty"),
+            ManifestError::PathElementIsEmpty => "Path element is empty".into(),
             ManifestError::PathElementStartsWithInvalidChar(c) => {
                 format!("Path starts with invalid character: {}", c)
             }
