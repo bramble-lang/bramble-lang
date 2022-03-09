@@ -74,7 +74,7 @@ impl<'ctx> RegisterLookup<'ctx> {
     /// assert_eq!(r, Ok(()));
     /// ```
     pub fn open_fn(&mut self) -> Result<()> {
-        if self.stack.len() == 0 {
+        if self.stack.is_empty() {
             self.stack.push(IdToValueMap::new());
             Ok(())
         } else {
@@ -106,7 +106,7 @@ impl<'ctx> RegisterLookup<'ctx> {
     /// Opens a new local scope. This will return an `Err` if there
     /// is no open function scope.
     pub fn open_local(&mut self) -> Result<()> {
-        if self.stack.len() == 0 {
+        if self.stack.is_empty() {
             Err("Cannot open local scope: there is no open fn scope".into())
         } else {
             self.stack.push(IdToValueMap::new());
@@ -139,7 +139,7 @@ impl<'ctx> RegisterLookup<'ctx> {
     /// If `id` is already in the current scope it will be overwritten.
     /// This will return an `Err` if there is no open scope.
     pub fn insert(&mut self, id: &str, value: AnyValueEnum<'ctx>) -> Result<()> {
-        if self.stack.len() == 0 {
+        if self.stack.is_empty() {
             return Err("Cannot insert identifier: there is no open scope".into());
         }
 

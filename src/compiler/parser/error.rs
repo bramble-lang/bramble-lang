@@ -66,7 +66,7 @@ impl CompilerDisplay for ParserError {
                 let ts = token_to_string(sm, st, token)?;
                 format!("Parser cannot advance past {}", ts)
             }
-            ParserError::ModExpectedName => format!("Identifier expected after mod keyword"),
+            ParserError::ModExpectedName => "Identifier expected after mod keyword".into(),
             ParserError::ModAlreadyContains(sid) => {
                 format!("Module already contains {}", sid.fmt(sm, st)?)
             }
@@ -75,18 +75,18 @@ impl CompilerDisplay for ParserError {
                     parameter before a VarArgs (...) parameter"
             ),
             ParserError::ExternExpectedFnDecl => {
-                format!("Expected function declaration after extern keyword")
+                "Expected function declaration after extern keyword".into()
             }
             ParserError::StructExpectedIdentifier => {
-                format!("Expected identifier after struct keyword")
+                "Expected identifier after struct keyword".into()
             }
             ParserError::FnExpectedIdentifierAfterFn => {
-                format!("Expected identifier after fn keyword")
+                "Expected identifier after fn keyword".into()
             }
             ParserError::FnVarArgsNotAllowed => {
-                format!("Varargs are not allowed in Bramble functions (only in externs)")
+                "Varargs are not allowed in Bramble functions (only in externs)".into()
             }
-            ParserError::FnExpectedTypeAfterArrow => format!("Type expected after ->"),
+            ParserError::FnExpectedTypeAfterArrow => "Type expected after ->".into(),
             ParserError::FnExpectedReturn(token) => {
                 format!(
                     "Routines must end with a return statement, but found {}",
@@ -94,22 +94,20 @@ impl CompilerDisplay for ParserError {
                 )
             }
             ParserError::FnCallExpectedParams => {
-                format!("Expected parameters after function call point")
+                "Expected parameters after function call point".into()
             }
             ParserError::CoExpectedIdentifierAfterCo => {
-                format!("Expected identifier after co keyword")
+                "Expected identifier after co keyword".into()
             }
             ParserError::ArrayExpectedIntLiteral => {
-                format!("Expected integer literal for array size")
+                "Expected integer literal for array size".into()
             }
-            ParserError::ArrayDeclExpectedType => {
-                format!("Expected type in array type declaration")
-            }
+            ParserError::ArrayDeclExpectedType => "Expected type in array type declaration".into(),
             ParserError::ArrayDeclExpectedSize => {
-                format!("Expected size to be specified in array type declaration")
+                "Expected size to be specified in array type declaration".into()
             }
             ParserError::IdDeclExpectedType => {
-                format!("Expected type after : in variable declaration")
+                "Expected type after : in variable declaration".into()
             }
             ParserError::ExpectedButFound(expected, actual) => {
                 format!(
@@ -119,32 +117,28 @@ impl CompilerDisplay for ParserError {
                 )
             }
             ParserError::ExpectedIdDeclAfterLet => {
-                format!("Expected identifier declaration (`<id> : <type>`) after let")
+                "Expected identifier declaration (`<id> : <type>`) after let".into()
             }
             ParserError::ExpectedTypeInIdDecl => {
-                format!("Expected type specification in let binding")
+                "Expected type specification in let binding".into()
             }
-            ParserError::ExpectedExpressionOnRhs => format!("Expected expression after :="),
-            ParserError::ExpectedParams => format!("Expected parameter list after identifier"),
-            ParserError::ExpectedIdAfterInit => format!("Expected identifer after init"),
+            ParserError::ExpectedExpressionOnRhs => "Expected expression after :=".into(),
+            ParserError::ExpectedParams => "Expected parameter list after identifier".into(),
+            ParserError::ExpectedIdAfterInit => "Expected identifer after init".into(),
             ParserError::NotAUnaryOp(op) => format!("{} is not a unary operator", op),
             ParserError::NotABinaryOp(op) => format!("{} is not a binary operator", op),
-            ParserError::IfExpectedConditional => {
-                format!("Expected conditional expression after if")
-            }
+            ParserError::IfExpectedConditional => "Expected conditional expression after if".into(),
             ParserError::IfTrueArmMissingExpr => {
-                format!("Expected expression block in true arm of if expression")
+                "Expected expression block in true arm of if expression".into()
             }
-            ParserError::IfElseExpectedIfExpr => format!("Expected expression block after else if"),
-            ParserError::IfFalseArmMissingExpr => format!("Expected expression block after else"),
+            ParserError::IfElseExpectedIfExpr => "Expected expression block after else if".into(),
+            ParserError::IfFalseArmMissingExpr => "Expected expression block after else".into(),
             ParserError::WhileExpectedConditional => {
-                format!("Expected conditional after while keyword")
+                "Expected conditional after while keyword".into()
             }
-            ParserError::WhileMissingBody => {
-                format!("Expected expression block for while loop body")
-            }
-            ParserError::PathExpectedIdentifier => format!("Expected identifier after ::"),
-            ParserError::YieldExpectedIdentifier => format!("Expected identifier after yield"),
+            ParserError::WhileMissingBody => "Expected expression block for while loop body".into(),
+            ParserError::PathExpectedIdentifier => "Expected identifier after ::".into(),
+            ParserError::YieldExpectedIdentifier => "Expected identifier after yield".into(),
             ParserError::StructExpectedFieldExpr(sid) => format!(
                 "Expected an expression to be assigned to field {}",
                 sid.fmt(sm, st)?
@@ -162,20 +156,20 @@ impl CompilerDisplay for ParserError {
                 )
             }
             ParserError::MemberAccessExpectedField => {
-                format!("Expected member name after . operator.")
+                "Expected member name after . operator.".into()
             }
             ParserError::IndexOpInvalidExpr => {
-                format!("Index operator must contain valid expression")
+                "Index operator must contain valid expression".into()
             }
-            ParserError::EmptyProject => format!("No source code."),
-            ParserError::RawPointerExpectedType => format!("Raw Pointer expected underlying type"),
-            ParserError::RawPointerExpectedConstOrMut => format!("Expected const or mut after *"),
+            ParserError::EmptyProject => "No source code.".into(),
+            ParserError::RawPointerExpectedType => "Raw Pointer expected underlying type".into(),
+            ParserError::RawPointerExpectedConstOrMut => "Expected const or mut after *".into(),
             ParserError::ExpectedIdentifierAfter(lex) => format!(
                 "Expected identifier after {}",
                 lex_to_string(sm, st, &Some(*lex))?
             ),
-            ParserError::AddressOfExpectedConstOrMut => format!("Expected const or mut after @"),
-            ParserError::InvalidCastTarget => format!("Can only cast to and from primitive types."),
+            ParserError::AddressOfExpectedConstOrMut => "Expected const or mut after @".into(),
+            ParserError::InvalidCastTarget => "Can only cast to and from primitive types.".into(),
         };
         Ok(msg)
     }

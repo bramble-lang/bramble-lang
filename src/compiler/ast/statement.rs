@@ -343,7 +343,7 @@ impl<M> YieldReturn<M> {
     }
 
     pub fn root_str(&self) -> String {
-        format!("yret")
+        "yret".into()
     }
 }
 
@@ -412,6 +412,6 @@ impl<M> Return<M> {
     }
 
     pub fn root_str(&self) -> String {
-        format!("return")
+        "return".into()
     }
 }

@@ -140,7 +140,7 @@ impl<'a> SymbolTableScopeStack {
 
     pub fn leave_scope(&mut self) -> SymbolTable {
         // If the head is None and the Stack is empty, then panic
-        if self.head.is_none() && self.stack.len() == 0 {
+        if self.head.is_none() && self.stack.is_empty() {
             panic!("There are no scopes to leave")
         }
 
@@ -319,7 +319,9 @@ impl<'a> SymbolTableScopeStack {
             // If the path has just the item name, then check the local scope and
             // the parent scopes for the given symbol
             match path.item() {
-                Some(item) => self.get_symbol(item).ok_or(SemanticError::NotDefined(item)),
+                Some(item) => self
+                    .get_symbol(item)
+                    .ok_or_else(|| SemanticError::NotDefined(item)),
                 None => Err(SemanticError::PathNotValid),
             }
         } else {
@@ -405,7 +407,7 @@ impl<'a> SymbolTableScopeStack {
                 Box::new(self.canonize_type(target_ty)?),
             )),
             Type::Array(el_ty, len) => {
-                if *len <= 0 {
+                if *len == 0 {
                     Err(SemanticError::ArrayInvalidSize(*len))
                 } else {
                     Ok(Type::Array(Box::new(self.canonize_type(el_ty)?), *len))
@@ -431,7 +433,7 @@ impl<'a> SymbolTableScopeStack {
     /// Converts a relative path, `path`, into a canonical path by merging it with
     /// the path to the current node, as represented by the stack.
     pub fn to_canonical(&self, path: &Path) -> Result<Path, SemanticError> {
-        let current_path = self.to_path().ok_or(SemanticError::PathNotValid)?;
+        let current_path = self.to_path().ok_or_else(|| SemanticError::PathNotValid)?;
         path.to_canonical(&current_path).map_err(|e| e.into())
     }
 

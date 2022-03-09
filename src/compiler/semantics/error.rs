@@ -80,17 +80,17 @@ impl CompilerDisplay for SemanticError {
                 path.fmt(sm, st)?,
                 canonical_form.fmt(sm, st)?
             )),
-            SemanticError::PathNotValid => Ok(format!("Path is not valid")),
+            SemanticError::PathNotValid => Ok("Path is not valid".into()),
             SemanticError::NotDefined(sid) => Ok(format!(
                 "Could not find definition for {} in this scope",
                 sid.fmt(sm, st)?
             )),
-            SemanticError::EmptyPath => Ok(format!("Empty path")),
+            SemanticError::EmptyPath => Ok("Empty path".into()),
             SemanticError::ArrayInvalidSize(sz) => {
                 Ok(format!("Expected length > 0 for array, but found {}", sz))
             }
             SemanticError::ArrayInconsistentElementTypes => {
-                Ok(format!("Inconsistent types in array value"))
+                Ok("Inconsistent types in array value".into())
             }
             SemanticError::ArrayIndexingInvalidType(ty) => Ok(format!(
                 "Expected array type on LHS of [] but found {}",
@@ -103,7 +103,7 @@ impl CompilerDisplay for SemanticError {
             SemanticError::AlreadyDeclared(sid) => {
                 Ok(format!("{} already declared", sid.fmt(sm, st)?))
             }
-            SemanticError::PathTooSuper => Ok(format!("Path too super")),
+            SemanticError::PathTooSuper => Ok("Path too super".into()),
             SemanticError::BindExpected(expected, actual) => Ok(format!(
                 "Bind expected {} but got {}",
                 expected.fmt(sm, st)?,
@@ -123,15 +123,15 @@ impl CompilerDisplay for SemanticError {
                 expected.fmt(sm, st)?,
                 actual.fmt(sm, st)?
             )),
-            SemanticError::YieldInvalidLocation => Ok(format!("yield must be at end of function")),
+            SemanticError::YieldInvalidLocation => Ok("yield must be at end of function".into()),
             SemanticError::ReturnExpected(expected, actual) => Ok(format!(
                 "Return expected {} but got {}",
                 expected.fmt(sm, st)?,
                 actual.fmt(sm, st)?
             )),
-            SemanticError::ReturnInvalidLocation => Ok(format!("return invalid loc")),
+            SemanticError::ReturnInvalidLocation => Ok("return invalid loc".into()),
             SemanticError::MemberAccessInvalidRootType(_) => {
-                Ok(format!("Member access invalid root type"))
+                Ok("Member access invalid root type".into())
             }
             SemanticError::MemberAccessMemberNotFound(path, member) => Ok(format!(
                 "{} does not have member {}",
@@ -227,12 +227,12 @@ impl CompilerDisplay for SemanticError {
                     .join(", ")
             )),
             SemanticError::MainFnInvalidType => {
-                Ok(format!("my_main must be a function of type () -> i64"))
+                Ok("my_main must be a function of type () -> i64".into())
             }
             SemanticError::MainFnInvalidParams => Ok(format!(
                 "my_main must take no parameters. It must be of type () -> i64"
             )),
-            SemanticError::InvalidStructure => Ok(format!("Not a valid structure definition")),
+            SemanticError::InvalidStructure => Ok("Not a valid structure definition".into()),
             SemanticError::RoutineCallInvalidTarget(call, path, ty) => {
                 let call = match call {
                     crate::compiler::ast::RoutineCall::Function => "function",
@@ -251,7 +251,7 @@ impl CompilerDisplay for SemanticError {
                 ty.fmt(sm, st)?
             )),
             SemanticError::MutablePointerToImmutable => {
-                Ok(format!("Cannot make mutable pointer to immutable variable"))
+                Ok("Cannot make mutable pointer to immutable variable".into())
             }
             SemanticError::ExpectedIdentifier(op) => Ok(format!("{} expected identifier", op)),
             SemanticError::ExpectedAddressable(op) => {
@@ -265,7 +265,7 @@ impl CompilerDisplay for SemanticError {
                 "@ operator expects integer on right side, but got {}",
                 ty.fmt(sm, st)?
             )),
-            SemanticError::InvalidTypeCast => Ok(format!("Invalid type cast")),
+            SemanticError::InvalidTypeCast => Ok("Invalid type cast".into()),
         }
     }
 }

@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use crate::io::get_files;
 use crate::{
@@ -46,9 +46,8 @@ impl CompilerDisplay for ProjectError {
 pub fn get_project_name(src: &Path) -> Result<&str, String> {
     if src.is_file() || src.is_dir() {
         src.file_stem()
-            .map(|name| name.to_str())
-            .flatten()
-            .ok_or("Could not extract name from given path".into())
+            .and_then(|name| name.to_str())
+            .ok_or_else(|| "Could not extract name from given path".into())
     } else {
         Err("Given path is neither a directory or a file".into())
     }
@@ -69,7 +68,7 @@ fn create_module_path<'a>(
                 .get_module_mut(*head)
                 .expect("A module with this name was just created and ought to be found");
 
-            if rest.len() == 0 {
+            if rest.is_empty() {
                 Some(sub)
             } else {
                 create_module_path(sub, rest)
@@ -98,7 +97,7 @@ pub fn build_source_map(
 ) -> Result<SourceMap, SourceMapError> {
     let mut sm = SourceMap::new();
 
-    let mut files = get_files(&src_path, ext)?;
+    let mut files = get_files(src_path, ext)?;
     files.sort(); // simplifies testing across platforms by making the source map consistent
     for file in files {
         sm.add_file(file)?;
@@ -119,10 +118,9 @@ pub fn parse_project(
     logger: &Logger,
 ) -> Result<Module<ParserContext>, Vec<CompilerError<ProjectError>>> {
     // The root module spans the entire source code space
-    let root_span = source_map.span().ok_or(vec![CompilerError::new(
-        Span::zero(),
-        ProjectError::EmptyProject,
-    )])?;
+    let root_span = source_map
+        .span()
+        .ok_or_else(|| vec![CompilerError::new(Span::zero(), ProjectError::EmptyProject)])?;
 
     let mut root = Module::new(root_module, ParserContext::new(root_span));
     let mut errors = vec![];
@@ -132,7 +130,7 @@ pub fn parse_project(
             Err(e) => errors.push(e),
         }
     }
-    if errors.len() == 0 {
+    if errors.is_empty() {
         Ok(root)
     } else {
         Err(errors)
@@ -183,7 +181,7 @@ fn tokenize_source(
         Vec<std::result::Result<Token, _>>,
     ) = tokens.into_iter().partition(|t| t.is_ok());
 
-    if errors.len() == 0 {
+    if errors.is_empty() {
         let tokens: Vec<Token> = tokens
             .into_iter()
             .filter_map(|t| match t {
@@ -246,7 +244,7 @@ fn append_module(
     root: &mut Module<ParserContext>,
     src_ast: CompilationUnit<Module<ParserContext>>,
 ) {
-    let parent = if src_ast.path.len() == 0 {
+    let parent = if src_ast.path.is_empty() {
         root
     } else {
         let path: Vec<_> = src_ast
@@ -259,8 +257,7 @@ fn append_module(
     parent.add_module(src_ast.data);
 }
 
-fn file_path_to_module_path(file: &PathBuf, src_path: &Path) -> Vec<String> {
-    let fpath = file.as_path();
+fn file_path_to_module_path(file: &Path, src_path: &Path) -> Vec<String> {
     let base = if src_path.is_dir() {
         src_path
     } else {
@@ -269,7 +266,7 @@ fn file_path_to_module_path(file: &PathBuf, src_path: &Path) -> Vec<String> {
             .expect("Given a file which is also the root of the directory structure.")
     };
 
-    let rel_path = fpath.strip_prefix(&base).unwrap();
+    let rel_path = file.strip_prefix(&base).unwrap();
 
     let mut p: Vec<String> = rel_path
         .iter()

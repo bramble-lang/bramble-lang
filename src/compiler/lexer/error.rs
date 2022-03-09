@@ -25,15 +25,15 @@ impl CompilerDisplay for LexerError {
     fn fmt(&self, sm: &SourceMap, st: &crate::StringTable) -> Result<String, CompilerDisplayError> {
         use LexerError::*;
         let msg = match self {
-            Locked(None) => format!("Lexer locked on EOF"),
+            Locked(None) => "Lexer locked on EOF".into(),
             Locked(Some(c)) => format!("Lexer locked on {}", c),
             InvalidEscapeSequence(c) => format!("Invalid escape sequence \\{}", c),
-            ExpectedEscapeCharacter => format!("Expected an escape character after \\"),
-            InvalidNumber => format!("Invalid number"),
+            ExpectedEscapeCharacter => "Expected an escape character after \\".into(),
+            InvalidNumber => "Invalid number".into(),
             UnexpectedSuffixType(ref prim) => format!("Invalid type suffix: {}", prim.fmt(sm, st)?),
-            SourceError => format!("Error reading characters from source code"),
-            UnexpectedEof => format!("Unexpected EOF"),
-            InvalidSuffixOnFloat => format!("Invalid suffix after float literal."),
+            SourceError => "Error reading characters from source code".into(),
+            UnexpectedEof => "Unexpected EOF".into(),
+            InvalidSuffixOnFloat => "Invalid suffix after float literal.".into(),
             ParseIntError(p, e) => format!("{} of {}", e, p),
             ParseFloatError(p, e) => format!("{} of {}", e, p),
         };

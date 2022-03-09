@@ -57,7 +57,7 @@ impl<'a> Writable for TypeOk<'a> {
 
         w.write_field("addressability", &self.addressable);
 
-        if self.refs.len() > 0 {
+        if !self.refs.is_empty() {
             for r in &self.refs {
                 w.write_span("ref", *r);
             }

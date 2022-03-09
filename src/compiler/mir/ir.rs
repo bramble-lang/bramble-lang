@@ -486,7 +486,7 @@ impl Display for LValue {
             LValue::Var(v) => format!("{}", v),
             LValue::Temp(t) => format!("{}", t),
             LValue::Access(lv, acc) => format!("{}{}", lv, acc),
-            LValue::ReturnPointer => format!("ReturnPtr"),
+            LValue::ReturnPointer => "ReturnPtr".into(),
         };
         f.write_str(&text)
     }
@@ -506,7 +506,7 @@ impl Display for Accessor {
         let text = match self {
             Accessor::Index(i) => format!("[{}]", i),
             Accessor::Field(f, _) => format!(".{}", f),
-            Accessor::Deref => format!("Deref()"),
+            Accessor::Deref => "Deref()".into(),
         };
         f.write_str(&text)
     }
@@ -666,7 +666,7 @@ impl Display for TerminatorKind {
                 args,
                 reentry,
             } => format!("call {}", func),
-            TerminatorKind::Return => format!("return"),
+            TerminatorKind::Return => "return".into(),
             TerminatorKind::GoTo { target } => format!("goto {}", target),
             TerminatorKind::CondGoTo { cond, tru, fls } => {
                 format!("if ({}) then {} else {}", cond, tru, fls)

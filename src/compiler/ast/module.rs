@@ -260,7 +260,7 @@ where
     }
 
     pub fn go_to_module(&self, path: &Path) -> Option<&Module<M>> {
-        if path.len() == 0 {
+        if path.is_empty() {
             None
         } else {
             // check to make sure that the first step in the path
