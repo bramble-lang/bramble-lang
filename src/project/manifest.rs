@@ -136,7 +136,7 @@ impl ManifestRoutineDef {
         let params = self
             .params
             .iter()
-            .map(|p| Ok(p.to_ty(st)?))
+            .map(|p| p.to_ty(st))
             .collect::<Result<_, ManifestError>>()?;
         let ret_ty = self.ret_ty.to_ty(st)?;
 
@@ -159,7 +159,7 @@ impl ManifestStructDef {
         sm: &SourceMap,
         st: &StringTable,
     ) -> Result<Self, ManifestError> {
-        let name = st.get(sd.get_name())?.into();
+        let name = st.get(sd.get_name())?;
         let canon_path = path_to_string(sm, st, sd.context().canonical_path())?;
         let fields = sd
             .get_fields()
@@ -167,7 +167,7 @@ impl ManifestStructDef {
             .map(|f| {
                 let name = st.get(f.name).map_err(|e| e.into());
                 let fty = ManifestType::from_ty(sm, st, &f.ty);
-                name.and_then(|name| fty.and_then(|fty| Ok((name.into(), fty))))
+                name.and_then(|name| fty.map(|fty| (name, fty)))
             })
             .collect::<Result<Vec<_>, ManifestError>>()?;
 
@@ -310,7 +310,7 @@ fn string_to_path(st: &StringTable, p: &str) -> Result<Path, ManifestError> {
     }
 
     // Check if this is a canonical path, and remove the $ if it is
-    let (p, is_canonical) = match p.strip_prefix("$") {
+    let (p, is_canonical) = match p.strip_prefix('$') {
         Some(stripped) => (stripped, true),
         None => (p, false),
     };
