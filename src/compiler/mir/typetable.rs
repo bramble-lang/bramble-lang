@@ -35,10 +35,12 @@ impl TypeTable {
         TypeTable { table }
     }
 
+    /// Given a [`TypeId`] this returns the corresponding [`MirTypeDef`].
     pub fn get(&self, id: TypeId) -> &MirTypeDef {
         &self.table[id.0 as usize]
     }
 
+    /// Returns a mutable [`MirTypeDef`] reference.
     fn get_mut(&mut self, id: TypeId) -> &mut MirTypeDef {
         &mut self.table[id.0 as usize]
     }
@@ -46,6 +48,9 @@ impl TypeTable {
     /// Adds the given [`Type`] to the type table. If this type references any type which is
     /// not in the table then it will also add the referenced type to the table. Structures will
     /// be added as [`MirStructDef::Declared`].
+    /// 
+    /// If the given [`Type`] is already in the table, then this will return the [`TypeId`] for
+    /// that occurance, rather than add another entry.
     pub fn add(&mut self, ty: &Type) -> TypeId {
         // Check if ty is already in the table
         if let Some(id) = self.find(ty) {
@@ -361,7 +366,7 @@ pub struct Field {
 pub struct FieldId(u32);
 
 impl FieldId {
-    pub fn new(id: u32) -> FieldId {
+    fn new(id: u32) -> FieldId {
         FieldId(id)
     }
 }
