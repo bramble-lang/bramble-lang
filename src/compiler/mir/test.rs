@@ -7,7 +7,8 @@ pub mod tests {
             lexer::{tokens::Token, LexerError},
             mir::{
                 ir::*,
-                transform::{self, MirProject}, typetable::FieldId,
+                transform::{self, MirProject},
+                typetable::FieldId,
             },
             parser::Parser,
             semantics::semanticnode::SemanticContext,
@@ -119,13 +120,17 @@ pub mod tests {
     #[test]
     fn print_mir_for_struct_field() {
         let text = "
-        fn test(s: S) -> i64 {
-            return s.a + s.b;
+        fn test(s: S2) -> i64 {
+            return s.s.a + s.s.b;
         }
 
         struct S {
             a: i64,
             b: i64,
+        }
+
+        struct S2 {
+            s: S,
         }
         ";
         let mut table = StringTable::new();
@@ -609,8 +614,71 @@ pub mod tests {
                 ),
             ) => {
                 assert_eq!(lv, rv);
-                
+
                 let expected_ty = project.get_type(&Type::I64).unwrap();
+                assert_eq!(*lfty, expected_ty);
+                assert_eq!(*rfty, expected_ty);
+
+                assert_eq!(*lfid, FieldId::new(0));
+                assert_eq!(*rfid, FieldId::new(1));
+            }
+            _ => panic!(),
+        }
+    }
+
+    #[test]
+    fn nested_member_access() {
+        let text = "
+        fn test(s: S2) -> i64 {
+            return s.s.a + s.s.b;
+        }
+
+        struct S {
+            a: i64,
+            b: i64,
+        }
+
+        struct S2 {
+            s: S,
+        }
+        ";
+        let mut table = StringTable::new();
+        let module = compile(text, &mut table);
+
+        let mut project = MirProject::new();
+        let mirs = transform::module_transform(&module, &mut project);
+        assert_eq!(mirs.len(), 1);
+
+        let mir = &mirs[0];
+        assert_eq!(mir.len(), 1);
+        let bb = mir.get_bb(BasicBlockId::new(0));
+
+        let stm = bb.get_stm(0);
+        match stm.kind() {
+            StatementKind::Assign(
+                _,
+                RValue::BinOp(
+                    BinOp::Add,
+                    Operand::LValue(LValue::Access(lv, Accessor::Field(lfid, lfty))),
+                    Operand::LValue(LValue::Access(rv, Accessor::Field(rfid, rfty))),
+                ),
+            ) => {
+                let expected_ty = project.get_type(&Type::I64).unwrap();
+
+                let lv = if let LValue::Access(lv, Accessor::Field(fid, _)) = lv.as_ref() {
+                    assert_eq!(*fid, FieldId::new(0));
+                    lv
+                } else {
+                    panic!()
+                };
+                let rv = if let LValue::Access(rv, Accessor::Field(fid, _)) = rv.as_ref() {
+                    assert_eq!(*fid, FieldId::new(0));
+                    rv
+                } else {
+                    panic!()
+                };
+                assert_eq!(lv, rv);
+
                 assert_eq!(*lfty, expected_ty);
                 assert_eq!(*rfty, expected_ty);
 
