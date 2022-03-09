@@ -331,8 +331,7 @@ impl FuncTransformer {
 
         // Add the parameters of the function to the set of variables
         func.params.iter().for_each(|p| {
-            self.mir
-                .arg(p.name, p.context().ty(), p.context().span());
+            self.mir.arg(p.name, p.context().ty(), p.context().span());
         });
 
         // Create a new MIR Procedure
