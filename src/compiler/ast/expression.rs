@@ -239,7 +239,7 @@ impl<I> Expression<I> {
         use Expression::*;
         match self {
             Null(_) => format!("null"),
-            U8(_, v) => format!( "{}u8", v),
+            U8(_, v) => format!("{}u8", v),
             U16(_, v) => format!("{}u16", v),
             U32(_, v) => format!("{}u32", v),
             U64(_, v) => format!("{}u64", v),

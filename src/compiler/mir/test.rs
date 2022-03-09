@@ -129,15 +129,12 @@ pub mod tests {
             StatementKind::Assign(lv, rv) => {
                 assert_eq!(
                     lv,
-                    &LValue::Access(Box::new(
-                        LValue::Temp(TempId::new(0))),
+                    &LValue::Access(
+                        Box::new(LValue::Temp(TempId::new(0))),
                         Accessor::Index(Box::new(Operand::Constant(Constant::I64(0))))
                     )
                 );
-                assert_eq!(
-                    rv,
-                    &RValue::Use(Operand::Constant(Constant::I64(1)))
-                );
+                assert_eq!(rv, &RValue::Use(Operand::Constant(Constant::I64(1))));
             }
         }
 
@@ -145,15 +142,12 @@ pub mod tests {
             StatementKind::Assign(lv, rv) => {
                 assert_eq!(
                     lv,
-                    &LValue::Access(Box::new(
-                        LValue::Temp(TempId::new(0))),
+                    &LValue::Access(
+                        Box::new(LValue::Temp(TempId::new(0))),
                         Accessor::Index(Box::new(Operand::Constant(Constant::I64(1))))
                     )
                 );
-                assert_eq!(
-                    rv,
-                    &RValue::Use(Operand::Constant(Constant::I64(2)))
-                );
+                assert_eq!(rv, &RValue::Use(Operand::Constant(Constant::I64(2))));
             }
         }
     }

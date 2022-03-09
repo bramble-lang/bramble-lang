@@ -48,7 +48,7 @@ impl TypeTable {
     /// Adds the given [`Type`] to the type table. If this type references any type which is
     /// not in the table then it will also add the referenced type to the table. Structures will
     /// be added as [`MirStructDef::Declared`].
-    /// 
+    ///
     /// If the given [`Type`] is already in the table, then this will return the [`TypeId`] for
     /// that occurance, rather than add another entry.
     pub fn add(&mut self, ty: &Type) -> Result<TypeId, TypeTableError> {
@@ -74,10 +74,10 @@ impl TypeTable {
                         def: MirStructDef::Declared,
                     }
                 } else {
-                    return Err(TypeTableError::ExpectedCanonicalPath)
+                    return Err(TypeTableError::ExpectedCanonicalPath);
                 }
             }
-            _ => return Err(TypeTableError::BaseTypesMissing)
+            _ => return Err(TypeTableError::BaseTypesMissing),
         };
 
         self.table.push(mir_ty);
@@ -88,9 +88,16 @@ impl TypeTable {
 
     /// Adds the definition for the given structure. This will use the path in the
     /// [`SemanticContext`] as the canonical path for the structure.
-    pub fn add_struct_def(&mut self, sd: &StructDef<SemanticContext>) -> Result<TypeId, TypeTableError> {
+    pub fn add_struct_def(
+        &mut self,
+        sd: &StructDef<SemanticContext>,
+    ) -> Result<TypeId, TypeTableError> {
         // Convert the fields of the structure to MIR Fields
-        let fields = sd.get_fields().iter().map(|f| f.to_field(self)).collect::<Result<_, _>>()?;
+        let fields = sd
+            .get_fields()
+            .iter()
+            .map(|f| f.to_field(self))
+            .collect::<Result<_, _>>()?;
 
         // Search the table for a structure with the same canonical path
         if let Some(id) = self.find_by_path(sd.context().canonical_path())? {
@@ -101,11 +108,11 @@ impl TypeTable {
                     *def = MirStructDef::Defined(fields);
                     Ok(id)
                 } else {
-                    return Err(TypeTableError::StrutureAlreadyDefined)
+                    return Err(TypeTableError::StrutureAlreadyDefined);
                 }
             } else {
                 // If it is, then return an error
-                return Err(TypeTableError::ExpectedStructure)
+                return Err(TypeTableError::ExpectedStructure);
             }
         } else {
             // If no match found, then create a new structure entry and add to the table
@@ -125,7 +132,8 @@ impl TypeTable {
             return Err(TypeTableError::ExpectedCanonicalPath);
         }
 
-        Ok(self.table
+        Ok(self
+            .table
             .iter()
             .position(|ty| match ty {
                 MirTypeDef::Structure { path: p, .. } => p == path,
@@ -320,7 +328,7 @@ impl PartialEq for MirTypeDef {
 /// The Unique Identifier for a type within a Bramble program. Every type,
 /// including base types, is given a TypeId.  MIR uses the TypeId to annotate
 /// the types of MIR values and variables.
-/// 
+///
 /// [`TypeId`] is implemented as a single [`u32`] to conserve memory and to
 /// optimize comparison operations. Using this design requires that all types,
 /// including base types, be added to the [`TypeTable`], but because the implementation

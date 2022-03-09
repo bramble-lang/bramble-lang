@@ -404,7 +404,9 @@ impl FuncTransformer {
             Expression::TypeCast(_, _, _) => todo!(),
             Expression::SizeOf(_, _) => todo!(),
             Expression::MemberAccess(_, base, field) => self.member_access(base, *field),
-            Expression::ArrayExpression(ctx, els, sz) => self.array_expr(ctx.ty(), els, *sz, ctx.span()),
+            Expression::ArrayExpression(ctx, els, sz) => {
+                self.array_expr(ctx.ty(), els, *sz, ctx.span())
+            }
             Expression::ArrayAt {
                 context,
                 array,

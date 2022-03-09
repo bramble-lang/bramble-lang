@@ -134,7 +134,11 @@ impl<'ctx> IrGen<'ctx> {
         if emit_asm {
             let asm_path = path.with_extension("s");
             machine
-                .write_to_file(&self.module, inkwell::targets::FileType::Assembly, &asm_path)
+                .write_to_file(
+                    &self.module,
+                    inkwell::targets::FileType::Assembly,
+                    &asm_path,
+                )
                 .map_err(|e| e.to_string())?
         }
 
