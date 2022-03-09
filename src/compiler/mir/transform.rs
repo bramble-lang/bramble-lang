@@ -504,7 +504,8 @@ impl<'a> FuncTransformer<'a> {
         if let MirTypeDef::Structure { def, .. } = self.project.types.get(mir_ty) {
             if let Operand::LValue(base_mir) = self.expression(base) {
                 let (field_id, field_mir) = def.find_field(field).unwrap();
-                let access = LValue::Access(Box::new(base_mir), Accessor::Field(field_id, field_mir.ty));
+                let access =
+                    LValue::Access(Box::new(base_mir), Accessor::Field(field_id, field_mir.ty));
                 Operand::LValue(access)
             } else {
                 // Base expression must be a location expression
