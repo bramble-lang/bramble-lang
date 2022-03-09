@@ -64,6 +64,11 @@ impl MirProject {
         }
     }
 
+    pub fn get_type(&self, ty: &Type) -> Option<TypeId> {
+        self.types.find(ty)
+    }
+
+    /// Adds a new Structure definition to the [`MirProject`].
     pub fn add_struct_def(
         &mut self,
         sd: &StructDef<SemanticContext>,
@@ -494,9 +499,21 @@ impl<'a> FuncTransformer<'a> {
 
     fn member_access(&mut self, base: &Expression<SemanticContext>, field: StringId) -> Operand {
         // Get the Index of the Field and convert to a `FieldId`
-        // Evaluate `base`
-        // Access the ith field of the result of `base`
-        todo!()
+        let ty = base.context().ty();
+        let mir_ty = self.project.get_type(ty).unwrap();
+        if let MirTypeDef::Structure { def, .. } = self.project.types.get(mir_ty) {
+            if let Operand::LValue(base_mir) = self.expression(base) {
+                let (field_id, field_mir) = def.find_field(field).unwrap();
+                let access = LValue::Access(Box::new(base_mir), Accessor::Field(field_id, field_mir.ty));
+                Operand::LValue(access)
+            } else {
+                // Base expression must be a location expression
+                panic!("Base expression must be a location expression")
+            }
+        } else {
+            // Trying to access a field on a non-structure type.
+            panic!("Trying to access a field on a non-structure type")
+        }
     }
 
     /// Transform an Array At operation to its MIR form and return the Location Expression as

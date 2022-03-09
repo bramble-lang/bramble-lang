@@ -8,7 +8,7 @@ use crate::{
     StringId,
 };
 
-use super::typetable::FieldId;
+use super::typetable::{FieldId, TypeId};
 
 const ROOT_SCOPE: usize = 0;
 
@@ -497,7 +497,7 @@ impl Display for LValue {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Accessor {
     Index(Box<Operand>),
-    Field(FieldId, Type),
+    Field(FieldId, TypeId),
     Deref,
 }
 

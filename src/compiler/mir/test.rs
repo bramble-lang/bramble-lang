@@ -112,12 +112,13 @@ pub mod tests {
     #[test]
     fn print_mir_for_struct_field() {
         let text = "
-        fn test(s: i64) -> i64 {
-            return s;
+        fn test(s: S) -> i64 {
+            return s.a + s.b;
         }
 
         struct S {
             a: i64,
+            b: i64,
         }
         ";
         let mut table = StringTable::new();
