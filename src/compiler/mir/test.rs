@@ -41,9 +41,16 @@ pub mod tests {
         resolve_types(&ast, main_mod, main_fn, &logger).unwrap()
     }
 
-    #[test]
-    fn print_mir() {
-        let text = "
+    /// These tests will take small Bramble programs and print their
+    /// MIR representation to the screen. These "tests" do not do any
+    /// validation. They are to be used for visual validation of a MIR
+    /// and to aid in writing the actual unit tests.
+    mod print {
+        use super::*;
+
+        #[test]
+        fn print_mir() {
+            let text = "
         fn test() -> i64 {
             let x: i64 := 5;
             let mut b: bool := true;
@@ -51,18 +58,18 @@ pub mod tests {
             return 1 + 2 + 3 + x + y;
         }
         ";
-        let mut table = StringTable::new();
-        let module = compile(text, &mut table);
-        let mut project = MirProject::new();
-        let mirs = transform::module_transform(&module, &mut project);
-        for mir in mirs {
-            println!("{}", mir);
+            let mut table = StringTable::new();
+            let module = compile(text, &mut table);
+            let mut project = MirProject::new();
+            let mirs = transform::module_transform(&module, &mut project);
+            for mir in mirs {
+                println!("{}", mir);
+            }
         }
-    }
 
-    #[test]
-    fn print_mir_for_if_no_else() {
-        let text = "
+        #[test]
+        fn print_mir_for_if_no_else() {
+            let text = "
         fn test() -> i64 {
             let x: i64 := 5;
             let b: bool := true;
@@ -70,18 +77,18 @@ pub mod tests {
             return 1 + 2 + 3 + x;
         }
         ";
-        let mut table = StringTable::new();
-        let module = compile(text, &mut table);
-        let mut project = MirProject::new();
-        let mirs = transform::module_transform(&module, &mut project);
-        for mir in mirs {
-            println!("{}", mir);
+            let mut table = StringTable::new();
+            let module = compile(text, &mut table);
+            let mut project = MirProject::new();
+            let mirs = transform::module_transform(&module, &mut project);
+            for mir in mirs {
+                println!("{}", mir);
+            }
         }
-    }
 
-    #[test]
-    fn print_mir_for_while_expr() {
-        let text = "
+        #[test]
+        fn print_mir_for_while_expr() {
+            let text = "
         fn test() -> i64 {
             let x: i64 := 5;
             let b: bool := true;
@@ -91,35 +98,35 @@ pub mod tests {
             return 0;
         }
         ";
-        let mut table = StringTable::new();
-        let module = compile(text, &mut table);
-        let mut project = MirProject::new();
-        let mirs = transform::module_transform(&module, &mut project);
-        for mir in mirs {
-            println!("{}", mir);
+            let mut table = StringTable::new();
+            let module = compile(text, &mut table);
+            let mut project = MirProject::new();
+            let mirs = transform::module_transform(&module, &mut project);
+            for mir in mirs {
+                println!("{}", mir);
+            }
         }
-    }
 
-    #[test]
-    fn print_mir_for_array_expression() {
-        let text = "
+        #[test]
+        fn print_mir_for_array_expression() {
+            let text = "
         fn test() -> i64 {
             let x: [[i64; 2]; 2] := [[1, 2], [3, 4]];
             return x[1][0];
         }
         ";
-        let mut table = StringTable::new();
-        let module = compile(text, &mut table);
-        let mut project = MirProject::new();
-        let mirs = transform::module_transform(&module, &mut project);
-        for mir in mirs {
-            println!("{}", mir);
+            let mut table = StringTable::new();
+            let module = compile(text, &mut table);
+            let mut project = MirProject::new();
+            let mirs = transform::module_transform(&module, &mut project);
+            for mir in mirs {
+                println!("{}", mir);
+            }
         }
-    }
 
-    #[test]
-    fn print_mir_for_struct_field() {
-        let text = "
+        #[test]
+        fn print_mir_for_struct_field() {
+            let text = "
         fn test(s: S2) -> i64 {
             return s.s.a + s.s.b;
         }
@@ -133,12 +140,13 @@ pub mod tests {
             s: S,
         }
         ";
-        let mut table = StringTable::new();
-        let module = compile(text, &mut table);
-        let mut project = MirProject::new();
-        let mirs = transform::module_transform(&module, &mut project);
-        for mir in mirs {
-            println!("{}", mir);
+            let mut table = StringTable::new();
+            let module = compile(text, &mut table);
+            let mut project = MirProject::new();
+            let mirs = transform::module_transform(&module, &mut project);
+            for mir in mirs {
+                println!("{}", mir);
+            }
         }
     }
 
