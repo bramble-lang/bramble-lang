@@ -27,3 +27,5 @@ jobs:
         uses: actions-rs/toolchain@v1
       - name: Run tests
         run: cargo test
+      - name: Run clippy
+        run: cargo clippy
