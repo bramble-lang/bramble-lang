@@ -51,21 +51,21 @@ impl TypeTable {
     /// 
     /// If the given [`Type`] is already in the table, then this will return the [`TypeId`] for
     /// that occurance, rather than add another entry.
-    pub fn add(&mut self, ty: &Type) -> TypeId {
+    pub fn add(&mut self, ty: &Type) -> Result<TypeId, TypeTableError> {
         // Check if ty is already in the table
         if let Some(id) = self.find(ty) {
-            return id;
+            return Ok(id);
         }
 
         // Create a MirType using the referenced TypeIds and add to the table
         let mir_ty = match ty {
             Type::Array(el, sz) => MirTypeDef::Array {
-                ty: self.add(el),
+                ty: self.add(el)?,
                 sz: *sz,
             },
             Type::RawPointer(mutable, target) => MirTypeDef::RawPointer {
                 mutable: *mutable,
-                target: self.add(target),
+                target: self.add(target)?,
             },
             Type::Custom(path) => {
                 if path.is_canonical() {
@@ -74,23 +74,23 @@ impl TypeTable {
                         def: MirStructDef::Declared,
                     }
                 } else {
-                    panic!("Exected canonical path on custom type")
+                    return Err(TypeTableError::ExpectedCanonicalPath)
                 }
             }
-            _ => panic!("Base types must be in the type table before any other type is added"),
+            _ => return Err(TypeTableError::BaseTypesMissing)
         };
 
         self.table.push(mir_ty);
 
         // Return the index of the new type as a TypeId
-        TypeId(self.table.len() as u32 - 1)
+        Ok(TypeId(self.table.len() as u32 - 1))
     }
 
     /// Adds the definition for the given structure. This will use the path in the
     /// [`SemanticContext`] as the canonical path for the structure.
-    pub fn add_struct_def(&mut self, sd: &StructDef<SemanticContext>) -> TypeId {
+    pub fn add_struct_def(&mut self, sd: &StructDef<SemanticContext>) -> Result<TypeId, TypeTableError> {
         // Convert the fields of the structure to MIR Fields
-        let fields = sd.get_fields().iter().map(|f| self.to_field(f)).collect();
+        let fields = sd.get_fields().iter().map(|f| self.to_field(f)).collect::<Result<_, _>>()?;
 
         // Search the table for a structure with the same canonical path
         if let Some(id) = self.find_by_path(sd.context().canonical_path()) {
@@ -99,13 +99,13 @@ impl TypeTable {
                 // check if it is not defined
                 if *def == MirStructDef::Declared {
                     *def = MirStructDef::Defined(fields);
-                    id
+                    Ok(id)
                 } else {
-                    panic!("Structure already defined")
+                    return Err(TypeTableError::StrutureAlreadyDefined)
                 }
             } else {
                 // If it is, then return an error
-                panic!("Expected a structure")
+                return Err(TypeTableError::ExpectedStructure)
             }
         } else {
             // If no match found, then create a new structure entry and add to the table
@@ -113,7 +113,7 @@ impl TypeTable {
                 path: sd.context().canonical_path().clone(),
                 def: MirStructDef::Defined(fields),
             });
-            TypeId(self.table.len() as u32 - 1)
+            Ok(TypeId(self.table.len() as u32 - 1))
         }
     }
 
@@ -228,12 +228,12 @@ impl TypeTable {
     }
 
     /// Converts a [`Parameter`] to a [`Field`].
-    fn to_field(&mut self, p: &Parameter<SemanticContext>) -> Field {
-        let id = self.add(&p.ty);
-        Field {
+    fn to_field(&mut self, p: &Parameter<SemanticContext>) -> Result<Field, TypeTableError> {
+        let id = self.add(&p.ty)?;
+        Ok(Field {
             name: p.name,
             ty: id,
-        }
+        })
     }
 }
 
@@ -435,7 +435,7 @@ mod tests {
             };
 
             let arr = Type::Array(Box::new(ty), 4);
-            let tid = table.add(&arr);
+            let tid = table.add(&arr).unwrap();
 
             let actual = table.get(tid);
 
@@ -468,7 +468,7 @@ mod tests {
                 };
 
                 let ptr = Type::RawPointer(mutable, Box::new(ty.clone()));
-                let tid = table.add(&ptr);
+                let tid = table.add(&ptr).unwrap();
 
                 let actual = table.get(tid);
 
@@ -482,7 +482,7 @@ mod tests {
         let mut table = TypeTable::new();
 
         let path: Path = vec![Element::CanonicalRoot, Element::Id(StringId::new())].into();
-        let decl_id = table.add(&Type::Custom(path.clone()));
+        let decl_id = table.add(&Type::Custom(path.clone())).unwrap();
 
         let actual = table.get(decl_id);
 
@@ -498,7 +498,7 @@ mod tests {
         let field = Parameter::new(sm.clone(), StringId::new(), &Type::I64);
         let sd = StructDef::new(StringId::new(), sm, vec![field]);
 
-        let def_id = table.add_struct_def(&sd);
+        let def_id = table.add_struct_def(&sd).unwrap();
 
         assert_eq!(decl_id, def_id);
 
@@ -532,7 +532,7 @@ mod tests {
         let field = Parameter::new(sm.clone(), StringId::new(), &Type::I64);
         let sd = StructDef::new(StringId::new(), sm, vec![field]);
 
-        let def_id = table.add_struct_def(&sd);
+        let def_id = table.add_struct_def(&sd).unwrap();
 
         let actual = table.get(def_id);
         let mir_field = Field {
@@ -557,7 +557,7 @@ mod tests {
         let mut table = TypeTable::new();
 
         let path: Path = vec![Element::CanonicalRoot, Element::Id(StringId::new())].into();
-        let decl_id = table.add(&Type::Custom(path.clone()));
+        let decl_id = table.add(&Type::Custom(path.clone())).unwrap();
 
         let actual = table.get(decl_id);
 
@@ -583,8 +583,16 @@ mod tests {
         let field = Parameter::new(sm.clone(), StringId::new(), &Type::I64);
         let sd = StructDef::new(StringId::new(), sm, vec![field]);
 
-        table.add_struct_def(&sd);
+        table.add_struct_def(&sd).unwrap();
 
         assert_eq!(table.is_complete(), true);
     }
+}
+
+#[derive(Debug)]
+pub enum TypeTableError {
+    ExpectedCanonicalPath,
+    BaseTypesMissing,
+    StrutureAlreadyDefined,
+    ExpectedStructure,
 }
