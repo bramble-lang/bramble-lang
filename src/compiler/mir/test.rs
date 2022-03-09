@@ -557,6 +557,44 @@ pub mod tests {
         }
     }
 
+    #[test]
+    fn member_access() {
+        let text = "
+        fn test(s: S) -> i64 {
+            return s.a + s.b;
+        }
+
+        struct S {
+            a: i64,
+            b: i64,
+        }
+        ";
+        let mut table = StringTable::new();
+        let module = compile(text, &mut table);
+        let mirs = transform::module_transform(&module);
+        assert_eq!(mirs.len(), 1);
+
+        let mir = &mirs[0];
+        assert_eq!(mir.len(), 1);
+        let bb = mir.get_bb(BasicBlockId::new(0));
+
+        let stm = bb.get_stm(0);
+        match stm.kind() {
+            StatementKind::Assign(
+                _,
+                RValue::BinOp(
+                    BinOp::Add,
+                    Operand::LValue(LValue::Access(lv, Accessor::Field(lfid, lfty))),
+                    Operand::LValue(LValue::Access(rv, Accessor::Field(rfid, rfty))),
+                ),
+            ) => {
+                assert_eq!(lv, rv);
+                assert_eq!(lfty, rfty);
+            }
+            _ => panic!(),
+        }
+    }
+
     fn to_code(e: &Expression<()>, table: &StringTable) -> String {
         match e {
             Expression::StringLiteral(_, sid) => format!("\"{}\"", table.get(*sid).unwrap()),
