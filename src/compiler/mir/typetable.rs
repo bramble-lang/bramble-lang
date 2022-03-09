@@ -203,25 +203,31 @@ impl TypeTable {
     /// [`TypeId`] is within the bounds of the table.
     pub fn is_complete(&self) -> bool {
         // Iterate through every entry in the table
-        let max_id = TypeId(self.table.len() as u32);
         for entry in &self.table {
-            // If it references another type, check that the type id exists
-            match entry {
-                | MirTypeDef::Array { ty, .. } if *ty >= max_id => return false,
-                | MirTypeDef::RawPointer { target, .. } if *target >= max_id => return false,
-                | MirTypeDef::Structure { def, .. } if *def == MirStructDef::Declared => {
-                    return false
-                }
-                | MirTypeDef::Structure {
-                    def: MirStructDef::Defined(fields),
-                    ..
-                } if fields.iter().any(|f| f.ty >= max_id) => return false,
-                _ => (),
+            if !self.is_defined(entry) {
+                return false;
             }
-            // If it is a structure, check that it is Defined and not Declared
         }
 
         return true;
+    }
+
+    /// Returns true if the given type from this Type Table is defined. Defined means that
+    /// this [`TypeId`] exists in the table, any type it references exists in the table, and
+    /// (if it is a Structure) the structure is [`MirStructDef::Defined`] and not [`MirStructDef::Declared`].
+    fn is_defined(&self, ty: &MirTypeDef) -> bool {
+        let max_id = TypeId(self.table.len() as u32);
+        match ty {
+            MirTypeDef::Array { ty, .. } if *ty >= max_id => return false,
+            MirTypeDef::RawPointer { target, .. } if *target >= max_id => return false,
+            MirTypeDef::Structure { def, .. } if *def == MirStructDef::Declared => return false,
+            MirTypeDef::Structure {
+                def: MirStructDef::Defined(fields),
+                ..
+            } if fields.iter().any(|f| f.ty >= max_id) => return false,
+            _ => (),
+        }
+        true
     }
 }
 
