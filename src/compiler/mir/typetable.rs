@@ -90,7 +90,7 @@ impl TypeTable {
     /// [`SemanticContext`] as the canonical path for the structure.
     pub fn add_struct_def(&mut self, sd: &StructDef<SemanticContext>) -> Result<TypeId, TypeTableError> {
         // Convert the fields of the structure to MIR Fields
-        let fields = sd.get_fields().iter().map(|f| self.to_field(f)).collect::<Result<_, _>>()?;
+        let fields = sd.get_fields().iter().map(|f| f.to_field(self)).collect::<Result<_, _>>()?;
 
         // Search the table for a structure with the same canonical path
         if let Some(id) = self.find_by_path(sd.context().canonical_path())? {
@@ -226,12 +226,14 @@ impl TypeTable {
         }
         true
     }
+}
 
-    /// Converts a [`Parameter`] to a [`Field`].
-    fn to_field(&mut self, p: &Parameter<SemanticContext>) -> Result<Field, TypeTableError> {
-        let id = self.add(&p.ty)?;
+impl Parameter<SemanticContext> {
+    /// Converts this [`Parameter`] to a [`Field`].
+    fn to_field(&self, table: &mut TypeTable) -> Result<Field, TypeTableError> {
+        let id = table.add(&self.ty)?;
         Ok(Field {
-            name: p.name,
+            name: self.name,
             ty: id,
         })
     }
