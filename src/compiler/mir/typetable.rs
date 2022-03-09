@@ -203,9 +203,25 @@ impl TypeTable {
     /// [`TypeId`] is within the bounds of the table.
     pub fn is_complete(&self) -> bool {
         // Iterate through every entry in the table
-        // If it references another type, check that the type id exists
-        // If it is a structure, check that it is Defined and not Declared
-        todo!()
+        let max_id = TypeId(self.table.len() as u32);
+        for entry in &self.table {
+            // If it references another type, check that the type id exists
+            match entry {
+                | MirTypeDef::Array { ty, .. } if *ty >= max_id => return false,
+                | MirTypeDef::RawPointer { target, .. } if *target >= max_id => return false,
+                | MirTypeDef::Structure { def, .. } if *def == MirStructDef::Declared => {
+                    return false
+                }
+                | MirTypeDef::Structure {
+                    def: MirStructDef::Defined(fields),
+                    ..
+                } if fields.iter().any(|f| f.ty >= max_id) => return false,
+                _ => (),
+            }
+            // If it is a structure, check that it is Defined and not Declared
+        }
+
+        return true;
     }
 }
 
@@ -295,7 +311,7 @@ impl PartialEq for MirTypeDef {
 /// The Unique Identifier for a type within a Bramble program. Every type,
 /// including base types, is given a TypeId.  MIR uses the TypeId to annotate
 /// the types of MIR values and variables.
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, PartialOrd, Clone, Copy)]
 pub struct TypeId(u32);
 
 /// Provides the definition of a structure type. A structure may be referenced in another
@@ -319,9 +335,10 @@ impl MirStructDef {
     pub fn get_field_id(&self, name: StringId) -> Option<FieldId> {
         match self {
             Self::Declared => None,
-            Self::Defined(fields) => {
-                fields.iter().position(|f| f.name == name).map(|fid| FieldId::new(fid as u32))
-            }
+            Self::Defined(fields) => fields
+                .iter()
+                .position(|f| f.name == name)
+                .map(|fid| FieldId::new(fid as u32)),
         }
     }
 }
@@ -519,5 +536,41 @@ mod tests {
             }
             _ => panic!("Expected structure"),
         }
+    }
+
+    #[test]
+    fn is_complete_when_not_complete() {
+        let mut table = TypeTable::new();
+
+        let path: Path = vec![Element::CanonicalRoot, Element::Id(StringId::new())].into();
+        let decl_id = table.add(&Type::Custom(path.clone()));
+
+        let actual = table.get(decl_id);
+
+        let expected = MirTypeDef::Structure {
+            path: path.clone(),
+            def: MirStructDef::Declared,
+        };
+        assert_eq!(actual, &expected);
+
+        // is_complete should return false
+        assert_eq!(table.is_complete(), false);
+    }
+
+    #[test]
+    fn is_complete_when_complete() {
+        let mut table = TypeTable::new();
+
+        let path: Path = vec![Element::CanonicalRoot, Element::Id(StringId::new())].into();
+
+        // Test adding a definition to the structure
+        let mut sm = SemanticContext::new_local(0, ParserContext::new(Span::zero()), Type::Unit);
+        sm.set_canonical_path(path.clone());
+        let field = Parameter::new(sm.clone(), StringId::new(), &Type::I64);
+        let sd = StructDef::new(StringId::new(), sm, vec![field]);
+
+        table.add_struct_def(&sd);
+
+        assert_eq!(table.is_complete(), true);
     }
 }
