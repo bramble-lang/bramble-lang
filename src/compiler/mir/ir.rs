@@ -20,6 +20,8 @@ pub struct Procedure {
     blocks: Vec<BasicBlock>,
     /// The return type of this function
     ret_ty: Type,
+    /// The argument list for the function
+    args: Vec<ArgDecl>,
     /// The set of all user declared variables from within this function
     vars: Vec<VarDecl>,
     /// The set of all temporary variables created by the MIR compiler
@@ -35,6 +37,7 @@ impl Procedure {
         Procedure {
             blocks: vec![],
             ret_ty: ret_ty.clone(),
+            args: vec![],
             vars: vec![],
             temps: vec![],
             span,
@@ -45,12 +48,16 @@ impl Procedure {
         self.span = span;
     }
 
-    /// Add an argument to this procedure
-    pub fn add_arg(&mut self, name: StringId, ty: &Type, span: Span) -> VarId {
-        let vd = VarDecl::new(name, false, ty, ScopeId::new(ROOT_SCOPE), span);
-        self.vars.push(vd);
-        let id = self.vars.len() - 1;
-        VarId::new(id)
+    /// Add an argument to this procedure's argument list and make the argument available as a variable.
+    pub fn add_arg(&mut self, name: StringId, ty: &Type, span: Span) -> ArgId {
+        // Add the given argument to the set of variables
+        self.add_var(name, false, ty, ScopeId::new(0), span);
+
+        // Add the argument to the argument set of the function
+        let ad = ArgDecl::new(name, ty, span);
+        self.args.push(ad);
+        let id = self.args.len() - 1;
+        ArgId::new(id)
     }
 
     /// Get a [`BasicBlock`] for this procedure
@@ -128,6 +135,20 @@ impl Procedure {
 impl Display for Procedure {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("fn () -> {:?}:\n", self.ret_ty))?;
+
+        // Print the arguments
+        f.write_str("Arguments: \n")?;
+
+        // Print out the variables
+        for idx in 0..self.args.len() {
+            f.write_str("arg ")?;
+
+            f.write_fmt(format_args!(
+                "{}: {:?} // {} {}\n",
+                idx, self.args[idx].ty, self.args[idx].name, self.args[idx].span
+            ))?
+        }
+        f.write_str("\n")?;
 
         // Print out the stack: vars and temps
         f.write_str("Stack:\n")?;
@@ -239,6 +260,37 @@ impl ScopeId {
 
     pub fn index(&self) -> usize {
         self.0
+    }
+}
+
+/// An argument for a function.  These are always immutable and are always
+/// in the root scope: therefore, there is no scope or mutable property.
+#[derive(Debug, PartialEq, Clone)]
+pub struct ArgDecl {
+    /// Name of this variable
+    name: StringId,
+    /// The type of this variable
+    ty: Type,
+    /// The span of code where this variable was declared
+    span: Span,
+}
+
+impl ArgDecl {
+    fn new(name: StringId, ty: &Type, span: Span) -> ArgDecl {
+        ArgDecl {
+            name,
+            ty: ty.clone(),
+            span,
+        }
+    }
+}
+
+/// Unique identifier for an argument within the MIR of a function
+pub struct ArgId(u32);
+
+impl ArgId {
+    fn new(id: usize) -> ArgId {
+        ArgId(id as u32)
     }
 }
 

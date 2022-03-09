@@ -138,6 +138,12 @@ impl MirBuilder {
         Operand::Constant(Constant::Null)
     }
 
+    /// Add an argument to the signature of a function. Arguments are also added to the
+    /// set of variables.
+    fn arg(&mut self, name: StringId, ty: &Type, span: Span) -> ArgId {
+        self.proc.add_arg(name, ty, span)
+    }
+
     /// Add a new user declared variable to this function's stack
     fn var(&mut self, name: StringId, mutable: bool, ty: &Type, span: Span) -> VarId {
         self.proc.add_var(name, mutable, ty, ScopeId::new(0), span)
@@ -322,6 +328,12 @@ impl FuncTransformer {
 
     pub fn transform(mut self, func: &RoutineDef<SemanticContext>) -> Procedure {
         self.mir.proc.set_span(func.context.span());
+
+        // Add the parameters of the function to the set of variables
+        func.params.iter().for_each(|p| {
+            self.mir
+                .arg(p.name, p.context().ty(), p.context().span());
+        });
 
         // Create a new MIR Procedure
         // Create a BasicBlock for the function

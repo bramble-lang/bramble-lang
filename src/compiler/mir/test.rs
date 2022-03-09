@@ -110,6 +110,25 @@ pub mod tests {
     }
 
     #[test]
+    fn print_mir_for_struct_field() {
+        let text = "
+        fn test(s: i64) -> i64 {
+            return s;
+        }
+
+        struct S {
+            a: i64,
+        }
+        ";
+        let mut table = StringTable::new();
+        let module = compile(text, &mut table);
+        let mirs = transform::module_transform(&module);
+        for mir in mirs {
+            println!("{}", mir);
+        }
+    }
+
+    #[test]
     fn array_expression() {
         let text = "
         fn test() -> i64 {
