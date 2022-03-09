@@ -123,7 +123,7 @@ impl<'ctx> IrGen<'ctx> {
                 RelocMode::Default,
                 CodeModel::Default,
             )
-            .ok_or("Could not create a target machine for compilation")?;
+            .ok_or_else(|| "Could not create a target machine for compilation")?;
         let data = machine.get_target_data();
 
         // Configure the module

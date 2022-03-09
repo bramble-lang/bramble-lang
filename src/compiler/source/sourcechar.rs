@@ -173,7 +173,7 @@ impl<R: Read> UnicodeCharIterator<R> {
 
         result
             .map_err(|e| e.into())
-            .and_then(|by| char::from_u32(by).ok_or(UnicodeParsingError::InvalidWord(by)))
+            .and_then(|by| char::from_u32(by).ok_or_else(|| UnicodeParsingError::InvalidWord(by)))
     }
 }
 

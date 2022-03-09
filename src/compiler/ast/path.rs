@@ -171,7 +171,9 @@ impl Path {
             let mut merged: Vec<Element> = current_path.into();
             for step in path.iter() {
                 if *step == Element::Super {
-                    merged.pop().ok_or(PathCanonizationError::SubceedingRoot)?;
+                    merged
+                        .pop()
+                        .ok_or_else(|| PathCanonizationError::SubceedingRoot)?;
                     if merged.is_empty() {
                         return Err(PathCanonizationError::SubceedingRoot);
                     }

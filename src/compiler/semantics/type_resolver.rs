@@ -362,10 +362,9 @@ impl<'a> TypeResolver<'a> {
 
             // Get the expected yield return type of the coroutine that the yield return
             // occurs within.
-            let current_func = self.symbols.get_current_fn().ok_or(CompilerError::new(
-                yr.span(),
-                SemanticError::YieldInvalidLocation,
-            ))?;
+            let current_func = self.symbols.get_current_fn().ok_or_else(|| {
+                CompilerError::new(yr.span(), SemanticError::YieldInvalidLocation)
+            })?;
             let (_, expected_ret_ty) = self
                 .symbols
                 .lookup_coroutine(current_func)
@@ -406,7 +405,7 @@ impl<'a> TypeResolver<'a> {
             let current_func = self
                 .symbols
                 .get_current_fn()
-                .ok_or(SemanticError::ReturnInvalidLocation)
+                .ok_or_else(|| SemanticError::ReturnInvalidLocation)
                 .map_err(|e| CompilerError::new(r.span(), e))?;
             let (_, expected_ret_ty) = self
                 .symbols
@@ -611,7 +610,7 @@ impl<'a> TypeResolver<'a> {
                         let member_ty = struct_def
                             .ty
                             .get_member(*member)
-                            .ok_or(SemanticError::MemberAccessMemberNotFound(
+                            .ok_or_else(||SemanticError::MemberAccessMemberNotFound(
                                 struct_name.clone(),
                                 *member,
                             ))
@@ -845,7 +844,7 @@ impl<'a> TypeResolver<'a> {
                 let struct_def_ty = struct_def.ty.clone();
                 let expected_num_params = struct_def_ty
                     .get_members()
-                    .ok_or(CompilerError::new(
+                    .ok_or_else(||CompilerError::new(
                         ctx.span(),
                         SemanticError::InvalidStructure,
                     ))?
@@ -859,7 +858,7 @@ impl<'a> TypeResolver<'a> {
 
                 let mut resolved_params = vec![];
                 for (pn, pv) in params.iter() {
-                    let member_ty = struct_def_ty.get_member(*pn).ok_or(CompilerError::new(
+                    let member_ty = struct_def_ty.get_member(*pn).ok_or_else(||CompilerError::new(
                         ctx.span(),
                         SemanticError::StructExprMemberNotFound(canonical_path.clone(), *pn),
                     ))?;
@@ -1082,7 +1081,9 @@ impl<'a> TypeResolver<'a> {
     }
 
     fn get_current_path(&self) -> Result<Path, SemanticError> {
-        self.symbols.to_path().ok_or(SemanticError::PathNotValid)
+        self.symbols
+            .to_path()
+            .ok_or_else(|| SemanticError::PathNotValid)
     }
 
     fn extract_routine_type_info<'b>(

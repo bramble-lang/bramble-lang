@@ -102,9 +102,7 @@ impl CompilerDisplay for ParserError {
             ParserError::ArrayExpectedIntLiteral => {
                 "Expected integer literal for array size".into()
             }
-            ParserError::ArrayDeclExpectedType => {
-                "Expected type in array type declaration".into()
-            }
+            ParserError::ArrayDeclExpectedType => "Expected type in array type declaration".into(),
             ParserError::ArrayDeclExpectedSize => {
                 "Expected size to be specified in array type declaration".into()
             }
@@ -129,9 +127,7 @@ impl CompilerDisplay for ParserError {
             ParserError::ExpectedIdAfterInit => "Expected identifer after init".into(),
             ParserError::NotAUnaryOp(op) => format!("{} is not a unary operator", op),
             ParserError::NotABinaryOp(op) => format!("{} is not a binary operator", op),
-            ParserError::IfExpectedConditional => {
-                "Expected conditional expression after if".into()
-            }
+            ParserError::IfExpectedConditional => "Expected conditional expression after if".into(),
             ParserError::IfTrueArmMissingExpr => {
                 "Expected expression block in true arm of if expression".into()
             }
@@ -140,9 +136,7 @@ impl CompilerDisplay for ParserError {
             ParserError::WhileExpectedConditional => {
                 "Expected conditional after while keyword".into()
             }
-            ParserError::WhileMissingBody => {
-                "Expected expression block for while loop body".into()
-            }
+            ParserError::WhileMissingBody => "Expected expression block for while loop body".into(),
             ParserError::PathExpectedIdentifier => "Expected identifier after ::".into(),
             ParserError::YieldExpectedIdentifier => "Expected identifier after yield".into(),
             ParserError::StructExpectedFieldExpr(sid) => format!(

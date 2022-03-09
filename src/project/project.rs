@@ -48,7 +48,7 @@ pub fn get_project_name(src: &Path) -> Result<&str, String> {
         src.file_stem()
             .map(|name| name.to_str())
             .flatten()
-            .ok_or("Could not extract name from given path".into())
+            .ok_or_else(|| "Could not extract name from given path".into())
     } else {
         Err("Given path is neither a directory or a file".into())
     }
@@ -119,10 +119,9 @@ pub fn parse_project(
     logger: &Logger,
 ) -> Result<Module<ParserContext>, Vec<CompilerError<ProjectError>>> {
     // The root module spans the entire source code space
-    let root_span = source_map.span().ok_or(vec![CompilerError::new(
-        Span::zero(),
-        ProjectError::EmptyProject,
-    )])?;
+    let root_span = source_map
+        .span()
+        .ok_or_else(|| vec![CompilerError::new(Span::zero(), ProjectError::EmptyProject)])?;
 
     let mut root = Module::new(root_module, ParserContext::new(root_span));
     let mut errors = vec![];

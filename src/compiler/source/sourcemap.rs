@@ -223,7 +223,7 @@ impl SourceMapEntry {
         let span = self
             .span
             .intersection(span)
-            .ok_or(SourceError::UnexpectedEof)?;
+            .ok_or_else(|| SourceError::UnexpectedEof)?;
         let local_low = span.low().to_local(self.span.low());
         let local_high = span.high().to_local(self.span.low());
 

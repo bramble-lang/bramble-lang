@@ -86,19 +86,23 @@ impl<'a> Parser<'a> {
                     Some(let_tok) => {
                         let is_mutable = stream.next_if(&Lex::Mut).is_some();
                         self.id_declaration(stream)?
-                            .ok_or(CompilerError::new(
-                                let_tok.span(),
-                                ParserError::ExpectedIdDeclAfterLet,
-                            ))
+                            .ok_or_else(|| {
+                                CompilerError::new(
+                                    let_tok.span(),
+                                    ParserError::ExpectedIdDeclAfterLet,
+                                )
+                            })
                             .and_then(|id_decl| {
                                 stream.next_must_be(&Lex::Assign)?;
 
                                 let exp = match self.co_init(stream)? {
                                     Some(co_init) => co_init,
-                                    None => self.expression(stream)?.ok_or(CompilerError::new(
-                                        let_tok.span(),
-                                        ParserError::ExpectedExpressionOnRhs,
-                                    ))?,
+                                    None => self.expression(stream)?.ok_or_else(|| {
+                                        CompilerError::new(
+                                            let_tok.span(),
+                                            ParserError::ExpectedExpressionOnRhs,
+                                        )
+                                    })?,
                                 };
 
                                 match id_decl {
@@ -127,19 +131,23 @@ impl<'a> Parser<'a> {
                 None => Ok(None),
                 Some(tokens) => {
                     // Parse the mutable expression
-                    let lhs = self.expression(stream)?.ok_or(CompilerError::new(
-                        tokens[0].span(),
-                        ParserError::ExpectedExprAfter(Lex::Mut),
-                    ))?;
+                    let lhs = self.expression(stream)?.ok_or_else(|| {
+                        CompilerError::new(
+                            tokens[0].span(),
+                            ParserError::ExpectedExprAfter(Lex::Mut),
+                        )
+                    })?;
 
                     // Check for the := operator
                     stream.next_must_be(&Lex::Assign)?;
 
                     self.expression(stream)?
-                        .ok_or(CompilerError::new(
-                            tokens[0].span(),
-                            ParserError::ExpectedExpressionOnRhs,
-                        ))
+                        .ok_or_else(|| {
+                            CompilerError::new(
+                                tokens[0].span(),
+                                ParserError::ExpectedExpressionOnRhs,
+                            )
+                        })
                         .and_then(|exp| {
                             let ctx = tokens[0].to_ctx().join(*exp.context());
                             Ok(Some(Mutate::new(ctx, lhs, exp)))
@@ -160,10 +168,9 @@ impl<'a> Parser<'a> {
                     Some(init_tok) => match self.path(stream)? {
                         Some((path, path_ctx)) => self
                             .routine_call_params(stream)?
-                            .ok_or(CompilerError::new(
-                                path_ctx.span(),
-                                ParserError::ExpectedParams,
-                            ))
+                            .ok_or_else(|| {
+                                CompilerError::new(path_ctx.span(), ParserError::ExpectedParams)
+                            })
                             .and_then(|(params, params_ctx)| {
                                 Ok(Some(Expression::RoutineCall(
                                     init_tok.to_ctx().join(params_ctx),
