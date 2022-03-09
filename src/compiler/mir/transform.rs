@@ -12,8 +12,8 @@ use log::debug;
 use crate::{
     compiler::{
         ast::{
-            BinaryOperator, Bind, Context, Expression, Module, Node, Return, RoutineDef, Statement,
-            Type, UnaryOperator,
+            BinaryOperator, Bind, Context, Expression, Item, Module, Node, Return, RoutineDef,
+            Statement, StructDef, Type, UnaryOperator,
         },
         semantics::semanticnode::SemanticContext,
         source::Offset,
@@ -22,16 +22,25 @@ use crate::{
     StringId,
 };
 
-use super::ir::*;
+use super::{ir::*, typetable::*};
 
 pub fn module_transform(module: &Module<SemanticContext>) -> Vec<Procedure> {
+    let mut project = MirProject::new();
+
+    // Add all the types in this module
+    module.get_structs().iter().for_each(|sd| {
+        if let Item::Struct(sd) = sd {
+            project.add_struct_def(sd).unwrap()
+        }
+    });
+
     let funcs = module.get_functions();
     let mut mirs = vec![];
 
     for f in funcs {
         match f {
             crate::compiler::ast::Item::Routine(r) => {
-                let ft = FuncTransformer::new();
+                let ft = FuncTransformer::new(&project);
                 let p = ft.transform(r);
                 mirs.push(p);
             }
@@ -41,6 +50,27 @@ pub fn module_transform(module: &Module<SemanticContext>) -> Vec<Procedure> {
     }
 
     mirs
+}
+
+/// Manages all of the Types and Functions which exist within a single project
+struct MirProject {
+    types: TypeTable,
+}
+
+impl MirProject {
+    pub fn new() -> MirProject {
+        MirProject {
+            types: TypeTable::new(),
+        }
+    }
+
+    pub fn add_struct_def(
+        &mut self,
+        sd: &StructDef<SemanticContext>,
+    ) -> Result<(), TypeTableError> {
+        self.types.add_struct_def(sd)?;
+        Ok(())
+    }
 }
 
 /// Provides a Builder interface for constructing the MIR CFG representation of a
@@ -315,13 +345,15 @@ impl MirProcedureBuilder {
 }
 
 /// Transform a single function to the MIR form
-struct FuncTransformer {
+struct FuncTransformer<'a> {
+    project: &'a MirProject,
     mir: MirProcedureBuilder,
 }
 
-impl FuncTransformer {
-    pub fn new() -> FuncTransformer {
+impl<'a> FuncTransformer<'a> {
+    pub fn new(project: &MirProject) -> FuncTransformer {
         FuncTransformer {
+            project,
             mir: MirProcedureBuilder::new(),
         }
     }
