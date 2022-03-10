@@ -342,7 +342,7 @@ impl<'a> Lexer<'a> {
             let (s, span) = branch.merge().unwrap();
             if closed {
                 // Remove the quotes from the string
-                let mut s: String = self.string_table.get(s).unwrap().into();
+                let mut s: String = self.string_table.get(s).unwrap();
                 s.remove(0);
                 s.pop();
                 let id = self.string_table.insert(s);
@@ -355,10 +355,10 @@ impl<'a> Lexer<'a> {
             Ok(None)
         }
         .map(|ok| {
-            ok.as_ref().map(|token| {
+            ok.map(|token| {
                 self.record(token.span, Ok("String"));
-            });
-            ok
+                token
+            })
         })
     }
 
@@ -380,7 +380,7 @@ impl<'a> Lexer<'a> {
         }
 
         // Check if number has an exponential component
-        if let Some(_) = branch.next_if_one_of(&["e", "E"]) {
+        if branch.next_if_one_of(&["e", "E"]).is_some() {
             is_float = true;
             // Check for optional minus or plus
             branch.next_if_one_of(&["-", "+"]);
@@ -407,7 +407,7 @@ impl<'a> Lexer<'a> {
         // Check that the current character at the lexer cursor position is a delimiter (we have
         // reached the end of the token); otherwise this is not a valid integer literal and an
         // error should be thrown.
-        if branch.peek().map(|c| Self::is_delimiter(c)).unwrap_or(true) {
+        if branch.peek().map(Self::is_delimiter).unwrap_or(true) {
             let (_, span) = branch.merge().unwrap();
             let int_text = self.string_table.get(int_token).unwrap();
 
@@ -420,10 +420,10 @@ impl<'a> Lexer<'a> {
             )
         }
         .map(|ok| {
-            ok.as_ref().map(|token| {
+            ok.map(|token| {
                 self.record(token.span, Ok("Number"));
-            });
-            ok
+                token
+            })
         })
         .map_err(|err| {
             self.record(err.span(), Err(&err));
@@ -502,10 +502,10 @@ impl<'a> Lexer<'a> {
             Token::new(*t, span)
         }))
         .map(|ok| {
-            ok.as_ref().map(|token| {
+            ok.map(|token| {
                 self.record(token.span, Ok("Operator"));
-            });
-            ok
+                token
+            })
         })
     }
 
@@ -531,10 +531,10 @@ impl<'a> Lexer<'a> {
             Some((id, span)) => Ok(Some(Token::new(Lex::Identifier(id), span))),
         }
         .map(|ok| {
-            ok.as_ref().map(|token| {
+            ok.map(|token| {
                 self.record(token.span, Ok("Identifier"));
-            });
-            ok
+                token
+            })
         })
     }
 
@@ -545,7 +545,7 @@ impl<'a> Lexer<'a> {
         const FALSE: &str = "false";
 
         match branch.next_if_one_of(&[TRUE, FALSE]) {
-            Some(b) if branch.peek().map(|c| Self::is_delimiter(c)).unwrap_or(true) => {
+            Some(b) if branch.peek().map(Self::is_delimiter).unwrap_or(true) => {
                 match branch.merge() {
                     None => Ok(None),
                     Some((_, span)) => {
@@ -554,10 +554,10 @@ impl<'a> Lexer<'a> {
                     }
                 }
                 .map(|ok| {
-                    ok.as_ref().map(|token| {
+                    ok.map(|token| {
                         self.record(token.span, Ok("Boolean"));
-                    });
-                    ok
+                        token
+                    })
                 })
             }
             _ => Ok(None),
@@ -576,7 +576,7 @@ impl<'a> Lexer<'a> {
         ];
 
         Ok(match branch.next_if_one_of(&keywords) {
-            Some(w) if branch.peek().map(|c| Self::is_delimiter(c)).unwrap_or(true) => {
+            Some(w) if branch.peek().map(Self::is_delimiter).unwrap_or(true) => {
                 let (_, span) = branch.merge().unwrap();
 
                 Some(match w {
@@ -608,10 +608,10 @@ impl<'a> Lexer<'a> {
             _ => None,
         })
         .map(|ok| {
-            ok.as_ref().map(|token| {
+            ok.map(|token| {
                 self.record(token.span, Ok("Keyword"));
-            });
-            ok
+                token
+            })
         })
     }
 
@@ -623,7 +623,7 @@ impl<'a> Lexer<'a> {
         ];
 
         Ok(match branch.next_if_one_of(&primitives) {
-            Some(w) if branch.peek().map(|c| Self::is_delimiter(c)).unwrap_or(true) => {
+            Some(w) if branch.peek().map(Self::is_delimiter).unwrap_or(true) => {
                 let (_, span) = branch.merge().unwrap();
 
                 Some(match w {
@@ -644,10 +644,10 @@ impl<'a> Lexer<'a> {
             _ => None,
         })
         .map(|ok| {
-            ok.as_ref().map(|token| {
+            ok.map(|token| {
                 self.record(token.span, Ok("Primitive"));
-            });
-            ok
+                token
+            })
         })
     }
 
