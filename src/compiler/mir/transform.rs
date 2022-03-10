@@ -62,6 +62,8 @@ impl MirProject {
         }
     }
 
+    /// Searches the [`TypeTable`] for the [`TypeId`] of the given
+    /// [`Type`].
     pub fn get_type(&self, ty: &Type) -> Option<TypeId> {
         self.types.find(ty)
     }
