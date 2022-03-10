@@ -20,6 +20,7 @@ mod ir;
 mod test;
 pub mod transform;
 mod typetable;
+mod typetable_test;
 
 pub struct Module {
     funcs: Vec<Procedure>,
