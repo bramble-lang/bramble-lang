@@ -11,10 +11,7 @@ use log::debug;
 
 use crate::{
     compiler::{
-        ast::{
-            BinaryOperator, Bind, Context, Expression, Item, Module, Node, Path, Return,
-            RoutineCall, RoutineDef, Statement, Type, UnaryOperator,
-        },
+        ast::{self, *},
         semantics::semanticnode::SemanticContext,
         source::Offset,
         Span,
@@ -88,16 +85,16 @@ impl<'a> FuncTransformer<'a> {
         self.mir.complete()
     }
 
-    fn statement(&mut self, stm: &Statement<SemanticContext>) {
+    fn statement(&mut self, stm: &ast::Statement<SemanticContext>) {
         debug!("Transform statement");
         match stm {
-            Statement::Bind(bind) => self.bind(bind),
-            Statement::Expression(expr) => {
+            ast::Statement::Bind(bind) => self.bind(bind),
+            ast::Statement::Expression(expr) => {
                 self.expression(expr);
             }
-            Statement::Mutate(_) => todo!(),
-            Statement::YieldReturn(_) => todo!(),
-            Statement::Return(ret) => self.ret(ret),
+            ast::Statement::Mutate(_) => todo!(),
+            ast::Statement::YieldReturn(_) => todo!(),
+            ast::Statement::Return(ret) => self.ret(ret),
         }
     }
 
