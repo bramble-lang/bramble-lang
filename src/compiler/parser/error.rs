@@ -70,10 +70,9 @@ impl CompilerDisplay for ParserError {
             ParserError::ModAlreadyContains(sid) => {
                 format!("Module already contains {}", sid.fmt(sm, st)?)
             }
-            ParserError::ExternInvalidVarArgs => format!(
-                "An extern declaration must have at least one \
+            ParserError::ExternInvalidVarArgs => "An extern declaration must have at least one \
                     parameter before a VarArgs (...) parameter"
-            ),
+                .into(),
             ParserError::ExternExpectedFnDecl => {
                 "Expected function declaration after extern keyword".into()
             }
