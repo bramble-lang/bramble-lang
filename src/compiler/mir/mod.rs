@@ -18,9 +18,11 @@ use super::Span;
 
 mod ir;
 mod test;
-pub mod transform;
+mod builder;
 mod typetable;
 mod typetable_test;
+
+pub mod transform;
 
 pub struct Module {
     funcs: Vec<Procedure>,
