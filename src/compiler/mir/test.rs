@@ -7,7 +7,7 @@ pub mod tests {
             lexer::{tokens::Token, LexerError},
             mir::{
                 ir::*,
-                transform::{self, MirProject},
+                transform, builder::MirProject,
             },
             parser::Parser,
             semantics::semanticnode::SemanticContext,
@@ -45,6 +45,7 @@ pub mod tests {
     /// validation. They are to be used for visual validation of a MIR
     /// and to aid in writing the actual unit tests.
     mod print {
+
         use super::*;
 
         #[test]
@@ -622,7 +623,7 @@ pub mod tests {
             ) => {
                 assert_eq!(lv, rv);
 
-                let expected_ty = project.get_type(&Type::I64).unwrap();
+                let expected_ty = project.find_type(&Type::I64).unwrap();
                 assert_eq!(*lfty, expected_ty);
                 assert_eq!(*rfty, expected_ty);
 
@@ -670,7 +671,7 @@ pub mod tests {
                     Operand::LValue(LValue::Access(rv, Accessor::Field(rfid, rfty))),
                 ),
             ) => {
-                let expected_ty = project.get_type(&Type::I64).unwrap();
+                let expected_ty = project.find_type(&Type::I64).unwrap();
 
                 let lv = if let LValue::Access(lv, Accessor::Field(fid, _)) = lv.as_ref() {
                     assert_eq!(u32::from(*fid), 0);
