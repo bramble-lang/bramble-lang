@@ -24,7 +24,10 @@ use crate::{
 
 use super::{ir::*, typetable::*};
 
-pub fn module_transform(module: &Module<SemanticContext>, project: &mut MirProject) -> Vec<Procedure> {
+pub fn module_transform(
+    module: &Module<SemanticContext>,
+    project: &mut MirProject,
+) -> Vec<Procedure> {
     // Add all the types in this module
     module.get_structs().iter().for_each(|sd| {
         if let Item::Struct(sd) = sd {
@@ -500,7 +503,10 @@ impl<'a> FuncTransformer<'a> {
     fn member_access(&mut self, base: &Expression<SemanticContext>, field: StringId) -> Operand {
         // Get the Index of the Field and convert to a `FieldId`
         let ty = base.context().ty();
-        let mir_ty = self.project.get_type(ty).unwrap();
+        let mir_ty = self
+            .project
+            .get_type(ty)
+            .expect("Could not find given type in the type table");
 
         let def = if let MirTypeDef::Structure { def, .. } = self.project.types.get(mir_ty) {
             def
@@ -510,7 +516,9 @@ impl<'a> FuncTransformer<'a> {
         };
 
         if let Operand::LValue(base_mir) = self.expression(base) {
-            let (field_id, field_mir) = def.find_field(field).unwrap();
+            let (field_id, field_mir) = def
+                .find_field(field)
+                .expect("Could not find field in structure");
             let access =
                 LValue::Access(Box::new(base_mir), Accessor::Field(field_id, field_mir.ty));
             Operand::LValue(access)
