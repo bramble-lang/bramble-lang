@@ -5,10 +5,7 @@ pub mod tests {
             ast::*,
             diagnostics::Logger,
             lexer::{tokens::Token, LexerError},
-            mir::{
-                ir::*,
-                transform, builder::MirProject,
-            },
+            mir::{builder::MirProject, ir::*, transform},
             parser::Parser,
             semantics::semanticnode::SemanticContext,
             CompilerError, Lexer, SourceMap,

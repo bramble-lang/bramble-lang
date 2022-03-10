@@ -1,8 +1,15 @@
 use log::debug;
 
-use crate::{compiler::{ast::{Type, StructDef}, semantics::semanticnode::SemanticContext, Span}, StringId};
+use crate::{
+    compiler::{
+        ast::{StructDef, Type},
+        semantics::semanticnode::SemanticContext,
+        Span,
+    },
+    StringId,
+};
 
-use super::{typetable::*, ir::*};
+use super::{ir::*, typetable::*};
 
 /// Manages all of the Types and Functions which exist within a single project
 pub struct MirProject {
