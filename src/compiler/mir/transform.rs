@@ -12,8 +12,8 @@ use log::debug;
 use crate::{
     compiler::{
         ast::{
-            BinaryOperator, Bind, Context, Expression, Item, Module, Node, Return, RoutineDef,
-            Statement, StructDef, Type, UnaryOperator,
+            BinaryOperator, Bind, Context, Expression, Item, Module, Node, Path, Return,
+            RoutineCall, RoutineDef, Statement, StructDef, Type, UnaryOperator,
         },
         semantics::semanticnode::SemanticContext,
         source::Offset,
@@ -490,7 +490,7 @@ impl<'a> FuncTransformer<'a> {
             Expression::CustomType(_, _) => todo!(),
             Expression::Path(_, _) => todo!(),
             Expression::IdentifierDeclare(_, _, _) => todo!(),
-            Expression::RoutineCall(_, _, _, _) => todo!(),
+            Expression::RoutineCall(ctx, call, path, args) => self.fn_call(ctx, *call, path, args),
             Expression::StructExpression(_, _, _) => todo!(),
             Expression::If {
                 context,
@@ -517,6 +517,24 @@ impl<'a> FuncTransformer<'a> {
         }
     }
 
+    /// [Terminates](Terminator) the current [`BasicBlock`] with a function call and starts a new basic block
+    fn fn_call(
+        &mut self,
+        ctx: &SemanticContext,
+        call: RoutineCall,
+        path: &Path,
+        args: &[Expression<SemanticContext>],
+    ) -> Operand {
+        // Look up the MIR Function ID for the target
+        // Get the TypeID for the return type of the called function
+        // Compute the value of each argument
+        // Create a basic block that the function will return into
+        // Create the call Terminator
+        // Change the current basic block to continue adding statements after the function call returns
+        todo!()
+    }
+
+    /// Creates a member access operand which can be used in a statement or terminator
     fn member_access(&mut self, base: &Expression<SemanticContext>, field: StringId) -> Operand {
         // Get the Index of the Field and convert to a `FieldId`
         let ty = base.context().ty();
