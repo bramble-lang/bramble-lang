@@ -22,7 +22,11 @@ use crate::{
     StringId,
 };
 
-use super::{ir::*, typetable::*, builder::{MirProject, MirProcedureBuilder}};
+use super::{
+    builder::{MirProcedureBuilder, MirProject},
+    ir::*,
+    typetable::*,
+};
 
 pub fn module_transform(
     module: &Module<SemanticContext>,

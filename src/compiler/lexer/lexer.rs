@@ -30,9 +30,9 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
     /// of accepting the current branch as correct and updating the source lexer
     /// to the match the cursor state of the branch.
     fn merge(mut self) -> Option<(StringId, Span)> {
-        self.cut().and_then(|cut| {
+        self.cut().map(|cut| {
             self.lexer.index = self.index;
-            Some(cut)
+            cut
         })
     }
 
@@ -171,7 +171,8 @@ impl<'a, 'st> LexerBranch<'a, 'st> {
                 return false;
             }
         }
-        return true;
+
+        true
     }
 }
 

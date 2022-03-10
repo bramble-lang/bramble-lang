@@ -16,9 +16,9 @@ use self::ir::Procedure;
 
 use super::Span;
 
+mod builder;
 mod ir;
 mod test;
-mod builder;
 mod typetable;
 mod typetable_test;
 

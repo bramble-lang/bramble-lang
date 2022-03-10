@@ -182,7 +182,7 @@ fn token_to_string(
     token
         .as_ref()
         .map(|t| t.fmt(sm, st))
-        .unwrap_or(Ok("EOF".into()))
+        .unwrap_or_else(|| Ok("EOF".into()))
 }
 
 fn lex_to_string(
@@ -192,7 +192,7 @@ fn lex_to_string(
 ) -> Result<String, CompilerDisplayError> {
     lex.as_ref()
         .map(|t| t.fmt(sm, st))
-        .unwrap_or(Ok("EOF".into()))
+        .unwrap_or_else(|| Ok("EOF".into()))
 }
 
 fn lex_set_to_string(
