@@ -98,7 +98,7 @@ impl StringId {
 
 impl crate::compiler::CompilerDisplay for StringId {
     fn fmt(&self, _: &SourceMap, st: &StringTable) -> Result<String, CompilerDisplayError> {
-        st.get(*self).map(|s| s.into()).map_err(|e| e.into())
+        st.get(*self).map_err(|e| e.into())
     }
 }
 

@@ -127,7 +127,7 @@ impl ManifestRoutineDef {
         })
     }
 
-    fn to_rd(self, st: &StringTable) -> Result<ImportRoutineDef, ManifestError> {
+    fn to_rd(&self, st: &StringTable) -> Result<ImportRoutineDef, ManifestError> {
         let path = string_to_path(st, &self.canon_path)?;
         let params = self
             .params
@@ -174,7 +174,7 @@ impl ManifestStructDef {
         })
     }
 
-    fn to_sd(self, st: &StringTable) -> Result<ImportStructDef, ManifestError> {
+    fn to_sd(&self, st: &StringTable) -> Result<ImportStructDef, ManifestError> {
         let canon_path = string_to_path(st, &self.canon_path)?;
         let fields = self
             .fields

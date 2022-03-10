@@ -64,7 +64,10 @@ impl<'a, W: Write> Writer for JsonWriter<'a, W> {
         }
 
         let field = format!("\"{}\": [{}, {}]", field, span.low(), span.high());
-        self.writer.borrow_mut().write_all(field.as_bytes()).unwrap();
+        self.writer
+            .borrow_mut()
+            .write_all(field.as_bytes())
+            .unwrap();
     }
 
     fn write_field(&self, label: &str, s: &dyn crate::compiler::diagnostics::Writable) {
@@ -75,7 +78,10 @@ impl<'a, W: Write> Writer for JsonWriter<'a, W> {
         }
 
         let field = format!("\"{}\": ", label);
-        self.writer.borrow_mut().write_all(field.as_bytes()).unwrap();
+        self.writer
+            .borrow_mut()
+            .write_all(field.as_bytes())
+            .unwrap();
         s.write(self);
     }
 
@@ -104,13 +110,16 @@ impl<'a, W: Write> Writer for JsonWriter<'a, W> {
     }
 
     fn write_text(&self, s: &str) {
-        let js = format!("{}", s);
+        let js = s.to_string();
         self.writer.borrow_mut().write_all(js.as_bytes()).unwrap();
     }
 
     fn start_event(&self) {
         if self.event_comma_prefix.get() {
-            self.writer.borrow_mut().write_all(",\n".as_bytes()).unwrap();
+            self.writer
+                .borrow_mut()
+                .write_all(",\n".as_bytes())
+                .unwrap();
         } else {
             self.event_comma_prefix.set(true);
         }
@@ -164,13 +173,12 @@ impl From<&SourceMap> for JsonSourceMap {
     fn from(sm: &SourceMap) -> Self {
         let mut map = vec![];
         for idx in 0..sm.len() {
-            if let Some(entry) = sm.get(idx)
-                .map(|entry| JsonSourceMapEntry {
-                    source: entry.path().clone(),
-                    span: entry.span().into(),
-                }) {
-                    map.push(entry)
-                }
+            if let Some(entry) = sm.get(idx).map(|entry| JsonSourceMapEntry {
+                source: entry.path().clone(),
+                span: entry.span().into(),
+            }) {
+                map.push(entry)
+            }
         }
         JsonSourceMap { map }
     }

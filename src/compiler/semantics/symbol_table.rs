@@ -170,7 +170,7 @@ impl SymbolTable {
         sym.add_symbol(*name, def, false, false, routine.span())
     }
 
-    fn get_types_for_params(params: &Vec<Parameter<SemanticContext>>) -> Vec<Type> {
+    fn get_types_for_params(params: &[Parameter<SemanticContext>]) -> Vec<Type> {
         params.iter().map(|p| p.ty.clone()).collect::<Vec<Type>>()
     }
 

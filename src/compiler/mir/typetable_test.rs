@@ -1,10 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use crate::{compiler::{
-        ast::*,
-        parser::ParserContext,
-        Span, semantics::semanticnode::SemanticContext,
-    }, StringId};
+    use crate::{
+        compiler::{ast::*, parser::ParserContext, semantics::semanticnode::SemanticContext, Span},
+        StringId,
+    };
 
     use super::super::typetable::*;
 

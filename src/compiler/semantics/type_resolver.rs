@@ -128,9 +128,9 @@ impl<'a> TypeResolver<'a> {
 
     fn analyze_item(&mut self, i: &Item<SemanticContext>) -> SemanticResult<Item<SemanticContext>> {
         match i {
-            Item::Struct(s) => self.analyze_structdef(s).map(|s2| Item::Struct(s2)),
-            Item::Routine(r) => self.analyze_routine(r).map(|r2| Item::Routine(r2)),
-            Item::Extern(ex) => self.analyze_extern(ex).map(|e2| Item::Extern(e2)),
+            Item::Struct(s) => self.analyze_structdef(s).map(Item::Struct),
+            Item::Routine(r) => self.analyze_routine(r).map(Item::Routine),
+            Item::Extern(ex) => self.analyze_extern(ex).map(Item::Extern),
         }
     }
 
@@ -226,11 +226,7 @@ impl<'a> TypeResolver<'a> {
             // Update the context with canonical path information and set the type to Type::Unit
             let ctx = struct_def.context().with_type(Type::Unit);
 
-            Ok(StructDef::new(
-                struct_def.get_name(),
-                ctx,
-                resolved_fields,
-            ))
+            Ok(StructDef::new(struct_def.get_name(), ctx, resolved_fields))
         });
         result.view(|e| self.record2(event, e, vec![]))
     }
@@ -577,16 +573,14 @@ impl<'a> TypeResolver<'a> {
                 Ok(Expression::IdentifierDeclare(ctx, *name, p.clone()))
             }
             Expression::Identifier(ctx, id) => {
-                let ctx = match self
+                let Symbol { ty: p, span, is_mutable, .. } = self
                     .symbols
                     .lookup_var(*id)
-                    .map_err(|e| CompilerError::new(ctx.span(), e))?
-                {
-                    Symbol { ty: p, span, is_mutable, .. } => {
-                        span.and_then(|s| Some(refs.push(s)));
-                        ctx.with_type(p.clone()).with_addressable(*is_mutable)
-                    }
-                };
+                    .map_err(|e| CompilerError::new(ctx.span(), e))?;
+
+                span.and_then(|s| {refs.push(s); Some(())});
+
+                let ctx = ctx.with_type(p.clone()).with_addressable(*is_mutable);
                 Ok(Expression::Identifier(ctx, *id))
             }
             Expression::Path(..) => {
