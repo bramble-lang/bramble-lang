@@ -383,7 +383,7 @@ pub struct Field {
 pub struct FieldId(u32);
 
 impl FieldId {
-    pub(super) fn new(id: u32) -> FieldId {
+    fn new(id: u32) -> FieldId {
         FieldId(id)
     }
 }
@@ -391,6 +391,17 @@ impl FieldId {
 impl Display for FieldId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("{}", self.0))
+    }
+}
+
+#[cfg(test)]
+impl From<FieldId> for u32 {
+    /// This is used in unit tests to validate that the correct fields are being used
+    /// in the MIR of a member access. It is only built for `test` because there is no
+    /// other case where code outside of this module should be able to directly access
+    /// the value of a [`FieldId`].
+    fn from(f: FieldId) -> Self {
+        f.0
     }
 }
 

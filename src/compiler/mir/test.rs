@@ -8,7 +8,6 @@ pub mod tests {
             mir::{
                 ir::*,
                 transform::{self, MirProject},
-                typetable::FieldId,
             },
             parser::Parser,
             semantics::semanticnode::SemanticContext,
@@ -627,8 +626,8 @@ pub mod tests {
                 assert_eq!(*lfty, expected_ty);
                 assert_eq!(*rfty, expected_ty);
 
-                assert_eq!(*lfid, FieldId::new(0));
-                assert_eq!(*rfid, FieldId::new(1));
+                assert_eq!(u32::from(*lfid), 0u32);
+                assert_eq!(u32::from(*rfid), 1u32);
             }
             _ => panic!(),
         }
@@ -674,13 +673,13 @@ pub mod tests {
                 let expected_ty = project.get_type(&Type::I64).unwrap();
 
                 let lv = if let LValue::Access(lv, Accessor::Field(fid, _)) = lv.as_ref() {
-                    assert_eq!(*fid, FieldId::new(0));
+                    assert_eq!(u32::from(*fid), 0);
                     lv
                 } else {
                     panic!()
                 };
                 let rv = if let LValue::Access(rv, Accessor::Field(fid, _)) = rv.as_ref() {
-                    assert_eq!(*fid, FieldId::new(0));
+                    assert_eq!(u32::from(*fid), 0);
                     rv
                 } else {
                     panic!()
@@ -690,8 +689,8 @@ pub mod tests {
                 assert_eq!(*lfty, expected_ty);
                 assert_eq!(*rfty, expected_ty);
 
-                assert_eq!(*lfid, FieldId::new(0));
-                assert_eq!(*rfid, FieldId::new(1));
+                assert_eq!(u32::from(*lfid), 0);
+                assert_eq!(u32::from(*rfid), 1);
             }
             _ => panic!(),
         }
