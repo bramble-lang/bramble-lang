@@ -205,6 +205,8 @@ impl MirProcedureBuilder {
     /// Store the given [`RValue`] in the location specified by the given
     /// [`LValue`].
     fn store(&mut self, lv: LValue, rv: RValue, span: Span) {
+        debug!("Store: {:?} := {:?}", lv, rv);
+
         let cid = self.current_bb.unwrap();
         let bb = self.proc.get_bb_mut(cid);
         bb.add_stm(super::ir::Statement::new(
@@ -216,6 +218,7 @@ impl MirProcedureBuilder {
     /// Will construct an [`LValue`] whose location is the specified `field` in a given
     /// strucure type. This expects `ty` to be a [`MirTypeDef::Structure`].
     fn member_access(&mut self, base: LValue, def: &MirStructDef, field: StringId) -> LValue {
+        debug!("Member Access: {:?}.{:?}", base, def);
 
         let (field_id, field_mir) = def
             .find_field(field)
@@ -225,12 +228,15 @@ impl MirProcedureBuilder {
     }
 
     fn array_at(&mut self, array: LValue, index: Operand) -> LValue {
+        debug!("Array At: {:?}[{:?}]", array, index);
+
         LValue::Access(Box::new(array), Accessor::Index(Box::new(index)))
     }
 
     /// Add a boolean not to the current [`BasicBlock`].
     fn not(&mut self, right: Operand) -> RValue {
         debug!("Not: {:?}", right);
+
         RValue::UnOp(UnOp::Not, right)
     }
 
@@ -524,7 +530,7 @@ impl<'a> FuncTransformer<'a> {
         let def = if let MirTypeDef::Structure { def, .. } = mir_ty {
             def
         } else {
-            // Type checking should guarantee that if this method is called then the type of the 
+            // Type checking should guarantee that if this method is called then the type of the
             // AST node is a structure. If it is not, then a critical bug has been encountered.
             panic!("Trying to access a field on a non-structure type")
         };
