@@ -5,7 +5,10 @@ pub mod tests {
             ast::*,
             diagnostics::Logger,
             lexer::{tokens::Token, LexerError},
-            mir::{ir::*, transform},
+            mir::{
+                ir::*,
+                transform::{self, MirProject},
+            },
             parser::Parser,
             semantics::semanticnode::SemanticContext,
             CompilerError, Lexer, SourceMap,
@@ -37,9 +40,16 @@ pub mod tests {
         resolve_types(&ast, main_mod, main_fn, &logger).unwrap()
     }
 
-    #[test]
-    fn print_mir() {
-        let text = "
+    /// These tests will take small Bramble programs and print their
+    /// MIR representation to the screen. These "tests" do not do any
+    /// validation. They are to be used for visual validation of a MIR
+    /// and to aid in writing the actual unit tests.
+    mod print {
+        use super::*;
+
+        #[test]
+        fn print_mir() {
+            let text = "
         fn test() -> i64 {
             let x: i64 := 5;
             let mut b: bool := true;
@@ -47,17 +57,18 @@ pub mod tests {
             return 1 + 2 + 3 + x + y;
         }
         ";
-        let mut table = StringTable::new();
-        let module = compile(text, &mut table);
-        let mirs = transform::module_transform(&module);
-        for mir in mirs {
-            println!("{}", mir);
+            let mut table = StringTable::new();
+            let module = compile(text, &mut table);
+            let mut project = MirProject::new();
+            let mirs = transform::module_transform(&module, &mut project);
+            for mir in mirs {
+                println!("{}", mir);
+            }
         }
-    }
 
-    #[test]
-    fn print_mir_for_if_no_else() {
-        let text = "
+        #[test]
+        fn print_mir_for_if_no_else() {
+            let text = "
         fn test() -> i64 {
             let x: i64 := 5;
             let b: bool := true;
@@ -65,17 +76,18 @@ pub mod tests {
             return 1 + 2 + 3 + x;
         }
         ";
-        let mut table = StringTable::new();
-        let module = compile(text, &mut table);
-        let mirs = transform::module_transform(&module);
-        for mir in mirs {
-            println!("{}", mir);
+            let mut table = StringTable::new();
+            let module = compile(text, &mut table);
+            let mut project = MirProject::new();
+            let mirs = transform::module_transform(&module, &mut project);
+            for mir in mirs {
+                println!("{}", mir);
+            }
         }
-    }
 
-    #[test]
-    fn print_mir_for_while_expr() {
-        let text = "
+        #[test]
+        fn print_mir_for_while_expr() {
+            let text = "
         fn test() -> i64 {
             let x: i64 := 5;
             let b: bool := true;
@@ -85,46 +97,55 @@ pub mod tests {
             return 0;
         }
         ";
-        let mut table = StringTable::new();
-        let module = compile(text, &mut table);
-        let mirs = transform::module_transform(&module);
-        for mir in mirs {
-            println!("{}", mir);
+            let mut table = StringTable::new();
+            let module = compile(text, &mut table);
+            let mut project = MirProject::new();
+            let mirs = transform::module_transform(&module, &mut project);
+            for mir in mirs {
+                println!("{}", mir);
+            }
         }
-    }
 
-    #[test]
-    fn print_mir_for_array_expression() {
-        let text = "
+        #[test]
+        fn print_mir_for_array_expression() {
+            let text = "
         fn test() -> i64 {
             let x: [[i64; 2]; 2] := [[1, 2], [3, 4]];
             return x[1][0];
         }
         ";
-        let mut table = StringTable::new();
-        let module = compile(text, &mut table);
-        let mirs = transform::module_transform(&module);
-        for mir in mirs {
-            println!("{}", mir);
+            let mut table = StringTable::new();
+            let module = compile(text, &mut table);
+            let mut project = MirProject::new();
+            let mirs = transform::module_transform(&module, &mut project);
+            for mir in mirs {
+                println!("{}", mir);
+            }
         }
-    }
 
-    #[test]
-    fn print_mir_for_struct_field() {
-        let text = "
-        fn test(s: i64) -> i64 {
-            return s;
+        #[test]
+        fn print_mir_for_struct_field() {
+            let text = "
+        fn test(s: S2) -> i64 {
+            return s.s.a + s.s.b;
         }
 
         struct S {
             a: i64,
+            b: i64,
+        }
+
+        struct S2 {
+            s: S,
         }
         ";
-        let mut table = StringTable::new();
-        let module = compile(text, &mut table);
-        let mirs = transform::module_transform(&module);
-        for mir in mirs {
-            println!("{}", mir);
+            let mut table = StringTable::new();
+            let module = compile(text, &mut table);
+            let mut project = MirProject::new();
+            let mirs = transform::module_transform(&module, &mut project);
+            for mir in mirs {
+                println!("{}", mir);
+            }
         }
     }
 
@@ -138,7 +159,8 @@ pub mod tests {
         ";
         let mut table = StringTable::new();
         let module = compile(text, &mut table);
-        let mir = &transform::module_transform(&module)[0];
+        let mut project = MirProject::new();
+        let mir = &transform::module_transform(&module, &mut project)[0];
 
         let bb = mir.get_bb(BasicBlockId::new(0));
         let first = bb.get_stm(0);
@@ -181,7 +203,8 @@ pub mod tests {
         ";
         let mut table = StringTable::new();
         let module = compile(text, &mut table);
-        let mir = &transform::module_transform(&module)[0];
+        let mut project = MirProject::new();
+        let mir = &transform::module_transform(&module, &mut project)[0];
 
         let bb = mir.get_bb(BasicBlockId::new(0));
         let last = bb.get_stm(bb.len() - 1);
@@ -210,7 +233,8 @@ pub mod tests {
         ";
         let mut table = StringTable::new();
         let module = compile(text, &mut table);
-        let mir = &transform::module_transform(&module)[0];
+        let mut project = MirProject::new();
+        let mir = &transform::module_transform(&module, &mut project)[0];
 
         let bb = mir.get_bb(BasicBlockId::new(0));
         let last = bb.get_stm(bb.len() - 1);
@@ -265,7 +289,8 @@ pub mod tests {
                     ",
                 );
                 let module = compile(&text, &mut table);
-                let mirs = transform::module_transform(&module);
+                let mut project = MirProject::new();
+                let mirs = transform::module_transform(&module, &mut project);
                 assert_eq!(1, mirs.len());
 
                 let bb = mirs[0].get_bb(BasicBlockId::new(0));
@@ -320,7 +345,8 @@ pub mod tests {
                 to_code(v, &table),
             );
             let module = compile(&text, &mut table);
-            let mirs = transform::module_transform(&module);
+            let mut project = MirProject::new();
+            let mirs = transform::module_transform(&module, &mut project);
             assert_eq!(1, mirs.len());
             let bb = mirs[0].get_bb(BasicBlockId::new(0));
             let stm = bb.get_stm(0);
@@ -369,7 +395,8 @@ pub mod tests {
                     ",
                 );
                 let module = compile(&text, &mut table);
-                let mirs = transform::module_transform(&module);
+                let mut project = MirProject::new();
+                let mirs = transform::module_transform(&module, &mut project);
                 assert_eq!(1, mirs.len());
 
                 let bb = mirs[0].get_bb(BasicBlockId::new(0));
@@ -411,7 +438,8 @@ pub mod tests {
                     ",
             );
             let module = compile(&text, &mut table);
-            let mirs = transform::module_transform(&module);
+            let mut project = MirProject::new();
+            let mirs = transform::module_transform(&module, &mut project);
             assert_eq!(1, mirs.len());
 
             let bb = mirs[0].get_bb(BasicBlockId::new(0));
@@ -456,7 +484,8 @@ pub mod tests {
                     ",
                 );
                 let module = compile(&text, &mut table);
-                let mirs = transform::module_transform(&module);
+                let mut project = MirProject::new();
+                let mirs = transform::module_transform(&module, &mut project);
                 assert_eq!(1, mirs.len());
 
                 let bb = mirs[0].get_bb(BasicBlockId::new(0));
@@ -495,7 +524,8 @@ pub mod tests {
                     ",
             );
             let module = compile(&text, &mut table);
-            let mirs = transform::module_transform(&module);
+            let mut project = MirProject::new();
+            let mirs = transform::module_transform(&module, &mut project);
             assert_eq!(1, mirs.len());
 
             let bb = mirs[0].get_bb(BasicBlockId::new(0));
@@ -522,7 +552,8 @@ pub mod tests {
         ";
         let mut table = StringTable::new();
         let module = compile(text, &mut table);
-        let mirs = transform::module_transform(&module);
+        let mut project = MirProject::new();
+        let mirs = transform::module_transform(&module, &mut project);
         let mir = &mirs[0];
 
         // Check that the right number of BBs are created
@@ -553,6 +584,115 @@ pub mod tests {
             assert_eq!(*target, BasicBlockId::new(1));
         } else {
             panic!("While body should always return to conditional BB")
+        }
+    }
+
+    #[test]
+    fn member_access() {
+        let text = "
+        fn test(s: S) -> i64 {
+            return s.a + s.b;
+        }
+
+        struct S {
+            a: i64,
+            b: i64,
+        }
+        ";
+        let mut table = StringTable::new();
+        let module = compile(text, &mut table);
+
+        let mut project = MirProject::new();
+        let mirs = transform::module_transform(&module, &mut project);
+        assert_eq!(mirs.len(), 1);
+
+        let mir = &mirs[0];
+        assert_eq!(mir.len(), 1);
+        let bb = mir.get_bb(BasicBlockId::new(0));
+
+        let stm = bb.get_stm(0);
+        match stm.kind() {
+            StatementKind::Assign(
+                _,
+                RValue::BinOp(
+                    BinOp::Add,
+                    Operand::LValue(LValue::Access(lv, Accessor::Field(lfid, lfty))),
+                    Operand::LValue(LValue::Access(rv, Accessor::Field(rfid, rfty))),
+                ),
+            ) => {
+                assert_eq!(lv, rv);
+
+                let expected_ty = project.get_type(&Type::I64).unwrap();
+                assert_eq!(*lfty, expected_ty);
+                assert_eq!(*rfty, expected_ty);
+
+                assert_eq!(u32::from(*lfid), 0u32);
+                assert_eq!(u32::from(*rfid), 1u32);
+            }
+            _ => panic!(),
+        }
+    }
+
+    #[test]
+    fn nested_member_access() {
+        let text = "
+        fn test(s: S2) -> i64 {
+            return s.s.a + s.s.b;
+        }
+
+        struct S {
+            a: i64,
+            b: i64,
+        }
+
+        struct S2 {
+            s: S,
+        }
+        ";
+        let mut table = StringTable::new();
+        let module = compile(text, &mut table);
+
+        let mut project = MirProject::new();
+        let mirs = transform::module_transform(&module, &mut project);
+        assert_eq!(mirs.len(), 1);
+
+        let mir = &mirs[0];
+        assert_eq!(mir.len(), 1);
+        let bb = mir.get_bb(BasicBlockId::new(0));
+
+        let stm = bb.get_stm(0);
+        match stm.kind() {
+            StatementKind::Assign(
+                _,
+                RValue::BinOp(
+                    BinOp::Add,
+                    Operand::LValue(LValue::Access(lv, Accessor::Field(lfid, lfty))),
+                    Operand::LValue(LValue::Access(rv, Accessor::Field(rfid, rfty))),
+                ),
+            ) => {
+                let expected_ty = project.get_type(&Type::I64).unwrap();
+
+                let lv = if let LValue::Access(lv, Accessor::Field(fid, _)) = lv.as_ref() {
+                    assert_eq!(u32::from(*fid), 0);
+                    lv
+                } else {
+                    panic!()
+                };
+                let rv = if let LValue::Access(rv, Accessor::Field(fid, _)) = rv.as_ref() {
+                    assert_eq!(u32::from(*fid), 0);
+                    rv
+                } else {
+                    panic!()
+                };
+                assert_eq!(lv, rv);
+
+                assert_eq!(*lfty, expected_ty);
+                assert_eq!(*rfty, expected_ty);
+
+                assert_eq!(u32::from(*lfid), 0);
+                assert_eq!(u32::from(*rfid), 1);
+            }
+            _ => panic!(),
         }
     }
 

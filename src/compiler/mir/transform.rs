@@ -12,8 +12,8 @@ use log::debug;
 use crate::{
     compiler::{
         ast::{
-            BinaryOperator, Bind, Context, Expression, Module, Node, Return, RoutineDef, Statement,
-            Type, UnaryOperator,
+            BinaryOperator, Bind, Context, Expression, Item, Module, Node, Return, RoutineDef,
+            Statement, StructDef, Type, UnaryOperator,
         },
         semantics::semanticnode::SemanticContext,
         source::Offset,
@@ -22,16 +22,26 @@ use crate::{
     StringId,
 };
 
-use super::ir::*;
+use super::{ir::*, typetable::*};
 
-pub fn module_transform(module: &Module<SemanticContext>) -> Vec<Procedure> {
+pub fn module_transform(
+    module: &Module<SemanticContext>,
+    project: &mut MirProject,
+) -> Vec<Procedure> {
+    // Add all the types in this module
+    module.get_structs().iter().for_each(|sd| {
+        if let Item::Struct(sd) = sd {
+            project.add_struct_def(sd).unwrap()
+        }
+    });
+
     let funcs = module.get_functions();
     let mut mirs = vec![];
 
     for f in funcs {
         match f {
             crate::compiler::ast::Item::Routine(r) => {
-                let ft = FuncTransformer::new();
+                let ft = FuncTransformer::new(&project);
                 let p = ft.transform(r);
                 mirs.push(p);
             }
@@ -43,21 +53,49 @@ pub fn module_transform(module: &Module<SemanticContext>) -> Vec<Procedure> {
     mirs
 }
 
+/// Manages all of the Types and Functions which exist within a single project
+pub struct MirProject {
+    types: TypeTable,
+}
+
+impl MirProject {
+    pub fn new() -> MirProject {
+        MirProject {
+            types: TypeTable::new(),
+        }
+    }
+
+    /// Searches the [`TypeTable`] for the [`TypeId`] of the given
+    /// [`Type`].
+    pub fn get_type(&self, ty: &Type) -> Option<TypeId> {
+        self.types.find(ty)
+    }
+
+    /// Adds a new Structure definition to the [`MirProject`].
+    pub fn add_struct_def(
+        &mut self,
+        sd: &StructDef<SemanticContext>,
+    ) -> Result<(), TypeTableError> {
+        self.types.add_struct_def(sd)?;
+        Ok(())
+    }
+}
+
 /// Provides a Builder interface for constructing the MIR CFG representation of a
 /// routine. This will keep track of the current [`BasicBlock`] and make sure that
 /// MIR operations are applied to that [`BasicBlock`]. This also provides a simplfied
 /// interface for constructing the MIR operands, operations, and statements, to
 /// simplify the code that traverses input ASTs and transforms them into MIR.
-struct MirBuilder {
+struct MirProcedureBuilder {
     proc: Procedure,
     current_bb: Option<BasicBlockId>,
 }
 
-impl MirBuilder {
+impl MirProcedureBuilder {
     /// Creates a new [`MirBuilder`], which is used to construct the MIR representation
     /// of a function.
-    pub fn new() -> MirBuilder {
-        MirBuilder {
+    pub fn new() -> MirProcedureBuilder {
+        MirProcedureBuilder {
             proc: Procedure::new(&Type::Unit, Span::zero()),
             current_bb: None,
         }
@@ -173,6 +211,17 @@ impl MirBuilder {
             StatementKind::Assign(lv, rv),
             span,
         ));
+    }
+
+    /// Will construct an [`LValue`] whose location is the specified `field` in a given
+    /// strucure type. This expects `ty` to be a [`MirTypeDef::Structure`].
+    fn member_access(&mut self, base: LValue, def: &MirStructDef, field: StringId) -> LValue {
+
+        let (field_id, field_mir) = def
+            .find_field(field)
+            .expect("Could not find field in structure");
+
+        LValue::Access(Box::new(base), Accessor::Field(field_id, field_mir.ty))
     }
 
     fn array_at(&mut self, array: LValue, index: Operand) -> LValue {
@@ -315,14 +364,16 @@ impl MirBuilder {
 }
 
 /// Transform a single function to the MIR form
-struct FuncTransformer {
-    mir: MirBuilder,
+struct FuncTransformer<'a> {
+    project: &'a MirProject,
+    mir: MirProcedureBuilder,
 }
 
-impl FuncTransformer {
-    pub fn new() -> FuncTransformer {
+impl<'a> FuncTransformer<'a> {
+    pub fn new(project: &MirProject) -> FuncTransformer {
         FuncTransformer {
-            mir: MirBuilder::new(),
+            project,
+            mir: MirProcedureBuilder::new(),
         }
     }
 
@@ -462,9 +513,29 @@ impl FuncTransformer {
 
     fn member_access(&mut self, base: &Expression<SemanticContext>, field: StringId) -> Operand {
         // Get the Index of the Field and convert to a `FieldId`
-        // Evaluate `base`
-        // Access the ith field of the result of `base`
-        todo!()
+        let ty = base.context().ty();
+        let mir_ty = self
+            .project
+            .get_type(ty)
+            .expect("Could not find given type in the type table");
+
+        // Extract the Structure Definition from the type
+        let mir_ty = self.project.types.get(mir_ty);
+        let def = if let MirTypeDef::Structure { def, .. } = mir_ty {
+            def
+        } else {
+            // Type checking should guarantee that if this method is called then the type of the 
+            // AST node is a structure. If it is not, then a critical bug has been encountered.
+            panic!("Trying to access a field on a non-structure type")
+        };
+
+        if let Operand::LValue(base_mir) = self.expression(base) {
+            let access = self.mir.member_access(base_mir, def, field);
+            Operand::LValue(access)
+        } else {
+            // Base expression must be a location expression
+            panic!("Base expression must be a location expression")
+        }
     }
 
     /// Transform an Array At operation to its MIR form and return the Location Expression as

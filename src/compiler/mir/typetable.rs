@@ -395,6 +395,21 @@ impl Display for FieldId {
 }
 
 #[cfg(test)]
+impl From<FieldId> for u32 {
+    /// This is used in unit tests to validate that the correct fields are being used
+    /// in the MIR of a member access. It is only built for `test` because there is no
+    /// other case where code outside of this module should be able to directly access
+    /// the value of a [`FieldId`].
+    /// 
+    /// Implementation of the From trait was chosen because it isolates the privacy 
+    /// violation as much as logically possible from the code that is used in the compiler
+    /// itself.
+    fn from(f: FieldId) -> Self {
+        f.0
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use crate::compiler::{
         ast::{Element, Parameter},

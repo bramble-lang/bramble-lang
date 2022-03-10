@@ -8,7 +8,7 @@ use crate::{
     StringId,
 };
 
-use super::typetable::FieldId;
+use super::typetable::{FieldId, TypeId};
 
 const ROOT_SCOPE: usize = 0;
 
@@ -126,7 +126,7 @@ impl Procedure {
         TempId::new(id)
     }
 
-    /// Returns the number of [`BasicBlock`]s in the procedure
+    /// Returns the number of [`BasicBlocks`](BasicBlock) in the procedure
     pub fn len(&self) -> usize {
         self.blocks.len()
     }
@@ -497,7 +497,7 @@ impl Display for LValue {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Accessor {
     Index(Box<Operand>),
-    Field(FieldId, Type),
+    Field(FieldId, TypeId),
     Deref,
 }
 
