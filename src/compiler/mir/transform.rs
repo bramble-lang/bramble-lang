@@ -213,6 +213,17 @@ impl MirProcedureBuilder {
         ));
     }
 
+    /// Will construct an [`LValue`] whose location is the specified `field` in a given
+    /// strucure type. This expects `ty` to be a [`MirTypeDef::Structure`].
+    fn member_access(&mut self, base: LValue, def: &MirStructDef, field: StringId) -> LValue {
+
+        let (field_id, field_mir) = def
+            .find_field(field)
+            .expect("Could not find field in structure");
+
+        LValue::Access(Box::new(base), Accessor::Field(field_id, field_mir.ty))
+    }
+
     fn array_at(&mut self, array: LValue, index: Operand) -> LValue {
         LValue::Access(Box::new(array), Accessor::Index(Box::new(index)))
     }
@@ -508,19 +519,18 @@ impl<'a> FuncTransformer<'a> {
             .get_type(ty)
             .expect("Could not find given type in the type table");
 
-        let def = if let MirTypeDef::Structure { def, .. } = self.project.types.get(mir_ty) {
+        // Extract the Structure Definition from the type
+        let mir_ty = self.project.types.get(mir_ty);
+        let def = if let MirTypeDef::Structure { def, .. } = mir_ty {
             def
         } else {
-            // Trying to access a field on a non-structure type.
+            // Type checking should guarantee that if this method is called then the type of the 
+            // AST node is a structure. If it is not, then a critical bug has been encountered.
             panic!("Trying to access a field on a non-structure type")
         };
 
         if let Operand::LValue(base_mir) = self.expression(base) {
-            let (field_id, field_mir) = def
-                .find_field(field)
-                .expect("Could not find field in structure");
-            let access =
-                LValue::Access(Box::new(base_mir), Accessor::Field(field_id, field_mir.ty));
+            let access = self.mir.member_access(base_mir, def, field);
             Operand::LValue(access)
         } else {
             // Base expression must be a location expression
