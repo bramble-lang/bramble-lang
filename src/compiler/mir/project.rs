@@ -1,4 +1,5 @@
-/*! Represents and entire Bramble program, including imported libraries,
+/*!
+Represents and entire Bramble program, including imported libraries,
 in MIR form.
 */
 
