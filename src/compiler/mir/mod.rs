@@ -18,6 +18,7 @@ use super::Span;
 
 mod builder;
 mod ir;
+mod project;
 mod test;
 mod typetable;
 mod typetable_test;
