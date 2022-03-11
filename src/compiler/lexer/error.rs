@@ -38,7 +38,7 @@ impl CompilerDisplay for LexerError {
             ParseFloatError(p, e) => format!("{} of {}", e, p),
         };
 
-        Ok(format!("{}", msg))
+        Ok(msg)
     }
 }
 

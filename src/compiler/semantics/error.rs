@@ -229,9 +229,9 @@ impl CompilerDisplay for SemanticError {
             SemanticError::MainFnInvalidType => {
                 Ok("my_main must be a function of type () -> i64".into())
             }
-            SemanticError::MainFnInvalidParams => Ok(format!(
-                "my_main must take no parameters. It must be of type () -> i64"
-            )),
+            SemanticError::MainFnInvalidParams => {
+                Ok("my_main must take no parameters. It must be of type () -> i64".into())
+            }
             SemanticError::InvalidStructure => Ok("Not a valid structure definition".into()),
             SemanticError::RoutineCallInvalidTarget(call, path, ty) => {
                 let call = match call {

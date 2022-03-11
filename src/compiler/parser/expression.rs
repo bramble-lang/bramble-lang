@@ -89,7 +89,7 @@ impl Expression<ParserContext> {
                 operand,
             ))),
             _ => {
-                err!(ctx.span(), ParserError::NotAUnaryOp(op.clone()))
+                err!(ctx.span(), ParserError::NotAUnaryOp(*op))
             }
         }
     }
@@ -180,7 +180,7 @@ impl Expression<ParserContext> {
                 right,
             ))),
             _ => {
-                err!(ctx.span(), ParserError::NotABinaryOp(op.clone()))
+                err!(ctx.span(), ParserError::NotABinaryOp(*op))
             }
         }
     }
@@ -201,7 +201,7 @@ impl<'a> Parser<'a> {
                     }
 
                     // Check if the block ends in an expression rather than a statement (no semicolon post fix)
-                    let final_exp = self.expression(stream)?.map(|e| Box::new(e));
+                    let final_exp = self.expression(stream)?.map(Box::new);
 
                     // Compute the span that goes from the `{` to the `}`
                     let ctx = stream
@@ -277,7 +277,7 @@ impl<'a> Parser<'a> {
                                 .ok_or_else(|| {
                                     CompilerError::new(
                                         op.span(),
-                                        ParserError::ExpectedExprAfter(op.sym.clone()),
+                                        ParserError::ExpectedExprAfter(op.sym),
                                     )
                                 })
                                 .and_then(|right| {
@@ -316,7 +316,7 @@ impl<'a> Parser<'a> {
                                 let id = self.subdata_access(stream)?.ok_or_else(|| {
                                     CompilerError::new(
                                         at_ctx.span(),
-                                        ParserError::ExpectedIdentifierAfter(at.sym.clone()),
+                                        ParserError::ExpectedIdentifierAfter(at.sym),
                                     )
                                 })?;
                                 let id_ctx = *id.context();
@@ -382,7 +382,7 @@ impl<'a> Parser<'a> {
 
         result.view(|v| {
             match msg {
-                Some(msg) => self.record(event.with_span(v.span()), Ok(&msg)),
+                Some(msg) => self.record(event.with_span(v.span()), Ok(msg)),
                 None => self.record_noop(event.with_span(v.span())),
             };
         })
@@ -402,7 +402,7 @@ impl<'a> Parser<'a> {
                                 o.ok_or_else(|| {
                                     CompilerError::new(
                                         op.span(),
-                                        ParserError::ExpectedTermAfter(op.sym.clone()),
+                                        ParserError::ExpectedTermAfter(op.sym),
                                     )
                                 })
                             })
@@ -578,7 +578,7 @@ impl<'a> Parser<'a> {
                     let ctx = stream.next_must_be(&Lex::RParen)?.to_ctx().join(ctx);
 
                     // Return size_of expression
-                    Ok(Some(Expression::SizeOf(ctx, Box::new(ty.clone()))))
+                    Ok(Some(Expression::SizeOf(ctx, Box::new(ty))))
                 });
                 result.view(|v| {
                     let msg = v.map(|_| "size_of");
@@ -640,7 +640,7 @@ impl<'a> Parser<'a> {
                             context: ctx,
                             cond: Box::new(cond),
                             if_arm: Box::new(if_arm),
-                            else_arm: else_arm.map(|f| Box::new(f)),
+                            else_arm: else_arm.map(Box::new),
                         }))
                     })
                 });
@@ -698,13 +698,13 @@ impl<'a> Parser<'a> {
                             call_ctx.join(params_ctx),
                             RoutineCall::Function,
                             path,
-                            params.clone(),
+                            params,
                         ))),
                         None => match self.struct_expression_params(stream)? {
                             Some((params, params_ctx)) => Ok(Some(Expression::StructExpression(
                                 call_ctx.join(params_ctx),
                                 path,
-                                params.clone(),
+                                params,
                             ))),
                             None => {
                                 if path.len() > 1 {

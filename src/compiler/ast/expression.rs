@@ -150,7 +150,7 @@ impl<M: Context> Node<M> for Expression<M> {
         match self {
             StructExpression(.., se) => {
                 let mut o: Vec<&dyn Node<M>> = vec![];
-                for (_, e) in se.into_iter() {
+                for (_, e) in se {
                     o.push(e);
                 }
                 o
@@ -177,7 +177,7 @@ impl<M: Context> Node<M> for Expression<M> {
             }
             ExpressionBlock(_, stms, exp) => {
                 let mut o: Vec<&dyn Node<M>> = vec![];
-                for s in stms.into_iter() {
+                for s in stms {
                     o.push(s);
                 }
                 if let Some(e) = exp {
@@ -188,7 +188,7 @@ impl<M: Context> Node<M> for Expression<M> {
             Yield(_, e) => vec![e.as_ref()],
             RoutineCall(.., exps) => {
                 let mut o: Vec<&dyn Node<M>> = vec![];
-                for e in exps.into_iter() {
+                for e in exps {
                     o.push(e);
                 }
                 o
