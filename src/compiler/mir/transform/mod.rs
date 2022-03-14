@@ -2,6 +2,7 @@
 
 mod error;
 mod transform;
+mod function;
 
 pub use error::TransformError;
-pub use transform::*;
+pub use transform::module_transform;
