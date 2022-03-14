@@ -44,7 +44,7 @@ pub fn module_transform(
     for f in funcs {
         match f {
             crate::compiler::ast::Item::Routine(r) => {
-                let ft = FuncTransformer::new(&project);
+                let ft = FuncTransformer::new(project);
                 let p = ft.transform(r);
                 mirs.push(p);
             }

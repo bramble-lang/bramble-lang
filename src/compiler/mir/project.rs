@@ -3,7 +3,7 @@ Represents and entire Bramble program, including imported libraries,
 in MIR form.
 */
 
-use crate::compiler::{ast::{Type, StructDef}, semantics::semanticnode::SemanticContext};
+use crate::compiler::{ast::{Type, StructDef, Path}, semantics::semanticnode::SemanticContext};
 
 use super::{typetable::{TypeTable, TypeId, MirTypeDef, TypeTableError}, ir::Procedure};
 
@@ -51,8 +51,28 @@ impl MirProject {
 /// Represents definitions of static items within this project
 /// This includes: functions and static variables and static constants.
 /// This also includes static strings.
+#[derive(Default)]
 struct StaticDefinitions {
-    defs: Vec<()>,
+    defs: Vec<StaticItem>,
+}
+
+impl StaticDefinitions {
+    /// Create a new table for keeping track of the static definition in a program
+    fn new() -> StaticDefinitions {
+        StaticDefinitions::default()
+    }
+
+    fn find(&self, path: &Path) -> Option<&StaticItem> {
+        todo!()
+    }
+
+    fn get(&self, id: DefId) -> &StaticItem {
+        todo!()
+    }
+
+    fn get_mut(&mut self, id: DefId) -> &mut StaticItem {
+        todo!()
+    }
 }
 
 /// Uniquely identifies an item that exists in the static memory of a program
