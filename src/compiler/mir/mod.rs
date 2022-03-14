@@ -22,13 +22,14 @@ mod project;
 mod test;
 mod typetable;
 
+// imports which will be made accessible outside of this module
+pub mod transform;
+
+// Unit test modules
 #[cfg(test)]
 mod typetable_test;
-
 #[cfg(test)]
 mod project_test;
-
-pub mod transform;
 
 pub struct Module {
     funcs: Vec<Procedure>,
