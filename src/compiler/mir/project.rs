@@ -25,12 +25,15 @@ struct MirProgram;
 /// Manages all of the Types and Functions which exist within a single project
 pub struct MirProject {
     types: TypeTable,
+
+    defs: StaticDefinitions,
 }
 
 impl MirProject {
     pub fn new() -> MirProject {
         MirProject {
             types: TypeTable::new(),
+            defs: StaticDefinitions::new(),
         }
     }
 
@@ -51,6 +54,14 @@ impl MirProject {
     ) -> Result<(), TypeTableError> {
         self.types.add_struct_def(sd)?;
         Ok(())
+    }
+
+    pub fn add_func(&mut self, func: Procedure) -> Result<DefId, ()> {
+        self.defs.add_fn(func)
+    }
+
+    pub fn get_def(&self, id: DefId) -> &StaticItem {
+        self.defs.get(id)
     }
 }
 
@@ -100,7 +111,7 @@ impl StaticDefinitions {
 
     /// Return a reference to the item with the given [`DefId`].
     fn get(&self, id: DefId) -> &StaticItem {
-        todo!()
+        &self.defs[id.0 as usize]
     }
 
     /// Return a mutable reference to the item with the given [`DefId`].
@@ -112,7 +123,7 @@ impl StaticDefinitions {
 /// Uniquely identifies an item that exists in the static memory of a program
 /// e.g., a function or static variable.
 #[derive(Debug, Copy, Clone, Default)]
-struct DefId(u32);
+pub struct DefId(u32);
 
 impl DefId {
     fn new(id: u32) -> DefId {
@@ -122,6 +133,7 @@ impl DefId {
 
 /// A static item, this could be a function or data.  Data in turn can be a
 /// variable or a constant.
-enum StaticItem {
+#[derive(Debug, PartialEq)]
+pub enum StaticItem {
     Function(Procedure),
 }
