@@ -1,20 +1,14 @@
-//! Converts the Bramble AST to the CFG MIR representation used for
-//! dataflow analyses; such as, lifetime checking, variable initialization,
-//! consistency rules checking, and so on.
-
-// Transformer
-// This process takes the AST for a compilation unit and transforms it into the
-// CFG MIR used for dataflow analysis and LLVM IR generation by the Bramble
-// compiler.
+//! Transforms the AST of a single function into its MIR control flow
+//! graph representation. All types, functions, and static variables that
+//! are referred to into the body of the input function must have already
+//! had their delcarations added to the [`MirProject`] or the transformation
+//!  will fail.
 
 use log::debug;
 
 use crate::{
     compiler::{
-        ast::{
-            BinaryOperator, Bind, Context, Expression, Item, Module, Node, Return, RoutineDef,
-            Statement, Type, UnaryOperator,
-        },
+        ast::{self, *},
         semantics::semanticnode::SemanticContext,
         source::Offset,
         Span,
@@ -22,52 +16,19 @@ use crate::{
     StringId,
 };
 
-use super::{
-    builder::{MirProcedureBuilder, MirProject},
-    ir::*,
-    typetable::*,
-};
-
-pub fn module_transform(
-    module: &Module<SemanticContext>,
-    project: &mut MirProject,
-) -> Vec<Procedure> {
-    // Add all the types in this module
-    module.get_structs().iter().for_each(|sd| {
-        if let Item::Struct(sd) = sd {
-            project.add_struct_def(sd).unwrap()
-        }
-    });
-
-    let funcs = module.get_functions();
-    let mut mirs = vec![];
-
-    for f in funcs {
-        match f {
-            crate::compiler::ast::Item::Routine(r) => {
-                let ft = FuncTransformer::new(&project);
-                let p = ft.transform(r);
-                mirs.push(p);
-            }
-            crate::compiler::ast::Item::Struct(_) => todo!(),
-            crate::compiler::ast::Item::Extern(_) => todo!(),
-        }
-    }
-
-    mirs
-}
+use super::super::{builder::MirProcedureBuilder, ir::*, project::MirProject, typetable::*};
 
 /// Transform a single function to the MIR form
-struct FuncTransformer<'a> {
+pub(super) struct FuncTransformer<'a> {
     project: &'a MirProject,
     mir: MirProcedureBuilder,
 }
 
 impl<'a> FuncTransformer<'a> {
-    pub fn new(project: &MirProject) -> FuncTransformer {
+    pub fn new(path: &Path, project: &'a MirProject) -> FuncTransformer<'a> {
         FuncTransformer {
             project,
-            mir: MirProcedureBuilder::new(),
+            mir: MirProcedureBuilder::new(path),
         }
     }
 
@@ -92,16 +53,16 @@ impl<'a> FuncTransformer<'a> {
         self.mir.complete()
     }
 
-    fn statement(&mut self, stm: &Statement<SemanticContext>) {
+    fn statement(&mut self, stm: &ast::Statement<SemanticContext>) {
         debug!("Transform statement");
         match stm {
-            Statement::Bind(bind) => self.bind(bind),
-            Statement::Expression(expr) => {
+            ast::Statement::Bind(bind) => self.bind(bind),
+            ast::Statement::Expression(expr) => {
                 self.expression(expr);
             }
-            Statement::Mutate(_) => todo!(),
-            Statement::YieldReturn(_) => todo!(),
-            Statement::Return(ret) => self.ret(ret),
+            ast::Statement::Mutate(_) => todo!(),
+            ast::Statement::YieldReturn(_) => todo!(),
+            ast::Statement::Return(ret) => self.ret(ret),
         }
     }
 
@@ -178,7 +139,7 @@ impl<'a> FuncTransformer<'a> {
             Expression::CustomType(_, _) => todo!(),
             Expression::Path(_, _) => todo!(),
             Expression::IdentifierDeclare(_, _, _) => todo!(),
-            Expression::RoutineCall(_, _, _, _) => todo!(),
+            Expression::RoutineCall(ctx, call, path, args) => self.fn_call(ctx, *call, path, args),
             Expression::StructExpression(_, _, _) => todo!(),
             Expression::If {
                 context,
@@ -205,6 +166,24 @@ impl<'a> FuncTransformer<'a> {
         }
     }
 
+    /// [Terminates](Terminator) the current [`BasicBlock`] with a function call and starts a new basic block
+    fn fn_call(
+        &mut self,
+        ctx: &SemanticContext,
+        call: RoutineCall,
+        path: &Path,
+        args: &[Expression<SemanticContext>],
+    ) -> Operand {
+        // Look up the MIR Function ID for the target
+        // Get the TypeID for the return type of the called function
+        // Compute the value of each argument
+        // Create a basic block that the function will return into
+        // Create the call Terminator
+        // Change the current basic block to continue adding statements after the function call returns
+        todo!()
+    }
+
+    /// Creates a member access operand which can be used in a statement or terminator
     fn member_access(&mut self, base: &Expression<SemanticContext>, field: StringId) -> Operand {
         // Get the Index of the Field and convert to a `FieldId`
         let ty = base.context().ty();

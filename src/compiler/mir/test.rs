@@ -5,7 +5,7 @@ pub mod tests {
             ast::*,
             diagnostics::Logger,
             lexer::{tokens::Token, LexerError},
-            mir::{builder::MirProject, ir::*, transform},
+            mir::{ir::*, project::*, transform},
             parser::Parser,
             semantics::semanticnode::SemanticContext,
             CompilerError, Lexer, SourceMap,
@@ -58,10 +58,8 @@ pub mod tests {
             let mut table = StringTable::new();
             let module = compile(text, &mut table);
             let mut project = MirProject::new();
-            let mirs = transform::module_transform(&module, &mut project);
-            for mir in mirs {
-                println!("{}", mir);
-            }
+            transform::transform(&module, &mut project).unwrap();
+            println!("{}", project);
         }
 
         #[test]
@@ -77,10 +75,8 @@ pub mod tests {
             let mut table = StringTable::new();
             let module = compile(text, &mut table);
             let mut project = MirProject::new();
-            let mirs = transform::module_transform(&module, &mut project);
-            for mir in mirs {
-                println!("{}", mir);
-            }
+            transform::transform(&module, &mut project).unwrap();
+            println!("{}", project);
         }
 
         #[test]
@@ -98,10 +94,8 @@ pub mod tests {
             let mut table = StringTable::new();
             let module = compile(text, &mut table);
             let mut project = MirProject::new();
-            let mirs = transform::module_transform(&module, &mut project);
-            for mir in mirs {
-                println!("{}", mir);
-            }
+            transform::transform(&module, &mut project).unwrap();
+            println!("{}", project);
         }
 
         #[test]
@@ -115,10 +109,8 @@ pub mod tests {
             let mut table = StringTable::new();
             let module = compile(text, &mut table);
             let mut project = MirProject::new();
-            let mirs = transform::module_transform(&module, &mut project);
-            for mir in mirs {
-                println!("{}", mir);
-            }
+            transform::transform(&module, &mut project).unwrap();
+            println!("{}", project);
         }
 
         #[test]
@@ -140,10 +132,8 @@ pub mod tests {
             let mut table = StringTable::new();
             let module = compile(text, &mut table);
             let mut project = MirProject::new();
-            let mirs = transform::module_transform(&module, &mut project);
-            for mir in mirs {
-                println!("{}", mir);
-            }
+            transform::transform(&module, &mut project).unwrap();
+            println!("{}", project);
         }
     }
 
@@ -158,7 +148,11 @@ pub mod tests {
         let mut table = StringTable::new();
         let module = compile(text, &mut table);
         let mut project = MirProject::new();
-        let mir = &transform::module_transform(&module, &mut project)[0];
+        transform::transform(&module, &mut project).unwrap();
+
+        let path: Path = to_path(&["main", "test"], &table);
+        let def_id = project.find_def(&path).unwrap();
+        let StaticItem::Function(mir) = project.get_def(def_id);
 
         let bb = mir.get_bb(BasicBlockId::new(0));
         let first = bb.get_stm(0);
@@ -202,7 +196,11 @@ pub mod tests {
         let mut table = StringTable::new();
         let module = compile(text, &mut table);
         let mut project = MirProject::new();
-        let mir = &transform::module_transform(&module, &mut project)[0];
+        transform::transform(&module, &mut project).unwrap();
+
+        let path: Path = to_path(&["main", "test"], &table);
+        let def_id = project.find_def(&path).unwrap();
+        let StaticItem::Function(mir) = project.get_def(def_id);
 
         let bb = mir.get_bb(BasicBlockId::new(0));
         let last = bb.get_stm(bb.len() - 1);
@@ -232,7 +230,11 @@ pub mod tests {
         let mut table = StringTable::new();
         let module = compile(text, &mut table);
         let mut project = MirProject::new();
-        let mir = &transform::module_transform(&module, &mut project)[0];
+        transform::transform(&module, &mut project).unwrap();
+
+        let path: Path = to_path(&["main", "test"], &table);
+        let def_id = project.find_def(&path).unwrap();
+        let StaticItem::Function(mir) = project.get_def(def_id);
 
         let bb = mir.get_bb(BasicBlockId::new(0));
         let last = bb.get_stm(bb.len() - 1);
@@ -288,10 +290,13 @@ pub mod tests {
                 );
                 let module = compile(&text, &mut table);
                 let mut project = MirProject::new();
-                let mirs = transform::module_transform(&module, &mut project);
-                assert_eq!(1, mirs.len());
+                transform::transform(&module, &mut project).unwrap();
 
-                let bb = mirs[0].get_bb(BasicBlockId::new(0));
+                let path: Path = to_path(&["main", "test"], &table);
+                let def_id = project.find_def(&path).unwrap();
+                let StaticItem::Function(mir) = project.get_def(def_id);
+
+                let bb = mir.get_bb(BasicBlockId::new(0));
                 let stm = bb.get_stm(1);
                 match stm.kind() {
                     StatementKind::Assign(_, r) => {
@@ -344,9 +349,13 @@ pub mod tests {
             );
             let module = compile(&text, &mut table);
             let mut project = MirProject::new();
-            let mirs = transform::module_transform(&module, &mut project);
-            assert_eq!(1, mirs.len());
-            let bb = mirs[0].get_bb(BasicBlockId::new(0));
+            transform::transform(&module, &mut project).unwrap();
+
+            let path: Path = to_path(&["main", "test"], &table);
+            let def_id = project.find_def(&path).unwrap();
+            let StaticItem::Function(mir) = project.get_def(def_id);
+
+            let bb = mir.get_bb(BasicBlockId::new(0));
             let stm = bb.get_stm(0);
             match stm.kind() {
                 StatementKind::Assign(_, r) => {
@@ -394,10 +403,13 @@ pub mod tests {
                 );
                 let module = compile(&text, &mut table);
                 let mut project = MirProject::new();
-                let mirs = transform::module_transform(&module, &mut project);
-                assert_eq!(1, mirs.len());
+                transform::transform(&module, &mut project).unwrap();
 
-                let bb = mirs[0].get_bb(BasicBlockId::new(0));
+                let path: Path = to_path(&["main", "test"], &table);
+                let def_id = project.find_def(&path).unwrap();
+                let StaticItem::Function(mir) = project.get_def(def_id);
+
+                let bb = mir.get_bb(BasicBlockId::new(0));
                 let stm = bb.get_stm(0);
                 match stm.kind() {
                     StatementKind::Assign(_, r) => {
@@ -437,10 +449,13 @@ pub mod tests {
             );
             let module = compile(&text, &mut table);
             let mut project = MirProject::new();
-            let mirs = transform::module_transform(&module, &mut project);
-            assert_eq!(1, mirs.len());
+            transform::transform(&module, &mut project).unwrap();
 
-            let bb = mirs[0].get_bb(BasicBlockId::new(0));
+            let path: Path = to_path(&["main", "test"], &table);
+            let def_id = project.find_def(&path).unwrap();
+            let StaticItem::Function(mir) = project.get_def(def_id);
+
+            let bb = mir.get_bb(BasicBlockId::new(0));
             let stm = bb.get_stm(0);
             match stm.kind() {
                 StatementKind::Assign(_, r) => {
@@ -483,10 +498,13 @@ pub mod tests {
                 );
                 let module = compile(&text, &mut table);
                 let mut project = MirProject::new();
-                let mirs = transform::module_transform(&module, &mut project);
-                assert_eq!(1, mirs.len());
+                transform::transform(&module, &mut project).unwrap();
 
-                let bb = mirs[0].get_bb(BasicBlockId::new(0));
+                let path: Path = to_path(&["main", "test"], &table);
+                let def_id = project.find_def(&path).unwrap();
+                let StaticItem::Function(mir) = project.get_def(def_id);
+
+                let bb = mir.get_bb(BasicBlockId::new(0));
                 let stm = bb.get_stm(0);
                 match stm.kind() {
                     StatementKind::Assign(_, r) => {
@@ -523,10 +541,13 @@ pub mod tests {
             );
             let module = compile(&text, &mut table);
             let mut project = MirProject::new();
-            let mirs = transform::module_transform(&module, &mut project);
-            assert_eq!(1, mirs.len());
+            transform::transform(&module, &mut project).unwrap();
 
-            let bb = mirs[0].get_bb(BasicBlockId::new(0));
+            let path: Path = to_path(&["main", "test"], &table);
+            let def_id = project.find_def(&path).unwrap();
+            let StaticItem::Function(mir) = project.get_def(def_id);
+
+            let bb = mir.get_bb(BasicBlockId::new(0));
             let stm = bb.get_stm(0);
             match stm.kind() {
                 StatementKind::Assign(_, r) => {
@@ -551,8 +572,11 @@ pub mod tests {
         let mut table = StringTable::new();
         let module = compile(text, &mut table);
         let mut project = MirProject::new();
-        let mirs = transform::module_transform(&module, &mut project);
-        let mir = &mirs[0];
+        transform::transform(&module, &mut project).unwrap();
+
+        let path: Path = to_path(&["main", "test"], &table);
+        let def_id = project.find_def(&path).unwrap();
+        let StaticItem::Function(mir) = project.get_def(def_id);
 
         // Check that the right number of BBs are created
         assert_eq!(mir.len(), 4);
@@ -601,10 +625,12 @@ pub mod tests {
         let module = compile(text, &mut table);
 
         let mut project = MirProject::new();
-        let mirs = transform::module_transform(&module, &mut project);
-        assert_eq!(mirs.len(), 1);
+        transform::transform(&module, &mut project).unwrap();
 
-        let mir = &mirs[0];
+        let path: Path = to_path(&["main", "test"], &table);
+        let def_id = project.find_def(&path).unwrap();
+        let StaticItem::Function(mir) = project.get_def(def_id);
+
         assert_eq!(mir.len(), 1);
         let bb = mir.get_bb(BasicBlockId::new(0));
 
@@ -651,10 +677,12 @@ pub mod tests {
         let module = compile(text, &mut table);
 
         let mut project = MirProject::new();
-        let mirs = transform::module_transform(&module, &mut project);
-        assert_eq!(mirs.len(), 1);
+        transform::transform(&module, &mut project).unwrap();
 
-        let mir = &mirs[0];
+        let path: Path = to_path(&["main", "test"], &table);
+        let def_id = project.find_def(&path).unwrap();
+        let StaticItem::Function(mir) = project.get_def(def_id);
+
         assert_eq!(mir.len(), 1);
         let bb = mir.get_bb(BasicBlockId::new(0));
 
@@ -692,6 +720,49 @@ pub mod tests {
             }
             _ => panic!(),
         }
+    }
+
+    #[test]
+    fn add_multiple_functions() {
+        let text = "
+        fn test(y: i64) -> i64 {
+            return y;
+        }
+
+        fn test2(x: i64) -> i64 {
+            return x;
+        }
+        ";
+        let mut table = StringTable::new();
+        let module = compile(text, &mut table);
+
+        let mut project = MirProject::new();
+        transform::transform(&module, &mut project).unwrap();
+
+        let path: Path = to_path(&["main", "test"], &table);
+        let def_id = project.find_def(&path).unwrap();
+        let StaticItem::Function(mir) = project.get_def(def_id);
+        assert_eq!(mir.len(), 1);
+        assert_eq!(mir.path(), &path);
+
+        let path2: Path = to_path(&["main", "test2"], &table);
+        let def2_id = project.find_def(&path2).unwrap();
+        let StaticItem::Function(mir2) = project.get_def(def2_id);
+        assert_eq!(mir2.len(), 1);
+        assert_eq!(mir2.path(), &path2);
+
+        assert!(def_id != def2_id);
+    }
+
+    fn to_path(v: &[&str], table: &StringTable) -> Path {
+        let mut path = vec![Element::CanonicalRoot];
+
+        for s in v {
+            let id = table.find(s).unwrap();
+            path.push(Element::Id(id))
+        }
+
+        path.into()
     }
 
     fn to_code(e: &Expression<()>, table: &StringTable) -> String {

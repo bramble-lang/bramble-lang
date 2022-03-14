@@ -4,7 +4,10 @@
 use std::fmt::Display;
 
 use crate::{
-    compiler::{ast::Type, Span},
+    compiler::{
+        ast::{Path, Type},
+        Span,
+    },
     StringId,
 };
 
@@ -16,6 +19,8 @@ const ROOT_SCOPE: usize = 0;
 /// This type represents a single function from the input source code.
 #[derive(Debug, PartialEq, Clone)]
 pub struct Procedure {
+    /// The canonical path of the procedure
+    path: Path,
     /// The set of basic blocks that constitute this procedure
     blocks: Vec<BasicBlock>,
     /// The return type of this function
@@ -33,8 +38,14 @@ pub struct Procedure {
 impl Procedure {
     /// Creates a new MIR procedure. When created this will not have any
     /// basic blocks or arguments.
-    pub fn new(ret_ty: &Type, span: Span) -> Procedure {
+    pub fn new(path: &Path, ret_ty: &Type, span: Span) -> Procedure {
+        assert!(
+            path.is_canonical(),
+            "All paths must be canonical to be used in MIR"
+        );
+
         Procedure {
+            path: path.clone(),
             blocks: vec![],
             ret_ty: ret_ty.clone(),
             args: vec![],
@@ -126,6 +137,11 @@ impl Procedure {
         TempId::new(id)
     }
 
+    /// Returns a reference to the canonical [`path`](Path) of this procedure
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
     /// Returns the number of [`BasicBlocks`](BasicBlock) in the procedure
     pub fn len(&self) -> usize {
         self.blocks.len()
@@ -134,7 +150,7 @@ impl Procedure {
 
 impl Display for Procedure {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("fn () -> {:?}:\n", self.ret_ty))?;
+        f.write_fmt(format_args!("fn {} () -> {:?}:\n", self.path, self.ret_ty))?;
 
         // Print the arguments
         f.write_str("Arguments: \n")?;

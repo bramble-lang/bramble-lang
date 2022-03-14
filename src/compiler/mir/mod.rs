@@ -18,11 +18,18 @@ use super::Span;
 
 mod builder;
 mod ir;
+mod project;
 mod test;
 mod typetable;
-mod typetable_test;
 
+// imports which will be made accessible outside of this module
 pub mod transform;
+
+// Unit test modules
+#[cfg(test)]
+mod project_test;
+#[cfg(test)]
+mod typetable_test;
 
 pub struct Module {
     funcs: Vec<Procedure>,

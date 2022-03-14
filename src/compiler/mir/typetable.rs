@@ -108,11 +108,11 @@ impl TypeTable {
                     *def = MirStructDef::Defined(fields);
                     Ok(id)
                 } else {
-                    return Err(TypeTableError::StrutureAlreadyDefined);
+                    Err(TypeTableError::StrutureAlreadyDefined)
                 }
             } else {
                 // If it is, then return an error
-                return Err(TypeTableError::ExpectedStructure);
+                Err(TypeTableError::ExpectedStructure)
             }
         } else {
             // If no match found, then create a new structure entry and add to the table
@@ -214,7 +214,7 @@ impl TypeTable {
             }
         }
 
-        return true;
+        true
     }
 
     /// Returns true if the given type from this Type Table is defined. Defined means that
