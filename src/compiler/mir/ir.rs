@@ -11,7 +11,7 @@ use crate::{
     StringId,
 };
 
-use super::typetable::{FieldId, TypeId};
+use super::{typetable::{FieldId, TypeId}, project::DefId};
 
 const ROOT_SCOPE: usize = 0;
 
@@ -482,6 +482,9 @@ impl Display for StatementKind {
 /// A physical location in memory where a value can be stored
 #[derive(Debug, PartialEq, Clone)]
 pub enum LValue {
+    /// A static location in the program's memory space
+    Static(DefId),
+
     /// A user defined variable.
     Var(VarId),
 
@@ -499,6 +502,7 @@ pub enum LValue {
 impl Display for LValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let text = match self {
+            LValue::Static(s) => format!("{}", s),
             LValue::Var(v) => format!("{}", v),
             LValue::Temp(t) => format!("{}", t),
             LValue::Access(lv, acc) => format!("{}{}", lv, acc),

@@ -73,7 +73,7 @@ impl MirProject {
 
     /// Search the set of static definitions for an item with a [path](Path) that is equal
     /// to the given path.
-    pub fn find_def(&mut self, path: &Path) -> Option<DefId> {
+    pub fn find_def(&self, path: &Path) -> Option<DefId> {
         self.static_defs.find(path)
     }
 }
@@ -150,6 +150,12 @@ pub struct DefId(u32);
 impl DefId {
     fn new(id: u32) -> DefId {
         DefId(id)
+    }
+}
+
+impl Display for DefId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{}", self.0))
     }
 }
 

@@ -302,8 +302,24 @@ impl MirProcedureBuilder {
     }
 
     /// Terminates by calling the given function
-    pub fn term_call(&mut self) {
-        debug!("Call");
-        todo!()
+    pub fn term_call(
+        &mut self,
+        func: Operand,
+        args: &[Operand],
+        reentry: (LValue, BasicBlockId),
+        span: Span,
+    ) {
+        debug!("Function Call: call({:?}) with {:?} returning to {:?}", func, args, reentry);
+
+        let cid = self.current_bb.unwrap();
+        let bb = self.proc.get_bb_mut(cid);
+        bb.set_terminator(Terminator::new(
+            TerminatorKind::CallFn {
+                func,
+                args: args.into(),
+                reentry,
+            },
+            span,
+        ))
     }
 }
