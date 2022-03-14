@@ -21,7 +21,12 @@ mod ir;
 mod project;
 mod test;
 mod typetable;
+
+#[cfg(test)]
 mod typetable_test;
+
+#[cfg(test)]
+mod project_test;
 
 pub mod transform;
 
