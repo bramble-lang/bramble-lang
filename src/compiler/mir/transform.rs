@@ -44,7 +44,7 @@ pub fn module_transform(
     for f in funcs {
         match f {
             crate::compiler::ast::Item::Routine(r) => {
-                let ft = FuncTransformer::new(project);
+                let ft = FuncTransformer::new(r.context().canonical_path(), project);
                 let p = ft.transform(r);
                 mirs.push(p);
             }
@@ -63,10 +63,10 @@ struct FuncTransformer<'a> {
 }
 
 impl<'a> FuncTransformer<'a> {
-    pub fn new(project: &MirProject) -> FuncTransformer {
+    pub fn new(path: &Path, project: &'a MirProject) -> FuncTransformer<'a> {
         FuncTransformer {
             project,
-            mir: MirProcedureBuilder::new(),
+            mir: MirProcedureBuilder::new(path),
         }
     }
 

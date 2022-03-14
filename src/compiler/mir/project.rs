@@ -3,9 +3,15 @@ Represents and entire Bramble program, including imported libraries,
 in MIR form.
 */
 
-use crate::compiler::{ast::{Type, StructDef, Path}, semantics::semanticnode::SemanticContext};
+use crate::compiler::{
+    ast::{Path, StructDef, Type},
+    semantics::semanticnode::SemanticContext,
+};
 
-use super::{typetable::{TypeTable, TypeId, MirTypeDef, TypeTableError}, ir::Procedure};
+use super::{
+    ir::Procedure,
+    typetable::{MirTypeDef, TypeId, TypeTable, TypeTableError},
+};
 
 /// Represents everything involved in compiling the current target compilation
 /// unit (executable, library, etc.).
@@ -63,11 +69,27 @@ impl StaticDefinitions {
     }
 
     /// Will add the given procedure to the the StaticDefinitions table and return the
-    /// [`DefId`] that has been assigned to the procedure. If an item with the same 
+    /// [`DefId`] that has been assigned to the procedure. If an item with the same
     /// canonical path already exists in the table, then overrwrite with the new value
     /// and return the associated [`DefId`].
-    fn add_fn(&mut self, func: Procedure) -> DefId {
-        todo!()
+    fn add_fn(&mut self, func: Procedure) -> Result<DefId, ()> {
+        // Search through defs for item with the same canonical path
+        if let Some((idx, def)) = self.defs.iter_mut().enumerate().find(|f| true) {
+            // If Found
+            // If the item is not a procedure, then return an error
+            // If the item is a procedure, then replace with the new value and return the DefId
+            match def {
+                StaticItem::Function(def) => {
+                    *def = func;
+                    Ok(DefId::new(idx as u32))
+                },
+            }
+        } else {
+            // If _not_ found then add to defs and return the DefId
+            self.defs.push(StaticItem::Function(func));
+            let idx = self.defs.len() - 1;
+            Ok(DefId::new(idx as u32))
+        }
     }
 
     /// Search this table for an item with the given [`Path`]. If one is found, then
@@ -100,6 +122,6 @@ impl DefId {
 
 /// A static item, this could be a function or data.  Data in turn can be a
 /// variable or a constant.
-enum StaticItem{
+enum StaticItem {
     Function(Procedure),
 }

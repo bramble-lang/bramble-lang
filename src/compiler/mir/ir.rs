@@ -4,7 +4,7 @@
 use std::fmt::Display;
 
 use crate::{
-    compiler::{ast::Type, Span},
+    compiler::{ast::{Type, Path}, Span},
     StringId,
 };
 
@@ -16,6 +16,8 @@ const ROOT_SCOPE: usize = 0;
 /// This type represents a single function from the input source code.
 #[derive(Debug, PartialEq, Clone)]
 pub struct Procedure {
+    /// The canonical path of the procedure
+    path: Path,
     /// The set of basic blocks that constitute this procedure
     blocks: Vec<BasicBlock>,
     /// The return type of this function
@@ -33,8 +35,9 @@ pub struct Procedure {
 impl Procedure {
     /// Creates a new MIR procedure. When created this will not have any
     /// basic blocks or arguments.
-    pub fn new(ret_ty: &Type, span: Span) -> Procedure {
+    pub fn new(path: &Path, ret_ty: &Type, span: Span) -> Procedure {
         Procedure {
+            path: path.clone(),
             blocks: vec![],
             ret_ty: ret_ty.clone(),
             args: vec![],

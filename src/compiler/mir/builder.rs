@@ -2,7 +2,7 @@ use log::debug;
 
 use crate::{
     compiler::{
-        ast::Type,
+        ast::{Type, Path},
         Span,
     },
     StringId,
@@ -24,9 +24,9 @@ pub struct MirProcedureBuilder {
 impl MirProcedureBuilder {
     /// Creates a new [`MirBuilder`], which is used to construct the MIR representation
     /// of a function.
-    pub fn new() -> MirProcedureBuilder {
+    pub fn new(path: &Path) -> MirProcedureBuilder {
         MirProcedureBuilder {
-            proc: Procedure::new(&Type::Unit, Span::zero()),
+            proc: Procedure::new(path, &Type::Unit, Span::zero()),
             current_bb: None,
         }
     }
