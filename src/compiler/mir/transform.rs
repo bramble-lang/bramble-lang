@@ -30,7 +30,7 @@ use super::{
 pub fn module_transform(
     module: &Module<SemanticContext>,
     project: &mut MirProject,
-) -> Vec<Procedure> {
+) -> Result<Vec<Procedure>,()> {
     // Add all the types in this module
     module.get_structs().iter().for_each(|sd| {
         if let Item::Struct(sd) = sd {
@@ -46,14 +46,15 @@ pub fn module_transform(
             crate::compiler::ast::Item::Routine(r) => {
                 let ft = FuncTransformer::new(r.context().canonical_path(), project);
                 let p = ft.transform(r);
-                mirs.push(p);
+                mirs.push(p.clone());
+                project.add_func(p)?;
             }
             crate::compiler::ast::Item::Struct(_) => todo!(),
             crate::compiler::ast::Item::Extern(_) => todo!(),
         }
     }
 
-    mirs
+    Ok(mirs)
 }
 
 /// Transform a single function to the MIR form
