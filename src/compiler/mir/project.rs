@@ -5,12 +5,12 @@ in MIR form.
 
 /// Represents everything involved in compiling the current target compilation
 /// unit (executable, library, etc.).
-/// 
+///
 /// This corresponds to the Root of the Canonical Path
 struct MirProgram;
 
 /// The representation of the full program, including imports
-/// 
+///
 /// This corresponds to the Project component of the Canonical Path
 struct MirProject;
 
