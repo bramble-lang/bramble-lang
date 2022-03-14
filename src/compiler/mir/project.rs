@@ -62,7 +62,7 @@ impl MirProject {
 
     /// Add a function to the table of static definitions. The MIR associated with
     /// the function can be added at a later time.
-    pub fn add_func(&mut self, func: Procedure) -> Result<DefId, ()> {
+    pub fn add_func(&mut self, func: Procedure) -> Result<DefId, StaticDefinitionError> {
         self.static_defs.add_fn(func)
     }
 
@@ -107,7 +107,7 @@ impl StaticDefinitions {
     /// [`DefId`] that has been assigned to the procedure. If an item with the same
     /// canonical path already exists in the table, then overrwrite with the new value
     /// and return the associated [`DefId`].
-    fn add_fn(&mut self, func: Procedure) -> Result<DefId, ()> {
+    fn add_fn(&mut self, func: Procedure) -> Result<DefId, StaticDefinitionError> {
         // Search through defs for item with the same canonical path
         if let Some(idx) = self.find(func.path()) {
             // If Found
@@ -159,3 +159,6 @@ impl DefId {
 pub enum StaticItem {
     Function(Procedure),
 }
+
+#[derive(Debug)]
+pub enum StaticDefinitionError {}

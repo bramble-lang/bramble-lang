@@ -19,20 +19,38 @@ use crate::{
     StringId,
 };
 
-use super::{builder::MirProcedureBuilder, ir::*, project::MirProject, typetable::*};
+use super::{builder::MirProcedureBuilder, ir::*, project::{MirProject, StaticDefinitionError}, typetable::*};
+
+#[derive(Debug)]
+pub enum TransformError {
+    TypeError(TypeTableError),
+    StaticDefError(StaticDefinitionError),
+}
+
+impl From<TypeTableError> for TransformError {
+    fn from(tte: TypeTableError) -> Self {
+        TransformError::TypeError(tte)
+    }
+}
+
+impl From<StaticDefinitionError> for TransformError {
+    fn from(sde: StaticDefinitionError) -> Self {
+        TransformError::StaticDefError(sde)
+    }
+}
 
 /// Transform a [`Module`] into its MIR representation and add all items to the
 /// given [`MirProject`].
 pub fn module_transform(
     module: &Module<SemanticContext>,
     project: &mut MirProject,
-) -> Result<(), ()> {
+) -> Result<(), TransformError> {
     // Add all the types in this module
-    module.get_structs().iter().for_each(|sd| {
+    for sd in module.get_structs() {
         if let Item::Struct(sd) = sd {
-            project.add_struct_def(sd).unwrap();
+            project.add_struct_def(sd)?;
         }
-    });
+    }
 
     let funcs = module.get_functions();
 
