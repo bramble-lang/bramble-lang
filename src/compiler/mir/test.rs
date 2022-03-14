@@ -722,6 +722,38 @@ pub mod tests {
         }
     }
 
+    #[test]
+    fn add_multiple_functions() {
+        let text = "
+        fn test(y: i64) -> i64 {
+            return y;
+        }
+
+        fn test2(x: i64) -> i64 {
+            return x;
+        }
+        ";
+        let mut table = StringTable::new();
+        let module = compile(text, &mut table);
+
+        let mut project = MirProject::new();
+        transform::module_transform(&module, &mut project).unwrap();
+
+        let path: Path = to_path(&["main", "test"], &table);
+        let def_id = project.find_def(&path).unwrap();
+        let StaticItem::Function(mir) = project.get_def(def_id);
+        assert_eq!(mir.len(), 1);
+        assert_eq!(mir.path(), &path);
+
+        let path2: Path = to_path(&["main", "test2"], &table);
+        let def2_id = project.find_def(&path2).unwrap();
+        let StaticItem::Function(mir2) = project.get_def(def2_id);
+        assert_eq!(mir2.len(), 1);
+        assert_eq!(mir2.path(), &path2);
+
+        assert!(def_id != def2_id);
+    }
+
     fn to_path(v: &[&str], table: &StringTable) -> Path {
         let mut path = vec![Element::CanonicalRoot];
 
