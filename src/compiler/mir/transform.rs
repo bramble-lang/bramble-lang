@@ -19,18 +19,14 @@ use crate::{
     StringId,
 };
 
-use super::{
-    builder::MirProcedureBuilder,
-    ir::*,
-    typetable::*, project::MirProject,
-};
+use super::{builder::MirProcedureBuilder, ir::*, project::MirProject, typetable::*};
 
 /// Transform a [`Module`] into its MIR representation and add all items to the
 /// given [`MirProject`].
 pub fn module_transform(
     module: &Module<SemanticContext>,
     project: &mut MirProject,
-) -> Result<(),()> {
+) -> Result<(), ()> {
     // Add all the types in this module
     module.get_structs().iter().for_each(|sd| {
         if let Item::Struct(sd) = sd {
