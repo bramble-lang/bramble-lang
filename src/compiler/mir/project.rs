@@ -45,6 +45,7 @@ impl MirProject {
         self.types.find(ty)
     }
 
+    /// Get the [`MirTypeDef`] associted with the given [`TypeId`].
     pub fn get_type(&self, ty: TypeId) -> &MirTypeDef {
         self.types.get(ty)
     }
@@ -58,14 +59,19 @@ impl MirProject {
         Ok(())
     }
 
+    /// Add a function to the table of static definitions. The MIR associated with
+    /// the function can be added at a later time.
     pub fn add_func(&mut self, func: Procedure) -> Result<DefId, ()> {
         self.static_defs.add_fn(func)
     }
 
+    /// Get the definition of a specific static item.
     pub fn get_def(&self, id: DefId) -> &StaticItem {
         self.static_defs.get(id)
     }
 
+    /// Search the set of static definitions for an item with a [path](Path) that is equal
+    /// to the given path.
     pub fn find_def(&mut self, path: &Path) -> Option<DefId> {
         self.static_defs.find(path)
     }
