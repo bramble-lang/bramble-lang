@@ -36,6 +36,8 @@ impl Procedure {
     /// Creates a new MIR procedure. When created this will not have any
     /// basic blocks or arguments.
     pub fn new(path: &Path, ret_ty: &Type, span: Span) -> Procedure {
+        assert!(path.is_canonical(), "All paths must be canonical to be used in MIR");
+
         Procedure {
             path: path.clone(),
             blocks: vec![],
