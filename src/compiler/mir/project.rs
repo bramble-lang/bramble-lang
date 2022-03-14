@@ -120,11 +120,6 @@ impl StaticDefinitions {
     fn get(&self, id: DefId) -> &StaticItem {
         &self.defs[id.0 as usize]
     }
-
-    /// Return a mutable reference to the item with the given [`DefId`].
-    fn get_mut(&mut self, id: DefId) -> &mut StaticItem {
-        todo!()
-    }
 }
 
 /// Uniquely identifies an item that exists in the static memory of a program
