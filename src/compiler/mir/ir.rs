@@ -502,7 +502,7 @@ pub enum LValue {
 impl Display for LValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let text = match self {
-            LValue::Static(s) => format!("{}", s),
+            LValue::Static(s) => format!("Static({})", s),
             LValue::Var(v) => format!("{}", v),
             LValue::Temp(t) => format!("{}", t),
             LValue::Access(lv, acc) => format!("{}{}", lv, acc),
@@ -685,7 +685,7 @@ impl Display for TerminatorKind {
                 func,
                 args,
                 reentry,
-            } => format!("call {}", func),
+            } => format!("{} := call {} ({:?}); goto {}", reentry.0, func, args, reentry.1),
             TerminatorKind::Return => "return".into(),
             TerminatorKind::GoTo { target } => format!("goto {}", target),
             TerminatorKind::CondGoTo { cond, tru, fls } => {
