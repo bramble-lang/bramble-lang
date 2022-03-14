@@ -19,25 +19,15 @@ use crate::{
     StringId,
 };
 
-use super::{builder::MirProcedureBuilder, ir::*, project::{MirProject, StaticDefinitionError}, typetable::*};
-
-#[derive(Debug)]
-pub enum TransformError {
-    TypeError(TypeTableError),
-    StaticDefError(StaticDefinitionError),
-}
-
-impl From<TypeTableError> for TransformError {
-    fn from(tte: TypeTableError) -> Self {
-        TransformError::TypeError(tte)
-    }
-}
-
-impl From<StaticDefinitionError> for TransformError {
-    fn from(sde: StaticDefinitionError) -> Self {
-        TransformError::StaticDefError(sde)
-    }
-}
+use super::{
+    super::{
+        builder::MirProcedureBuilder,
+        ir::*,
+        project::MirProject,
+        typetable::*,
+    },
+    TransformError,
+};
 
 /// Transform a [`Module`] into its MIR representation and add all items to the
 /// given [`MirProject`].
