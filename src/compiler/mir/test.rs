@@ -578,7 +578,7 @@ pub mod tests {
         let mut table = StringTable::new();
         let module = compile(text, &mut table);
         let mut project = MirProject::new();
-        let mirs = transform::module_transform(&module, &mut project).unwrap();
+        transform::module_transform(&module, &mut project).unwrap();
 
         let path: Path = to_path(&["main", "test"], &table);
         let def_id = project.find_def(&path).unwrap();
