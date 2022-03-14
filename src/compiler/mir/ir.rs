@@ -150,7 +150,7 @@ impl Procedure {
 
 impl Display for Procedure {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("fn () -> {:?}:\n", self.ret_ty))?;
+        f.write_fmt(format_args!("fn {} () -> {:?}:\n", self.path, self.ret_ty))?;
 
         // Print the arguments
         f.write_str("Arguments: \n")?;

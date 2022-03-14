@@ -65,6 +65,11 @@ impl StringTable {
         }
     }
 
+    pub fn find(&self, s: &str) -> Option<StringId> {
+        let table = self.table.borrow();
+        table.get(s).map(|id| *id)
+    }
+
     /// Given an ID, if it is assigned to a string, then return the associated
     /// string, otherwise, return None.
     pub fn get(&self, id: StringId) -> Result<String, StringTableError> {
