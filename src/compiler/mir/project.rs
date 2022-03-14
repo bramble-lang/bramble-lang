@@ -5,7 +5,7 @@ in MIR form.
 
 use crate::compiler::{ast::{Type, StructDef}, semantics::semanticnode::SemanticContext};
 
-use super::typetable::{TypeTable, TypeId, MirTypeDef, TypeTableError};
+use super::{typetable::{TypeTable, TypeId, MirTypeDef, TypeTableError}, ir::Procedure};
 
 /// Represents everything involved in compiling the current target compilation
 /// unit (executable, library, etc.).
@@ -51,12 +51,23 @@ impl MirProject {
 /// Represents definitions of static items within this project
 /// This includes: functions and static variables and static constants.
 /// This also includes static strings.
-struct Definitions;
+struct StaticDefinitions {
+    defs: Vec<()>,
+}
 
 /// Uniquely identifies an item that exists in the static memory of a program
 /// e.g., a function or static variable.
-struct DefId;
+#[derive(Debug, Copy, Clone, Default)]
+struct DefId(u32);
+
+impl DefId {
+    fn new(id: u32) -> DefId {
+        DefId(id)
+    }
+}
 
 /// A static item, this could be a function or data.  Data in turn can be a
 /// variable or a constant.
-struct StaticItem;
+enum StaticItem{
+    Function(Procedure),
+}

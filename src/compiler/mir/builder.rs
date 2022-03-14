@@ -2,8 +2,7 @@ use log::debug;
 
 use crate::{
     compiler::{
-        ast::{StructDef, Type},
-        semantics::semanticnode::SemanticContext,
+        ast::Type,
         Span,
     },
     StringId,
