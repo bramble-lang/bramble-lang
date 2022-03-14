@@ -62,14 +62,26 @@ impl StaticDefinitions {
         StaticDefinitions::default()
     }
 
+    /// Will add the given procedure to the the StaticDefinitions table and return the
+    /// [`DefId`] that has been assigned to the procedure. If an item with the same 
+    /// canonical path already exists in the table, then overrwrite with the new value
+    /// and return the associated [`DefId`].
+    fn add_fn(&mut self, func: Procedure) -> DefId {
+        todo!()
+    }
+
+    /// Search this table for an item with the given [`Path`]. If one is found, then
+    /// return a reference to the item. Otherwise, return [`None`](`Option::None`).
     fn find(&self, path: &Path) -> Option<&StaticItem> {
         todo!()
     }
 
+    /// Return a reference to the item with the given [`DefId`].
     fn get(&self, id: DefId) -> &StaticItem {
         todo!()
     }
 
+    /// Return a mutable reference to the item with the given [`DefId`].
     fn get_mut(&mut self, id: DefId) -> &mut StaticItem {
         todo!()
     }
