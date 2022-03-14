@@ -1,3 +1,5 @@
+//! Defines the error types which are used by the transformers.
+
 use crate::compiler::mir::{typetable::TypeTableError, project::StaticDefinitionError};
 
 #[derive(Debug)]
