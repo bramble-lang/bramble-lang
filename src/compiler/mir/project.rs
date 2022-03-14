@@ -80,9 +80,9 @@ impl MirProject {
 
 impl Display for MirProject {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for def in &self.static_defs.defs {
+        for (idx, def) in self.static_defs.defs.iter().enumerate() {
             match def {
-                StaticItem::Function(func) => f.write_fmt(format_args!("{}", func))?,
+                StaticItem::Function(func) => f.write_fmt(format_args!("ID: {} ::: {}\n",idx, func))?,
             }
         }
         Ok(())

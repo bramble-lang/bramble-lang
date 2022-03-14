@@ -63,6 +63,25 @@ pub mod tests {
         }
 
         #[test]
+        fn print_mir_fn_call() {
+            let text = "
+        fn test() -> i64 {
+            let x: i64 := test2();
+            return 1 + 2 + 3 + x;
+        }
+        
+        fn test2() -> i64 {
+            return 2;
+        }
+        ";
+            let mut table = StringTable::new();
+            let module = compile(text, &mut table);
+            let mut project = MirProject::new();
+            transform::transform(&module, &mut project).unwrap();
+            println!("{}", project);
+        }
+
+        #[test]
         fn print_mir_for_if_no_else() {
             let text = "
         fn test() -> i64 {
