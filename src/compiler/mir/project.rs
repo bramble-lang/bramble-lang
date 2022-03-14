@@ -24,16 +24,18 @@ struct MirProgram;
 /// This corresponds to the Project component of the Canonical Path
 /// Manages all of the Types and Functions which exist within a single project
 pub struct MirProject {
+    /// Table of all the [`Types`](Type) defined during compilation.
     types: TypeTable,
 
-    defs: StaticDefinitions,
+    /// Table of all static defined values which can be referenced by code.
+    static_defs: StaticDefinitions,
 }
 
 impl MirProject {
     pub fn new() -> MirProject {
         MirProject {
             types: TypeTable::new(),
-            defs: StaticDefinitions::new(),
+            static_defs: StaticDefinitions::new(),
         }
     }
 
@@ -57,15 +59,15 @@ impl MirProject {
     }
 
     pub fn add_func(&mut self, func: Procedure) -> Result<DefId, ()> {
-        self.defs.add_fn(func)
+        self.static_defs.add_fn(func)
     }
 
     pub fn get_def(&self, id: DefId) -> &StaticItem {
-        self.defs.get(id)
+        self.static_defs.get(id)
     }
 
     pub fn find_def(&mut self, path: &Path) -> Option<DefId> {
-        self.defs.find(path)
+        self.static_defs.find(path)
     }
 }
 
