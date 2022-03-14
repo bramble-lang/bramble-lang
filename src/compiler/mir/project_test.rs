@@ -5,7 +5,10 @@ mod static_defs {
     use crate::{
         compiler::{
             ast::{Element, Path, Type},
-            mir::{ir::Procedure, project::{MirProject, StaticItem}},
+            mir::{
+                ir::Procedure,
+                project::{MirProject, StaticItem},
+            },
             Span,
         },
         StringId,
@@ -81,7 +84,12 @@ mod static_defs {
         proj.add_func(func.clone()).unwrap();
 
         // Search for the function
-        let mispath: Path = vec![Element::CanonicalRoot, Element::Id(StringId::new()), Element::Id(StringId::new())].into();
+        let mispath: Path = vec![
+            Element::CanonicalRoot,
+            Element::Id(StringId::new()),
+            Element::Id(StringId::new()),
+        ]
+        .into();
         let actual_id = proj.find_def(&mispath);
 
         assert_eq!(actual_id, None);

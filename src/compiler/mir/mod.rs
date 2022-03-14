@@ -27,9 +27,9 @@ pub mod transform;
 
 // Unit test modules
 #[cfg(test)]
-mod typetable_test;
-#[cfg(test)]
 mod project_test;
+#[cfg(test)]
+mod typetable_test;
 
 pub struct Module {
     funcs: Vec<Procedure>,

@@ -2,14 +2,13 @@ use log::debug;
 
 use crate::{
     compiler::{
-        ast::{Type, Path},
+        ast::{Path, Type},
         Span,
     },
     StringId,
 };
 
 use super::{ir::*, typetable::*};
-
 
 /// Provides a Builder interface for constructing the MIR CFG representation of a
 /// routine. This will keep track of the current [`BasicBlock`] and make sure that
