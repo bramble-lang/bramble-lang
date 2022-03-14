@@ -11,37 +11,6 @@ use crate::{
 
 use super::{ir::*, typetable::*};
 
-/// Manages all of the Types and Functions which exist within a single project
-pub struct MirProject {
-    types: TypeTable,
-}
-
-impl MirProject {
-    pub fn new() -> MirProject {
-        MirProject {
-            types: TypeTable::new(),
-        }
-    }
-
-    /// Searches the [`TypeTable`] for the [`TypeId`] of the given
-    /// [`Type`].
-    pub fn find_type(&self, ty: &Type) -> Option<TypeId> {
-        self.types.find(ty)
-    }
-
-    pub fn get_type(&self, ty: TypeId) -> &MirTypeDef {
-        self.types.get(ty)
-    }
-
-    /// Adds a new Structure definition to the [`MirProject`].
-    pub fn add_struct_def(
-        &mut self,
-        sd: &StructDef<SemanticContext>,
-    ) -> Result<(), TypeTableError> {
-        self.types.add_struct_def(sd)?;
-        Ok(())
-    }
-}
 
 /// Provides a Builder interface for constructing the MIR CFG representation of a
 /// routine. This will keep track of the current [`BasicBlock`] and make sure that

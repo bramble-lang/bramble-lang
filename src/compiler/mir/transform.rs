@@ -20,9 +20,9 @@ use crate::{
 };
 
 use super::{
-    builder::{MirProcedureBuilder, MirProject},
+    builder::MirProcedureBuilder,
     ir::*,
-    typetable::*,
+    typetable::*, project::MirProject,
 };
 
 /// Transform a [`Module`] into its MIR representation and add all items to the
