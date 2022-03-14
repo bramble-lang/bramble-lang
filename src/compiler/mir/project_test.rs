@@ -51,8 +51,20 @@ mod static_defs {
         assert_eq!(actual, &StaticItem::Function(func));
     }
 
+    #[test]
     fn find_func() {
-        // Add a func to the static def table
-        // Find with canonical path
+        let mut proj = MirProject::new();
+
+        // Add a procedure to the table
+        let path: Path = vec![Element::CanonicalRoot, Element::Id(StringId::new())].into();
+        let func = Procedure::new(&path, &Type::Unit, Span::zero());
+
+        // Get the procedure with the given def id
+        let expected_id = proj.add_func(func.clone()).unwrap();
+
+        // Search for the function
+        let actual_id = proj.find_def(&path).unwrap();
+
+        assert_eq!(actual_id, expected_id);
     }
 }

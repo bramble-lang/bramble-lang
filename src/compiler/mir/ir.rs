@@ -131,6 +131,11 @@ impl Procedure {
         TempId::new(id)
     }
 
+    /// Returns a reference to the canonical path of this procedure
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
     /// Returns the number of [`BasicBlocks`](BasicBlock) in the procedure
     pub fn len(&self) -> usize {
         self.blocks.len()

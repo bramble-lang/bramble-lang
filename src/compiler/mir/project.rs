@@ -63,6 +63,10 @@ impl MirProject {
     pub fn get_def(&self, id: DefId) -> &StaticItem {
         self.defs.get(id)
     }
+
+    pub fn find_def(&mut self, path: &Path) -> Option<DefId> {
+        self.defs.find(path)
+    }
 }
 
 /// Represents definitions of static items within this project
@@ -85,15 +89,15 @@ impl StaticDefinitions {
     /// and return the associated [`DefId`].
     fn add_fn(&mut self, func: Procedure) -> Result<DefId, ()> {
         // Search through defs for item with the same canonical path
-        if let Some((idx, def)) = self.defs.iter_mut().enumerate().find(|f| true) {
+        if let Some(idx) = self.find(func.path()) {
             // If Found
             // If the item is not a procedure, then return an error
             // If the item is a procedure, then replace with the new value and return the DefId
-            match def {
+            match &mut self.defs[idx.0 as usize] {
                 StaticItem::Function(def) => {
                     *def = func;
-                    Ok(DefId::new(idx as u32))
-                },
+                    Ok(idx)
+                }
             }
         } else {
             // If _not_ found then add to defs and return the DefId
@@ -104,9 +108,12 @@ impl StaticDefinitions {
     }
 
     /// Search this table for an item with the given [`Path`]. If one is found, then
-    /// return a reference to the item. Otherwise, return [`None`](`Option::None`).
-    fn find(&self, path: &Path) -> Option<&StaticItem> {
-        todo!()
+    /// return the [`DefId`] of the item. Otherwise, return [`None`](`Option::None`).
+    fn find(&self, path: &Path) -> Option<DefId> {
+        let pos = self.defs.iter().position(|i| match i {
+            StaticItem::Function(f) => f.path() == path,
+        })?;
+        Some(DefId::new(pos as u32))
     }
 
     /// Return a reference to the item with the given [`DefId`].
