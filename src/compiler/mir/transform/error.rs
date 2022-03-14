@@ -1,6 +1,6 @@
 //! Defines the error types which are used by the transformers.
 
-use crate::compiler::mir::{typetable::TypeTableError, project::StaticDefinitionError};
+use crate::compiler::mir::{project::StaticDefinitionError, typetable::TypeTableError};
 
 #[derive(Debug)]
 pub enum TransformError {

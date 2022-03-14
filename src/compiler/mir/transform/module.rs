@@ -9,23 +9,13 @@
 
 use log::debug;
 
-use crate::{
-    compiler::{
-        ast::*,
-        semantics::semanticnode::SemanticContext,
-    },
-};
+use crate::compiler::{ast::*, semantics::semanticnode::SemanticContext};
 
-use super::{
-    super::{
-        project::MirProject,
-    },
-    TransformError, function::FuncTransformer,
-};
+use super::{super::project::MirProject, function::FuncTransformer, TransformError};
 
 /// Transform a [`Module`] into its MIR representation and add all items to the
 /// given [`MirProject`].
-pub fn module_transform(
+pub fn transform(
     module: &Module<SemanticContext>,
     project: &mut MirProject,
 ) -> Result<(), TransformError> {
