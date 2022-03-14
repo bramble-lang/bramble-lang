@@ -137,7 +137,7 @@ impl Procedure {
         TempId::new(id)
     }
 
-    /// Returns a reference to the canonical path of this procedure
+    /// Returns a reference to the canonical [`path`](Path) of this procedure
     pub fn path(&self) -> &Path {
         &self.path
     }
