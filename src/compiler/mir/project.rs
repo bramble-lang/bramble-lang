@@ -56,9 +56,8 @@ impl MirProject {
     pub fn add_struct_def(
         &mut self,
         sd: &StructDef<SemanticContext>,
-    ) -> Result<(), TypeTableError> {
-        self.types.add_struct_def(sd)?;
-        Ok(())
+    ) -> Result<TypeId, TypeTableError> {
+        self.types.add_struct_def(sd)
     }
 
     /// Add a function to the table of static definitions. The MIR associated with

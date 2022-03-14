@@ -30,7 +30,7 @@ pub fn module_transform(
     // Add all the types in this module
     module.get_structs().iter().for_each(|sd| {
         if let Item::Struct(sd) = sd {
-            project.add_struct_def(sd).unwrap()
+            project.add_struct_def(sd).unwrap();
         }
     });
 
