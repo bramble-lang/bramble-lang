@@ -1,4 +1,4 @@
-//! This handles the transforming the Bramble AST into its MIR representation.
+//! This handles transforming the Bramble AST into its MIR representation.
 
 mod error;
 mod function;
