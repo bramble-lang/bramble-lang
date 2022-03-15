@@ -42,7 +42,20 @@ pub fn transform(
 
     // Add function declarations so that function calls can safely look up
     // the correct DefId
-    for f in &funcs {
+    add_fn_declarations(project, &funcs)?;
+
+    // Iterate through each function an construct its MIR and then update
+    // it's static definition with the MIR
+    transform_fns(project, &funcs)?;
+
+    Ok(())
+}
+
+fn add_fn_declarations(
+    project: &mut MirProject,
+    funcs: &[&RoutineDef<SemanticContext>],
+) -> Result<(), TransformError> {
+    for f in funcs {
         let p = Procedure::new(
             f.context().canonical_path(),
             f.context().ty(),
@@ -51,9 +64,14 @@ pub fn transform(
         project.add_func(p)?;
     }
 
-    // Iterate through each function an construct its MIR and then update
-    // it's static definition with the MIR
-    for f in &funcs {
+    Ok(())
+}
+
+fn transform_fns(
+    project: &mut MirProject,
+    funcs: &[&RoutineDef<SemanticContext>],
+) -> Result<(), TransformError> {
+    for f in funcs {
         let ft = FuncTransformer::new(f.context().canonical_path(), project);
         let p = ft.transform(f);
         project.add_func(p)?;
