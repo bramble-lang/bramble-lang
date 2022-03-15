@@ -806,12 +806,13 @@ pub mod tests {
             TerminatorKind::CallFn { func, args, reentry } => (func, args, reentry),
             _ => panic!(),
         };
-        match func {
-            Operand::LValue(LValue::Static(target)) => {
-                assert_eq!(*target, expected_target);
-            },
-            _ => panic!(),
-        }
+
+        assert_eq!(*func, Operand::LValue(LValue::Static(expected_target)));
+        assert_eq!(args[0], Operand::Constant(Constant::I64(1)));
+
+        let expected_temp = TempId::new(0);
+        assert_eq!(reentry.0, LValue::Temp(expected_temp));
+        assert_eq!(reentry.1, BasicBlockId::new(1));
     }
 
     fn to_path(v: &[&str], table: &StringTable) -> Path {
