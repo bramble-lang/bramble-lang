@@ -45,7 +45,7 @@ pub fn transform(
     add_fn_declarations(project, &funcs)?;
 
     // Iterate through each function an construct its MIR and then update
-    // it's static definition with the MIR
+    // its static definition with the MIR
     transform_fns(project, &funcs)?;
 
     Ok(())
