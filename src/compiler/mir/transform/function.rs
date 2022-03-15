@@ -140,8 +140,8 @@ impl<'a> FuncTransformer<'a> {
             Expression::CustomType(_, _) => todo!(),
             Expression::Path(_, _) => todo!(),
             Expression::IdentifierDeclare(_, _, _) => todo!(),
-            Expression::RoutineCall(ctx, call, target, args) => {
-                self.fn_call(ctx, *call, target, args)
+            Expression::RoutineCall(ctx, _, target, args) => {
+                self.fn_call(ctx, target, args)
             }
             Expression::StructExpression(_, _, _) => todo!(),
             Expression::If {
@@ -173,7 +173,6 @@ impl<'a> FuncTransformer<'a> {
     fn fn_call(
         &mut self,
         ctx: &SemanticContext,
-        call: RoutineCall,
         target: &Path,
         args: &[Expression<SemanticContext>],
     ) -> Operand {
@@ -193,7 +192,7 @@ impl<'a> FuncTransformer<'a> {
         let reentry_bb = self.mir.new_bb();
 
         // Create a temp location for the result value of the function call
-        let result = self.mir.temp(ctx.ty(), ctx.span());
+        let result = self.mir.temp(func.ret_ty(), ctx.span());
 
         // Create the call Terminator
         self.mir.term_call(

@@ -137,6 +137,11 @@ impl Procedure {
         TempId::new(id)
     }
 
+    /// Gets the return [type](Type) of this function.
+    pub fn ret_ty(&self) -> &Type {
+        &self.ret_ty
+    }
+
     /// Returns a reference to the canonical [`path`](Path) of this procedure
     pub fn path(&self) -> &Path {
         &self.path
