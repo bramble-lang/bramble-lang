@@ -9,7 +9,7 @@
 
 use log::debug;
 
-use crate::compiler::{ast::*, semantics::semanticnode::SemanticContext};
+use crate::compiler::{ast::*, mir::ir::Procedure, semantics::semanticnode::SemanticContext};
 
 use super::{super::project::MirProject, function::FuncTransformer, TransformError};
 
@@ -28,18 +28,53 @@ pub fn transform(
         }
     }
 
-    let funcs = module.get_functions();
-
-    for f in funcs {
-        match f {
-            crate::compiler::ast::Item::Routine(r) => {
-                let ft = FuncTransformer::new(r.context().canonical_path(), project);
-                let p = ft.transform(r);
-                project.add_func(p)?;
+    let funcs: Vec<_> = module
+        .get_functions()
+        .iter()
+        .filter_map(|f| {
+            if let Item::Routine(r) = f {
+                Some(r)
+            } else {
+                None
             }
-            crate::compiler::ast::Item::Struct(_) => todo!(),
-            crate::compiler::ast::Item::Extern(_) => todo!(),
-        }
+        })
+        .collect();
+
+    // Add function declarations so that function calls can safely look up
+    // the correct DefId
+    add_fn_declarations(project, &funcs)?;
+
+    // Iterate through each function an construct its MIR and then update
+    // its static definition with the MIR
+    transform_fns(project, &funcs)?;
+
+    Ok(())
+}
+
+fn add_fn_declarations(
+    project: &mut MirProject,
+    funcs: &[&RoutineDef<SemanticContext>],
+) -> Result<(), TransformError> {
+    for f in funcs {
+        let p = Procedure::new(
+            f.context().canonical_path(),
+            f.context().ty(),
+            f.context().span(),
+        );
+        project.add_func(p)?;
+    }
+
+    Ok(())
+}
+
+fn transform_fns(
+    project: &mut MirProject,
+    funcs: &[&RoutineDef<SemanticContext>],
+) -> Result<(), TransformError> {
+    for f in funcs {
+        let ft = FuncTransformer::new(f.context().canonical_path(), project);
+        let p = ft.transform(f);
+        project.add_func(p)?;
     }
 
     Ok(())

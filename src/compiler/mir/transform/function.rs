@@ -9,6 +9,7 @@ use log::debug;
 use crate::{
     compiler::{
         ast::{self, *},
+        mir::project::StaticItem,
         semantics::semanticnode::SemanticContext,
         source::Offset,
         Span,
@@ -139,7 +140,7 @@ impl<'a> FuncTransformer<'a> {
             Expression::CustomType(_, _) => todo!(),
             Expression::Path(_, _) => todo!(),
             Expression::IdentifierDeclare(_, _, _) => todo!(),
-            Expression::RoutineCall(ctx, call, path, args) => self.fn_call(ctx, *call, path, args),
+            Expression::RoutineCall(ctx, _, target, args) => self.fn_call(ctx, target, args),
             Expression::StructExpression(_, _, _) => todo!(),
             Expression::If {
                 context,
@@ -170,17 +171,40 @@ impl<'a> FuncTransformer<'a> {
     fn fn_call(
         &mut self,
         ctx: &SemanticContext,
-        call: RoutineCall,
-        path: &Path,
+        target: &Path,
         args: &[Expression<SemanticContext>],
     ) -> Operand {
         // Look up the MIR Function ID for the target
-        // Get the TypeID for the return type of the called function
+        let fn_id = self
+            .project
+            .find_def(target)
+            .expect("Target function not found");
+
+        // Look up the declaration of the target function
+        let StaticItem::Function(func) = self.project.get_def(fn_id);
+
         // Compute the value of each argument
+        let args: Vec<_> = args.iter().map(|a| self.expression(a)).collect();
+
         // Create a basic block that the function will return into
+        let reentry_bb = self.mir.new_bb();
+
+        // Create a temp location for the result value of the function call
+        let result = self.mir.temp(func.ret_ty(), ctx.span());
+
         // Create the call Terminator
+        self.mir.term_call(
+            Operand::LValue(LValue::Static(fn_id)),
+            &args,
+            (LValue::Temp(result), reentry_bb),
+            ctx.span(),
+        );
+
         // Change the current basic block to continue adding statements after the function call returns
-        todo!()
+        self.mir.set_bb(reentry_bb);
+
+        // return an operand that has the result of the function call (if any)
+        Operand::LValue(LValue::Temp(result))
     }
 
     /// Creates a member access operand which can be used in a statement or terminator

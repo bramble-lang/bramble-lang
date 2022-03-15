@@ -11,7 +11,10 @@ use crate::{
     StringId,
 };
 
-use super::typetable::{FieldId, TypeId};
+use super::{
+    project::DefId,
+    typetable::{FieldId, TypeId},
+};
 
 const ROOT_SCOPE: usize = 0;
 
@@ -135,6 +138,11 @@ impl Procedure {
         self.temps.push(td);
         let id = self.temps.len() - 1;
         TempId::new(id)
+    }
+
+    /// Gets the return [type](Type) of this function.
+    pub fn ret_ty(&self) -> &Type {
+        &self.ret_ty
     }
 
     /// Returns a reference to the canonical [`path`](Path) of this procedure
@@ -354,6 +362,10 @@ impl TempDecl {
             span,
         }
     }
+
+    pub fn ty(&self) -> &Type {
+        &self.ty
+    }
 }
 
 /// Basic Block
@@ -482,6 +494,9 @@ impl Display for StatementKind {
 /// A physical location in memory where a value can be stored
 #[derive(Debug, PartialEq, Clone)]
 pub enum LValue {
+    /// A static location in the program's memory space
+    Static(DefId),
+
     /// A user defined variable.
     Var(VarId),
 
@@ -499,6 +514,7 @@ pub enum LValue {
 impl Display for LValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let text = match self {
+            LValue::Static(s) => format!("Static({})", s),
             LValue::Var(v) => format!("{}", v),
             LValue::Temp(t) => format!("{}", t),
             LValue::Access(lv, acc) => format!("{}{}", lv, acc),
@@ -681,7 +697,10 @@ impl Display for TerminatorKind {
                 func,
                 args,
                 reentry,
-            } => format!("call {}", func),
+            } => format!(
+                "{} := call {} ({:?}); goto {}",
+                reentry.0, func, args, reentry.1
+            ),
             TerminatorKind::Return => "return".into(),
             TerminatorKind::GoTo { target } => format!("goto {}", target),
             TerminatorKind::CondGoTo { cond, tru, fls } => {
