@@ -314,7 +314,9 @@ impl MirProcedureBuilder {
             func, args, reentry
         );
 
-        let cid = self.current_bb.unwrap();
+        let cid = self
+            .current_bb
+            .expect("Cannot set terminator when there is not current BasicBlock");
         let bb = self.proc.get_bb_mut(cid);
         bb.set_terminator(Terminator::new(
             TerminatorKind::CallFn {
