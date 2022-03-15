@@ -40,14 +40,7 @@ pub fn transform(
         })
         .collect();
 
-    for e in externs {
-        let p = Procedure::new_extern(
-            e.context().canonical_path(),
-            e.get_return_type(),
-            e.context().span(),
-        );
-        project.add_func(p)?;
-    }
+    add_extern_declarations(project, &externs)?;
 
     let funcs: Vec<_> = module
         .get_functions()
@@ -68,6 +61,22 @@ pub fn transform(
     // Iterate through each function an construct its MIR and then update
     // its static definition with the MIR
     transform_fns(project, &funcs)?;
+
+    Ok(())
+}
+
+fn add_extern_declarations(
+    project: &mut MirProject,
+    externs: &[&Extern<SemanticContext>],
+) -> Result<(), TransformError> {
+    for e in externs {
+        let p = Procedure::new_extern(
+            e.context().canonical_path(),
+            e.get_return_type(),
+            e.context().span(),
+        );
+        project.add_func(p)?;
+    }
 
     Ok(())
 }
