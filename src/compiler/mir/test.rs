@@ -793,17 +793,21 @@ pub mod tests {
         let path: Path = to_path(&["main", "test"], &table);
         let def_id = project.find_def(&path).unwrap();
         let StaticItem::Function(mir) = project.get_def(def_id);
-        assert_eq!(mir.len(), 2);  // There should be 2: the first BB calls the func and the second is the reentry BB
+        assert_eq!(mir.len(), 2); // There should be 2: the first BB calls the func and the second is the reentry BB
         assert_eq!(mir.path(), &path);
-       
+
         // Get the Defid of the expected target
         let path: Path = to_path(&["main", "test2"], &table);
         let expected_target = project.find_def(&path).unwrap();
 
         // Check the BB terminator
-        let term =  mir.get_bb(BasicBlockId::new(0)).get_term().unwrap();
+        let term = mir.get_bb(BasicBlockId::new(0)).get_term().unwrap();
         let (func, args, reentry) = match term.kind() {
-            TerminatorKind::CallFn { func, args, reentry } => (func, args, reentry),
+            TerminatorKind::CallFn {
+                func,
+                args,
+                reentry,
+            } => (func, args, reentry),
             _ => panic!(),
         };
 
@@ -840,17 +844,21 @@ pub mod tests {
         let path: Path = to_path(&["main", "test"], &table);
         let def_id = project.find_def(&path).unwrap();
         let StaticItem::Function(mir) = project.get_def(def_id);
-        assert_eq!(mir.len(), 2);  // There should be 2: the first BB calls the func and the second is the reentry BB
+        assert_eq!(mir.len(), 2); // There should be 2: the first BB calls the func and the second is the reentry BB
         assert_eq!(mir.path(), &path);
-       
+
         // Get the Defid of the expected target
         let path: Path = to_path(&["main", "test2"], &table);
         let expected_target = project.find_def(&path).unwrap();
 
         // Check the BB terminator
-        let term =  mir.get_bb(BasicBlockId::new(0)).get_term().unwrap();
+        let term = mir.get_bb(BasicBlockId::new(0)).get_term().unwrap();
         let (func, args, reentry) = match term.kind() {
-            TerminatorKind::CallFn { func, args, reentry } => (func, args, reentry),
+            TerminatorKind::CallFn {
+                func,
+                args,
+                reentry,
+            } => (func, args, reentry),
             _ => panic!(),
         };
 
