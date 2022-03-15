@@ -354,6 +354,10 @@ impl TempDecl {
             span,
         }
     }
+
+    pub fn ty(&self) -> &Type {
+        &self.ty
+    }
 }
 
 /// Basic Block
