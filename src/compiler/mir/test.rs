@@ -875,6 +875,48 @@ pub mod tests {
         assert_eq!(ret_val.ty(), &Type::Unit);
     }
 
+    #[test]
+    fn call_recursive_function() {
+        let text = "
+        fn test() -> i64 {
+            return test();
+        }
+        ";
+        let mut table = StringTable::new();
+        let module = compile(text, &mut table);
+
+        let mut project = MirProject::new();
+        transform::transform(&module, &mut project).unwrap();
+
+        let path: Path = to_path(&["main", "test"], &table);
+        let expected_target = project.find_def(&path).unwrap();
+        let StaticItem::Function(mir) = project.get_def(expected_target);
+        assert_eq!(mir.len(), 2); // There should be 2: the first BB calls the func and the second is the reentry BB
+        assert_eq!(mir.path(), &path);
+
+        // Check the BB terminator
+        let term = mir.get_bb(BasicBlockId::new(0)).get_term().unwrap();
+        let (func, args, reentry) = match term.kind() {
+            TerminatorKind::CallFn {
+                func,
+                args,
+                reentry,
+            } => (func, args, reentry),
+            _ => panic!(),
+        };
+
+        assert_eq!(*func, Operand::LValue(LValue::Static(expected_target)));
+        assert_eq!(args.len(), 0);
+
+        let expected_temp = TempId::new(0);
+        assert_eq!(reentry.0, LValue::Temp(expected_temp));
+        assert_eq!(reentry.1, BasicBlockId::new(1));
+
+        // Check temp type
+        let ret_val = mir.get_temp(expected_temp);
+        assert_eq!(ret_val.ty(), &Type::I64);
+    }
+
     fn to_path(v: &[&str], table: &StringTable) -> Path {
         let mut path = vec![Element::CanonicalRoot];
 
