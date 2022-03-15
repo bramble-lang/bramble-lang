@@ -41,7 +41,7 @@ pub fn transform(
         .collect();
 
     for e in externs {
-        let p = Procedure::new(
+        let p = Procedure::new_extern(
             e.context().canonical_path(),
             e.get_return_type(),
             e.context().span(),
