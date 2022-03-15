@@ -123,7 +123,7 @@ impl<'ctx> IrGen<'ctx> {
                 RelocMode::Default,
                 CodeModel::Default,
             )
-            .ok_or_else(|| "Could not create a target machine for compilation")?;
+            .ok_or("Could not create a target machine for compilation")?;
         let data = machine.get_target_data();
 
         // Configure the module
@@ -167,10 +167,10 @@ impl<'ctx> IrGen<'ctx> {
 
         self.add_mod_items(m);
 
-        match Self::find_distinct_user_main(m, user_main)? {
-            Some(main_path) => self.configure_user_main(&main_path),
-            None => (),
+        if let Some(main_path) = Self::find_distinct_user_main(m, user_main)? {
+            self.configure_user_main(&main_path)
         }
+
         match m.to_llvm_ir(self) {
             None => (),
             Some(_) => panic!("Expected None when compiling a Module"),
@@ -241,7 +241,8 @@ impl<'ctx> IrGen<'ctx> {
         let user_main = self
             .module
             .get_function(&user_main_name)
-            .expect(&format!("Could not find {}", user_main_name));
+            .unwrap_or_else(|| panic!("Could not find {}", user_main_name));
+
         let status = self
             .builder
             .build_call(user_main, &[], "user_main")
@@ -333,7 +334,7 @@ impl<'ctx> IrGen<'ctx> {
             .canonical_path()
             .to_label(self.source_map, self.string_table);
         self.add_fn_decl(
-            &label,
+            label,
             &params,
             ex.has_varargs,
             ex.get_return_type(),
@@ -1177,7 +1178,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                     el_ptr.into()
                 } else {
                     let event = llvm.new_event(self.span());
-                    let ld = llvm.builder.build_load(el_ptr, "").into();
+                    let ld = llvm.builder.build_load(el_ptr, "");
                     llvm.record(event, &ld);
                     ld
                 };
@@ -1284,9 +1285,9 @@ impl ast::Expression<SemanticContext> {
             }
             _ => panic!("Illegal casting operation"),
         };
-        let ir = op.into();
-        llvm.record(event, &ir);
-        ir
+
+        llvm.record(event, &op);
+        op
     }
 }
 
