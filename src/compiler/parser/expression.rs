@@ -709,12 +709,10 @@ impl<'a> Parser<'a> {
                             None => {
                                 if path.len() > 1 {
                                     Ok(Some(Expression::Path(call_ctx, path)))
+                                } else if let Element::Id(sid) = path.last().unwrap() {
+                                    Ok(Some(Expression::Identifier(call_ctx, *sid)))
                                 } else {
-                                    if let Element::Id(sid) = path.last().unwrap() {
-                                        Ok(Some(Expression::Identifier(call_ctx, *sid)))
-                                    } else {
-                                        err!(call_ctx.span(), ParserError::PathExpectedIdentifier)
-                                    }
+                                    err!(call_ctx.span(), ParserError::PathExpectedIdentifier)
                                 }
                             }
                         },
