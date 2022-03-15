@@ -773,6 +773,47 @@ pub mod tests {
         assert!(def_id != def2_id);
     }
 
+    #[test]
+    fn call_function() {
+        let text = "
+        fn test() -> i64 {
+            return test2(1);
+        }
+
+        fn test2(x: i64) -> i64 {
+            return x;
+        }
+        ";
+        let mut table = StringTable::new();
+        let module = compile(text, &mut table);
+
+        let mut project = MirProject::new();
+        transform::transform(&module, &mut project).unwrap();
+
+        let path: Path = to_path(&["main", "test"], &table);
+        let def_id = project.find_def(&path).unwrap();
+        let StaticItem::Function(mir) = project.get_def(def_id);
+        assert_eq!(mir.len(), 2);  // There should be 2: the first BB calls the func and the second is the reentry BB
+        assert_eq!(mir.path(), &path);
+       
+        // Get the Defid of the expected target
+        let path: Path = to_path(&["main", "test2"], &table);
+        let expected_target = project.find_def(&path).unwrap();
+
+        // Check the BB terminator
+        let term =  mir.get_bb(BasicBlockId::new(0)).get_term().unwrap();
+        let (func, args, reentry) = match term.kind() {
+            TerminatorKind::CallFn { func, args, reentry } => (func, args, reentry),
+            _ => panic!(),
+        };
+        match func {
+            Operand::LValue(LValue::Static(target)) => {
+                assert_eq!(*target, expected_target);
+            },
+            _ => panic!(),
+        }
+    }
+
     fn to_path(v: &[&str], table: &StringTable) -> Path {
         let mut path = vec![Element::CanonicalRoot];
 
