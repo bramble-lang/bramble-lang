@@ -180,7 +180,7 @@ impl<'a> FuncTransformer<'a> {
             .find_def(target)
             .expect("Target function not found");
 
-        // Get the TypeID for the return type of the called function
+        // Look up the declaration of the target function
         let StaticItem::Function(func) = self.project.get_def(fn_id);
 
         // Compute the value of each argument
