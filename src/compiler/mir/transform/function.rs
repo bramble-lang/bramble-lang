@@ -178,7 +178,7 @@ impl<'a> FuncTransformer<'a> {
         let fn_id = self
             .project
             .find_def(target)
-            .expect("Target function not found");
+            .unwrap_or_else(|| panic!("Target function not found: {}", target));
 
         // Look up the declaration of the target function
         let StaticItem::Function(func) = self.project.get_def(fn_id);

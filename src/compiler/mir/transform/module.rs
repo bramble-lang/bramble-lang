@@ -28,6 +28,27 @@ pub fn transform(
         }
     }
 
+    let externs: Vec<_> = module
+        .get_externs()
+        .iter()
+        .filter_map(|e| {
+            if let Item::Extern(e) = e {
+                Some(e)
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    for e in externs {
+        let p = Procedure::new(
+            e.context().canonical_path(),
+            e.get_return_type(),
+            e.context().span(),
+        );
+        project.add_func(p)?;
+    }
+
     let funcs: Vec<_> = module
         .get_functions()
         .iter()

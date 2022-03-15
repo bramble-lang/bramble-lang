@@ -8,7 +8,7 @@ pub mod tests {
             mir::{ir::*, project::*, transform},
             parser::Parser,
             semantics::semanticnode::SemanticContext,
-            CompilerError, Lexer, SourceMap,
+            CompilerDisplay, CompilerError, Lexer, SourceMap,
         },
         resolve_types, StringTable,
     };
@@ -33,8 +33,18 @@ pub mod tests {
             .unwrap();
 
         let parser = Parser::new(&logger);
-        let ast = parser.parse(main, &tokens).unwrap().unwrap();
-        resolve_types(&ast, main_mod, main_fn, &logger).unwrap()
+        let ast = match parser.parse(main, &tokens) {
+            Ok(ast) => ast.unwrap(),
+            Err(err) => {
+                panic!("{}", err.fmt(&sm, table).unwrap());
+            }
+        };
+        match resolve_types(&ast, main_mod, main_fn, &logger) {
+            Ok(module) => module,
+            Err(err) => {
+                panic!("{}", err.fmt(&sm, table).unwrap());
+            }
+        }
     }
 
     /// These tests will take small Bramble programs and print their
@@ -72,6 +82,23 @@ pub mod tests {
         
         fn test2() -> i64 {
             return 2;
+        }
+        ";
+            let mut table = StringTable::new();
+            let module = compile(text, &mut table);
+            let mut project = MirProject::new();
+            transform::transform(&module, &mut project).unwrap();
+            println!("{}", project);
+        }
+
+        #[test]
+        fn print_mir_extern() {
+            let text = "
+        extern fn printf(x: i64, ...);
+
+        fn test() {
+            printf(1, 2, 3);
+            return;
         }
         ";
             let mut table = StringTable::new();
