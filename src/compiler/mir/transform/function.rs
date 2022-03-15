@@ -140,9 +140,7 @@ impl<'a> FuncTransformer<'a> {
             Expression::CustomType(_, _) => todo!(),
             Expression::Path(_, _) => todo!(),
             Expression::IdentifierDeclare(_, _, _) => todo!(),
-            Expression::RoutineCall(ctx, _, target, args) => {
-                self.fn_call(ctx, target, args)
-            }
+            Expression::RoutineCall(ctx, _, target, args) => self.fn_call(ctx, target, args),
             Expression::StructExpression(_, _, _) => todo!(),
             Expression::If {
                 context,

@@ -11,7 +11,10 @@ use crate::{
     StringId,
 };
 
-use super::{typetable::{FieldId, TypeId}, project::DefId};
+use super::{
+    project::DefId,
+    typetable::{FieldId, TypeId},
+};
 
 const ROOT_SCOPE: usize = 0;
 
@@ -694,7 +697,10 @@ impl Display for TerminatorKind {
                 func,
                 args,
                 reentry,
-            } => format!("{} := call {} ({:?}); goto {}", reentry.0, func, args, reentry.1),
+            } => format!(
+                "{} := call {} ({:?}); goto {}",
+                reentry.0, func, args, reentry.1
+            ),
             TerminatorKind::Return => "return".into(),
             TerminatorKind::GoTo { target } => format!("goto {}", target),
             TerminatorKind::CondGoTo { cond, tru, fls } => {

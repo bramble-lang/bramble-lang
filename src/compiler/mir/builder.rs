@@ -309,7 +309,10 @@ impl MirProcedureBuilder {
         reentry: (LValue, BasicBlockId),
         span: Span,
     ) {
-        debug!("Function Call: call({:?}) with {:?} returning to {:?}", func, args, reentry);
+        debug!(
+            "Function Call: call({:?}) with {:?} returning to {:?}",
+            func, args, reentry
+        );
 
         let cid = self.current_bb.unwrap();
         let bb = self.proc.get_bb_mut(cid);
