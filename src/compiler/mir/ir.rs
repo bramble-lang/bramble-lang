@@ -811,3 +811,50 @@ impl Display for UnOp {
         f.write_str(txt)
     }
 }
+
+/// Stores the topology of a function's scope tree.
+struct ScopeTree {
+    current: ScopeId,
+    scopes: Vec<Option<ScopeId>>,
+}
+
+impl ScopeTree {
+    /// Returns the parent of the given [`ScopeId`]. If the given scope is the root
+    /// scope then it will return [`None`](Option::None).
+    pub fn parent_of(&self, id: ScopeId) -> Option<ScopeId> {
+        self.scopes[id.0]
+    }
+
+    /// Returns the [`ScopeId`] of the current scope. All variables added to the stack
+    /// should be assigned this value as their scope.
+    pub fn get_current(&self) -> ScopeId {
+        self.current
+    }
+
+    /// Creates a new [`ScopeId`] that is the child of the current scope
+    /// and sets the new scope as the current scope.
+    pub fn start_scope(&mut self) {
+        let id = self.scopes.len();
+        self.scopes.push(Some(self.current));
+        self.current = ScopeId(id);
+    }
+
+    /// This will move to the parent of the current scope.  Unless this is
+    /// the root scope, in which case this will fault because you should never
+    /// attempt to close the parent scope.
+    pub fn close_scope(&mut self) {
+        match self.scopes[self.current.0] {
+            Some(parent) => self.current = parent,
+            None => panic!("Attempting to exit the root scope of this procedure.  This indicates a bug in the MIR generation."),
+        }
+    }
+}
+
+impl Default for ScopeTree {
+    fn default() -> Self {
+        Self {
+            current: ScopeId(0),
+            scopes: vec![None],
+        }
+    }
+}
