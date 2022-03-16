@@ -814,7 +814,6 @@ impl Display for UnOp {
 
 /// Stores the topology of a function's scope tree.
 struct ScopeTree {
-    current: ScopeId,
     scopes: Vec<Option<ScopeId>>,
 }
 
@@ -825,36 +824,44 @@ impl ScopeTree {
         self.scopes[id.0]
     }
 
-    /// Returns the [`ScopeId`] of the current scope. All variables added to the stack
-    /// should be assigned this value as their scope.
-    pub fn get_current(&self) -> ScopeId {
-        self.current
-    }
-
-    /// Creates a new [`ScopeId`] that is the child of the current scope
-    /// and sets the new scope as the current scope.
-    pub fn start_scope(&mut self) {
+    /// Creates a new scope as a child of the given `parent` scope. Returns the
+    /// [`ScopeId`] of the new scope.
+    pub fn new_scope(&mut self, parent: ScopeId) -> ScopeId {
         let id = self.scopes.len();
-        self.scopes.push(Some(self.current));
-        self.current = ScopeId(id);
+        self.scopes.push(Some(parent));
+        ScopeId(id)
     }
 
-    /// This will move to the parent of the current scope.  Unless this is
-    /// the root scope, in which case this will fault because you should never
-    /// attempt to close the parent scope.
-    pub fn close_scope(&mut self) {
-        match self.scopes[self.current.0] {
-            Some(parent) => self.current = parent,
-            None => panic!("Attempting to exit the root scope of this procedure.  This indicates a bug in the MIR generation."),
+    /// Returns an iterator over the scopes from the `start` scope through its ancestors
+    /// up to the root scope.
+    pub fn iter_from(&self, start: ScopeId) -> ScopeIterator {
+        assert!(start.0 < self.scopes.len());
+        ScopeIterator {
+            next: Some(start),
+            tree: self,
         }
     }
 }
 
 impl Default for ScopeTree {
     fn default() -> Self {
-        Self {
-            current: ScopeId(0),
-            scopes: vec![None],
+        Self { scopes: vec![None] } // The root scope as no parent
+    }
+}
+
+struct ScopeIterator<'a> {
+    next: Option<ScopeId>,
+    tree: &'a ScopeTree,
+}
+
+impl<'a> Iterator for ScopeIterator<'a> {
+    type Item = ScopeId;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let s = self.next;
+        if let Some(id) = s {
+            self.next = self.tree.parent_of(id);
         }
+        s
     }
 }
