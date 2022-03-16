@@ -361,13 +361,14 @@ impl<'a> FuncTransformer<'a> {
 
         self.mir.set_bb(then_bb);
         let val = self.expression(then_block);
-        result.map(|t| {
+        if let Some(t) = result {
             self.mir.store(
                 LValue::Temp(t),
                 RValue::Use(val),
                 then_block.context().span(),
             )
-        });
+        }
+
         self.mir
             .term_goto(merge_bb, span_end(then_block.context().span()));
 
@@ -375,13 +376,15 @@ impl<'a> FuncTransformer<'a> {
         if let Some((else_block, else_bb)) = else_bb {
             self.mir.set_bb(else_bb);
             let val = self.expression(else_block);
-            result.map(|t| {
+
+            if let Some(t) = result {
                 self.mir.store(
                     LValue::Temp(t),
                     RValue::Use(val),
                     else_block.context().span(),
                 )
-            });
+            }
+
             self.mir
                 .term_goto(merge_bb, span_end(else_block.context().span()));
         }
