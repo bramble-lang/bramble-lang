@@ -30,6 +30,8 @@ pub struct Procedure {
     ret_ty: Type,
     /// The argument list for the function
     args: Vec<ArgDecl>,
+    /// Does the function have variadic arguments
+    has_varargs: bool,
     /// The set of all user declared variables from within this function
     vars: Vec<VarDecl>,
     /// The set of all temporary variables created by the MIR compiler
@@ -52,6 +54,7 @@ impl Procedure {
             blocks: vec![],
             ret_ty: ret_ty.clone(),
             args: vec![],
+            has_varargs: false,
             vars: vec![],
             temps: vec![],
             span,
@@ -60,12 +63,13 @@ impl Procedure {
 
     /// Creates a new MIR procedure. When created this will not have any
     /// basic blocks or arguments.
-    pub fn new_extern(path: &Path, ret_ty: &Type, span: Span) -> Procedure {
+    pub fn new_extern(path: &Path, has_varargs: bool, ret_ty: &Type, span: Span) -> Procedure {
         Procedure {
             path: path.clone(),
             blocks: vec![],
             ret_ty: ret_ty.clone(),
             args: vec![],
+            has_varargs,
             vars: vec![],
             temps: vec![],
             span,
