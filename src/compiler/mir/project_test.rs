@@ -21,7 +21,7 @@ mod static_defs {
 
         // Add a procedure to the table
         let path: Path = vec![Element::CanonicalRoot, Element::Id(StringId::new())].into();
-        let func = Procedure::new(&path, &Type::Unit, Span::zero());
+        let func = Procedure::new(&path, vec![], &Type::Unit, Span::zero());
 
         // Get the procedure with the given def id
         let id = proj.add_func(func.clone()).unwrap();
@@ -38,7 +38,7 @@ mod static_defs {
 
         // Add a procedure to the table
         let path: Path = vec![Element::CanonicalRoot, Element::Id(StringId::new())].into();
-        let mut func = Procedure::new(&path, &Type::Unit, Span::zero());
+        let mut func = Procedure::new(&path, vec![], &Type::Unit, Span::zero());
 
         // Get the procedure with the given def id
         let id = proj.add_func(func.clone()).unwrap();
@@ -61,7 +61,7 @@ mod static_defs {
 
         // Add a procedure to the table
         let path: Path = vec![Element::CanonicalRoot, Element::Id(StringId::new())].into();
-        let func = Procedure::new(&path, &Type::Unit, Span::zero());
+        let func = Procedure::new(&path, vec![], &Type::Unit, Span::zero());
 
         // Get the procedure with the given def id
         let expected_id = proj.add_func(func.clone()).unwrap();
@@ -78,7 +78,7 @@ mod static_defs {
 
         // Add a procedure to the table
         let path: Path = vec![Element::CanonicalRoot, Element::Id(StringId::new())].into();
-        let func = Procedure::new(&path, &Type::Unit, Span::zero());
+        let func = Procedure::new(&path, vec![], &Type::Unit, Span::zero());
 
         // Get the procedure with the given def id
         proj.add_func(func.clone()).unwrap();

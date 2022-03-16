@@ -99,8 +99,16 @@ fn add_fn_declarations(
     funcs: &[&RoutineDef<SemanticContext>],
 ) -> Result<(), TransformError> {
     for f in funcs {
+        // convert args into MIR args
+        let args: Vec<_> = f
+            .params
+            .iter()
+            .map(|p| ArgDecl::new(p.name, p.context().ty(), p.context().span()))
+            .collect();
+
         let p = Procedure::new(
             f.context().canonical_path(),
+            args,
             f.context().ty(),
             f.context().span(),
         );

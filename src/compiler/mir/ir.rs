@@ -43,13 +43,13 @@ pub struct Procedure {
 impl Procedure {
     /// Creates a new MIR procedure. When created this will not have any
     /// basic blocks or arguments.
-    pub fn new(path: &Path, ret_ty: &Type, span: Span) -> Procedure {
+    pub fn new(path: &Path, args: Vec<ArgDecl>, ret_ty: &Type, span: Span) -> Procedure {
         assert!(
             path.is_canonical(),
             "All paths must be canonical to be used in MIR"
         );
 
-        Procedure {
+        let mut p = Procedure {
             path: path.clone(),
             blocks: vec![],
             ret_ty: ret_ty.clone(),
@@ -58,7 +58,16 @@ impl Procedure {
             vars: vec![],
             temps: vec![],
             span,
+        };
+
+        // For each argument, add it to the local variable stack
+        for arg in &args {
+            p.add_var(arg.name, false, &arg.ty, ScopeId::new(0), arg.span);
         }
+
+        p.args = args;
+
+        p
     }
 
     /// Creates a new MIR procedure. When created this will not have any
