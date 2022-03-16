@@ -847,7 +847,8 @@ pub mod tests {
 
         // Check temp type
         let ret_val = mir.get_temp(expected_temp);
-        assert_eq!(ret_val.ty(), &Type::I64);
+        let expected_ty = project.find_type(&Type::I64).unwrap();
+        assert_eq!(ret_val.ty(), expected_ty);
     }
 
     #[test]
@@ -899,7 +900,8 @@ pub mod tests {
 
         // Check temp type
         let ret_val = mir.get_temp(expected_temp);
-        assert_eq!(ret_val.ty(), &Type::Unit);
+        let expected_ty = project.find_type(&Type::Unit).unwrap();
+        assert_eq!(ret_val.ty(), expected_ty);
     }
 
     #[test]
@@ -941,7 +943,8 @@ pub mod tests {
 
         // Check temp type
         let ret_val = mir.get_temp(expected_temp);
-        assert_eq!(ret_val.ty(), &Type::I64);
+        let expected_ty = project.find_type(&Type::I64).unwrap();
+        assert_eq!(ret_val.ty(), expected_ty);
     }
 
     #[test]
@@ -989,7 +992,8 @@ pub mod tests {
 
         // Check temp type
         let ret_val = mir.get_temp(expected_temp);
-        assert_eq!(ret_val.ty(), &Type::I64);
+        let expected_ty = project.find_type(&Type::I64).unwrap();
+        assert_eq!(ret_val.ty(), expected_ty);
     }
 
     #[test]
@@ -1041,7 +1045,8 @@ pub mod tests {
 
         // Check temp type
         let ret_val = mir.get_temp(expected_temp);
-        assert_eq!(ret_val.ty(), &Type::I64);
+        let expected_ty = project.find_type(&Type::I64).unwrap();
+        assert_eq!(ret_val.ty(), expected_ty);
     }
 
     fn to_path(v: &[&str], table: &StringTable) -> Path {

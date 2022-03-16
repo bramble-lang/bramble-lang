@@ -86,11 +86,15 @@ fn add_extern_declarations(
             })
             .collect();
 
+        let ret_ty = project
+            .find_type(e.get_return_type())
+            .expect("Cannot find return type");
+
         let p = Procedure::new_extern(
             e.context().canonical_path(),
             args,
             e.has_varargs,
-            e.get_return_type(),
+            ret_ty,
             e.context().span(),
         );
         project.add_func(p)?;
@@ -116,10 +120,14 @@ fn add_fn_declarations(
             })
             .collect();
 
+        let ret_ty = project
+            .find_type(f.context().ty())
+            .expect("Cannot find return type");
+
         let p = Procedure::new(
             f.context().canonical_path(),
             args,
-            f.context().ty(),
+            ret_ty,
             f.context().span(),
         );
         project.add_func(p)?;

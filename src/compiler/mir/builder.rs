@@ -23,9 +23,9 @@ pub struct MirProcedureBuilder {
 impl MirProcedureBuilder {
     /// Creates a new [`MirBuilder`], which is used to construct the MIR representation
     /// of a function.
-    pub fn new(path: &Path) -> MirProcedureBuilder {
+    pub fn new(path: &Path, ret_ty: TypeId) -> MirProcedureBuilder {
         MirProcedureBuilder {
-            proc: Procedure::new(path, vec![], &Type::Unit, Span::zero()),
+            proc: Procedure::new(path, vec![], ret_ty, Span::zero()),
             current_bb: None,
         }
     }
@@ -127,12 +127,12 @@ impl MirProcedureBuilder {
     }
 
     /// Add a new temporary variable to this function's stack
-    pub fn temp(&mut self, ty: &Type, span: Span) -> TempId {
+    pub fn temp(&mut self, ty: TypeId, span: Span) -> TempId {
         self.proc.add_temp(ty, span)
     }
 
     /// Create a new temporary variable and store the [`RValue`] in it.
-    pub fn temp_store(&mut self, rv: RValue, ty: &Type, span: Span) -> Operand {
+    pub fn temp_store(&mut self, rv: RValue, ty: TypeId, span: Span) -> Operand {
         let tv = LValue::Temp(self.temp(ty, span));
         debug!("Temp store: {:?} := {:?}", tv, rv);
 

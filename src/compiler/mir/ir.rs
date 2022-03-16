@@ -27,7 +27,7 @@ pub struct Procedure {
     /// The set of basic blocks that constitute this procedure
     blocks: Vec<BasicBlock>,
     /// The return type of this function
-    ret_ty: Type,
+    ret_ty: TypeId,
     /// The argument list for the function
     args: Vec<ArgDecl>,
     /// Does the function have variadic arguments
@@ -43,7 +43,7 @@ pub struct Procedure {
 impl Procedure {
     /// Creates a new MIR procedure. When created this will not have any
     /// basic blocks or arguments.
-    pub fn new(path: &Path, args: Vec<ArgDecl>, ret_ty: &Type, span: Span) -> Procedure {
+    pub fn new(path: &Path, args: Vec<ArgDecl>, ret_ty: TypeId, span: Span) -> Procedure {
         assert!(
             path.is_canonical(),
             "All paths must be canonical to be used in MIR"
@@ -52,7 +52,7 @@ impl Procedure {
         let mut p = Procedure {
             path: path.clone(),
             blocks: vec![],
-            ret_ty: ret_ty.clone(),
+            ret_ty,
             args: vec![],
             has_varargs: false,
             vars: vec![],
@@ -76,13 +76,13 @@ impl Procedure {
         path: &Path,
         args: Vec<ArgDecl>,
         has_varargs: bool,
-        ret_ty: &Type,
+        ret_ty: TypeId,
         span: Span,
     ) -> Procedure {
         Procedure {
             path: path.clone(),
             blocks: vec![],
-            ret_ty: ret_ty.clone(),
+            ret_ty,
             args,
             has_varargs,
             vars: vec![],
@@ -166,7 +166,7 @@ impl Procedure {
     }
 
     /// Add a new temporary variable to the procedures stack
-    pub fn add_temp(&mut self, ty: &Type, span: Span) -> TempId {
+    pub fn add_temp(&mut self, ty: TypeId, span: Span) -> TempId {
         let td = TempDecl::new(ty, span);
         self.temps.push(td);
         let id = self.temps.len() - 1;
@@ -179,8 +179,8 @@ impl Procedure {
     }
 
     /// Gets the return [type](Type) of this function.
-    pub fn ret_ty(&self) -> &Type {
-        &self.ret_ty
+    pub fn ret_ty(&self) -> TypeId {
+        self.ret_ty
     }
 
     /// Returns a reference to the canonical [`path`](Path) of this procedure
@@ -389,21 +389,18 @@ impl VarDecl {
 #[derive(Debug, PartialEq, Clone)]
 pub struct TempDecl {
     /// The type of this variable
-    ty: Type,
+    ty: TypeId,
     /// The subexpression that this temp variable represents
     span: Span,
 }
 
 impl TempDecl {
-    pub fn new(ty: &Type, span: Span) -> TempDecl {
-        TempDecl {
-            ty: ty.clone(),
-            span,
-        }
+    pub fn new(ty: TypeId, span: Span) -> TempDecl {
+        TempDecl { ty, span }
     }
 
-    pub fn ty(&self) -> &Type {
-        &self.ty
+    pub fn ty(&self) -> TypeId {
+        self.ty
     }
 }
 

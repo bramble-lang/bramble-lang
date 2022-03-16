@@ -27,9 +27,12 @@ pub(super) struct FuncTransformer<'a> {
 
 impl<'a> FuncTransformer<'a> {
     pub fn new(path: &Path, project: &'a mut MirProject) -> FuncTransformer<'a> {
+        let unit = project
+            .find_type(&Type::Unit)
+            .expect("Cannot find Unit type");
         FuncTransformer {
             project,
-            mir: MirProcedureBuilder::new(path),
+            mir: MirProcedureBuilder::new(path, unit),
         }
     }
 
@@ -117,11 +120,13 @@ impl<'a> FuncTransformer<'a> {
             // Operations
             Expression::BinaryOp(ctx, op, left, right) => {
                 let rv = self.binary_op(*op, left, right);
-                self.mir.temp_store(rv, ctx.ty(), ctx.span())
+                let ty = self.find_type(ctx.ty());
+                self.mir.temp_store(rv, ty, ctx.span())
             }
             Expression::UnaryOp(ctx, op, right) => {
                 let rv = self.unary_op(*op, right);
-                self.mir.temp_store(rv, ctx.ty(), ctx.span())
+                let ty = self.find_type(ctx.ty());
+                self.mir.temp_store(rv, ty, ctx.span())
             }
             Expression::TypeCast(_, _, _) => todo!(),
             Expression::SizeOf(_, _) => todo!(),
@@ -276,6 +281,7 @@ impl<'a> FuncTransformer<'a> {
         span: Span,
     ) -> Operand {
         // Create a temporary place on the stack for the array expression
+        let ty = self.find_type(ty);
         let temp = LValue::Temp(self.mir.temp(ty, span));
 
         // Compute the value of each element expression and store in the stack variable
@@ -353,10 +359,8 @@ impl<'a> FuncTransformer<'a> {
         // Only create a temp location if this If Expression can resolve to a
         // value
         let result = if else_block.is_some() && then_block.get_type() != Type::Unit {
-            Some(
-                self.mir
-                    .temp(then_block.get_type(), then_block.context().span()),
-            )
+            let then_ty = self.find_type(then_block.get_type());
+            Some(self.mir.temp(then_ty, then_block.context().span()))
         } else {
             None
         };
@@ -492,6 +496,12 @@ impl<'a> FuncTransformer<'a> {
                 self.mir.offset(left, right)
             }
         }
+    }
+
+    fn find_type(&self, ty: &Type) -> TypeId {
+        self.project
+            .find_type(ty)
+            .unwrap_or_else(|| panic!("Cannot find type: {}", ty))
     }
 }
 
