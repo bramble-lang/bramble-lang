@@ -237,11 +237,18 @@ impl<'a> TypeResolver<'a> {
     ) -> SemanticResult<Extern<SemanticContext>> {
         // Check the type of each member
         let (event, result) = self.new_event().and_then(|| {
-            let params = ex.get_params();
-            for Parameter { ty: field_type, .. } in params.iter() {
+            let mut params = ex.get_params().clone();
+            for Parameter {
+                context,
+                ty: field_type,
+                ..
+            } in params.iter_mut()
+            {
                 if let Type::Custom(_) = field_type {
                     panic!("Custom types are not supported for extern function declarations")
                 }
+
+                *context = context.with_type(field_type.clone());
             }
 
             // Update the context with canonical path information and set the type to Type::Unit
@@ -249,13 +256,7 @@ impl<'a> TypeResolver<'a> {
             let ctx = ex.context().with_type(ex.get_return_type().clone());
             let ret_ty = ctx.ty().clone();
 
-            Ok(Extern::new(
-                name,
-                ctx,
-                params.clone(),
-                ex.has_varargs,
-                ret_ty,
-            ))
+            Ok(Extern::new(name, ctx, params, ex.has_varargs, ret_ty))
         });
         result.view(|e| self.record2(event, e, vec![]))
     }
