@@ -78,6 +78,7 @@ pub mod tests {
         fn test() -> i64 {
             let x: i64 := 5;
             {
+                let z: i64 := x;
                 let x: f64 := 5.0;
                 let y: f64 := x;
             };
