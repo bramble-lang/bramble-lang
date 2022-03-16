@@ -78,7 +78,12 @@ fn add_extern_declarations(
         let args: Vec<_> = e
             .params
             .iter()
-            .map(|p| ArgDecl::new(p.name, p.context().ty(), p.context().span()))
+            .map(|p| {
+                let ty = project.find_type(p.context().ty()).unwrap_or_else(|| {
+                    panic!("Cannot find type in project for parameter: {:?}", p)
+                });
+                ArgDecl::new(p.name, ty, p.context().span())
+            })
             .collect();
 
         let p = Procedure::new_extern(
@@ -103,7 +108,12 @@ fn add_fn_declarations(
         let args: Vec<_> = f
             .params
             .iter()
-            .map(|p| ArgDecl::new(p.name, p.context().ty(), p.context().span()))
+            .map(|p| {
+                let ty = project
+                    .find_type(p.context().ty())
+                    .expect("Cannot find type in Project");
+                ArgDecl::new(p.name, ty, p.context().span())
+            })
             .collect();
 
         let p = Procedure::new(

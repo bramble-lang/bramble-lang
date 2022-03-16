@@ -21,12 +21,12 @@ use super::super::{builder::MirProcedureBuilder, ir::*, project::MirProject, typ
 
 /// Transform a single function to the MIR form
 pub(super) struct FuncTransformer<'a> {
-    project: &'a MirProject,
+    project: &'a mut MirProject,
     mir: MirProcedureBuilder,
 }
 
 impl<'a> FuncTransformer<'a> {
-    pub fn new(path: &Path, project: &'a MirProject) -> FuncTransformer<'a> {
+    pub fn new(path: &Path, project: &'a mut MirProject) -> FuncTransformer<'a> {
         FuncTransformer {
             project,
             mir: MirProcedureBuilder::new(path),
@@ -38,7 +38,11 @@ impl<'a> FuncTransformer<'a> {
 
         // Add the parameters of the function to the set of variables
         func.params.iter().for_each(|p| {
-            self.mir.arg(p.name, p.context().ty(), p.context().span());
+            let ty = self
+                .project
+                .add_type(p.context().ty())
+                .expect("Cannot find type in project");
+            self.mir.arg(p.name, ty, p.context().span());
         });
 
         // Create a new MIR Procedure
@@ -71,7 +75,7 @@ impl<'a> FuncTransformer<'a> {
         debug!("Binding statement");
         let var = bind.get_id();
         let mutable = bind.is_mutable();
-        let ty = bind.get_type();
+        let ty = self.project.add_type(bind.context().ty()).unwrap();
         let vid = self.mir.var(var, mutable, ty, bind.context().span());
 
         let expr = self.expression(bind.get_rhs());
@@ -186,7 +190,9 @@ impl<'a> FuncTransformer<'a> {
         .unwrap_or_else(|| panic!("Target function not found: {}", target));
 
         // Look up the declaration of the target function
-        let StaticItem::Function(func) = self.project.get_def(fn_id);
+        let func = match self.project.get_def(fn_id) {
+            StaticItem::Function(func) => func.clone(), // TODO: get rid of this once I finish the move to TypeID
+        };
 
         // Compute the value of each argument
         let args: Vec<_> = args.iter().map(|a| self.expression(a)).collect();
@@ -222,7 +228,7 @@ impl<'a> FuncTransformer<'a> {
             .expect("Could not find given type in the type table");
 
         // Extract the Structure Definition from the type
-        let mir_ty = self.project.get_type(mir_ty);
+        let mir_ty = self.project.get_type(mir_ty).clone();
         let def = if let MirTypeDef::Structure { def, .. } = mir_ty {
             def
         } else {
@@ -232,7 +238,7 @@ impl<'a> FuncTransformer<'a> {
         };
 
         if let Operand::LValue(base_mir) = self.expression(base) {
-            let access = self.mir.member_access(base_mir, def, field);
+            let access = self.mir.member_access(base_mir, &def, field);
             Operand::LValue(access)
         } else {
             // Base expression must be a location expression

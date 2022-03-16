@@ -62,7 +62,7 @@ impl Procedure {
 
         // For each argument, add it to the local variable stack
         for arg in &args {
-            p.add_var(arg.name, false, &arg.ty, ScopeId::new(0), arg.span);
+            p.add_var(arg.name, false, arg.ty, ScopeId::new(0), arg.span);
         }
 
         p.args = args;
@@ -96,7 +96,7 @@ impl Procedure {
     }
 
     /// Add an argument to this procedure's argument list and make the argument available as a variable.
-    pub fn add_arg(&mut self, name: StringId, ty: &Type, span: Span) -> ArgId {
+    pub fn add_arg(&mut self, name: StringId, ty: TypeId, span: Span) -> ArgId {
         // Add the given argument to the set of variables
         self.add_var(name, false, ty, ScopeId::new(0), span);
 
@@ -154,7 +154,7 @@ impl Procedure {
         &mut self,
         name: StringId,
         mutable: bool,
-        ty: &Type,
+        ty: TypeId,
         scope: ScopeId,
         span: Span,
     ) -> VarId {
@@ -337,18 +337,14 @@ pub struct ArgDecl {
     /// Name of this variable
     name: StringId,
     /// The type of this variable
-    ty: Type,
+    ty: TypeId,
     /// The span of code where this variable was declared
     span: Span,
 }
 
 impl ArgDecl {
-    pub fn new(name: StringId, ty: &Type, span: Span) -> ArgDecl {
-        ArgDecl {
-            name,
-            ty: ty.clone(),
-            span,
-        }
+    pub fn new(name: StringId, ty: TypeId, span: Span) -> ArgDecl {
+        ArgDecl { name, ty, span }
     }
 }
 
@@ -369,7 +365,7 @@ pub struct VarDecl {
     /// Whether this variable can be mutated
     mutable: bool,
     /// The type of this variable
-    ty: Type,
+    ty: TypeId,
     /// What scope this variable was declared in
     scope: ScopeId,
     /// The span of code where this variable was declared
@@ -377,11 +373,11 @@ pub struct VarDecl {
 }
 
 impl VarDecl {
-    pub fn new(name: StringId, mutable: bool, ty: &Type, scope: ScopeId, span: Span) -> VarDecl {
+    pub fn new(name: StringId, mutable: bool, ty: TypeId, scope: ScopeId, span: Span) -> VarDecl {
         VarDecl {
             name,
             mutable,
-            ty: ty.clone(),
+            ty,
             scope,
             span,
         }

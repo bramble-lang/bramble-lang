@@ -117,12 +117,12 @@ impl MirProcedureBuilder {
 
     /// Add an argument to the signature of a function. Arguments are also added to the
     /// set of variables.
-    pub fn arg(&mut self, name: StringId, ty: &Type, span: Span) -> ArgId {
+    pub fn arg(&mut self, name: StringId, ty: TypeId, span: Span) -> ArgId {
         self.proc.add_arg(name, ty, span)
     }
 
     /// Add a new user declared variable to this function's stack
-    pub fn var(&mut self, name: StringId, mutable: bool, ty: &Type, span: Span) -> VarId {
+    pub fn var(&mut self, name: StringId, mutable: bool, ty: TypeId, span: Span) -> VarId {
         self.proc.add_var(name, mutable, ty, ScopeId::new(0), span)
     }
 
