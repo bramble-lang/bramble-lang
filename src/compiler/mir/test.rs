@@ -73,6 +73,26 @@ pub mod tests {
         }
 
         #[test]
+        fn print_mir_scopes() {
+            let text = "
+        fn test() -> i64 {
+            let x: i64 := 5;
+            {
+                let x: f64 := 5.0;
+                let y: f64 := x;
+            };
+            let y: i64 := x;
+            return 1;
+        }
+        ";
+            let mut table = StringTable::new();
+            let module = compile(text, &mut table);
+            let mut project = MirProject::new();
+            transform::transform(&module, &mut project).unwrap();
+            println!("{}", project);
+        }
+
+        #[test]
         fn print_mir_fn_call() {
             let text = "
         fn test() -> i64 {
