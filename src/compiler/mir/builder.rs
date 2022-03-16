@@ -25,7 +25,7 @@ impl MirProcedureBuilder {
     /// of a function.
     pub fn new(path: &Path) -> MirProcedureBuilder {
         MirProcedureBuilder {
-            proc: Procedure::new(path, &Type::Unit, Span::zero()),
+            proc: Procedure::new(path, vec![], &Type::Unit, Span::zero()),
             current_bb: None,
         }
     }

@@ -30,6 +30,8 @@ pub struct Procedure {
     ret_ty: Type,
     /// The argument list for the function
     args: Vec<ArgDecl>,
+    /// Does the function have variadic arguments
+    has_varargs: bool,
     /// The set of all user declared variables from within this function
     vars: Vec<VarDecl>,
     /// The set of all temporary variables created by the MIR compiler
@@ -41,17 +43,48 @@ pub struct Procedure {
 impl Procedure {
     /// Creates a new MIR procedure. When created this will not have any
     /// basic blocks or arguments.
-    pub fn new(path: &Path, ret_ty: &Type, span: Span) -> Procedure {
+    pub fn new(path: &Path, args: Vec<ArgDecl>, ret_ty: &Type, span: Span) -> Procedure {
         assert!(
             path.is_canonical(),
             "All paths must be canonical to be used in MIR"
         );
 
-        Procedure {
+        let mut p = Procedure {
             path: path.clone(),
             blocks: vec![],
             ret_ty: ret_ty.clone(),
             args: vec![],
+            has_varargs: false,
+            vars: vec![],
+            temps: vec![],
+            span,
+        };
+
+        // For each argument, add it to the local variable stack
+        for arg in &args {
+            p.add_var(arg.name, false, &arg.ty, ScopeId::new(0), arg.span);
+        }
+
+        p.args = args;
+
+        p
+    }
+
+    /// Creates a new MIR procedure. When created this will not have any
+    /// basic blocks or arguments.
+    pub fn new_extern(
+        path: &Path,
+        args: Vec<ArgDecl>,
+        has_varargs: bool,
+        ret_ty: &Type,
+        span: Span,
+    ) -> Procedure {
+        Procedure {
+            path: path.clone(),
+            blocks: vec![],
+            ret_ty: ret_ty.clone(),
+            args,
+            has_varargs,
             vars: vec![],
             temps: vec![],
             span,
@@ -140,6 +173,11 @@ impl Procedure {
         TempId::new(id)
     }
 
+    /// Returns `true` if this function has a variadic argument
+    pub fn has_varargs(&self) -> bool {
+        self.has_varargs
+    }
+
     /// Gets the return [type](Type) of this function.
     pub fn ret_ty(&self) -> &Type {
         &self.ret_ty
@@ -172,6 +210,11 @@ impl Display for Procedure {
                 idx, self.args[idx].ty, self.args[idx].name, self.args[idx].span
             ))?
         }
+
+        if self.has_varargs {
+            f.write_str("Is Variadic\n")?;
+        }
+
         f.write_str("\n")?;
 
         // Print out the stack: vars and temps
@@ -300,7 +343,7 @@ pub struct ArgDecl {
 }
 
 impl ArgDecl {
-    fn new(name: StringId, ty: &Type, span: Span) -> ArgDecl {
+    pub fn new(name: StringId, ty: &Type, span: Span) -> ArgDecl {
         ArgDecl {
             name,
             ty: ty.clone(),

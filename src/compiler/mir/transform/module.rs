@@ -9,7 +9,11 @@
 
 use log::debug;
 
-use crate::compiler::{ast::*, mir::ir::Procedure, semantics::semanticnode::SemanticContext};
+use crate::compiler::{
+    ast::*,
+    mir::ir::{ArgDecl, Procedure},
+    semantics::semanticnode::SemanticContext,
+};
 
 use super::{super::project::MirProject, function::FuncTransformer, TransformError};
 
@@ -27,6 +31,20 @@ pub fn transform(
             project.add_struct_def(sd)?;
         }
     }
+
+    let externs: Vec<_> = module
+        .get_externs()
+        .iter()
+        .filter_map(|e| {
+            if let Item::Extern(e) = e {
+                Some(e)
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    add_extern_declarations(project, &externs)?;
 
     let funcs: Vec<_> = module
         .get_functions()
@@ -51,13 +69,46 @@ pub fn transform(
     Ok(())
 }
 
+fn add_extern_declarations(
+    project: &mut MirProject,
+    externs: &[&Extern<SemanticContext>],
+) -> Result<(), TransformError> {
+    for e in externs {
+        // convert args into MIR args
+        let args: Vec<_> = e
+            .params
+            .iter()
+            .map(|p| ArgDecl::new(p.name, p.context().ty(), p.context().span()))
+            .collect();
+
+        let p = Procedure::new_extern(
+            e.context().canonical_path(),
+            args,
+            e.has_varargs,
+            e.get_return_type(),
+            e.context().span(),
+        );
+        project.add_func(p)?;
+    }
+
+    Ok(())
+}
+
 fn add_fn_declarations(
     project: &mut MirProject,
     funcs: &[&RoutineDef<SemanticContext>],
 ) -> Result<(), TransformError> {
     for f in funcs {
+        // convert args into MIR args
+        let args: Vec<_> = f
+            .params
+            .iter()
+            .map(|p| ArgDecl::new(p.name, p.context().ty(), p.context().span()))
+            .collect();
+
         let p = Procedure::new(
             f.context().canonical_path(),
+            args,
             f.context().ty(),
             f.context().span(),
         );

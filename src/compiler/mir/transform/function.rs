@@ -140,7 +140,9 @@ impl<'a> FuncTransformer<'a> {
             Expression::CustomType(_, _) => todo!(),
             Expression::Path(_, _) => todo!(),
             Expression::IdentifierDeclare(_, _, _) => todo!(),
-            Expression::RoutineCall(ctx, _, target, args) => self.fn_call(ctx, target, args),
+            Expression::RoutineCall(ctx, call, target, args) => {
+                self.fn_call(ctx, *call, target, args)
+            }
             Expression::StructExpression(_, _, _) => todo!(),
             Expression::If {
                 context,
@@ -171,14 +173,17 @@ impl<'a> FuncTransformer<'a> {
     fn fn_call(
         &mut self,
         ctx: &SemanticContext,
+        call: RoutineCall,
         target: &Path,
         args: &[Expression<SemanticContext>],
     ) -> Operand {
-        // Look up the MIR Function ID for the target
-        let fn_id = self
-            .project
-            .find_def(target)
-            .expect("Target function not found");
+        let fn_id = if call == RoutineCall::Extern {
+            let extern_path: Path = vec![Element::Id(target.item().unwrap())].into();
+            self.project.find_def(&extern_path)
+        } else {
+            self.project.find_def(target)
+        }
+        .unwrap_or_else(|| panic!("Target function not found: {}", target));
 
         // Look up the declaration of the target function
         let StaticItem::Function(func) = self.project.get_def(fn_id);
