@@ -41,10 +41,7 @@ impl<'a> FuncTransformer<'a> {
 
         // Add the parameters of the function to the set of variables
         func.params.iter().for_each(|p| {
-            let ty = self
-                .project
-                .find_type(p.context().ty())
-                .expect("Cannot find type in project");
+            let ty = self.find_type(p.context().ty());
             self.mir.arg(p.name, ty, p.context().span());
         });
 
@@ -78,7 +75,7 @@ impl<'a> FuncTransformer<'a> {
         debug!("Binding statement");
         let var = bind.get_id();
         let mutable = bind.is_mutable();
-        let ty = self.project.find_type(bind.context().ty()).unwrap();
+        let ty = self.find_type(bind.context().ty());
         let vid = self.mir.var(var, mutable, ty, bind.context().span());
 
         let expr = self.expression(bind.get_rhs());
