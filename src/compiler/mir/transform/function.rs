@@ -234,7 +234,7 @@ impl<'a> FuncTransformer<'a> {
             // Extract the Structure Definition from the type
             let mir_ty = self.project.get_type(mir_ty);
             let def = mir_ty
-                .into_struct()
+                .get_struct()
                 .expect("Trying to access a field on a non-structure type");
 
             let access = self.mir.member_access(base_mir, def, field);

@@ -105,7 +105,7 @@ impl Writable for Type {
                 w.write_text(&format!("; {}]", sz));
             }
             Type::Unit => w.write_text("Unit"),
-            Type::Custom(p) => w.write_path(&p),
+            Type::Custom(p) => w.write_path(p),
             Type::StructDef(_) => w.write_text("Struct Def"),
             Type::FunctionDef(_, _) => w.write_text("Function Def"),
             Type::CoroutineDef(_, _) => w.write_text("Coroutine Def"),

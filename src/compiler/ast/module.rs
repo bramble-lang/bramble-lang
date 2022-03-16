@@ -248,15 +248,20 @@ where
     }
 
     pub fn get_item(&self, name: StringId) -> Option<&Item<M>> {
-        self.functions.iter().find(|f| f.get_name() == name).or(self
-            .coroutines
+        self.functions
             .iter()
-            .find(|c| c.get_name() == name)
-            .or(self
-                .structs
-                .iter()
-                .find(|c| c.get_name() == name)
-                .or(self.externs.iter().find(|e| e.get_name() == name))))
+            .find(|f| f.get_name() == name)
+            .or_else(|| {
+                self.coroutines
+                    .iter()
+                    .find(|c| c.get_name() == name)
+                    .or_else(|| {
+                        self.structs
+                            .iter()
+                            .find(|c| c.get_name() == name)
+                            .or_else(|| self.externs.iter().find(|e| e.get_name() == name))
+                    })
+            })
     }
 
     pub fn go_to_module(&self, path: &Path) -> Option<&Module<M>> {
