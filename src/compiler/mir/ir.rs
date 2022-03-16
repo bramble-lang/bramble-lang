@@ -314,7 +314,7 @@ impl Display for TempId {
 }
 
 /// Identifier for each scope that exists within the function
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub struct ScopeId(usize);
 
 impl ScopeId {
@@ -329,7 +329,7 @@ impl ScopeId {
 
 /// An argument for a function.  These are always immutable and are always
 /// in the root scope: therefore, there is no scope or mutable property.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub struct ArgDecl {
     /// Name of this variable
     name: StringId,
@@ -355,7 +355,7 @@ impl ArgId {
 }
 
 /// A variable declared by the user.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub struct VarDecl {
     /// Name of this variable
     name: StringId,
@@ -629,7 +629,7 @@ impl Display for Operand {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Constant {
     Unit,
     I8(i8),
