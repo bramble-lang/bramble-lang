@@ -50,19 +50,18 @@ impl MirProcedureBuilder {
         self.current_bb = Some(bb)
     }
 
+    /// Create a new scope that's the child of the current scope and make it
+    /// the current scope.
     pub fn start_scope(&mut self) {
         self.current_scope = self.proc.new_scope(self.current_scope);
     }
 
+    /// Close the current scope and move up to its parent scope.
     pub fn close_scope(&mut self) {
         self.current_scope = self
             .proc
             .parent_scope(self.current_scope)
             .unwrap_or_else(|| ScopeId::new(0));
-    }
-
-    fn get_scope(&self) -> ScopeId {
-        self.current_scope
     }
 
     pub fn find_var(&self, name: StringId) -> Option<VarId> {
