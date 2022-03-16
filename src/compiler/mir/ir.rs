@@ -190,6 +190,11 @@ impl Display for Procedure {
                 idx, self.args[idx].ty, self.args[idx].name, self.args[idx].span
             ))?
         }
+
+        if self.has_varargs {
+            f.write_str("Is Variadic\n")?;
+        }
+
         f.write_str("\n")?;
 
         // Print out the stack: vars and temps
