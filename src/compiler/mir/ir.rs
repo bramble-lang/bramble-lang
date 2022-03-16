@@ -35,6 +35,8 @@ pub struct Procedure {
     temps: Vec<TempDecl>,
     /// The span of input source code that this IR element covers
     span: Span,
+    /// The scope tree
+    scopes: ScopeTree,
 }
 
 impl Procedure {
@@ -55,6 +57,7 @@ impl Procedure {
             vars: vec![],
             temps: vec![],
             span,
+            scopes: ScopeTree::default(),
         };
 
         // For each argument, add it to the local variable stack
@@ -85,6 +88,7 @@ impl Procedure {
             vars: vec![],
             temps: vec![],
             span,
+            scopes: ScopeTree::default(),
         }
     }
 
@@ -121,6 +125,14 @@ impl Procedure {
         self.blocks.push(bb);
         let id = self.blocks.len() - 1;
         BasicBlockId::new(id)
+    }
+
+    pub fn new_scope(&mut self, parent: ScopeId) -> ScopeId {
+        self.scopes.new_scope(parent)
+    }
+
+    pub fn parent_scope(&self, id: ScopeId) -> Option<ScopeId> {
+        self.scopes.parent_of(id)
     }
 
     /// Get the declaration details of a user defined variable in
@@ -813,6 +825,7 @@ impl Display for UnOp {
 }
 
 /// Stores the topology of a function's scope tree.
+#[derive(Debug, Clone, PartialEq)]
 struct ScopeTree {
     scopes: Vec<Option<ScopeId>>,
 }

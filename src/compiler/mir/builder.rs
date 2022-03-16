@@ -15,6 +15,7 @@ use super::{ir::*, typetable::*};
 pub struct MirProcedureBuilder {
     proc: Procedure,
     current_bb: Option<BasicBlockId>,
+    current_scope: ScopeId,
 }
 
 impl MirProcedureBuilder {
@@ -24,6 +25,7 @@ impl MirProcedureBuilder {
         MirProcedureBuilder {
             proc: Procedure::new(path, vec![], ret_ty, Span::zero()),
             current_bb: None,
+            current_scope: ScopeId::new(0),
         }
     }
 
@@ -46,6 +48,21 @@ impl MirProcedureBuilder {
     /// to the function will be appended to the [`BasicBlock`] specified by `bb`.
     pub fn set_bb(&mut self, bb: BasicBlockId) {
         self.current_bb = Some(bb)
+    }
+
+    fn start_scope(&mut self) {
+        self.current_scope = self.proc.new_scope(self.current_scope);
+    }
+
+    fn close_scope(&mut self) {
+        self.current_scope = self
+            .proc
+            .parent_scope(self.current_scope)
+            .unwrap_or_else(|| ScopeId::new(0));
+    }
+
+    fn get_scope(&self) -> ScopeId {
+        self.current_scope
     }
 
     pub fn find_var(&self, name: StringId) -> Option<VarId> {
@@ -120,7 +137,8 @@ impl MirProcedureBuilder {
 
     /// Add a new user declared variable to this function's stack
     pub fn var(&mut self, name: StringId, mutable: bool, ty: TypeId, span: Span) -> VarId {
-        self.proc.add_var(name, mutable, ty, ScopeId::new(0), span)
+        self.proc
+            .add_var(name, mutable, ty, self.current_scope, span)
     }
 
     /// Add a new temporary variable to this function's stack
