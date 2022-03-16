@@ -194,16 +194,14 @@ impl<'a> FuncTransformer<'a> {
         }
         .unwrap_or_else(|| panic!("Target function not found: {}", target));
 
-        // Look up the declaration of the target function
-        let func = match self.project.get_def(fn_id) {
-            StaticItem::Function(func) => func.clone(), // TODO: get rid of this once I finish the move to TypeID
-        };
-
         // Compute the value of each argument
         let args: Vec<_> = args.iter().map(|a| self.expression(a)).collect();
 
         // Create a basic block that the function will return into
         let reentry_bb = self.mir.new_bb();
+
+        // Look up the declaration of the target function
+        let StaticItem::Function(func) = self.project.get_def(fn_id);
 
         // Create a temp location for the result value of the function call
         let result = self.mir.temp(func.ret_ty(), ctx.span());
@@ -232,18 +230,14 @@ impl<'a> FuncTransformer<'a> {
             .find_type(ty)
             .expect("Could not find given type in the type table");
 
-        // Extract the Structure Definition from the type
-        let mir_ty = self.project.get_type(mir_ty).clone();
-        let def = if let MirTypeDef::Structure { def, .. } = mir_ty {
-            def
-        } else {
-            // Type checking should guarantee that if this method is called then the type of the
-            // AST node is a structure. If it is not, then a critical bug has been encountered.
-            panic!("Trying to access a field on a non-structure type")
-        };
-
         if let Operand::LValue(base_mir) = self.expression(base) {
-            let access = self.mir.member_access(base_mir, &def, field);
+            // Extract the Structure Definition from the type
+            let mir_ty = self.project.get_type(mir_ty);
+            let def = mir_ty
+                .into_struct()
+                .expect("Trying to access a field on a non-structure type");
+
+            let access = self.mir.member_access(base_mir, def, field);
             Operand::LValue(access)
         } else {
             // Base expression must be a location expression
