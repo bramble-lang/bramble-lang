@@ -5,8 +5,7 @@ use std::fmt::Display;
 
 use crate::{
     compiler::{
-        ast::{Context, Node, Parameter, Path, Type},
-        semantics::semanticnode::SemanticContext,
+        ast::{Path, Type},
         Span,
     },
     StringId,
@@ -66,17 +65,11 @@ impl Procedure {
     /// basic blocks or arguments.
     pub fn new_extern(
         path: &Path,
-        params: &[Parameter<SemanticContext>],
+        args: Vec<ArgDecl>,
         has_varargs: bool,
         ret_ty: &Type,
         span: Span,
     ) -> Procedure {
-        // convert args into MIR args
-        let args: Vec<_> = params
-            .iter()
-            .map(|p| ArgDecl::new(p.name, p.context().ty(), p.context().span()))
-            .collect();
-
         Procedure {
             path: path.clone(),
             blocks: vec![],
@@ -336,7 +329,7 @@ pub struct ArgDecl {
 }
 
 impl ArgDecl {
-    fn new(name: StringId, ty: &Type, span: Span) -> ArgDecl {
+    pub fn new(name: StringId, ty: &Type, span: Span) -> ArgDecl {
         ArgDecl {
             name,
             ty: ty.clone(),

@@ -9,7 +9,11 @@
 
 use log::debug;
 
-use crate::compiler::{ast::*, mir::ir::Procedure, semantics::semanticnode::SemanticContext};
+use crate::compiler::{
+    ast::*,
+    mir::ir::{ArgDecl, Procedure},
+    semantics::semanticnode::SemanticContext,
+};
 
 use super::{super::project::MirProject, function::FuncTransformer, TransformError};
 
@@ -70,9 +74,16 @@ fn add_extern_declarations(
     externs: &[&Extern<SemanticContext>],
 ) -> Result<(), TransformError> {
     for e in externs {
+        // convert args into MIR args
+        let args: Vec<_> = e
+            .params
+            .iter()
+            .map(|p| ArgDecl::new(p.name, p.context().ty(), p.context().span()))
+            .collect();
+
         let p = Procedure::new_extern(
             e.context().canonical_path(),
-            &e.params,
+            args,
             e.has_varargs,
             e.get_return_type(),
             e.context().span(),
