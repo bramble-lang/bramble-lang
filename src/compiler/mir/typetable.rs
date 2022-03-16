@@ -302,7 +302,7 @@ impl MirTypeDef {
     /// If this is a [`Structure`](MirTypeDef::Structure) variant then
     /// return a reference to the underlying [`MirStructDef`]. Otherwise,
     /// return [`None`](Option::None).
-    pub fn get_struct(&self) -> Option<&MirStructDef> {
+    pub fn get_struct_def(&self) -> Option<&MirStructDef> {
         match self {
             Self::Structure { def, .. } => Some(def),
             _ => None,
