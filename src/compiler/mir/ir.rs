@@ -4,10 +4,7 @@
 use std::fmt::Display;
 
 use crate::{
-    compiler::{
-        ast::{Path, Type},
-        Span,
-    },
+    compiler::{ast::Path, Span},
     StringId,
 };
 
@@ -595,7 +592,7 @@ pub enum RValue {
     UnOp(UnOp, Operand),
 
     /// Casting an operand to a new type
-    Cast(Operand, Type),
+    Cast(Operand, TypeId),
 
     /// Getting the address of a variable in memory.
     AddressOf(LValue),

@@ -1,10 +1,7 @@
 use log::debug;
 
 use crate::{
-    compiler::{
-        ast::{Path, Type},
-        Span,
-    },
+    compiler::{ast::Path, Span},
     StringId,
 };
 
