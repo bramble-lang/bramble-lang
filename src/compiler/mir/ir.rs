@@ -143,10 +143,12 @@ impl Procedure {
 
     /// Will return the [`VarId`] for the given variable name if it
     /// exists in the function's stack.
-    pub fn find_var(&self, name: StringId) -> Option<VarId> {
-        for idx in 0..self.vars.len() {
-            if self.vars[idx].name == name {
-                return Some(VarId::new(idx));
+    pub fn find_var(&self, name: StringId, start: ScopeId) -> Option<VarId> {
+        for scope in self.scopes.iter_from(start) {
+            for idx in 0..self.vars.len() {
+                if self.vars[idx].name == name && self.vars[idx].scope == scope {
+                    return Some(VarId::new(idx));
+                }
             }
         }
 

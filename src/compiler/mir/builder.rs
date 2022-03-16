@@ -66,7 +66,7 @@ impl MirProcedureBuilder {
     }
 
     pub fn find_var(&self, name: StringId) -> Option<VarId> {
-        self.proc.find_var(name)
+        self.proc.find_var(name, self.current_scope)
     }
 
     /// Create an [`i8`] constant
