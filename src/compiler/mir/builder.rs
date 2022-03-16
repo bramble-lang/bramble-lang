@@ -64,6 +64,8 @@ impl MirProcedureBuilder {
             .unwrap_or_else(|| ScopeId::new(0));
     }
 
+    /// Search the procedure's set of local variables for the variable with
+    /// the matching name that's in the nearest scope.
     pub fn find_var(&self, name: StringId) -> Option<VarId> {
         self.proc.find_var(name, self.current_scope)
     }
