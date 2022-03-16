@@ -1,10 +1,7 @@
 use log::debug;
 
 use crate::{
-    compiler::{
-        ast::{Path, Type},
-        Span,
-    },
+    compiler::{ast::Path, Span},
     StringId,
 };
 
@@ -23,9 +20,9 @@ pub struct MirProcedureBuilder {
 impl MirProcedureBuilder {
     /// Creates a new [`MirBuilder`], which is used to construct the MIR representation
     /// of a function.
-    pub fn new(path: &Path) -> MirProcedureBuilder {
+    pub fn new(path: &Path, ret_ty: TypeId) -> MirProcedureBuilder {
         MirProcedureBuilder {
-            proc: Procedure::new(path, vec![], &Type::Unit, Span::zero()),
+            proc: Procedure::new(path, vec![], ret_ty, Span::zero()),
             current_bb: None,
         }
     }
@@ -117,22 +114,22 @@ impl MirProcedureBuilder {
 
     /// Add an argument to the signature of a function. Arguments are also added to the
     /// set of variables.
-    pub fn arg(&mut self, name: StringId, ty: &Type, span: Span) -> ArgId {
+    pub fn arg(&mut self, name: StringId, ty: TypeId, span: Span) -> ArgId {
         self.proc.add_arg(name, ty, span)
     }
 
     /// Add a new user declared variable to this function's stack
-    pub fn var(&mut self, name: StringId, mutable: bool, ty: &Type, span: Span) -> VarId {
+    pub fn var(&mut self, name: StringId, mutable: bool, ty: TypeId, span: Span) -> VarId {
         self.proc.add_var(name, mutable, ty, ScopeId::new(0), span)
     }
 
     /// Add a new temporary variable to this function's stack
-    pub fn temp(&mut self, ty: &Type, span: Span) -> TempId {
+    pub fn temp(&mut self, ty: TypeId, span: Span) -> TempId {
         self.proc.add_temp(ty, span)
     }
 
     /// Create a new temporary variable and store the [`RValue`] in it.
-    pub fn temp_store(&mut self, rv: RValue, ty: &Type, span: Span) -> Operand {
+    pub fn temp_store(&mut self, rv: RValue, ty: TypeId, span: Span) -> Operand {
         let tv = LValue::Temp(self.temp(ty, span));
         debug!("Temp store: {:?} := {:?}", tv, rv);
 

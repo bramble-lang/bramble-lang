@@ -21,7 +21,8 @@ mod static_defs {
 
         // Add a procedure to the table
         let path: Path = vec![Element::CanonicalRoot, Element::Id(StringId::new())].into();
-        let func = Procedure::new(&path, vec![], &Type::Unit, Span::zero());
+        let ty = proj.find_type(&Type::Unit).unwrap();
+        let func = Procedure::new(&path, vec![], ty, Span::zero());
 
         // Get the procedure with the given def id
         let id = proj.add_func(func.clone()).unwrap();
@@ -38,13 +39,15 @@ mod static_defs {
 
         // Add a procedure to the table
         let path: Path = vec![Element::CanonicalRoot, Element::Id(StringId::new())].into();
-        let mut func = Procedure::new(&path, vec![], &Type::Unit, Span::zero());
+        let ty = proj.find_type(&Type::Unit).unwrap();
+        let mut func = Procedure::new(&path, vec![], ty, Span::zero());
 
         // Get the procedure with the given def id
         let id = proj.add_func(func.clone()).unwrap();
 
         // Change the function
-        func.add_temp(&Type::U32, Span::zero());
+        let ty_u32 = proj.find_type(&Type::U32).unwrap();
+        func.add_temp(ty_u32, Span::zero());
         let id2 = proj.add_func(func.clone()).unwrap();
 
         // Check that same DefId is returned
@@ -61,7 +64,8 @@ mod static_defs {
 
         // Add a procedure to the table
         let path: Path = vec![Element::CanonicalRoot, Element::Id(StringId::new())].into();
-        let func = Procedure::new(&path, vec![], &Type::Unit, Span::zero());
+        let ty = proj.find_type(&Type::Unit).unwrap();
+        let func = Procedure::new(&path, vec![], ty, Span::zero());
 
         // Get the procedure with the given def id
         let expected_id = proj.add_func(func.clone()).unwrap();
@@ -78,7 +82,8 @@ mod static_defs {
 
         // Add a procedure to the table
         let path: Path = vec![Element::CanonicalRoot, Element::Id(StringId::new())].into();
-        let func = Procedure::new(&path, vec![], &Type::Unit, Span::zero());
+        let ty = proj.find_type(&Type::Unit).unwrap();
+        let func = Procedure::new(&path, vec![], ty, Span::zero());
 
         // Get the procedure with the given def id
         proj.add_func(func.clone()).unwrap();

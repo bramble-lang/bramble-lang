@@ -298,6 +298,18 @@ pub enum MirTypeDef {
     Structure { path: Path, def: MirStructDef },
 }
 
+impl MirTypeDef {
+    /// If this is a [`Structure`](MirTypeDef::Structure) variant then
+    /// return a reference to the underlying [`MirStructDef`]. Otherwise,
+    /// return [`None`](Option::None).
+    pub fn get_struct_def(&self) -> Option<&MirStructDef> {
+        match self {
+            Self::Structure { def, .. } => Some(def),
+            _ => None,
+        }
+    }
+}
+
 impl PartialEq for MirTypeDef {
     /// Checks if two MirTypeDef values are logically the same type. Two [`MirTypeDef::Structure`] values
     /// are equal if their [`Paths`](Path) are equal.

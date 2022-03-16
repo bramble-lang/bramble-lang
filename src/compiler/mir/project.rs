@@ -52,6 +52,11 @@ impl MirProject {
         self.types.get(ty)
     }
 
+    /// Addsa  [`Type`] to the underlying [`TypeTable`].
+    pub fn add_type(&mut self, ty: &Type) -> Result<TypeId, TypeTableError> {
+        self.types.add(ty)
+    }
+
     /// Adds a new Structure definition to the [`MirProject`].
     pub fn add_struct_def(
         &mut self,

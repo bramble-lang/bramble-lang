@@ -4,10 +4,7 @@
 use std::fmt::Display;
 
 use crate::{
-    compiler::{
-        ast::{Path, Type},
-        Span,
-    },
+    compiler::{ast::Path, Span},
     StringId,
 };
 
@@ -27,7 +24,7 @@ pub struct Procedure {
     /// The set of basic blocks that constitute this procedure
     blocks: Vec<BasicBlock>,
     /// The return type of this function
-    ret_ty: Type,
+    ret_ty: TypeId,
     /// The argument list for the function
     args: Vec<ArgDecl>,
     /// Does the function have variadic arguments
@@ -43,7 +40,7 @@ pub struct Procedure {
 impl Procedure {
     /// Creates a new MIR procedure. When created this will not have any
     /// basic blocks or arguments.
-    pub fn new(path: &Path, args: Vec<ArgDecl>, ret_ty: &Type, span: Span) -> Procedure {
+    pub fn new(path: &Path, args: Vec<ArgDecl>, ret_ty: TypeId, span: Span) -> Procedure {
         assert!(
             path.is_canonical(),
             "All paths must be canonical to be used in MIR"
@@ -52,7 +49,7 @@ impl Procedure {
         let mut p = Procedure {
             path: path.clone(),
             blocks: vec![],
-            ret_ty: ret_ty.clone(),
+            ret_ty,
             args: vec![],
             has_varargs: false,
             vars: vec![],
@@ -62,7 +59,7 @@ impl Procedure {
 
         // For each argument, add it to the local variable stack
         for arg in &args {
-            p.add_var(arg.name, false, &arg.ty, ScopeId::new(0), arg.span);
+            p.add_var(arg.name, false, arg.ty, ScopeId::new(0), arg.span);
         }
 
         p.args = args;
@@ -76,13 +73,13 @@ impl Procedure {
         path: &Path,
         args: Vec<ArgDecl>,
         has_varargs: bool,
-        ret_ty: &Type,
+        ret_ty: TypeId,
         span: Span,
     ) -> Procedure {
         Procedure {
             path: path.clone(),
             blocks: vec![],
-            ret_ty: ret_ty.clone(),
+            ret_ty,
             args,
             has_varargs,
             vars: vec![],
@@ -96,7 +93,7 @@ impl Procedure {
     }
 
     /// Add an argument to this procedure's argument list and make the argument available as a variable.
-    pub fn add_arg(&mut self, name: StringId, ty: &Type, span: Span) -> ArgId {
+    pub fn add_arg(&mut self, name: StringId, ty: TypeId, span: Span) -> ArgId {
         // Add the given argument to the set of variables
         self.add_var(name, false, ty, ScopeId::new(0), span);
 
@@ -154,7 +151,7 @@ impl Procedure {
         &mut self,
         name: StringId,
         mutable: bool,
-        ty: &Type,
+        ty: TypeId,
         scope: ScopeId,
         span: Span,
     ) -> VarId {
@@ -166,7 +163,7 @@ impl Procedure {
     }
 
     /// Add a new temporary variable to the procedures stack
-    pub fn add_temp(&mut self, ty: &Type, span: Span) -> TempId {
+    pub fn add_temp(&mut self, ty: TypeId, span: Span) -> TempId {
         let td = TempDecl::new(ty, span);
         self.temps.push(td);
         let id = self.temps.len() - 1;
@@ -179,8 +176,8 @@ impl Procedure {
     }
 
     /// Gets the return [type](Type) of this function.
-    pub fn ret_ty(&self) -> &Type {
-        &self.ret_ty
+    pub fn ret_ty(&self) -> TypeId {
+        self.ret_ty
     }
 
     /// Returns a reference to the canonical [`path`](Path) of this procedure
@@ -317,7 +314,7 @@ impl Display for TempId {
 }
 
 /// Identifier for each scope that exists within the function
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub struct ScopeId(usize);
 
 impl ScopeId {
@@ -332,23 +329,19 @@ impl ScopeId {
 
 /// An argument for a function.  These are always immutable and are always
 /// in the root scope: therefore, there is no scope or mutable property.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub struct ArgDecl {
     /// Name of this variable
     name: StringId,
     /// The type of this variable
-    ty: Type,
+    ty: TypeId,
     /// The span of code where this variable was declared
     span: Span,
 }
 
 impl ArgDecl {
-    pub fn new(name: StringId, ty: &Type, span: Span) -> ArgDecl {
-        ArgDecl {
-            name,
-            ty: ty.clone(),
-            span,
-        }
+    pub fn new(name: StringId, ty: TypeId, span: Span) -> ArgDecl {
+        ArgDecl { name, ty, span }
     }
 }
 
@@ -362,14 +355,14 @@ impl ArgId {
 }
 
 /// A variable declared by the user.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub struct VarDecl {
     /// Name of this variable
     name: StringId,
     /// Whether this variable can be mutated
     mutable: bool,
     /// The type of this variable
-    ty: Type,
+    ty: TypeId,
     /// What scope this variable was declared in
     scope: ScopeId,
     /// The span of code where this variable was declared
@@ -377,11 +370,11 @@ pub struct VarDecl {
 }
 
 impl VarDecl {
-    pub fn new(name: StringId, mutable: bool, ty: &Type, scope: ScopeId, span: Span) -> VarDecl {
+    pub fn new(name: StringId, mutable: bool, ty: TypeId, scope: ScopeId, span: Span) -> VarDecl {
         VarDecl {
             name,
             mutable,
-            ty: ty.clone(),
+            ty,
             scope,
             span,
         }
@@ -393,21 +386,18 @@ impl VarDecl {
 #[derive(Debug, PartialEq, Clone)]
 pub struct TempDecl {
     /// The type of this variable
-    ty: Type,
+    ty: TypeId,
     /// The subexpression that this temp variable represents
     span: Span,
 }
 
 impl TempDecl {
-    pub fn new(ty: &Type, span: Span) -> TempDecl {
-        TempDecl {
-            ty: ty.clone(),
-            span,
-        }
+    pub fn new(ty: TypeId, span: Span) -> TempDecl {
+        TempDecl { ty, span }
     }
 
-    pub fn ty(&self) -> &Type {
-        &self.ty
+    pub fn ty(&self) -> TypeId {
+        self.ty
     }
 }
 
@@ -602,7 +592,7 @@ pub enum RValue {
     UnOp(UnOp, Operand),
 
     /// Casting an operand to a new type
-    Cast(Operand, Type),
+    Cast(Operand, TypeId),
 
     /// Getting the address of a variable in memory.
     AddressOf(LValue),
@@ -639,7 +629,7 @@ impl Display for Operand {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Constant {
     Unit,
     I8(i8),
