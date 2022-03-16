@@ -50,11 +50,11 @@ impl MirProcedureBuilder {
         self.current_bb = Some(bb)
     }
 
-    fn start_scope(&mut self) {
+    pub fn start_scope(&mut self) {
         self.current_scope = self.proc.new_scope(self.current_scope);
     }
 
-    fn close_scope(&mut self) {
+    pub fn close_scope(&mut self) {
         self.current_scope = self
             .proc
             .parent_scope(self.current_scope)

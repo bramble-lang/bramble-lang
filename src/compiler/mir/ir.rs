@@ -239,8 +239,12 @@ impl Display for Procedure {
             }
 
             f.write_fmt(format_args!(
-                "{}: {:?} // {} {}\n",
-                vid, self.vars[idx].ty, self.vars[idx].name, self.vars[idx].span
+                "{}: {:?}, {:?} // {} {}\n",
+                vid,
+                self.vars[idx].ty,
+                self.vars[idx].scope,
+                self.vars[idx].name,
+                self.vars[idx].span
             ))?
         }
         f.write_str("\n")?;
