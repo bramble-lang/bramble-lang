@@ -173,6 +173,11 @@ impl Procedure {
         TempId::new(id)
     }
 
+    /// Returns `true` if this function has a variadic argument
+    pub fn has_varargs(&self) -> bool {
+        self.has_varargs
+    }
+
     /// Gets the return [type](Type) of this function.
     pub fn ret_ty(&self) -> &Type {
         &self.ret_ty

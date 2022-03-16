@@ -992,6 +992,58 @@ pub mod tests {
         assert_eq!(ret_val.ty(), &Type::I64);
     }
 
+    #[test]
+    fn call_variadic_extern() {
+        let text = "
+        extern fn test2(x: i64, ...) -> i64;
+
+        fn test() -> i64 {
+            return test2(1, 2, 3);
+        }
+        ";
+        let mut table = StringTable::new();
+        let module = compile(text, &mut table);
+
+        let mut project = MirProject::new();
+        transform::transform(&module, &mut project).unwrap();
+
+        let path: Path = to_path(&["main", "test"], &table);
+        let def_id = project.find_def(&path).unwrap();
+        let StaticItem::Function(mir) = project.get_def(def_id);
+        assert_eq!(mir.len(), 2); // There should be 2: the first BB calls the func and the second is the reentry BB
+        assert_eq!(mir.path(), &path);
+
+        // Get the Defid of the expected target
+        let path: Path = vec![Element::Id(table.find("test2").unwrap())].into();
+        let expected_target = project.find_def(&path).unwrap();
+
+        // check that the extern is variadic
+        let StaticItem::Function(target_def) = project.get_def(expected_target);
+        assert!(target_def.has_varargs());
+
+        // Check the BB terminator
+        let term = mir.get_bb(BasicBlockId::new(0)).get_term().unwrap();
+        let (func, args, reentry) = match term.kind() {
+            TerminatorKind::CallFn {
+                func,
+                args,
+                reentry,
+            } => (func, args, reentry),
+            _ => panic!(),
+        };
+
+        assert_eq!(*func, Operand::LValue(LValue::Static(expected_target)));
+        assert_eq!(args[0], Operand::Constant(Constant::I64(1)));
+
+        let expected_temp = TempId::new(0);
+        assert_eq!(reentry.0, LValue::Temp(expected_temp));
+        assert_eq!(reentry.1, BasicBlockId::new(1));
+
+        // Check temp type
+        let ret_val = mir.get_temp(expected_temp);
+        assert_eq!(ret_val.ty(), &Type::I64);
+    }
+
     fn to_path(v: &[&str], table: &StringTable) -> Path {
         let mut path = vec![Element::CanonicalRoot];
 
