@@ -72,6 +72,7 @@ fn add_extern_declarations(
     for e in externs {
         let p = Procedure::new_extern(
             e.context().canonical_path(),
+            &e.params,
             e.has_varargs,
             e.get_return_type(),
             e.context().span(),

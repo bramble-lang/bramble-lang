@@ -5,7 +5,8 @@ use std::fmt::Display;
 
 use crate::{
     compiler::{
-        ast::{Path, Type},
+        ast::{Context, Node, Parameter, Path, Type},
+        semantics::semanticnode::SemanticContext,
         Span,
     },
     StringId,
@@ -63,12 +64,24 @@ impl Procedure {
 
     /// Creates a new MIR procedure. When created this will not have any
     /// basic blocks or arguments.
-    pub fn new_extern(path: &Path, has_varargs: bool, ret_ty: &Type, span: Span) -> Procedure {
+    pub fn new_extern(
+        path: &Path,
+        params: &[Parameter<SemanticContext>],
+        has_varargs: bool,
+        ret_ty: &Type,
+        span: Span,
+    ) -> Procedure {
+        // convert args into MIR args
+        let args: Vec<_> = params
+            .iter()
+            .map(|p| ArgDecl::new(p.name, p.context().ty(), p.context().span()))
+            .collect();
+
         Procedure {
             path: path.clone(),
             blocks: vec![],
             ret_ty: ret_ty.clone(),
-            args: vec![],
+            args,
             has_varargs,
             vars: vec![],
             temps: vec![],
