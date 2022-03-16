@@ -98,9 +98,7 @@ impl<M> std::fmt::Display for Statement<M> {
 
 impl<M> Statement<M> {
     pub fn from_ast(ast: Expression<M>) -> Option<Statement<M>> {
-        match ast {
-            _ => Some(Statement::Expression(Box::new(ast))),
-        }
+        Some(Statement::Expression(Box::new(ast)))
     }
 
     pub fn root_str(&self) -> String {
