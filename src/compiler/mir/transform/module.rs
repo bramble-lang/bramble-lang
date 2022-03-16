@@ -26,11 +26,8 @@ pub fn transform(
     debug!("Transform module: {:?}", module.context().canonical_path());
 
     // Add all the types in this module
-    for sd in module.get_structs() {
-        if let Item::Struct(sd) = sd {
-            project.add_struct_def(sd)?;
-        }
-    }
+    add_struct_defs_to_typetable(project, module)?;
+    add_types_to_typetable(project, module)?;
 
     let externs: Vec<_> = module
         .get_externs()
@@ -65,6 +62,30 @@ pub fn transform(
     // Iterate through each function an construct its MIR and then update
     // its static definition with the MIR
     transform_fns(project, &funcs)?;
+
+    Ok(())
+}
+
+fn add_types_to_typetable(
+    project: &mut MirProject,
+    module: &Module<SemanticContext>,
+) -> Result<(), TransformError> {
+    PostOrderIter::new(module)
+        .map(|n| project.add_type(n.context().ty()))
+        .collect::<Result<Vec<_>, _>>()?;
+
+    Ok(())
+}
+
+fn add_struct_defs_to_typetable(
+    project: &mut MirProject,
+    module: &Module<SemanticContext>,
+) -> Result<(), TransformError> {
+    for sd in module.get_structs() {
+        if let Item::Struct(sd) = sd {
+            project.add_struct_def(sd)?;
+        }
+    }
 
     Ok(())
 }
