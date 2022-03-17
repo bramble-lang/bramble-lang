@@ -136,7 +136,7 @@ impl<'a> FuncTransformer<'a> {
                 let ty = self.find_type(ctx.ty());
                 self.mir.temp_store(rv, ty, ctx.span())
             }
-            Expression::TypeCast(_, _, _) => todo!(),
+            Expression::TypeCast(ctx, expr, target) => self.cast(ctx, expr, target),
             Expression::SizeOf(_, _) => todo!(),
             Expression::MemberAccess(_, base, field) => self.member_access(base, *field),
             Expression::ArrayExpression(ctx, els, sz) => {
@@ -187,6 +187,21 @@ impl<'a> FuncTransformer<'a> {
             }
             Expression::Yield(_, _) => todo!(),
         }
+    }
+
+    fn cast(
+        &mut self,
+        ctx: &SemanticContext,
+        expr: &Expression<SemanticContext>,
+        target: &Type,
+    ) -> Operand {
+        let expr = self.expression(expr);
+        let target = self
+            .project
+            .find_type(target)
+            .expect("Cannot find the given type");
+        let result = self.mir.cast(expr, target);
+        self.mir.temp_store(result, target, ctx.span())
     }
 
     /// [Terminates](Terminator) the current [`BasicBlock`] with a function call and starts a new basic block
