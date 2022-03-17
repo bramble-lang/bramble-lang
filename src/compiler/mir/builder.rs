@@ -13,8 +13,11 @@ use super::{ir::*, typetable::*};
 /// interface for constructing the MIR operands, operations, and statements, to
 /// simplify the code that traverses input ASTs and transforms them into MIR.
 pub struct MirProcedureBuilder {
+    /// The [`Procedure`] being built
     proc: Procedure,
+    /// All MIR elements will be added to this [`BasicBlock`].
     current_bb: Option<BasicBlockId>,
+    /// All variables will be added to this scope.
     current_scope: ScopeId,
 }
 
@@ -56,7 +59,8 @@ impl MirProcedureBuilder {
         self.current_scope = self.proc.new_scope(self.current_scope);
     }
 
-    /// Close the current scope and move up to its parent scope.
+    /// Close the current scope and move up to its parent scope. Closing the root
+    /// scope will have no effect.
     pub fn close_scope(&mut self) {
         self.current_scope = self
             .proc

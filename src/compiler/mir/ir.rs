@@ -868,6 +868,8 @@ impl Default for ScopeTree {
     }
 }
 
+/// An [`Iterator`] that will traverse the ancestors of the given [scope](ScopeId) moving
+/// from the initial scope, through its ancestors, to the root scope.
 struct ScopeIterator<'a> {
     next: Option<ScopeId>,
     tree: &'a ScopeTree,
