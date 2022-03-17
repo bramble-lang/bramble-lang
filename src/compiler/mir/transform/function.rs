@@ -84,6 +84,12 @@ impl<'a> FuncTransformer<'a> {
             .store(LValue::Var(vid), RValue::Use(expr), bind.context().span())
     }
 
+    fn mutate(&mut self, mutate: &Mutate<SemanticContext>) {
+        debug!("Mutate statement");
+        let lhs = self.expression(mutate.get_lhs());
+        let rhs = self.expression(mutate.get_rhs());
+    }
+
     fn ret(&mut self, ret: &Return<SemanticContext>) {
         match ret.get_value() {
             Some(val) => {
@@ -230,19 +236,19 @@ impl<'a> FuncTransformer<'a> {
             .find_type(ty)
             .expect("Could not find given type in the type table");
 
-        if let Operand::LValue(base_mir) = self.expression(base) {
-            // Extract the Structure Definition from the type
-            let mir_ty = self.project.get_type(mir_ty);
-            let def = mir_ty
-                .get_struct_def()
-                .expect("Trying to access a field on a non-structure type");
+        let base_mir = self
+            .expression(base)
+            .into_lvalue()
+            .expect("Base expression must be a location expressionk");
 
-            let access = self.mir.member_access(base_mir, def, field);
-            Operand::LValue(access)
-        } else {
-            // Base expression must be a location expression
-            panic!("Base expression must be a location expression")
-        }
+        // Extract the Structure Definition from the type
+        let mir_ty = self.project.get_type(mir_ty);
+        let def = mir_ty
+            .get_struct_def()
+            .expect("Trying to access a field on a non-structure type");
+
+        let access = self.mir.member_access(base_mir, def, field);
+        Operand::LValue(access)
     }
 
     /// Transform an Array At operation to its MIR form and return the Location Expression as

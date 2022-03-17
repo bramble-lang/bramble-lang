@@ -637,6 +637,17 @@ pub enum Operand {
     LValue(LValue),
 }
 
+impl Operand {
+    /// If this is an [`Operand::LValue`] then this will extract the underlying
+    /// [`LValue`]; otherwise, this will return [`None`](Option::None).
+    pub fn into_lvalue(self) -> Option<LValue> {
+        match self {
+            Self::LValue(lv) => Some(lv),
+            Self::Constant(_) => None,
+        }
+    }
+}
+
 impl Display for Operand {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let text = match self {
