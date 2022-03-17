@@ -41,6 +41,15 @@ pub struct StringTable {
     table: RefCell<HashMap<String, StringId>>,
 }
 
+impl Default for StringTable {
+    fn default() -> Self {
+        Self {
+            next_id: Default::default(),
+            table: Default::default(),
+        }
+    }
+}
+
 impl StringTable {
     pub fn new() -> StringTable {
         StringTable {
@@ -86,13 +95,13 @@ impl StringTable {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug, Default)]
 pub struct StringId(u32);
 
 impl StringId {
     /// Create a new String ID and initialize it to 0
     pub fn new() -> StringId {
-        StringId(0)
+        Self::default()
     }
 
     /// Increment by one and return the value of the ID before the increment.
