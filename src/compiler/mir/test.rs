@@ -1167,6 +1167,39 @@ pub mod tests {
         assert_eq!(ret_val.ty(), expected_ty);
     }
 
+    #[test]
+    fn casting() {
+        let text = "
+        fn test() -> i32 {
+            let x: i64 := 5;
+            let y: i32 := x as i32;
+            return y;
+        }
+        ";
+        let mut table = StringTable::new();
+        let module = compile(text, &mut table);
+        let mut project = MirProject::new();
+        transform::transform(&module, &mut project).unwrap();
+
+        let path: Path = to_path(&["main", "test"], &table);
+        let def_id = project.find_def(&path).unwrap();
+        let StaticItem::Function(mir) = project.get_def(def_id);
+
+        // Check that the right number of BBs are created
+        assert_eq!(mir.len(), 1);
+
+        // Check first transition into cond BB
+        let bb = mir.get_bb(BasicBlockId::new(0));
+
+        let cast = bb.get_stm(1); // x as i32;
+        let expected_cast = RValue::Cast(
+            Operand::LValue(LValue::Var(VarId::new(0))),
+            project.find_type(&Type::I32).unwrap(),
+        );
+        let StatementKind::Assign(_, rhs) = cast.kind();
+        assert_eq!(rhs, &expected_cast);
+    }
+
     fn to_path(v: &[&str], table: &StringTable) -> Path {
         let mut path = vec![Element::CanonicalRoot];
 

@@ -284,6 +284,12 @@ impl MirProcedureBuilder {
         todo!()
     }
 
+    /// Cast the given expression to the given primitive.
+    pub fn cast(&mut self, expr: Operand, target: TypeId) -> RValue {
+        debug!("Cast: {:?}, {:?}", expr, target);
+        RValue::Cast(expr, target)
+    }
+
     /// Terminates by returning to the caller function
     pub fn term_return(&mut self, span: Span) {
         debug!("Terminator: Return");
