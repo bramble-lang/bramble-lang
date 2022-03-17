@@ -625,6 +625,45 @@ pub mod tests {
     }
 
     #[test]
+    fn mutate() {
+        let text = "
+        fn test() -> i64 {
+            let mut x: i64 := 5;
+            mut x := 6;
+            return x;
+        }
+        ";
+        let mut table = StringTable::new();
+        let module = compile(text, &mut table);
+        let mut project = MirProject::new();
+        transform::transform(&module, &mut project).unwrap();
+
+        let path: Path = to_path(&["main", "test"], &table);
+        let def_id = project.find_def(&path).unwrap();
+        let StaticItem::Function(mir) = project.get_def(def_id);
+
+        // Check that the right number of BBs are created
+        assert_eq!(mir.len(), 1);
+
+        // Check first transition into cond BB
+        let bb = mir.get_bb(BasicBlockId::new(0));
+
+        let letx = bb.get_stm(0); // let x: i64 := 5;
+        let expected_letx = StatementKind::Assign(
+            LValue::Var(VarId::new(0)),
+            RValue::Use(Operand::Constant(Constant::I64(5))),
+        );
+        assert_eq!(letx.kind(), &expected_letx);
+
+        let mutx = bb.get_stm(1); // mut x := 6;
+        let expected_mutx = StatementKind::Assign(
+            LValue::Var(VarId::new(0)),
+            RValue::Use(Operand::Constant(Constant::I64(6))),
+        );
+        assert_eq!(mutx.kind(), &expected_mutx);
+    }
+
+    #[test]
     fn variable_scopes() {
         let text = "
         fn test() -> i64 {

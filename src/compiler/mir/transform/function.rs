@@ -65,7 +65,7 @@ impl<'a> FuncTransformer<'a> {
             ast::Statement::Expression(expr) => {
                 self.expression(expr);
             }
-            ast::Statement::Mutate(_) => todo!(),
+            ast::Statement::Mutate(mutate) => self.mutate(mutate),
             ast::Statement::YieldReturn(_) => todo!(),
             ast::Statement::Return(ret) => self.ret(ret),
         }
@@ -82,6 +82,17 @@ impl<'a> FuncTransformer<'a> {
 
         self.mir
             .store(LValue::Var(vid), RValue::Use(expr), bind.context().span())
+    }
+
+    fn mutate(&mut self, mutate: &Mutate<SemanticContext>) {
+        debug!("Mutate statement");
+        let lhs = self
+            .expression(mutate.get_lhs())
+            .into_lvalue()
+            .expect("LHS of a mutate must be an addressable expression");
+        let rhs = self.expression(mutate.get_rhs());
+        self.mir
+            .store(lhs, RValue::Use(rhs), mutate.context().span());
     }
 
     fn ret(&mut self, ret: &Return<SemanticContext>) {
@@ -230,19 +241,19 @@ impl<'a> FuncTransformer<'a> {
             .find_type(ty)
             .expect("Could not find given type in the type table");
 
-        if let Operand::LValue(base_mir) = self.expression(base) {
-            // Extract the Structure Definition from the type
-            let mir_ty = self.project.get_type(mir_ty);
-            let def = mir_ty
-                .get_struct_def()
-                .expect("Trying to access a field on a non-structure type");
+        let base_mir = self
+            .expression(base)
+            .into_lvalue()
+            .expect("The LHS of a '.' operator must be an addressable expression");
 
-            let access = self.mir.member_access(base_mir, def, field);
-            Operand::LValue(access)
-        } else {
-            // Base expression must be a location expression
-            panic!("Base expression must be a location expression")
-        }
+        // Extract the Structure Definition from the type
+        let mir_ty = self.project.get_type(mir_ty);
+        let def = mir_ty
+            .get_struct_def()
+            .expect("Trying to access a field on a non-structure type");
+
+        let access = self.mir.member_access(base_mir, def, field);
+        Operand::LValue(access)
     }
 
     /// Transform an Array At operation to its MIR form and return the Location Expression as
