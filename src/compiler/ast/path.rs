@@ -25,7 +25,7 @@ impl CompilerDisplay for Element {
             Element::CanonicalRoot => CANONICAL_ROOT.into(),
             Element::Selph => SELF.into(),
             Element::Super => SUPER.into(),
-            Element::Id(id) => st.get(*id)?.into(),
+            Element::Id(id) => st.get(*id)?,
         })
     }
 }
@@ -65,12 +65,18 @@ pub struct Path {
     is_canonical: bool,
 }
 
+impl Default for Path {
+    fn default() -> Self {
+        Self {
+            path: Default::default(),
+            is_canonical: Default::default(),
+        }
+    }
+}
+
 impl Path {
     pub fn new() -> Path {
-        Path {
-            path: vec![],
-            is_canonical: false,
-        }
+        Self::default()
     }
 
     pub fn is_canonical(&self) -> bool {
@@ -120,12 +126,10 @@ impl Path {
         let l = self.path.len();
         if l == 0 {
             None
+        } else if let Element::Id(id) = self.path[l - 1] {
+            Some(id)
         } else {
-            if let Element::Id(id) = self.path[l - 1] {
-                Some(id)
-            } else {
-                None
-            }
+            None
         }
     }
 
@@ -171,9 +175,7 @@ impl Path {
             let mut merged: Vec<Element> = current_path.into();
             for step in path.iter() {
                 if *step == Element::Super {
-                    merged
-                        .pop()
-                        .ok_or_else(|| PathCanonizationError::SubceedingRoot)?;
+                    merged.pop().ok_or(PathCanonizationError::SubceedingRoot)?;
                     if merged.is_empty() {
                         return Err(PathCanonizationError::SubceedingRoot);
                     }

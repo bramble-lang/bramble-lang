@@ -93,13 +93,13 @@ impl<'ctx> RegisterLookup<'ctx> {
     /// assert_eq!(r, Ok(()));
     /// ```
     pub fn close_fn(&mut self) -> Result<()> {
-        if self.stack.len() == 1 {
-            self.stack.pop();
-            Ok(())
-        } else if self.stack.len() > 1 {
-            Err("Cannot close fn scope: there is an open local scope".into())
-        } else {
-            Err("Cannot close fn scope: there is no open fn scope".into())
+        match self.stack.len() {
+            1 => {
+                self.stack.pop();
+                Ok(())
+            }
+            x if x > 1 => Err("Cannot close fn scope: there is an open local scope".into()),
+            _ => Err("Cannot close fn scope: there is no open fn scope".into()),
         }
     }
 
@@ -117,13 +117,13 @@ impl<'ctx> RegisterLookup<'ctx> {
     /// Closes the current local scope. If there is no open local scope
     /// this will return an `Err`
     pub fn close_local(&mut self) -> Result<()> {
-        if self.stack.len() > 1 {
-            self.stack.pop();
-            Ok(())
-        } else if self.stack.len() == 1 {
-            Err("Cannot close local scope: there is no open local scope".into())
-        } else {
-            Err("Cannot close local scope: there is no open fn scope".into())
+        match self.stack.len() {
+            x if x > 1 => {
+                self.stack.pop();
+                Ok(())
+            }
+            1 => Err("Cannot close local scope: there is no open local scope".into()),
+            _ => Err("Cannot close local scope: there is no open fn scope".into()),
         }
     }
 
