@@ -800,6 +800,8 @@ pub enum BinOp {
     And,
     /// '|' bitwise or operation on two primitives
     Or,
+    /// '@' compute an offset from a given raw pointer value
+    RawPointerOffset,
 }
 
 impl Display for BinOp {
@@ -817,6 +819,7 @@ impl Display for BinOp {
             BinOp::Gt => "Gt",
             BinOp::And => "BitwiseAnd",
             BinOp::Or => "BitwiseOr",
+            BinOp::RawPointerOffset => "RawPointerOffset",
         };
         f.write_str(txt)
     }
