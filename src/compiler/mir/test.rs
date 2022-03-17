@@ -73,6 +73,27 @@ pub mod tests {
         }
 
         #[test]
+        fn print_mir_scopes() {
+            let text = "
+        fn test() -> i64 {
+            let x: i64 := 5;
+            {
+                let z: i64 := x;
+                let x: f64 := 5.0;
+                let y: f64 := x;
+            };
+            let y: i64 := x;
+            return 1;
+        }
+        ";
+            let mut table = StringTable::new();
+            let module = compile(text, &mut table);
+            let mut project = MirProject::new();
+            transform::transform(&module, &mut project).unwrap();
+            println!("{}", project);
+        }
+
+        #[test]
         fn print_mir_fn_call() {
             let text = "
         fn test() -> i64 {
@@ -601,6 +622,64 @@ pub mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn variable_scopes() {
+        let text = "
+        fn test() -> i64 {
+            let x: i64 := 5;
+            {
+                let y: i64 := x;
+                let x: f64 := 5.0;
+                let z: f64 := x;
+            };
+            let y: i64 := x;
+            return y;
+        }
+        ";
+        let mut table = StringTable::new();
+        let module = compile(text, &mut table);
+        let mut project = MirProject::new();
+        transform::transform(&module, &mut project).unwrap();
+
+        let path: Path = to_path(&["main", "test"], &table);
+        let def_id = project.find_def(&path).unwrap();
+        let StaticItem::Function(mir) = project.get_def(def_id);
+
+        // Check that the right number of BBs are created
+        assert_eq!(mir.len(), 1);
+
+        // Check first transition into cond BB
+        let bb = mir.get_bb(BasicBlockId::new(0));
+
+        let lety = bb.get_stm(1); // let y: i64 := x;
+        let expected_lety = StatementKind::Assign(
+            LValue::Var(VarId::new(1)),
+            RValue::Use(Operand::LValue(LValue::Var(VarId::new(0)))),
+        );
+        assert_eq!(lety.kind(), &expected_lety);
+
+        let letx = bb.get_stm(2); // let x: f64 := 5.0;
+        let expected_letx = StatementKind::Assign(
+            LValue::Var(VarId::new(2)),
+            RValue::Use(Operand::Constant(Constant::F64(5.0))),
+        );
+        assert_eq!(letx.kind(), &expected_letx);
+
+        let letz = bb.get_stm(3);
+        let expected_letz = StatementKind::Assign(
+            LValue::Var(VarId::new(3)),
+            RValue::Use(Operand::LValue(LValue::Var(VarId::new(2)))),
+        );
+        assert_eq!(letz.kind(), &expected_letz);
+
+        let letx2 = bb.get_stm(4);
+        let expected_letx2 = StatementKind::Assign(
+            LValue::Var(VarId::new(4)),
+            RValue::Use(Operand::LValue(LValue::Var(VarId::new(0)))),
+        );
+        assert_eq!(letx2.kind(), &expected_letx2);
     }
 
     #[test]

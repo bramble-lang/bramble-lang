@@ -162,14 +162,17 @@ impl<'a> FuncTransformer<'a> {
                 body,
             } => self.while_expr(cond, body, context.span()),
             Expression::ExpressionBlock(_, block, expr) => {
+                self.mir.start_scope();
                 for stm in block {
                     self.statement(stm);
                 }
-                if let Some(expr) = expr {
+                let result = if let Some(expr) = expr {
                     self.expression(expr)
                 } else {
                     Operand::Constant(Constant::Unit)
-                }
+                };
+                self.mir.close_scope();
+                result
             }
             Expression::Yield(_, _) => todo!(),
         }

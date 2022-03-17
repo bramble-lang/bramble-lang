@@ -13,7 +13,7 @@ use super::{
     typetable::{FieldId, TypeId},
 };
 
-const ROOT_SCOPE: usize = 0;
+const ROOT_SCOPE: ScopeId = ScopeId(0);
 
 /// Procedure
 /// This type represents a single function from the input source code.
@@ -35,6 +35,8 @@ pub struct Procedure {
     temps: Vec<TempDecl>,
     /// The span of input source code that this IR element covers
     span: Span,
+    /// The scope tree
+    scopes: ScopeTree,
 }
 
 impl Procedure {
@@ -55,11 +57,12 @@ impl Procedure {
             vars: vec![],
             temps: vec![],
             span,
+            scopes: ScopeTree::default(),
         };
 
         // For each argument, add it to the local variable stack
         for arg in &args {
-            p.add_var(arg.name, false, arg.ty, ScopeId::new(0), arg.span);
+            p.add_var(arg.name, false, arg.ty, ROOT_SCOPE, arg.span);
         }
 
         p.args = args;
@@ -85,6 +88,7 @@ impl Procedure {
             vars: vec![],
             temps: vec![],
             span,
+            scopes: ScopeTree::default(),
         }
     }
 
@@ -95,7 +99,7 @@ impl Procedure {
     /// Add an argument to this procedure's argument list and make the argument available as a variable.
     pub fn add_arg(&mut self, name: StringId, ty: TypeId, span: Span) -> ArgId {
         // Add the given argument to the set of variables
-        self.add_var(name, false, ty, ScopeId::new(0), span);
+        self.add_var(name, false, ty, ROOT_SCOPE, span);
 
         // Add the argument to the argument set of the function
         let ad = ArgDecl::new(name, ty, span);
@@ -123,6 +127,14 @@ impl Procedure {
         BasicBlockId::new(id)
     }
 
+    pub fn new_scope(&mut self, parent: ScopeId) -> ScopeId {
+        self.scopes.new_scope(parent)
+    }
+
+    pub fn parent_scope(&self, id: ScopeId) -> Option<ScopeId> {
+        self.scopes.parent_of(id)
+    }
+
     /// Get the declaration details of a user defined variable in
     /// this procedure.
     pub fn get_var(&self, id: VarId) -> &VarDecl {
@@ -131,10 +143,12 @@ impl Procedure {
 
     /// Will return the [`VarId`] for the given variable name if it
     /// exists in the function's stack.
-    pub fn find_var(&self, name: StringId) -> Option<VarId> {
-        for idx in 0..self.vars.len() {
-            if self.vars[idx].name == name {
-                return Some(VarId::new(idx));
+    pub fn find_var(&self, name: StringId, start: ScopeId) -> Option<VarId> {
+        for scope in self.scopes.iter_from(start) {
+            for idx in 0..self.vars.len() {
+                if self.vars[idx].name == name && self.vars[idx].scope == scope {
+                    return Some(VarId::new(idx));
+                }
             }
         }
 
@@ -227,8 +241,12 @@ impl Display for Procedure {
             }
 
             f.write_fmt(format_args!(
-                "{}: {:?} // {} {}\n",
-                vid, self.vars[idx].ty, self.vars[idx].name, self.vars[idx].span
+                "{}: {:?}, {:?} // {} {}\n",
+                vid,
+                self.vars[idx].ty,
+                self.vars[idx].scope,
+                self.vars[idx].name,
+                self.vars[idx].span
             ))?
         }
         f.write_str("\n")?;
@@ -318,8 +336,8 @@ impl Display for TempId {
 pub struct ScopeId(usize);
 
 impl ScopeId {
-    pub fn new(id: usize) -> ScopeId {
-        ScopeId(id)
+    pub fn root() -> ScopeId {
+        ROOT_SCOPE
     }
 
     pub fn index(&self) -> usize {
@@ -809,5 +827,62 @@ impl Display for UnOp {
             UnOp::Not => "!",
         };
         f.write_str(txt)
+    }
+}
+
+/// Stores the topology of a function's scope tree.
+#[derive(Debug, Clone, PartialEq)]
+struct ScopeTree {
+    scopes: Vec<Option<ScopeId>>,
+}
+
+impl ScopeTree {
+    /// Returns the parent of the given [`ScopeId`]. If the given scope is the root
+    /// scope then it will return [`None`](Option::None).
+    pub fn parent_of(&self, id: ScopeId) -> Option<ScopeId> {
+        self.scopes[id.0]
+    }
+
+    /// Creates a new scope as a child of the given `parent` scope. Returns the
+    /// [`ScopeId`] of the new scope.
+    pub fn new_scope(&mut self, parent: ScopeId) -> ScopeId {
+        let id = self.scopes.len();
+        self.scopes.push(Some(parent));
+        ScopeId(id)
+    }
+
+    /// Returns an iterator over the scopes from the `start` scope through its ancestors
+    /// up to the root scope.
+    pub fn iter_from(&self, start: ScopeId) -> ScopeIterator {
+        assert!(start.0 < self.scopes.len());
+        ScopeIterator {
+            next: Some(start),
+            tree: self,
+        }
+    }
+}
+
+impl Default for ScopeTree {
+    fn default() -> Self {
+        Self { scopes: vec![None] } // The root scope as no parent
+    }
+}
+
+/// An [`Iterator`] that will traverse the ancestors of the given [scope](ScopeId) moving
+/// from the initial scope, through its ancestors, to the root scope.
+struct ScopeIterator<'a> {
+    next: Option<ScopeId>,
+    tree: &'a ScopeTree,
+}
+
+impl<'a> Iterator for ScopeIterator<'a> {
+    type Item = ScopeId;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let s = self.next;
+        if let Some(id) = s {
+            self.next = self.tree.parent_of(id);
+        }
+        s
     }
 }

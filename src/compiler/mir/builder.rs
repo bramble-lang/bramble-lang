@@ -13,8 +13,12 @@ use super::{ir::*, typetable::*};
 /// interface for constructing the MIR operands, operations, and statements, to
 /// simplify the code that traverses input ASTs and transforms them into MIR.
 pub struct MirProcedureBuilder {
+    /// The [`Procedure`] being built
     proc: Procedure,
+    /// All MIR elements will be added to this [`BasicBlock`].
     current_bb: Option<BasicBlockId>,
+    /// All variables will be added to this scope.
+    current_scope: ScopeId,
 }
 
 impl MirProcedureBuilder {
@@ -24,6 +28,7 @@ impl MirProcedureBuilder {
         MirProcedureBuilder {
             proc: Procedure::new(path, vec![], ret_ty, Span::zero()),
             current_bb: None,
+            current_scope: ScopeId::root(),
         }
     }
 
@@ -48,8 +53,25 @@ impl MirProcedureBuilder {
         self.current_bb = Some(bb)
     }
 
+    /// Create a new scope that's the child of the current scope and make it
+    /// the current scope.
+    pub fn start_scope(&mut self) {
+        self.current_scope = self.proc.new_scope(self.current_scope);
+    }
+
+    /// Close the current scope and move up to its parent scope. Closing the root
+    /// scope will have no effect.
+    pub fn close_scope(&mut self) {
+        self.current_scope = self
+            .proc
+            .parent_scope(self.current_scope)
+            .unwrap_or_else(ScopeId::root);
+    }
+
+    /// Search the procedure's set of local variables for the variable with
+    /// the matching name that's in the nearest scope.
     pub fn find_var(&self, name: StringId) -> Option<VarId> {
-        self.proc.find_var(name)
+        self.proc.find_var(name, self.current_scope)
     }
 
     /// Create an [`i8`] constant
@@ -120,7 +142,8 @@ impl MirProcedureBuilder {
 
     /// Add a new user declared variable to this function's stack
     pub fn var(&mut self, name: StringId, mutable: bool, ty: TypeId, span: Span) -> VarId {
-        self.proc.add_var(name, mutable, ty, ScopeId::new(0), span)
+        self.proc
+            .add_var(name, mutable, ty, self.current_scope, span)
     }
 
     /// Add a new temporary variable to this function's stack
