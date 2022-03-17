@@ -65,7 +65,7 @@ impl<'a> FuncTransformer<'a> {
             ast::Statement::Expression(expr) => {
                 self.expression(expr);
             }
-            ast::Statement::Mutate(_) => todo!(),
+            ast::Statement::Mutate(mutate) => self.mutate(mutate),
             ast::Statement::YieldReturn(_) => todo!(),
             ast::Statement::Return(ret) => self.ret(ret),
         }
@@ -86,8 +86,13 @@ impl<'a> FuncTransformer<'a> {
 
     fn mutate(&mut self, mutate: &Mutate<SemanticContext>) {
         debug!("Mutate statement");
-        let lhs = self.expression(mutate.get_lhs());
+        let lhs = self
+            .expression(mutate.get_lhs())
+            .into_lvalue()
+            .expect("LHS of a mutate must be an addressable expression");
         let rhs = self.expression(mutate.get_rhs());
+        self.mir
+            .store(lhs, RValue::Use(rhs), mutate.context().span());
     }
 
     fn ret(&mut self, ret: &Return<SemanticContext>) {
