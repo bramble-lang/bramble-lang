@@ -65,7 +65,7 @@ impl MirProcedureBuilder {
         self.current_scope = self
             .proc
             .parent_scope(self.current_scope)
-            .unwrap_or_else(|| ScopeId::root());
+            .unwrap_or_else(ScopeId::root);
     }
 
     /// Search the procedure's set of local variables for the variable with
