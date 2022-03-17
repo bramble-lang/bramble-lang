@@ -244,7 +244,7 @@ impl<'a> FuncTransformer<'a> {
         let base_mir = self
             .expression(base)
             .into_lvalue()
-            .expect("Base expression must be a location expressionk");
+            .expect("The LHS of a '.' operator must be an addressable expression");
 
         // Extract the Structure Definition from the type
         let mir_ty = self.project.get_type(mir_ty);
