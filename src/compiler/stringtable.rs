@@ -64,21 +64,16 @@ impl StringTable {
     /// will add the string to the table and assign it a unique ID.
     pub fn insert(&self, s: String) -> StringId {
         let mut table = self.table.borrow_mut();
-        if table.contains_key(&s) {
-            let id = table.get(&s).unwrap();
-            *id
-        } else {
-            let id = self.next_id.borrow_mut().get_and_inc();
-            table.insert(s, id);
-            id
-        }
+        *table
+            .entry(s)
+            .or_insert_with(|| self.next_id.borrow_mut().get_and_inc())
     }
 
     /// Search the string table for the given string and, if found, return the
     /// associated [`StringId`]. If not found, then return [`None`](Option::None).
     pub fn find(&self, s: &str) -> Option<StringId> {
         let table = self.table.borrow();
-        table.get(s).map(|id| *id)
+        table.get(s).copied()
     }
 
     /// Given an ID, if it is assigned to a string, then return the associated
