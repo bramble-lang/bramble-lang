@@ -324,6 +324,63 @@ pub mod tests {
     }
 
     #[test]
+    fn pointer_offset() {
+        let mut table = StringTable::new();
+        let hello = table.insert("hello".into());
+        for (op, ptr_mut) in [
+            (UnaryOperator::AddressConst, PointerMut::Const),
+            (UnaryOperator::AddressMut, PointerMut::Mut),
+        ] {
+            for (literal_ty, v) in &[
+                (Type::I8, Expression::I8((), 1)),
+                (Type::I16, Expression::I16((), 1)),
+                (Type::I32, Expression::I32((), 1)),
+                (Type::I64, Expression::I64((), 1)),
+                (Type::U8, Expression::U8((), 1)),
+                (Type::U16, Expression::U16((), 1)),
+                (Type::U32, Expression::U32((), 1)),
+                (Type::U64, Expression::U64((), 1)),
+                (Type::F64, Expression::F64((), 5.0)),
+                (Type::StringLiteral, Expression::StringLiteral((), hello)),
+                (Type::Bool, Expression::Boolean((), true)),
+            ] {
+                let literal = to_code(v, &table);
+                let ptr_ty = Type::RawPointer(ptr_mut, Box::new(literal_ty.clone()));
+                let text = format!(
+                    "
+                    fn test() {{ 
+                        let mut x: {literal_ty} := {literal};
+                        let p: {ptr_ty} := {op} x;
+                        let p2: {ptr_ty} := p @ 2;
+                        return;
+                    }}
+                    ",
+                );
+                let module = compile(&text, &mut table);
+                let mut project = MirProject::new();
+                transform::transform(&module, &mut project).unwrap();
+
+                let path: Path = to_path(&["main", "test"], &table);
+                let def_id = project.find_def(&path).unwrap();
+                let StaticItem::Function(mir) = project.get_def(def_id);
+
+                let bb = mir.get_bb(BasicBlockId::new(0));
+                let stm = bb.get_stm(3);
+                match stm.kind() {
+                    StatementKind::Assign(_, r) => {
+                        let expected = RValue::BinOp(
+                            BinOp::RawPointerOffset,
+                            Operand::LValue(LValue::Var(VarId::new(1))),
+                            Operand::Constant(Constant::I64(2)),
+                        );
+                        assert_eq!(*r, expected);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
     fn address_of() {
         let mut table = StringTable::new();
         let hello = table.insert("hello".into());

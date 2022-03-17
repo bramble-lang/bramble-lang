@@ -281,7 +281,7 @@ impl MirProcedureBuilder {
     /// Add a raw pointer offset operation to the current [`BasicBlock`].
     pub fn offset(&mut self, left: Operand, right: Operand) -> RValue {
         debug!("Pointer Offset: {:?}, {:?}", left, right);
-        todo!()
+        RValue::BinOp(BinOp::RawPointerOffset, left, right)
     }
 
     /// Cast the given expression to the given primitive.
