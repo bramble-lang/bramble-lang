@@ -28,7 +28,7 @@ impl MirProcedureBuilder {
         MirProcedureBuilder {
             proc: Procedure::new(path, vec![], ret_ty, Span::zero()),
             current_bb: None,
-            current_scope: ScopeId::new(0),
+            current_scope: ScopeId::root(),
         }
     }
 
@@ -65,7 +65,7 @@ impl MirProcedureBuilder {
         self.current_scope = self
             .proc
             .parent_scope(self.current_scope)
-            .unwrap_or_else(|| ScopeId::new(0));
+            .unwrap_or_else(|| ScopeId::root());
     }
 
     /// Search the procedure's set of local variables for the variable with

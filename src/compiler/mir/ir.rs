@@ -13,7 +13,7 @@ use super::{
     typetable::{FieldId, TypeId},
 };
 
-const ROOT_SCOPE: usize = 0;
+const ROOT_SCOPE: ScopeId = ScopeId(0);
 
 /// Procedure
 /// This type represents a single function from the input source code.
@@ -62,7 +62,7 @@ impl Procedure {
 
         // For each argument, add it to the local variable stack
         for arg in &args {
-            p.add_var(arg.name, false, arg.ty, ScopeId::new(0), arg.span);
+            p.add_var(arg.name, false, arg.ty, ROOT_SCOPE, arg.span);
         }
 
         p.args = args;
@@ -99,7 +99,7 @@ impl Procedure {
     /// Add an argument to this procedure's argument list and make the argument available as a variable.
     pub fn add_arg(&mut self, name: StringId, ty: TypeId, span: Span) -> ArgId {
         // Add the given argument to the set of variables
-        self.add_var(name, false, ty, ScopeId::new(0), span);
+        self.add_var(name, false, ty, ROOT_SCOPE, span);
 
         // Add the argument to the argument set of the function
         let ad = ArgDecl::new(name, ty, span);
@@ -336,8 +336,8 @@ impl Display for TempId {
 pub struct ScopeId(usize);
 
 impl ScopeId {
-    pub fn new(id: usize) -> ScopeId {
-        ScopeId(id)
+    pub fn root() -> ScopeId {
+        ROOT_SCOPE
     }
 
     pub fn index(&self) -> usize {
