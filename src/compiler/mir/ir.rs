@@ -622,7 +622,7 @@ impl Display for RValue {
             RValue::Use(o) => format!("Use({})", o),
             RValue::BinOp(op, l, r) => format!("{}({}, {})", op, l, r),
             RValue::UnOp(op, o) => format!("{}({})", op, o),
-            RValue::Cast(v, t) => format!("{} as {:?}", v, t),
+            RValue::Cast(v, ty) => format!("{} as {:?}", v, ty),
             RValue::AddressOf(o) => format!("AddressOf({})", o),
         };
         f.write_str(&text)
@@ -673,6 +673,7 @@ pub enum Constant {
     Bool(bool),
     StringLiteral(StringId),
     Null,
+    SizeOf(TypeId),
 }
 
 impl Display for Constant {
@@ -691,6 +692,7 @@ impl Display for Constant {
             Constant::F64(v) => f.write_fmt(format_args!("{}f64", v)),
             Constant::Bool(b) => f.write_fmt(format_args!("{}", b)),
             Constant::StringLiteral(sid) => f.write_fmt(format_args!("{}", sid)),
+            Constant::SizeOf(ty) => f.write_fmt(format_args!("size_of({:?})", ty)),
         }
     }
 }

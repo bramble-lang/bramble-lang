@@ -137,7 +137,7 @@ impl<'a> FuncTransformer<'a> {
                 self.mir.temp_store(rv, ty, ctx.span())
             }
             Expression::TypeCast(ctx, expr, target) => self.cast(ctx, expr, target),
-            Expression::SizeOf(_, _) => todo!(),
+            Expression::SizeOf(ctx, ty) => self.size_of(ctx, ty.as_ref()),
             Expression::MemberAccess(_, base, field) => self.member_access(base, *field),
             Expression::ArrayExpression(ctx, els, sz) => {
                 self.array_expr(ctx.ty(), els, *sz, ctx.span())
@@ -187,6 +187,11 @@ impl<'a> FuncTransformer<'a> {
             }
             Expression::Yield(_, _) => todo!(),
         }
+    }
+
+    fn size_of(&mut self, ctx: &SemanticContext, ty: &Type) -> Operand {
+        let ty = self.project.find_type(ty).expect("Could not find type");
+        self.mir.size_of(ty)
     }
 
     fn stuct_expr(
