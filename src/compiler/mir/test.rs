@@ -181,6 +181,25 @@ pub mod tests {
         }
 
         #[test]
+        fn print_mir_for_struct_expression() {
+            let text = "
+        fn test() -> Test {
+            let x: Test := Test{a: 1, b: 2};
+            return x;
+        }
+        struct Test {
+            a: i64,
+            b: i64,
+        }
+        ";
+            let mut table = StringTable::new();
+            let module = compile(text, &mut table);
+            let mut project = MirProject::new();
+            transform::transform(&module, &mut project).unwrap();
+            println!("{}", project);
+        }
+
+        #[test]
         fn print_mir_for_struct_field() {
             let text = "
         fn test(s: S2) -> i64 {
@@ -1255,6 +1274,55 @@ pub mod tests {
         );
         let StatementKind::Assign(_, rhs) = cast.kind();
         assert_eq!(rhs, &expected_cast);
+    }
+
+    #[test]
+    fn struct_expression() {
+        let text = "
+        fn test() -> S {
+            let s: S := S{a: 1, b: 2};
+            return s;
+        }
+
+        struct S {
+            a: i64,
+            b: i64,
+        }
+        ";
+        let mut table = StringTable::new();
+        let module = compile(text, &mut table);
+
+        let mut project = MirProject::new();
+        transform::transform(&module, &mut project).unwrap();
+
+        let path: Path = to_path(&["main", "test"], &table);
+        let def_id = project.find_def(&path).unwrap();
+        let StaticItem::Function(mir) = project.get_def(def_id);
+
+        assert_eq!(mir.len(), 1);
+        let bb = mir.get_bb(BasicBlockId::new(0));
+
+        let stm = bb.get_stm(0);
+        match stm.kind() {
+            StatementKind::Assign(
+                LValue::Access(_, Accessor::Field(fid, _)),
+                RValue::Use(Operand::Constant(Constant::I64(1))),
+            ) => {
+                assert_eq!(u32::from(*fid), 0u32);
+            }
+            _ => panic!(),
+        }
+
+        let stm = bb.get_stm(1);
+        match stm.kind() {
+            StatementKind::Assign(
+                LValue::Access(_, Accessor::Field(fid, _)),
+                RValue::Use(Operand::Constant(Constant::I64(2))),
+            ) => {
+                assert_eq!(u32::from(*fid), 1u32);
+            }
+            _ => panic!(),
+        }
     }
 
     fn to_path(v: &[&str], table: &StringTable) -> Path {
