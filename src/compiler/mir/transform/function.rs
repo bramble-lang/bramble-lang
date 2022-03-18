@@ -191,7 +191,7 @@ impl<'a> FuncTransformer<'a> {
 
     fn size_of(&mut self, ctx: &SemanticContext, ty: &Type) -> Operand {
         let ty = self.project.find_type(ty).expect("Could not find type");
-        Operand::Constant(Constant::SizeOf(ty))
+        self.mir.size_of(ty)
     }
 
     fn stuct_expr(

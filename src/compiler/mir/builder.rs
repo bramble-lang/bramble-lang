@@ -134,6 +134,10 @@ impl MirProcedureBuilder {
         Operand::Constant(Constant::Null)
     }
 
+    pub fn size_of(&self, ty: TypeId) -> Operand {
+        Operand::Constant(Constant::SizeOf(ty))
+    }
+
     /// Add an argument to the signature of a function. Arguments are also added to the
     /// set of variables.
     pub fn arg(&mut self, name: StringId, ty: TypeId, span: Span) -> ArgId {
