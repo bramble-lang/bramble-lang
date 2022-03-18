@@ -341,7 +341,7 @@ impl<'ctx> IrGen<'ctx> {
             ex.span(),
         );
 
-        let llvm_fn_decl = self.module.get_function(&label).unwrap();
+        let llvm_fn_decl = self.module.get_function(label).unwrap();
         self.record_terminal(ex.span(), &llvm_fn_decl);
     }
 
@@ -907,7 +907,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                         .ptr_type(AddressSpace::Generic),
                     "",
                 );
-                Some(bitcast.into()).view(|ir| llvm.record_terminal(self.span(), ir))
+                Some(bitcast).view(|ir| llvm.record_terminal(self.span(), ir))
             }
             ast::Expression::SizeOf(_, ty) => {
                 let llvm_ty = ty.to_llvm_ir(llvm).unwrap();
@@ -1069,7 +1069,7 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
                 let sdef = llvm
                     .struct_table
                     .get(&sname)
-                    .expect(&format!("Cannot find {} in {:?}", sname, llvm.struct_table));
+                    .unwrap_or_else(|| panic!("Cannot find {} in {:?}", sname, llvm.struct_table));
                 let sdef_llvm = llvm.module.get_struct_type(&sname).unwrap();
                 let s_ptr = llvm.builder.build_alloca(sdef_llvm, "");
                 llvm.record(event, &s_ptr);
@@ -1327,7 +1327,7 @@ impl ast::UnaryOperator {
                 if ptr.get_type().get_element_type().is_aggregate_type() {
                     ptr.into()
                 } else {
-                    llvm.builder.build_load(ptr, "").into()
+                    llvm.builder.build_load(ptr, "")
                 }
             }
             _ => panic!("Invalid operator"),
@@ -1384,13 +1384,12 @@ impl ast::BinaryOperator {
                 _ => panic!("Attempting to apply invalid operators to floats"),
             }
         } else if is_pointer {
+            let lp = l.into_pointer_value();
             if self == &ast::BinaryOperator::RawPointerOffset {
-                let lp = l.into_pointer_value();
                 let offset = r.into_int_value();
                 let outer_idx = llvm.context.i64_type().const_int(0, false);
                 unsafe { llvm.builder.build_gep(lp, &[offset], "").into() }
             } else {
-                let lp = l.into_pointer_value();
                 let rp = r.into_pointer_value();
                 use ast::BinaryOperator::*;
                 match self {
@@ -1484,8 +1483,7 @@ impl ast::RoutineCall {
             ast::RoutineCall::Extern => llvm
                 .string_table
                 .get(target.item().expect("Extern call must have a target path"))
-                .unwrap()
-                .into(),
+                .unwrap(),
         }
     }
 
@@ -1536,7 +1534,9 @@ impl ast::RoutineCall {
 
                 // If this will use an out param to return the result then
                 // add it to the list of parameters for this function.
-                out_param.map(|out_ptr| llvm_params.push(out_ptr.into()));
+                if let Some(out_ptr) = out_param {
+                    llvm_params.push(out_ptr.into())
+                }
 
                 for p in params {
                     let p_llvm = p.to_llvm_ir(llvm).unwrap();
@@ -1546,7 +1546,7 @@ impl ast::RoutineCall {
                 let call = llvm
                     .module
                     .get_function(&fn_name)
-                    .expect(&format!("Could not find function {}", fn_name));
+                    .unwrap_or_else(|| panic!("Could not find function {}", fn_name));
                 let result = llvm.builder.build_call(call, &llvm_params, "result");
                 llvm.record(event, &result);
                 match out_param {
@@ -1580,7 +1580,7 @@ impl ast::Type {
                 let label = name.to_label(llvm.source_map, llvm.string_table);
                 llvm.module
                     .get_struct_type(&label)
-                    .expect(&format!("Could not find struct {}", label))
+                    .unwrap_or_else(|| panic!("Could not find struct {}", label))
                     .into()
             }
             ast::Type::RawPointer(_, ty) => {
@@ -1611,23 +1611,21 @@ fn convert_esc_seq_to_ascii(s: &str) -> Result<String> {
     for c in s.chars() {
         if c == '\\' {
             is_escape = true;
+        } else if !is_escape {
+            escaped_str.push(c);
         } else {
-            if !is_escape {
-                escaped_str.push(c);
-            } else {
-                is_escape = false;
+            is_escape = false;
 
-                // process escaped character
-                match c {
-                    '\\' => escaped_str.push('\\'),
-                    'n' => escaped_str.push('\n'),
-                    'r' => escaped_str.push('\r'),
-                    't' => escaped_str.push('\t'),
-                    '0' => escaped_str.push('\0'),
-                    '"' => escaped_str.push('\"'),
-                    '\'' => escaped_str.push('\''),
-                    _ => return Err(format!("Unknown escape sequence \\{}", c)),
-                }
+            // process escaped character
+            match c {
+                '\\' => escaped_str.push('\\'),
+                'n' => escaped_str.push('\n'),
+                'r' => escaped_str.push('\r'),
+                't' => escaped_str.push('\t'),
+                '0' => escaped_str.push('\0'),
+                '"' => escaped_str.push('\"'),
+                '\'' => escaped_str.push('\''),
+                _ => return Err(format!("Unknown escape sequence \\{}", c)),
             }
         }
     }
@@ -1635,7 +1633,7 @@ fn convert_esc_seq_to_ascii(s: &str) -> Result<String> {
     Ok(escaped_str)
 }
 
-fn get_ptr_alignment<'ctx>(ptr: PointerValue<'ctx>) -> u32 {
+fn get_ptr_alignment(ptr: PointerValue) -> u32 {
     ptr.get_type()
         .get_alignment()
         .get_zero_extended_constant()
