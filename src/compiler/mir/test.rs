@@ -666,6 +666,53 @@ pub mod tests {
     }
 
     #[test]
+    fn deref_rawpointer() {
+        let mut table = StringTable::new();
+        for literal_ty in &[
+            Type::Bool,
+            Type::I8,
+            Type::I16,
+            Type::I32,
+            Type::I64,
+            Type::U8,
+            Type::U16,
+            Type::U32,
+            Type::U64,
+            Type::StringLiteral,
+        ] {
+            let text = format!(
+                "
+                    fn test(p: *const {literal_ty}) {{ 
+                        let x: {literal_ty} := ^p;
+                        return;
+                    }}
+                    ",
+            );
+            let module = compile(&text, &mut table);
+            let mut project = MirProject::new();
+            transform::transform(&module, &mut project).unwrap();
+
+            let path: Path = to_path(&["main", "test"], &table);
+            let def_id = project.find_def(&path).unwrap();
+            let StaticItem::Function(mir) = project.get_def(def_id);
+
+            let bb = mir.get_bb(BasicBlockId::new(0));
+            let stm = bb.get_stm(0);
+            match stm.kind() {
+                StatementKind::Assign(_, r) => {
+                    assert_eq!(
+                        *r,
+                        RValue::UnOp(
+                            UnOp::DerefRawPointer,
+                            Operand::LValue(LValue::Var(VarId::new(0)))
+                        )
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
     fn not() {
         let mut table = StringTable::new();
         for (literal_ty, v, exp) in &[(
