@@ -471,7 +471,13 @@ impl<'a> FuncTransformer<'a> {
                     panic!("AddressOf can only be applied to LValues")
                 }
             }
-            UnaryOperator::DerefRawPointer => self.mir.deref_rawpointer(right),
+            UnaryOperator::DerefRawPointer => {
+                if let Operand::LValue(lv) = right {
+                    RValue::Use(self.mir.deref_rawpointer(lv))
+                } else {
+                    panic!("Deref can only be applied to LValues")
+                }
+            }
         }
     }
 
