@@ -453,17 +453,11 @@ impl<'a> FuncTransformer<'a> {
     }
 
     fn unary_op(&mut self, op: UnaryOperator, right: &Expression<SemanticContext>) -> RValue {
+        let right = self.expression(right);
         match op {
-            UnaryOperator::Negate => {
-                let right = self.expression(right);
-                self.mir.negate(right)
-            }
-            UnaryOperator::Not => {
-                let right = self.expression(right);
-                self.mir.not(right)
-            }
+            UnaryOperator::Negate => self.mir.negate(right),
+            UnaryOperator::Not => self.mir.not(right),
             UnaryOperator::AddressConst | UnaryOperator::AddressMut => {
-                let right = self.expression(right);
                 if let Operand::LValue(lv) = right {
                     RValue::AddressOf(lv)
                 } else {
@@ -472,7 +466,7 @@ impl<'a> FuncTransformer<'a> {
                     panic!("AddressOf can only be applied to LValues")
                 }
             }
-            UnaryOperator::DerefRawPointer => todo!(),
+            UnaryOperator::DerefRawPointer => self.mir.deref_rawpointer(right),
         }
     }
 

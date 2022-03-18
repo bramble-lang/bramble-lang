@@ -75,62 +75,62 @@ impl MirProcedureBuilder {
     }
 
     /// Create an [`i8`] constant
-    pub fn const_i8(&mut self, i: i8) -> Operand {
+    pub fn const_i8(&self, i: i8) -> Operand {
         Operand::Constant(Constant::I8(i))
     }
 
     /// Create an [`i16`] constant
-    pub fn const_i16(&mut self, i: i16) -> Operand {
+    pub fn const_i16(&self, i: i16) -> Operand {
         Operand::Constant(Constant::I16(i))
     }
 
     /// Create an [`i32`] constant
-    pub fn const_i32(&mut self, i: i32) -> Operand {
+    pub fn const_i32(&self, i: i32) -> Operand {
         Operand::Constant(Constant::I32(i))
     }
 
     /// Create an [`i64`] constant
-    pub fn const_i64(&mut self, i: i64) -> Operand {
+    pub fn const_i64(&self, i: i64) -> Operand {
         Operand::Constant(Constant::I64(i))
     }
 
     /// Create a [`u8`] constant
-    pub fn const_u8(&mut self, i: u8) -> Operand {
+    pub fn const_u8(&self, i: u8) -> Operand {
         Operand::Constant(Constant::U8(i))
     }
 
     /// Create a [`u16`] constant
-    pub fn const_u16(&mut self, i: u16) -> Operand {
+    pub fn const_u16(&self, i: u16) -> Operand {
         Operand::Constant(Constant::U16(i))
     }
 
     /// Create a [`u32`] constant
-    pub fn const_u32(&mut self, i: u32) -> Operand {
+    pub fn const_u32(&self, i: u32) -> Operand {
         Operand::Constant(Constant::U32(i))
     }
 
     /// Create a [`u64`] constant
-    pub fn const_u64(&mut self, i: u64) -> Operand {
+    pub fn const_u64(&self, i: u64) -> Operand {
         Operand::Constant(Constant::U64(i))
     }
 
     /// Create an [`f64`] constant
-    pub fn const_f64(&mut self, f: f64) -> Operand {
+    pub fn const_f64(&self, f: f64) -> Operand {
         Operand::Constant(Constant::F64(f))
     }
 
     /// Create a [`bool`] constant
-    pub fn const_bool(&mut self, b: bool) -> Operand {
+    pub fn const_bool(&self, b: bool) -> Operand {
         Operand::Constant(Constant::Bool(b))
     }
 
     /// Create a reference to a string literal
-    pub fn const_stringliteral(&mut self, s: StringId) -> Operand {
+    pub fn const_stringliteral(&self, s: StringId) -> Operand {
         Operand::Constant(Constant::StringLiteral(s))
     }
 
     /// Create a `null` value
-    pub fn const_null(&mut self) -> Operand {
+    pub fn const_null(&self) -> Operand {
         Operand::Constant(Constant::Null)
     }
 
@@ -176,7 +176,7 @@ impl MirProcedureBuilder {
 
     /// Will construct an [`LValue`] whose location is the specified `field` in a given
     /// strucure type. This expects `ty` to be a [`MirTypeDef::Structure`].
-    pub fn member_access(&mut self, base: LValue, def: &MirStructDef, field: StringId) -> LValue {
+    pub fn member_access(&self, base: LValue, def: &MirStructDef, field: StringId) -> LValue {
         debug!("Member Access: {:?}.{:?}", base, def);
 
         let (field_id, field_mir) = def
@@ -186,106 +186,111 @@ impl MirProcedureBuilder {
         LValue::Access(Box::new(base), Accessor::Field(field_id, field_mir.ty))
     }
 
-    pub fn array_at(&mut self, array: LValue, index: Operand) -> LValue {
+    pub fn array_at(&self, array: LValue, index: Operand) -> LValue {
         debug!("Array At: {:?}[{:?}]", array, index);
 
         LValue::Access(Box::new(array), Accessor::Index(Box::new(index)))
     }
 
     /// Add a boolean not to the current [`BasicBlock`].
-    pub fn not(&mut self, right: Operand) -> RValue {
+    pub fn not(&self, right: Operand) -> RValue {
         debug!("Not: {:?}", right);
 
         RValue::UnOp(UnOp::Not, right)
     }
 
     /// Add a negate to the current [`BasicBlock`].
-    pub fn negate(&mut self, right: Operand) -> RValue {
+    pub fn negate(&self, right: Operand) -> RValue {
         debug!("Negate: {:?}", right);
         RValue::UnOp(UnOp::Negate, right)
     }
 
+    pub fn deref_rawpointer(&self, right: Operand) -> RValue {
+        debug!("Deref Raw: {:?}", right);
+        RValue::UnOp(UnOp::DerefRawPointer, right)
+    }
+
     /// Add an addition operation to the current [`BasicBlock`].
-    pub fn add(&mut self, left: Operand, right: Operand) -> RValue {
+    pub fn add(&self, left: Operand, right: Operand) -> RValue {
         debug!("Add: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Add, left, right)
     }
 
     /// Add a subtraction operation to the current [`BasicBlock`].
-    pub fn sub(&mut self, left: Operand, right: Operand) -> RValue {
+    pub fn sub(&self, left: Operand, right: Operand) -> RValue {
         debug!("Sub: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Sub, left, right)
     }
 
     /// Add a multiply operation to the current [`BasicBlock`].
-    pub fn mul(&mut self, left: Operand, right: Operand) -> RValue {
+    pub fn mul(&self, left: Operand, right: Operand) -> RValue {
         debug!("Mul: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Mul, left, right)
     }
 
     /// Add a divide operation to the current [`BasicBlock`].
-    pub fn div(&mut self, left: Operand, right: Operand) -> RValue {
+    pub fn div(&self, left: Operand, right: Operand) -> RValue {
         debug!("Div: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Div, left, right)
     }
 
     /// Add a bitwise and operation to the current [`BasicBlock`].
-    pub fn bitwise_and(&mut self, left: Operand, right: Operand) -> RValue {
+    pub fn bitwise_and(&self, left: Operand, right: Operand) -> RValue {
         debug!("And: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::And, left, right)
     }
 
     /// Add a bitwise and operation to the current [`BasicBlock`].
-    pub fn bitwise_or(&mut self, left: Operand, right: Operand) -> RValue {
+    pub fn bitwise_or(&self, left: Operand, right: Operand) -> RValue {
         debug!("Or: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Or, left, right)
     }
 
     /// Add an equality test operation to the current [`BasicBlock`].
-    pub fn eq(&mut self, left: Operand, right: Operand) -> RValue {
+    pub fn eq(&self, left: Operand, right: Operand) -> RValue {
         debug!("Eq: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Eq, left, right)
     }
 
     /// Add a not equal test operation to the current [`BasicBlock`].
-    pub fn neq(&mut self, left: Operand, right: Operand) -> RValue {
+    pub fn neq(&self, left: Operand, right: Operand) -> RValue {
         debug!("Neq: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Ne, left, right)
     }
 
     /// Add a less than test operation to the current [`BasicBlock`].
-    pub fn lt(&mut self, left: Operand, right: Operand) -> RValue {
+    pub fn lt(&self, left: Operand, right: Operand) -> RValue {
         debug!("Less Than");
         debug!("Add: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Lt, left, right)
     }
 
     /// Add a less than or equal to test operation to the current [`BasicBlock`].
-    pub fn le(&mut self, left: Operand, right: Operand) -> RValue {
+    pub fn le(&self, left: Operand, right: Operand) -> RValue {
         debug!("Less or Equal: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Le, left, right)
     }
 
     /// Add a greater than test operation to the current [`BasicBlock`].
-    pub fn gt(&mut self, left: Operand, right: Operand) -> RValue {
+    pub fn gt(&self, left: Operand, right: Operand) -> RValue {
         debug!("Greater: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Gt, left, right)
     }
 
     /// Add a greater than or equal to test operation to the current [`BasicBlock`].
-    pub fn ge(&mut self, left: Operand, right: Operand) -> RValue {
+    pub fn ge(&self, left: Operand, right: Operand) -> RValue {
         debug!("Greater or Equal: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Ge, left, right)
     }
 
     /// Add a raw pointer offset operation to the current [`BasicBlock`].
-    pub fn offset(&mut self, left: Operand, right: Operand) -> RValue {
+    pub fn offset(&self, left: Operand, right: Operand) -> RValue {
         debug!("Pointer Offset: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::RawPointerOffset, left, right)
     }
 
     /// Cast the given expression to the given primitive.
-    pub fn cast(&mut self, expr: Operand, target: TypeId) -> RValue {
+    pub fn cast(&self, expr: Operand, target: TypeId) -> RValue {
         debug!("Cast: {:?}, {:?}", expr, target);
         RValue::Cast(expr, target)
     }

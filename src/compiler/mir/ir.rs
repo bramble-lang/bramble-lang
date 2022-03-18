@@ -832,6 +832,8 @@ pub enum UnOp {
     Negate,
     /// '!' bitwise not a primitive value
     Not,
+    /// '^' dereference a raw pointer
+    DerefRawPointer,
 }
 
 impl Display for UnOp {
@@ -839,6 +841,7 @@ impl Display for UnOp {
         let txt = match self {
             UnOp::Negate => "-",
             UnOp::Not => "!",
+            UnOp::DerefRawPointer => "^",
         };
         f.write_str(txt)
     }
