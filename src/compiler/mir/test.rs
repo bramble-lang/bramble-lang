@@ -181,6 +181,25 @@ pub mod tests {
         }
 
         #[test]
+        fn print_mir_for_struct_expression() {
+            let text = "
+        fn test() -> Test {
+            let x: Test := Test{a: 1, b: 2};
+            return x;
+        }
+        struct Test {
+            a: i64,
+            b: i64,
+        }
+        ";
+            let mut table = StringTable::new();
+            let module = compile(text, &mut table);
+            let mut project = MirProject::new();
+            transform::transform(&module, &mut project).unwrap();
+            println!("{}", project);
+        }
+
+        #[test]
         fn print_mir_for_struct_field() {
             let text = "
         fn test(s: S2) -> i64 {

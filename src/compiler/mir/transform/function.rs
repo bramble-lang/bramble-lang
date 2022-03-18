@@ -160,7 +160,7 @@ impl<'a> FuncTransformer<'a> {
             Expression::RoutineCall(ctx, call, target, args) => {
                 self.fn_call(ctx, *call, target, args)
             }
-            Expression::StructExpression(_, _, _) => todo!(),
+            Expression::StructExpression(ctx, ty, fields) => self.stuct_expr(ctx, ty, fields),
             Expression::If {
                 context,
                 cond,
@@ -187,6 +187,36 @@ impl<'a> FuncTransformer<'a> {
             }
             Expression::Yield(_, _) => todo!(),
         }
+    }
+
+    fn stuct_expr(
+        &mut self,
+        ctx: &SemanticContext,
+        def: &Path,
+        expr: &[(StringId, Expression<SemanticContext>)],
+    ) -> Operand {
+        // Get the type for this structure
+        let ty = self.project.find_type(&Type::Custom(def.clone())).unwrap();
+
+        // Create a temporary location on the stack to store the struct expression
+        let temp = self.mir.temp(ty, ctx.span());
+
+        // Get the structure definition
+        let def = self
+            .project
+            .get_type(ty)
+            .get_struct_def()
+            .expect("Trying to access a field on a non-structure type")
+            .clone();
+
+        // Evaluate each expression and store into the associated temp field
+        for (field, val) in expr {
+            let result = self.expression(val);
+            let field_loc = self.mir.member_access(LValue::Temp(temp), &def, *field);
+            self.mir
+                .store(field_loc, RValue::Use(result), val.context().span());
+        }
+        Operand::LValue(LValue::Temp(temp))
     }
 
     fn cast(
