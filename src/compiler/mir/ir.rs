@@ -614,6 +614,9 @@ pub enum RValue {
 
     /// Getting the address of a variable in memory.
     AddressOf(LValue),
+
+    /// Gets the size of a specific type
+    SizeOf(TypeId),
 }
 
 impl Display for RValue {
@@ -622,8 +625,9 @@ impl Display for RValue {
             RValue::Use(o) => format!("Use({})", o),
             RValue::BinOp(op, l, r) => format!("{}({}, {})", op, l, r),
             RValue::UnOp(op, o) => format!("{}({})", op, o),
-            RValue::Cast(v, t) => format!("{} as {:?}", v, t),
+            RValue::Cast(v, ty) => format!("{} as {:?}", v, ty),
             RValue::AddressOf(o) => format!("AddressOf({})", o),
+            RValue::SizeOf(ty) => format!("size_of({:?})", ty),
         };
         f.write_str(&text)
     }
