@@ -39,6 +39,10 @@ impl<'a> FuncTransformer<'a> {
     pub fn transform(mut self, func: &RoutineDef<SemanticContext>) -> Procedure {
         self.mir.set_span(func.context.span());
 
+        // Set the function return type
+        let ret_ty = self.find_type(func.get_return_type());
+        self.mir.set_ret_ty(ret_ty);
+
         // Add the parameters of the function to the set of variables
         func.params.iter().for_each(|p| {
             let ty = self.find_type(p.context().ty());

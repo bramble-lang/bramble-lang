@@ -96,6 +96,11 @@ impl Procedure {
         self.span = span;
     }
 
+    /// Sets the [`TypeId`] of the value this function will return.
+    pub fn set_ret_ty(&mut self, ty: TypeId) {
+        self.ret_ty = ty;
+    }
+
     /// Add an argument to this procedure's argument list and make the argument available as a variable.
     pub fn add_arg(&mut self, name: StringId, ty: TypeId, span: Span) -> ArgId {
         // Add the given argument to the set of variables
