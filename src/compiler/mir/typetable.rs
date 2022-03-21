@@ -236,6 +236,16 @@ impl TypeTable {
     }
 }
 
+impl Display for TypeTable {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for (id, ty) in self.table.iter().enumerate() {
+            f.write_fmt(format_args!("{} -> {}\n", id, ty))?
+        }
+
+        Ok(())
+    }
+}
+
 impl Parameter<SemanticContext> {
     /// Converts this [`Parameter`] to a [`Field`].
     fn to_field(&self, table: &mut TypeTable) -> Result<Field, TypeTableError> {
@@ -289,6 +299,26 @@ impl MirBaseType {
     }
 }
 
+impl Display for MirBaseType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MirBaseType::Unit => f.write_str("()"),
+            MirBaseType::Null => f.write_str("null"),
+            MirBaseType::U8 => f.write_str("u8"),
+            MirBaseType::U16 => f.write_str("u16"),
+            MirBaseType::U32 => f.write_str("u32"),
+            MirBaseType::U64 => f.write_str("u64"),
+            MirBaseType::I8 => f.write_str("i8"),
+            MirBaseType::I16 => f.write_str("i16"),
+            MirBaseType::I32 => f.write_str("i32"),
+            MirBaseType::I64 => f.write_str("i64"),
+            MirBaseType::F64 => f.write_str("f64"),
+            MirBaseType::Bool => f.write_str("bool"),
+            MirBaseType::StringLiteral => f.write_str("string"),
+        }
+    }
+}
+
 /// Defines a single type that exists within a Bramble program.
 #[derive(Debug, Clone)]
 pub enum MirTypeDef {
@@ -337,6 +367,19 @@ impl PartialEq for MirTypeDef {
     }
 }
 
+impl Display for MirTypeDef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MirTypeDef::Base(base) => f.write_fmt(format_args!("{}", base)),
+            MirTypeDef::Array { ty, sz } => f.write_fmt(format_args!("[{}; {}]", ty, sz)),
+            MirTypeDef::RawPointer { mutable, target } => {
+                f.write_fmt(format_args!("*{} {}", mutable, target))
+            }
+            MirTypeDef::Structure { path, def } => f.write_fmt(format_args!("{}", path)),
+        }
+    }
+}
+
 /// The Unique Identifier for a type within a Bramble program. Every type,
 /// including base types, is given a TypeId.  MIR uses the TypeId to annotate
 /// the types of MIR values and variables.
@@ -348,6 +391,12 @@ impl PartialEq for MirTypeDef {
 /// was deemed acceptable.
 #[derive(Debug, PartialEq, PartialOrd, Clone, Copy)]
 pub struct TypeId(u32);
+
+impl Display for TypeId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{}", self.0))
+    }
+}
 
 /// Provides the definition of a structure type. A structure may be referenced in another
 /// type before it is defined; in such a case, the structure is added to the type table

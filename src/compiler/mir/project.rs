@@ -85,6 +85,7 @@ impl MirProject {
 
 impl Display for MirProject {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // Print all the functions in the project
         for (idx, def) in self.static_defs.defs.iter().enumerate() {
             match def {
                 StaticItem::Function(func) => {
@@ -92,7 +93,10 @@ impl Display for MirProject {
                 }
             }
         }
-        Ok(())
+
+        // Print the type table
+        f.write_str("\nTypes:\n")?;
+        f.write_fmt(format_args!("{}", self.types))
     }
 }
 
