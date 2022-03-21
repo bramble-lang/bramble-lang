@@ -139,6 +139,11 @@ impl MirProcedureBuilder {
         Operand::Constant(Constant::SizeOf(ty))
     }
 
+    /// Sets the [`TypeId`] of the value this function will return.
+    pub fn set_ret_ty(&mut self, ty: TypeId) {
+        self.proc.set_ret_ty(ty)
+    }
+
     /// Add an argument to the signature of a function. Arguments are also added to the
     /// set of variables.
     pub fn arg(&mut self, name: StringId, ty: TypeId, span: Span) -> ArgId {
