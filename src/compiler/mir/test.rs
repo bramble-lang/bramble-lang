@@ -715,14 +715,17 @@ pub mod tests {
 
             let bb = mir.get_bb(BasicBlockId::new(0));
             let stm = bb.get_stm(0);
-            /*match stm.kind() {
+            match stm.kind() {
                 StatementKind::Assign(_, r) => {
                     assert_eq!(
                         *r,
-                        RValue::
+                        RValue::Use(Operand::LValue(LValue::Access(
+                            Box::new(LValue::Var(VarId::new(0))),
+                            Accessor::Deref
+                        )))
                     );
                 }
-            }*/
+            }
         }
     }
 
