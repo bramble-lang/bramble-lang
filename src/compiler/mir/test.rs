@@ -699,7 +699,8 @@ pub mod tests {
         ] {
             let text = format!(
                 "
-                    fn test(p: *const {literal_ty}) {{ 
+                    fn test(p: *mut {literal_ty}, v: {literal_ty}) {{ 
+                        mut ^p := v;
                         let x: {literal_ty} := ^p;
                         return;
                     }}
@@ -714,7 +715,20 @@ pub mod tests {
             let StaticItem::Function(mir) = project.get_def(def_id);
 
             let bb = mir.get_bb(BasicBlockId::new(0));
+
+            // mut ^p := ..;
             let stm = bb.get_stm(0);
+            match stm.kind() {
+                StatementKind::Assign(l, _) => {
+                    assert_eq!(
+                        *l,
+                        LValue::Access(Box::new(LValue::Var(VarId::new(0))), Accessor::Deref)
+                    );
+                }
+            }
+
+            // let x := ^p;
+            let stm = bb.get_stm(1);
             match stm.kind() {
                 StatementKind::Assign(_, r) => {
                     assert_eq!(
