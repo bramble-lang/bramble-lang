@@ -238,6 +238,26 @@ pub mod tests {
             transform::transform(&module, &mut project).unwrap();
             println!("{}", project);
         }
+
+        #[test]
+        fn print_mir_submodule() {
+            let text = "
+                fn test() -> i64 {
+                    return my_mod::test();
+                }
+
+                mod my_mod {
+                    fn test() -> i64 {
+                        return 2;
+                    }
+                }
+                ";
+            let mut table = StringTable::new();
+            let module = compile(text, &mut table);
+            let mut project = MirProject::new();
+            transform::transform(&module, &mut project).unwrap();
+            println!("{}", project);
+        }
     }
 
     #[test]

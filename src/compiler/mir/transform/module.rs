@@ -183,7 +183,7 @@ fn transform_fns(
 
     // Repeat for all submodules
     for m in module.get_modules() {
-        add_module_items(project, m)?;
+        transform_fns(project, m)?;
     }
 
     Ok(())
