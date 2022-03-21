@@ -26,13 +26,28 @@ pub fn transform(
     debug!("Transform module: {:?}", module.context().canonical_path());
 
     // Add all the types in this module
+    add_module_items(project, module)?;
+
+    // Lower the AST to its MIR form
+    transform_fns(project, module)?;
+
+    Ok(())
+}
+
+fn add_module_items(
+    project: &mut MirProject,
+    module: &Module<SemanticContext>,
+) -> Result<(), TransformError> {
+    // Add all the types in this module
     add_struct_defs_to_typetable(project, module)?;
     add_types_to_typetable(project, module)?;
     add_extern_declarations(project, module)?;
     add_fn_declarations(project, module)?;
 
-    // Lower the AST to its MIR form
-    transform_fns(project, module)?;
+    // Repeat for all submodules
+    for m in module.get_modules() {
+        add_module_items(project, m)?;
+    }
 
     Ok(())
 }
@@ -164,6 +179,11 @@ fn transform_fns(
         let ft = FuncTransformer::new(f.context().canonical_path(), project);
         let p = ft.transform(f);
         project.add_func(p)?;
+    }
+
+    // Repeat for all submodules
+    for m in module.get_modules() {
+        add_module_items(project, m)?;
     }
 
     Ok(())
