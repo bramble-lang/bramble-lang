@@ -131,11 +131,7 @@ impl<'a> FuncTransformer<'a> {
                 let ty = self.find_type(ctx.ty());
                 self.mir.temp_store(rv, ty, ctx.span())
             }
-            Expression::UnaryOp(ctx, op, right) => {
-                let rv = self.unary_op(*op, right);
-                let ty = self.find_type(ctx.ty());
-                self.mir.temp_store(rv, ty, ctx.span())
-            }
+            Expression::UnaryOp(ctx, op, right) => self.unary_op(ctx, *op, right),
             Expression::TypeCast(ctx, expr, target) => self.cast(ctx, expr, target),
             Expression::SizeOf(ctx, ty) => self.size_of(ctx, ty.as_ref()),
             Expression::MemberAccess(_, base, field) => self.member_access(base, *field),
@@ -457,14 +453,29 @@ impl<'a> FuncTransformer<'a> {
         }
     }
 
-    fn unary_op(&mut self, op: UnaryOperator, right: &Expression<SemanticContext>) -> RValue {
+    fn unary_op(
+        &mut self,
+        ctx: &SemanticContext,
+        op: UnaryOperator,
+        right: &Expression<SemanticContext>,
+    ) -> Operand {
         let right = self.expression(right);
         match op {
-            UnaryOperator::Negate => self.mir.negate(right),
-            UnaryOperator::Not => self.mir.not(right),
+            UnaryOperator::Negate => {
+                let rv = self.mir.negate(right);
+                let ty = self.find_type(ctx.ty());
+                self.mir.temp_store(rv, ty, ctx.span())
+            }
+            UnaryOperator::Not => {
+                let rv = self.mir.not(right);
+                let ty = self.find_type(ctx.ty());
+                self.mir.temp_store(rv, ty, ctx.span())
+            }
             UnaryOperator::AddressConst | UnaryOperator::AddressMut => {
                 if let Operand::LValue(lv) = right {
-                    RValue::AddressOf(lv)
+                    let rv = RValue::AddressOf(lv);
+                    let ty = self.find_type(ctx.ty());
+                    self.mir.temp_store(rv, ty, ctx.span())
                 } else {
                     // Type checking should ensure that this branch never happens
                     // so if it does, then there is a bug in the compiler.
@@ -473,7 +484,7 @@ impl<'a> FuncTransformer<'a> {
             }
             UnaryOperator::DerefRawPointer => {
                 if let Operand::LValue(lv) = right {
-                    RValue::Use(self.mir.deref_rawpointer(lv))
+                    Operand::LValue(self.mir.deref_rawpointer(lv))
                 } else {
                     panic!("Deref can only be applied to LValues")
                 }

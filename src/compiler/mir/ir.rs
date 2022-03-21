@@ -568,7 +568,10 @@ impl Display for LValue {
             LValue::Static(s) => format!("Static({})", s),
             LValue::Var(v) => format!("{}", v),
             LValue::Temp(t) => format!("{}", t),
-            LValue::Access(lv, acc) => format!("{}{}", lv, acc),
+            LValue::Access(lv, acc) => match acc {
+                Accessor::Deref => format!("^{}", lv),
+                _ => format!("{}{}", lv, acc),
+            },
             LValue::ReturnPointer => "ReturnPtr".into(),
         };
         f.write_str(&text)
