@@ -179,6 +179,7 @@ impl MirProcedureBuilder {
         ));
     }
 
+    /// Will construct an [`LValue`] whose location is the address stored in `right`.
     pub fn deref_rawpointer(&self, right: LValue) -> LValue {
         debug!("Deref Raw: {:?}", right);
         LValue::Access(Box::new(right), Accessor::Deref)
