@@ -568,7 +568,10 @@ impl Display for LValue {
             LValue::Static(s) => format!("Static({})", s),
             LValue::Var(v) => format!("{}", v),
             LValue::Temp(t) => format!("{}", t),
-            LValue::Access(lv, acc) => format!("{}{}", lv, acc),
+            LValue::Access(lv, acc) => match acc {
+                Accessor::Deref => format!("^{}", lv),
+                _ => format!("{}{}", lv, acc),
+            },
             LValue::ReturnPointer => "ReturnPtr".into(),
         };
         f.write_str(&text)
@@ -834,8 +837,6 @@ pub enum UnOp {
     Negate,
     /// '!' bitwise not a primitive value
     Not,
-    /// '^' dereference a raw pointer
-    DerefRawPointer,
 }
 
 impl Display for UnOp {
@@ -843,7 +844,6 @@ impl Display for UnOp {
         let txt = match self {
             UnOp::Negate => "-",
             UnOp::Not => "!",
-            UnOp::DerefRawPointer => "^",
         };
         f.write_str(txt)
     }

@@ -179,6 +179,12 @@ impl MirProcedureBuilder {
         ));
     }
 
+    /// Will construct an [`LValue`] whose location is the address stored in `right`.
+    pub fn deref_rawpointer(&self, right: LValue) -> LValue {
+        debug!("Deref Raw: {:?}", right);
+        LValue::Access(Box::new(right), Accessor::Deref)
+    }
+
     /// Will construct an [`LValue`] whose location is the specified `field` in a given
     /// strucure type. This expects `ty` to be a [`MirTypeDef::Structure`].
     pub fn member_access(&self, base: LValue, def: &MirStructDef, field: StringId) -> LValue {
@@ -208,11 +214,6 @@ impl MirProcedureBuilder {
     pub fn negate(&self, right: Operand) -> RValue {
         debug!("Negate: {:?}", right);
         RValue::UnOp(UnOp::Negate, right)
-    }
-
-    pub fn deref_rawpointer(&self, right: Operand) -> RValue {
-        debug!("Deref Raw: {:?}", right);
-        RValue::UnOp(UnOp::DerefRawPointer, right)
     }
 
     /// Add an addition operation to the current [`BasicBlock`].
