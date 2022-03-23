@@ -1,0 +1,54 @@
+//! Defines the Transformer trait: a set of methods which are called by
+//! the Traverser process. The methods correspond to different MIR elements
+//! and can be used to convert a single MIR element to an element of a different
+//! representation. This trait allows MIR to X conversion to be written
+//! independently of the MIR traversal logic.
+
+use crate::compiler::mir::ir::*;
+
+/// The MIR Transformer defines an interface between the process which traverses
+/// the MIR (which is a Control Flow Graph) and the process which converts a MIR
+/// element into the Target Type. The goal of this design is to make it so that
+/// all structural and topological elements of the MIR exist only within the
+/// Traverser process.  The Transformer only has to care about converting specific
+/// MIR values which correspond to Bramble language entities to the target representation.
+/// For example: constants and operators get converted by the Transformer. But
+/// deconstructing the [`RValue`] enumeration to extract the [`Operands`](Operand)
+/// exists only within the Traverser.
+///
+/// Furhermore, the Traverser will be responsible for managing the intermediate
+/// results of converting the [`RValue`] or [`LValue`] prior to the conversion
+/// of the [`Statement`]. To allow for the Traverser to manage the intermediate
+/// values before the conversion of the [`Statement`] a generic type parameter
+/// `V` is used, this will be the type used by the Target IR to represent an expression
+/// result. The type parameter `L` will have the type used to represent variables
+/// and memory locations (i.e., addressable expressions).
+pub trait Transformer<L, V> {
+    /// Begins a new Basic Block with the given identifier.  The identifier is needed
+    /// because [`Terminators`](Terminator) will refer to target Basic Blocks with their
+    /// [`BasicBlockId`].
+    fn start_bb(bb: BasicBlockId);
+
+    /// Tells the program to exit this [`BasicBlock`] by returning to the calling function
+    fn term_return();
+
+    /// Store a given value to the given memory location
+    fn assign(l: L, v: V);
+
+    /// Convert a reference to a specific location in memory
+    fn lvalue(l: LValue) -> L;
+
+    // The following methods correspond to [`RValue`] variants
+    fn constant(c: Constant) -> V;
+    fn load();
+    fn add();
+    fn subtract();
+    fn mul();
+    fn div();
+    fn neg();
+    fn not();
+    fn and();
+    fn or();
+    fn cast();
+    fn address_of();
+}
