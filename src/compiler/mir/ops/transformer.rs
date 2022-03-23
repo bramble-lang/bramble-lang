@@ -32,23 +32,23 @@ pub trait Transformer<L, V> {
     /// Tells the program to exit this [`BasicBlock`] by returning to the calling function
     fn term_return();
 
-    /// Store a given value to the given memory location
+    /// Store the given value to the given memory location
     fn assign(l: L, v: V);
 
     /// Convert a reference to a specific location in memory
     fn lvalue(l: LValue) -> L;
 
     // The following methods correspond to [`RValue`] variants
+
+    /// Convert a constant value
     fn constant(c: Constant) -> V;
-    fn load();
-    fn add();
-    fn subtract();
-    fn mul();
-    fn div();
-    fn neg();
-    fn not();
-    fn and();
-    fn or();
-    fn cast();
-    fn address_of();
+
+    /// Load a value from a memory location
+    fn load() -> V;
+
+    /// Add two values together
+    fn add(a: V, b: V) -> V;
+
+    /// Subtract two values
+    fn sub(a: V, b: V) -> V;
 }
