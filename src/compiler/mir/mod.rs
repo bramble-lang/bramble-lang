@@ -18,6 +18,7 @@ use super::Span;
 
 mod builder;
 mod ir;
+mod ops;
 mod project;
 mod test;
 mod typetable;
