@@ -2,3 +2,4 @@
 //! MIR representation of a function.
 
 mod transformer;
+mod traverser;
