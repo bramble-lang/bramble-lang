@@ -1,12 +1,31 @@
 //! Transforms the MIR representation into LLVM
 
-use inkwell::values::{BasicValueEnum, PointerValue};
+use inkwell::{
+    builder::Builder,
+    context::Context,
+    module::Module,
+    values::{BasicValueEnum, PointerValue},
+};
 
 use crate::compiler::mir::{ir::*, Transformer};
 
-struct LlvmTransformer {}
+struct LlvmTransformer<'ctx> {
+    context: &'ctx Context,
+    module: Module<'ctx>,
+    builder: Builder<'ctx>,
+}
 
-impl<'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>> for LlvmTransformer {
+impl<'ctx> LlvmTransformer<'ctx> {
+    pub fn new(ctx: &'ctx Context, module: &str) -> Self {
+        Self {
+            context: ctx,
+            module: ctx.create_module(module),
+            builder: ctx.create_builder(),
+        }
+    }
+}
+
+impl<'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>> for LlvmTransformer<'ctx> {
     fn start_bb(&mut self, bb: BasicBlockId) {
         todo!()
     }
