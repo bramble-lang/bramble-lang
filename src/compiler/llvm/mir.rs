@@ -108,3 +108,81 @@ impl<'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>> for LlvmTransfo
         todo!()
     }
 }
+
+#[cfg(test)]
+mod mir2llvm_tests {
+    use inkwell::context::Context;
+
+    use crate::{
+        compiler::{
+            ast::{Module, MAIN_MODULE},
+            diagnostics::Logger,
+            lexer::{tokens::Token, LexerError},
+            mir::{transform, MirProject, Traverser},
+            parser::Parser,
+            semantics::semanticnode::SemanticContext,
+            CompilerDisplay, CompilerError, Lexer, SourceMap,
+        },
+        resolve_types, StringId, StringTable,
+    };
+
+    use super::LlvmTransformer;
+
+    #[test]
+    fn print_llvm() {
+        let text = "
+            fn test() {
+                let x: i64 := 5;
+                return;
+            }
+        ";
+
+        let (table, module) = compile(text);
+        let mut project = MirProject::new();
+        transform::transform(&module, &mut project).unwrap();
+
+        let context = Context::create();
+        let mut llvm = LlvmTransformer::new(StringId::new(), &context, "test", &table);
+
+        let mvr = Traverser::new(&project, &mut llvm);
+
+        // Traverser is given a MirProject
+        // call traverser.map(llvm) this will use the llvm xfmr to map MirProject to LlvmProject
+        // Print LLVM
+    }
+
+    type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
+
+    fn compile(input: &str) -> (StringTable, Module<SemanticContext>) {
+        let table = StringTable::new();
+        let mut sm = SourceMap::new();
+        sm.add_string(input, "/test".into()).unwrap();
+        let src = sm.get(0).unwrap().read().unwrap();
+
+        let main = table.insert("main".into());
+        let main_mod = table.insert(MAIN_MODULE.into());
+        let main_fn = table.insert("my_main".into());
+
+        let logger = Logger::new();
+        let tokens: Vec<Token> = Lexer::new(src, &table, &logger)
+            .unwrap()
+            .tokenize()
+            .into_iter()
+            .collect::<LResult>()
+            .unwrap();
+
+        let parser = Parser::new(&logger);
+        let ast = match parser.parse(main, &tokens) {
+            Ok(ast) => ast.unwrap(),
+            Err(err) => {
+                panic!("{}", err.fmt(&sm, &table).unwrap());
+            }
+        };
+        match resolve_types(&ast, main_mod, main_fn, &logger) {
+            Ok(module) => (table, module),
+            Err(err) => {
+                panic!("{}", err.fmt(&sm, &table).unwrap());
+            }
+        }
+    }
+}

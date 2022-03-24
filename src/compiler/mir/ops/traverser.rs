@@ -3,7 +3,7 @@
 
 use std::marker::PhantomData;
 
-use crate::compiler::mir::ir::*;
+use crate::compiler::mir::{ir::*, MirProject};
 
 use super::transformer::Transformer;
 
@@ -20,17 +20,24 @@ use super::transformer::Transformer;
 /// conversion to the target IR.
 pub struct Traverser<'a, L, V, T: Transformer<L, V>> {
     xfmr: &'a mut T,
+    mir: &'a MirProject,
     _l: PhantomData<L>,
     _v: PhantomData<V>,
 }
 
 impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
-    pub fn new(xfmr: &'a mut T) -> Self {
+    pub fn new(mir: &'a MirProject, xfmr: &'a mut T) -> Self {
         Self {
             xfmr,
+            mir,
             _l: PhantomData,
             _v: PhantomData,
         }
+    }
+
+    pub fn map(&mut self) {
+        // Iterate over every function in MIR
+        // For each function, iterate over every BB
     }
 
     /// Traverses every variable, [statement](Statement), and the final [terminator](Terminator)
