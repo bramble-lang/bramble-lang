@@ -26,13 +26,9 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
             .kind()
         {
             TerminatorKind::Return => self.xfmr.term_return(),
-            TerminatorKind::GoTo { target } => todo!(),
-            TerminatorKind::CondGoTo { cond, tru, fls } => todo!(),
-            TerminatorKind::CallFn {
-                func,
-                args,
-                reentry,
-            } => todo!(),
+            TerminatorKind::GoTo { .. } => todo!(),
+            TerminatorKind::CondGoTo { .. } => todo!(),
+            TerminatorKind::CallFn { .. } => todo!(),
         }
     }
 }

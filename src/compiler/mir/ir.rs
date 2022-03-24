@@ -1,7 +1,7 @@
 //! The IR abstractions used to represent any given Bramble program
 //! as a CFG.
 
-use std::fmt::Display;
+use std::{fmt::Display, slice::Iter};
 
 use crate::{
     compiler::{ast::Path, Span},
@@ -461,6 +461,11 @@ impl BasicBlock {
     pub fn set_terminator(&mut self, term: Terminator) {
         self.add_span(term.span);
         self.terminator = Some(term);
+    }
+
+    /// Returns an [`Iter`] over the statements in this Basic Block
+    pub fn stm_iter(&self) -> Iter<Statement> {
+        self.statements.iter()
     }
 
     /// Get the [`Statement`] at the given index
