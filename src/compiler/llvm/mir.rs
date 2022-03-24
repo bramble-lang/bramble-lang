@@ -4,23 +4,42 @@ use inkwell::{
     builder::Builder,
     context::Context,
     module::Module,
-    values::{BasicValueEnum, PointerValue},
+    values::{BasicValueEnum, FunctionValue, PointerValue},
 };
 
-use crate::compiler::mir::{ir::*, Transformer};
+use crate::{
+    compiler::mir::{ir::*, Transformer},
+    StringId, StringTable,
+};
 
 struct LlvmTransformer<'ctx> {
     context: &'ctx Context,
     module: Module<'ctx>,
     builder: Builder<'ctx>,
+    table: &'ctx StringTable,
+    function: FunctionValue<'ctx>,
 }
 
 impl<'ctx> LlvmTransformer<'ctx> {
-    pub fn new(ctx: &'ctx Context, module: &str) -> Self {
+    pub fn new(
+        func_name: StringId,
+        ctx: &'ctx Context,
+        module: &str,
+        table: &'ctx StringTable,
+    ) -> Self {
+        let module = ctx.create_module(module);
+
+        // Create a function to build
+        let ft = ctx.void_type().fn_type(&[], false);
+        let name = table.get(func_name).unwrap();
+        let function = module.add_function(&name, ft, None);
+
         Self {
             context: ctx,
-            module: ctx.create_module(module),
+            module,
             builder: ctx.create_builder(),
+            table,
+            function,
         }
     }
 }
