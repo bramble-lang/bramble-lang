@@ -12,10 +12,6 @@
  that is generated from the MIR compiler.
 */
 
-use self::ir::Procedure;
-
-use super::Span;
-
 mod builder;
 mod ops;
 mod project;
@@ -27,14 +23,10 @@ pub mod ir;
 pub mod transform;
 
 pub use ops::{Transformer, Traverser};
+pub use project::MirProject;
 
 // Unit test modules
 #[cfg(test)]
 mod project_test;
 #[cfg(test)]
 mod typetable_test;
-
-pub struct Module {
-    funcs: Vec<Procedure>,
-    span: Span,
-}
