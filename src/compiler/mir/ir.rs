@@ -1,7 +1,7 @@
 //! The IR abstractions used to represent any given Bramble program
 //! as a CFG.
 
-use std::fmt::Display;
+use std::{fmt::Display, slice::Iter};
 
 use crate::{
     compiler::{ast::Path, Span},
@@ -463,6 +463,11 @@ impl BasicBlock {
         self.terminator = Some(term);
     }
 
+    /// Returns an [`Iter`] over the statements in this Basic Block
+    pub fn stm_iter(&self) -> Iter<Statement> {
+        self.statements.iter()
+    }
+
     /// Get the [`Statement`] at the given index
     pub fn get_stm(&self, idx: usize) -> &Statement {
         &self.statements[idx]
@@ -522,6 +527,11 @@ impl Statement {
     /// Returns the [`StatementKind`] of this statement.
     pub fn kind(&self) -> &StatementKind {
         &self.kind
+    }
+
+    /// Returns the [`Span`] that this statement covers.
+    pub fn span(&self) -> Span {
+        self.span
     }
 }
 
@@ -734,16 +744,6 @@ impl Display for Terminator {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TerminatorKind {
-    /// Enter a new functions scope.
-    CallFn {
-        /// The function to enter
-        func: Operand,
-        /// The arguments for the function being called
-        args: Vec<Operand>,
-        /// The location of the function result and which basic block is the reentry point from the called function
-        reentry: (LValue, BasicBlockId),
-    },
-
     /// Return from this function to the calling function.
     Return,
 
@@ -759,6 +759,16 @@ pub enum TerminatorKind {
         tru: BasicBlockId,
         /// If `cond` is false, then go to this basic block
         fls: BasicBlockId,
+    },
+
+    /// Enter a new functions scope.
+    CallFn {
+        /// The function to enter
+        func: Operand,
+        /// The arguments for the function being called
+        args: Vec<Operand>,
+        /// The location of the function result and which basic block is the reentry point from the called function
+        reentry: (LValue, BasicBlockId),
     },
 }
 
