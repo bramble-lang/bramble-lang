@@ -1,11 +1,6 @@
 //! Transforms the MIR representation into LLVM
 
-use inkwell::{
-    builder::Builder,
-    context::Context,
-    module::Module,
-    values::{BasicValueEnum, FunctionValue, PointerValue},
-};
+use inkwell::{builder::Builder, context::Context, module::Module, values::*};
 
 use crate::{
     compiler::mir::{ir::*, Transformer},
