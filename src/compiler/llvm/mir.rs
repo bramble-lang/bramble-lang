@@ -167,6 +167,7 @@ mod mir2llvm_tests {
         // call traverser.map(llvm) this will use the llvm xfmr to map MirProject to LlvmProject
         mvr.map();
         // Print LLVM
+        llvm.module.print_to_stderr();
     }
 
     type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
