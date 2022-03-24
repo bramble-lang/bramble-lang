@@ -25,6 +25,9 @@ pub struct Traverser<'a, L, V, T: Transformer<L, V>> {
 }
 
 impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
+    /// Traverses every variable, [statement](Statement), and the final [terminator](Terminator)
+    /// in the given [`BasicBlock`] and calls the appropriate conversion functions on the
+    /// given [`Transformer`].
     pub fn basic_block(&mut self, bb: &BasicBlock) {
         // Iterate over all the variables in the block
 
