@@ -25,6 +25,14 @@ pub struct Traverser<'a, L, V, T: Transformer<L, V>> {
 }
 
 impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
+    pub fn new(xfmr: &'a mut T) -> Self {
+        Self {
+            xfmr,
+            _l: PhantomData,
+            _v: PhantomData,
+        }
+    }
+
     /// Traverses every variable, [statement](Statement), and the final [terminator](Terminator)
     /// in the given [`BasicBlock`] and calls the appropriate conversion functions on the
     /// given [`Transformer`].
