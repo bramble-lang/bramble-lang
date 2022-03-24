@@ -46,7 +46,7 @@ pub trait Transformer<L, V> {
     /// [`BasicBlockId`].
     fn start_bb(&mut self, bb: BasicBlockId);
 
-    fn add_var(&mut self);
+    fn add_var(&mut self, id: VarId, vd: &VarDecl);
     fn add_temp(&mut self);
 
     /// Tells the program to exit this [`BasicBlock`] by returning to the calling function
@@ -56,7 +56,7 @@ pub trait Transformer<L, V> {
     fn assign(&mut self, span: Span, l: L, v: V);
 
     /// Convert the given variable declaration to a specific location in memory
-    fn var(&self, v: &VarDecl) -> L;
+    fn var(&self, v: VarId) -> L;
 
     // The following methods correspond to [`RValue`] variants
 

@@ -42,9 +42,21 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
         for f in self.mir.function_iter() {
             // For each function, iterate over every BB
             self.function = Some(f);
+
+            // Iterate over all the variables in the function
+            self.add_variables();
+
+            // Convert every basic block
             for bb in f.bb_iter() {
                 self.basic_block(bb)
             }
+        }
+    }
+
+    fn add_variables(&mut self) {
+        for id in self.get_varid_iter() {
+            let decl = *self.get_var(id);
+            self.xfmr.add_var(id, &decl);
         }
     }
 
@@ -53,7 +65,6 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
     /// given [`Transformer`].
     pub fn basic_block(&mut self, bb: &BasicBlock) {
         self.xfmr.start_bb(BasicBlockId::new(0));
-        // Iterate over all the variables in the block
 
         // Iterate over the statements in the basic block
         bb.stm_iter().for_each(|s| self.statement(s));
@@ -112,14 +123,21 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
             LValue::Var(vid) => {
                 // Get function which is currently being converted
                 // Look up VarId to get the vardecl
-                let vd = self.get_var(*vid);
+                //let vd = self.get_var(*vid);
 
                 // Convert VarDecl
-                self.xfmr.var(vd)
+                self.xfmr.var(*vid)
             }
             LValue::Temp(_) => todo!(),
             LValue::Access(_, _) => todo!(),
             LValue::ReturnPointer => todo!(),
+        }
+    }
+
+    fn get_varid_iter(&self) -> impl Iterator<Item = VarId> {
+        match self.function {
+            Some(f) => f.varid_iter(),
+            None => panic!(),
         }
     }
 

@@ -1,5 +1,7 @@
 //! Transforms the MIR representation into LLVM
 
+use std::collections::{hash_map::Entry, HashMap};
+
 use inkwell::{builder::Builder, context::Context, module::Module, values::*};
 
 use crate::{
@@ -13,6 +15,8 @@ struct LlvmTransformer<'ctx> {
     builder: Builder<'ctx>,
     table: &'ctx StringTable,
     function: FunctionValue<'ctx>,
+
+    vars: HashMap<VarId, PointerValue<'ctx>>,
 }
 
 impl<'ctx> LlvmTransformer<'ctx> {
@@ -31,13 +35,23 @@ impl<'ctx> LlvmTransformer<'ctx> {
 
         let builder = ctx.create_builder();
 
+        let entry = ctx.append_basic_block(function, "entry");
+        builder.position_at_end(entry);
+
         Self {
             context: ctx,
             module,
             builder,
             table,
             function,
+            vars: HashMap::default(),
         }
+    }
+
+    fn to_label(&self, vd: &VarDecl) -> String {
+        let name = self.table.get(vd.name()).unwrap();
+        let scope = vd.scope();
+        format!("{}_{}", name, scope)
     }
 }
 
@@ -47,8 +61,24 @@ impl<'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>> for LlvmTransfo
         self.builder.position_at_end(bb);
     }
 
-    fn add_var(&mut self) {
-        todo!()
+    fn add_var(&mut self, id: VarId, decl: &VarDecl) {
+        let name = self.to_label(decl);
+
+        // Check if variable name already exists
+        match self.vars.entry(id) {
+            // If it does -> return an error
+            Entry::Occupied(_) => {
+                panic!("Attempting to add a variable that is already in the table")
+            }
+
+            // If not, then allocate a pointer in the Builder
+            Entry::Vacant(ve) => {
+                // and add a mapping from VarID to the pointer in the local var table
+                let ty = self.context.i64_type();
+                let ptr = self.builder.build_alloca(ty, &name);
+                ve.insert(ptr);
+            }
+        }
     }
 
     fn add_temp(&mut self) {
@@ -68,10 +98,11 @@ impl<'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>> for LlvmTransfo
         self.builder.build_store(l, v);
     }
 
-    fn var(&self, v: &VarDecl) -> PointerValue<'ctx> {
-        let name = self.table.get(v.name()).unwrap();
-        let ty = self.context.i64_type();
-        self.builder.build_alloca(ty, &name)
+    fn var(&self, v: VarId) -> PointerValue<'ctx> {
+        *self
+            .vars
+            .get(&v)
+            .expect("Cound not find given VarId in vars table")
     }
 
     fn constant(&self, c: Constant) -> BasicValueEnum<'ctx> {

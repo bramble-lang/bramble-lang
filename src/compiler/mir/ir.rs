@@ -144,6 +144,10 @@ impl Procedure {
         self.scopes.parent_of(id)
     }
 
+    pub fn varid_iter(&self) -> impl Iterator<Item = VarId> {
+        (0..self.vars.len()).map(|idx| VarId(idx))
+    }
+
     /// Get the declaration details of a user defined variable in
     /// this procedure.
     pub fn get_var(&self, id: VarId) -> &VarDecl {
@@ -301,7 +305,7 @@ impl Display for BasicBlockId {
 }
 
 /// Identifier for a user declared variable
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, Hash, Eq, PartialEq, Copy, Clone)]
 pub struct VarId(usize);
 
 impl VarId {
@@ -351,6 +355,12 @@ impl ScopeId {
 
     pub fn index(&self) -> usize {
         self.0
+    }
+}
+
+impl Display for ScopeId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{}", self.0))
     }
 }
 
