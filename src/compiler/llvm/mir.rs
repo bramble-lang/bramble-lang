@@ -68,26 +68,6 @@ impl<'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>> for LlvmTransfo
         self.builder.build_store(l, v);
     }
 
-    fn lvalue(&self, l: &LValue) -> PointerValue<'ctx> {
-        match l {
-            LValue::Static(_) => todo!(),
-            LValue::Var(v) => {
-                // TODO: VarId should not exist outside of the MIR.  The TFormer should get VarDecl or TempDecl?
-                // One reason for this is that the Xform should be one-way/push.  If the VarId is passed to the XFormer
-                // it needs to be able to query the MirProcedure and pull the VarDecl, which makes this a two-way xform.
-                //
-                // Exception to this is the TypeTable/TypeId? What about FunctionTable/FunctionId?
-                //
-                // Create label for variable
-                // Create pointer to label
-                todo!()
-            }
-            LValue::Temp(_) => todo!(),
-            LValue::Access(_, _) => todo!(),
-            LValue::ReturnPointer => todo!(),
-        }
-    }
-
     fn var(&self, v: &VarDecl) -> PointerValue<'ctx> {
         let name = self.table.get(v.name()).unwrap();
         let ty = self.context.i64_type();

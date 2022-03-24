@@ -55,9 +55,6 @@ pub trait Transformer<L, V> {
     /// Store the given value to the given memory location
     fn assign(&mut self, span: Span, l: L, v: V);
 
-    /// Convert a reference to a specific location in memory
-    fn lvalue(&self, l: &LValue) -> L;
-
     /// Convert the given variable declaration to a specific location in memory
     fn var(&self, v: &VarDecl) -> L;
 
