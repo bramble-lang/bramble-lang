@@ -7,6 +7,17 @@ use crate::compiler::mir::ir::*;
 
 use super::transformer::Transformer;
 
+/// This will traverse the MIR representation of a function and use the given
+/// [`Transformer`] implementation to generate a new IR for the function.
+///
+/// `L` - the type used by the target IR to represent addressable expressions
+/// or [`LValue`].
+///
+/// `V` - the type used by the target IR to represent values such as
+/// constants or the value read from a [memory location](LValue).
+///
+/// `T` - the type that implements the [`Transformer`] trait and will actually handle the
+/// conversion to the target IR.
 pub struct Traverser<'a, L, V, T: Transformer<L, V>> {
     xfmr: &'a mut T,
     _l: PhantomData<L>,
@@ -33,6 +44,7 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
         }
     }
 
+    /// Call the [`Transformer`] on a statement
     fn statement(&mut self, stm: &Statement) {
         let span = stm.span();
 
@@ -45,6 +57,7 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
         }
     }
 
+    /// Use the [`Transformer`] to convert a MIR [`RValue`] to the target IR value type `V`
     fn rvalue(&mut self, rv: &RValue) -> V {
         match rv {
             RValue::Use(o) => self.operand(o),
@@ -55,6 +68,7 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
         }
     }
 
+    /// Use the [`Transformer`] to convert a Mir [`Operand`] to the target IR value type `V`
     fn operand(&mut self, o: &Operand) -> V {
         match o {
             Operand::Constant(c) => self.xfmr.constant(*c),
