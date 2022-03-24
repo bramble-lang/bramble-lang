@@ -1,10 +1,12 @@
 //! Transforms the MIR representation into LLVM
 
+use inkwell::values::BasicValueEnum;
+
 use crate::compiler::mir::{ir::*, Transformer};
 
 struct LlvmTransformer {}
 
-impl<L, V> Transformer<L, V> for LlvmTransformer {
+impl<'ctx, L> Transformer<L, BasicValueEnum<'ctx>> for LlvmTransformer {
     fn start_bb(&mut self, bb: BasicBlockId) {
         todo!()
     }
@@ -21,7 +23,7 @@ impl<L, V> Transformer<L, V> for LlvmTransformer {
         todo!()
     }
 
-    fn assign(&mut self, span: crate::compiler::Span, l: L, v: V) {
+    fn assign(&mut self, span: crate::compiler::Span, l: L, v: BasicValueEnum<'ctx>) {
         todo!()
     }
 
@@ -29,19 +31,19 @@ impl<L, V> Transformer<L, V> for LlvmTransformer {
         todo!()
     }
 
-    fn constant(&self, c: Constant) -> V {
+    fn constant(&self, c: Constant) -> BasicValueEnum<'ctx> {
         todo!()
     }
 
-    fn load(&self, lv: L) -> V {
+    fn load(&self, lv: L) -> BasicValueEnum<'ctx> {
         todo!()
     }
 
-    fn add(&self, a: V, b: V) -> V {
+    fn add(&self, a: BasicValueEnum<'ctx>, b: BasicValueEnum<'ctx>) -> BasicValueEnum<'ctx> {
         todo!()
     }
 
-    fn sub(&self, a: V, b: V) -> V {
+    fn sub(&self, a: BasicValueEnum<'ctx>, b: BasicValueEnum<'ctx>) -> BasicValueEnum<'ctx> {
         todo!()
     }
 }
