@@ -25,14 +25,14 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
             .expect("Terminator must be defined for a basic block")
             .kind()
         {
+            TerminatorKind::Return => self.xfmr.term_return(),
+            TerminatorKind::GoTo { target } => todo!(),
+            TerminatorKind::CondGoTo { cond, tru, fls } => todo!(),
             TerminatorKind::CallFn {
                 func,
                 args,
                 reentry,
             } => todo!(),
-            TerminatorKind::Return => self.xfmr.term_return(),
-            TerminatorKind::GoTo { target } => todo!(),
-            TerminatorKind::CondGoTo { cond, tru, fls } => todo!(),
         }
     }
 }

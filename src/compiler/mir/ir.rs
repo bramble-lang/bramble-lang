@@ -734,16 +734,6 @@ impl Display for Terminator {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TerminatorKind {
-    /// Enter a new functions scope.
-    CallFn {
-        /// The function to enter
-        func: Operand,
-        /// The arguments for the function being called
-        args: Vec<Operand>,
-        /// The location of the function result and which basic block is the reentry point from the called function
-        reentry: (LValue, BasicBlockId),
-    },
-
     /// Return from this function to the calling function.
     Return,
 
@@ -759,6 +749,16 @@ pub enum TerminatorKind {
         tru: BasicBlockId,
         /// If `cond` is false, then go to this basic block
         fls: BasicBlockId,
+    },
+
+    /// Enter a new functions scope.
+    CallFn {
+        /// The function to enter
+        func: Operand,
+        /// The arguments for the function being called
+        args: Vec<Operand>,
+        /// The location of the function result and which basic block is the reentry point from the called function
+        reentry: (LValue, BasicBlockId),
     },
 }
 
