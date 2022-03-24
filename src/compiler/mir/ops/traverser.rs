@@ -37,7 +37,12 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
 
     pub fn map(&mut self) {
         // Iterate over every function in MIR
-        // For each function, iterate over every BB
+        for f in self.mir.function_iter() {
+            // For each function, iterate over every BB
+            for bb in f.bb_iter() {
+                self.basic_block(bb)
+            }
+        }
     }
 
     /// Traverses every variable, [statement](Statement), and the final [terminator](Terminator)

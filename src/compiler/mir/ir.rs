@@ -113,6 +113,10 @@ impl Procedure {
         ArgId::new(id)
     }
 
+    pub fn bb_iter(&self) -> impl Iterator<Item = &BasicBlock> {
+        self.blocks.iter()
+    }
+
     /// Get a [`BasicBlock`] for this procedure
     pub fn get_bb(&self, id: BasicBlockId) -> &BasicBlock {
         &self.blocks[id.index()]
