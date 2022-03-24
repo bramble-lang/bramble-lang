@@ -16,7 +16,7 @@
 //! the vector.
 //! 5. Need to construct the Phi operator in the merge point Basic Block.
 
-use crate::compiler::mir::ir::*;
+use crate::compiler::{mir::ir::*, Span};
 
 /// The MIR Transformer defines an interface between the process which traverses
 /// the MIR (which is a Control Flow Graph) and the process which converts a MIR
@@ -48,10 +48,10 @@ pub trait Transformer<L, V> {
     fn term_return(&mut self);
 
     /// Store the given value to the given memory location
-    fn assign(&mut self, l: L, v: V);
+    fn assign(&mut self, span: Span, l: L, v: V);
 
     /// Convert a reference to a specific location in memory
-    fn lvalue(&self, l: LValue) -> L;
+    fn lvalue(&self, l: &LValue) -> L;
 
     // The following methods correspond to [`RValue`] variants
 
@@ -59,7 +59,7 @@ pub trait Transformer<L, V> {
     fn constant(&self, c: Constant) -> V;
 
     /// Load a value from a memory location
-    fn load(&self) -> V;
+    fn load(&self, lv: L) -> V;
 
     /// Add two values together
     fn add(&self, a: V, b: V) -> V;

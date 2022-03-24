@@ -18,6 +18,7 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
         // Iterate over all the variables in the block
 
         // Iterate over the statements in the basic block
+        bb.stm_iter().for_each(|s| self.statement(s));
 
         // Convert the terminator
         match bb
@@ -29,6 +30,38 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
             TerminatorKind::GoTo { .. } => todo!(),
             TerminatorKind::CondGoTo { .. } => todo!(),
             TerminatorKind::CallFn { .. } => todo!(),
+        }
+    }
+
+    fn statement(&mut self, stm: &Statement) {
+        let span = stm.span();
+
+        match stm.kind() {
+            StatementKind::Assign(lv, rv) => {
+                let lv = self.xfmr.lvalue(lv);
+                let rv = self.rvalue(rv);
+                self.xfmr.assign(span, lv, rv);
+            }
+        }
+    }
+
+    fn rvalue(&mut self, rv: &RValue) -> V {
+        match rv {
+            RValue::Use(o) => self.operand(o),
+            RValue::BinOp(_, _, _) => todo!(),
+            RValue::UnOp(_, _) => todo!(),
+            RValue::Cast(_, _) => todo!(),
+            RValue::AddressOf(_) => todo!(),
+        }
+    }
+
+    fn operand(&mut self, o: &Operand) -> V {
+        match o {
+            Operand::Constant(c) => self.xfmr.constant(*c),
+            Operand::LValue(lv) => {
+                let l = self.xfmr.lvalue(lv);
+                self.xfmr.load(l)
+            }
         }
     }
 }

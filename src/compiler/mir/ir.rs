@@ -528,6 +528,11 @@ impl Statement {
     pub fn kind(&self) -> &StatementKind {
         &self.kind
     }
+
+    /// Returns the [`Span`] that this statement covers.
+    pub fn span(&self) -> Span {
+        self.span
+    }
 }
 
 impl Display for Statement {
