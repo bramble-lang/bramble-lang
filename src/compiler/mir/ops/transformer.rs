@@ -8,7 +8,7 @@
 //! 1. Create a vector of LLVM Basic Blocks with 1-1 correspondance to the MIR
 //! Basic Blocks.
 //! 2. Execute the Traverser and pass it the LLVM Transformer.
-//! 3. When start_bb is called us it's BasicBlockId to look up the associated LLVM
+//! 3. When start_bb is called use its BasicBlockId to look up the associated LLVM
 //! BB in the LLVM BB vector by converting the BasicBlockId to a [`usize`]. Then
 //! tell the LLVM Builder that is the current basic block.
 //! 4. When a Terminator is conversion happens. Use the BasicBlockId(s) in the
