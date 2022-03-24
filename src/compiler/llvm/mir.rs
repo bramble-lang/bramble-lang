@@ -144,10 +144,11 @@ mod mir2llvm_tests {
         let context = Context::create();
         let mut llvm = LlvmTransformer::new(StringId::new(), &context, "test", &table);
 
-        let mvr = Traverser::new(&project, &mut llvm);
+        let mut mvr = Traverser::new(&project, &mut llvm);
 
         // Traverser is given a MirProject
         // call traverser.map(llvm) this will use the llvm xfmr to map MirProject to LlvmProject
+        mvr.map();
         // Print LLVM
     }
 
