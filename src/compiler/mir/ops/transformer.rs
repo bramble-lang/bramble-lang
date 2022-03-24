@@ -35,6 +35,11 @@ use crate::compiler::{mir::ir::*, Span};
 /// `V` is used, this will be the type used by the Target IR to represent an expression
 /// result. The type parameter `L` will have the type used to represent variables
 /// and memory locations (i.e., addressable expressions).
+///
+/// Even though there will only be one implementation of this trait (LLVM), there
+/// is still a reason for this trait to exist. To create a decoupling between the
+/// mir module and the LLVM IR module and avoid having bi-directional imports creating
+/// a more confusing dependency graph.
 pub trait Transformer<L, V> {
     /// Begins a new Basic Block with the given identifier.  The identifier is needed
     /// because [`Terminators`](Terminator) will refer to target Basic Blocks with their
