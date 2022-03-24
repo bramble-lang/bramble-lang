@@ -21,6 +21,7 @@ use super::transformer::Transformer;
 pub struct Traverser<'a, L, V, T: Transformer<L, V>> {
     xfmr: &'a mut T,
     mir: &'a MirProject,
+    function: Option<&'a Procedure>,
     _l: PhantomData<L>,
     _v: PhantomData<V>,
 }
@@ -30,6 +31,7 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
         Self {
             xfmr,
             mir,
+            function: None,
             _l: PhantomData,
             _v: PhantomData,
         }
@@ -39,6 +41,7 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
         // Iterate over every function in MIR
         for f in self.mir.function_iter() {
             // For each function, iterate over every BB
+            self.function = Some(f);
             for bb in f.bb_iter() {
                 self.basic_block(bb)
             }
@@ -49,6 +52,7 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
     /// in the given [`BasicBlock`] and calls the appropriate conversion functions on the
     /// given [`Transformer`].
     pub fn basic_block(&mut self, bb: &BasicBlock) {
+        self.xfmr.start_bb(BasicBlockId::new(0));
         // Iterate over all the variables in the block
 
         // Iterate over the statements in the basic block
@@ -73,7 +77,7 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
 
         match stm.kind() {
             StatementKind::Assign(lv, rv) => {
-                let lv = self.xfmr.lvalue(lv);
+                let lv = self.lvalue(lv);
                 let rv = self.rvalue(rv);
                 self.xfmr.assign(span, lv, rv);
             }
@@ -96,9 +100,36 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
         match o {
             Operand::Constant(c) => self.xfmr.constant(*c),
             Operand::LValue(lv) => {
-                let l = self.xfmr.lvalue(lv);
+                let l = self.lvalue(lv);
                 self.xfmr.load(l)
             }
+        }
+    }
+
+    fn lvalue(&mut self, lv: &LValue) -> L {
+        match lv {
+            LValue::Static(_) => todo!(),
+            LValue::Var(vid) => {
+                // Get function which is currently being converted
+                // Look up VarId to get the vardecl
+                let vd = self.get_var(*vid);
+
+                // Convert VarDecl
+                self.xfmr.var(vd)
+            }
+            LValue::Temp(_) => todo!(),
+            LValue::Access(_, _) => todo!(),
+            LValue::ReturnPointer => todo!(),
+        }
+    }
+
+    /// Given a [`VarId`] this will find the associated [`VarDecl`] from the currently
+    /// transforming [`Procedure`].  If no [`Procedure`] is currently being transformed this
+    /// will panic.
+    fn get_var(&self, id: VarId) -> &VarDecl {
+        match self.function {
+            Some(f) => f.get_var(id),
+            None => panic!("Must be converting a fucntion to look up a VarId"),
         }
     }
 }

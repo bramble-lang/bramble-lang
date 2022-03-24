@@ -56,7 +56,7 @@ impl<'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>> for LlvmTransfo
     }
 
     fn term_return(&mut self) {
-        todo!()
+        self.builder.build_return(None);
     }
 
     fn assign(
@@ -89,11 +89,28 @@ impl<'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>> for LlvmTransfo
     }
 
     fn var(&self, v: &VarDecl) -> PointerValue<'ctx> {
-        todo!()
+        let name = self.table.get(v.name()).unwrap();
+        let ty = self.context.i64_type();
+        self.builder.build_alloca(ty, &name)
     }
 
     fn constant(&self, c: Constant) -> BasicValueEnum<'ctx> {
-        todo!()
+        match c {
+            Constant::Unit => todo!(),
+            Constant::I8(_) => todo!(),
+            Constant::I16(_) => todo!(),
+            Constant::I32(_) => todo!(),
+            Constant::I64(i) => self.context.i64_type().const_int(i as u64, true).into(),
+            Constant::U8(_) => todo!(),
+            Constant::U16(_) => todo!(),
+            Constant::U32(_) => todo!(),
+            Constant::U64(_) => todo!(),
+            Constant::F64(_) => todo!(),
+            Constant::Bool(_) => todo!(),
+            Constant::StringLiteral(_) => todo!(),
+            Constant::Null => todo!(),
+            Constant::SizeOf(_) => todo!(),
+        }
     }
 
     fn load(&self, lv: PointerValue<'ctx>) -> BasicValueEnum<'ctx> {
