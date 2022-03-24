@@ -88,6 +88,10 @@ impl<'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>> for LlvmTransfo
         }
     }
 
+    fn var(&self, v: &VarDecl) -> PointerValue<'ctx> {
+        todo!()
+    }
+
     fn constant(&self, c: Constant) -> BasicValueEnum<'ctx> {
         todo!()
     }

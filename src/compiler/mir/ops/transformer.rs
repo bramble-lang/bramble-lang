@@ -58,6 +58,9 @@ pub trait Transformer<L, V> {
     /// Convert a reference to a specific location in memory
     fn lvalue(&self, l: &LValue) -> L;
 
+    /// Convert the given variable declaration to a specific location in memory
+    fn var(&self, v: &VarDecl) -> L;
+
     // The following methods correspond to [`RValue`] variants
 
     /// Convert a constant value

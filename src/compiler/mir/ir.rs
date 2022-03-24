@@ -402,6 +402,22 @@ impl VarDecl {
             span,
         }
     }
+
+    pub fn name(&self) -> StringId {
+        self.name
+    }
+
+    pub fn ty(&self) -> TypeId {
+        self.ty
+    }
+
+    pub fn scope(&self) -> ScopeId {
+        self.scope
+    }
+
+    pub fn span(&self) -> Span {
+        self.span
+    }
 }
 
 /// A temporary variable created by the MIR compiler to store
