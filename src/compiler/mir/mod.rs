@@ -17,14 +17,16 @@ use self::ir::Procedure;
 use super::Span;
 
 mod builder;
-mod ir;
 mod ops;
 mod project;
 mod test;
 mod typetable;
 
 // imports which will be made accessible outside of this module
+pub mod ir;
 pub mod transform;
+
+pub use ops::{Transformer, Traverser};
 
 // Unit test modules
 #[cfg(test)]
