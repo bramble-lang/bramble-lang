@@ -59,7 +59,9 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
 
     fn allocate_local_vars(&mut self) {
         // Tell the transformer to make the entry BasicBlock active
-        self.xfmr.set_bb(BasicBlockId::new(0));
+        self.xfmr
+            .set_bb(BasicBlockId::new(0))
+            .expect("There must be at least one BasicBlock for a function");
 
         // Loop through all user defined variables and allocate them
         // in the Entry BasicBlock
@@ -73,7 +75,7 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
     /// in the given [`BasicBlock`] and calls the appropriate conversion functions on the
     /// given [`Transformer`].
     pub fn basic_block(&mut self, id: BasicBlockId, bb: &BasicBlock) {
-        self.xfmr.set_bb(id);
+        self.xfmr.set_bb(id).expect("Could not find BasicBlock");
 
         // Iterate over the statements in the basic block
         bb.stm_iter().for_each(|s| self.statement(s));

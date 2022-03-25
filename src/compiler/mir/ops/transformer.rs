@@ -42,7 +42,7 @@ use crate::compiler::{mir::ir::*, Span};
 /// a more confusing dependency graph.
 pub trait Transformer<L, V> {
     fn create_bb(&mut self, bb: BasicBlockId) -> Result<(), TransformerResult>;
-    fn set_bb(&mut self, bb: BasicBlockId);
+    fn set_bb(&mut self, bb: BasicBlockId) -> Result<(), TransformerResult>;
 
     /// Allocate space for the given variable declaration
     fn alloc_var(&mut self, id: VarId, vd: &VarDecl) -> Result<(), TransformerResult>;

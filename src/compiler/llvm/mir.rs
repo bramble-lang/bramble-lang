@@ -82,9 +82,14 @@ impl<'a, 'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
         }
     }
 
-    fn set_bb(&mut self, id: BasicBlockId) {
-        let bb = self.blocks.get(&id).unwrap();
-        self.builder.position_at_end(*bb);
+    fn set_bb(&mut self, id: BasicBlockId) -> Result<(), TransformerResult> {
+        match self.blocks.get(&id) {
+            Some(bb) => {
+                self.builder.position_at_end(*bb);
+                Ok(())
+            }
+            None => Err(TransformerResult::BasicBlockNotFound),
+        }
     }
 
     fn alloc_var(&mut self, id: VarId, decl: &VarDecl) -> Result<(), TransformerResult> {
@@ -200,7 +205,6 @@ mod mir2llvm_tests_visual {
             fn test() {
                 let x: i64 := 5;
                 let b: bool := true;
-                if (true) {} else {};
                 return;
             }
         ";
