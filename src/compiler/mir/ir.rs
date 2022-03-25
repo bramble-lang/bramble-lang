@@ -14,6 +14,7 @@ use super::{
 };
 
 const ROOT_SCOPE: ScopeId = ScopeId(0);
+pub const ENTRY_BB: BasicBlockId = BasicBlockId(0);
 
 /// Procedure
 /// This type represents a single function from the input source code.
