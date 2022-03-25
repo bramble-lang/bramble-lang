@@ -44,11 +44,6 @@ pub trait Transformer<L, V> {
     fn create_bb(&mut self, bb: BasicBlockId);
     fn set_bb(&mut self, bb: BasicBlockId);
 
-    /// Begins a new Basic Block with the given identifier.  The identifier is needed
-    /// because [`Terminators`](Terminator) will refer to target Basic Blocks with their
-    /// [`BasicBlockId`].
-    fn start_bb(&mut self, bb: BasicBlockId);
-
     /// Allocate space for the given variable declaration
     fn alloc_var(&mut self, id: VarId, vd: &VarDecl) -> Result<(), TransformerResult>;
     fn alloc_temp(&mut self);

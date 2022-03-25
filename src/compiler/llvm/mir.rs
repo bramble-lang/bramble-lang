@@ -84,13 +84,6 @@ impl<'a, 'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
         self.builder.position_at_end(*bb);
     }
 
-    fn start_bb(&mut self, bb: BasicBlockId) {
-        let bb = self
-            .context
-            .append_basic_block(self.function, &bb.to_string());
-        self.builder.position_at_end(bb);
-    }
-
     fn alloc_var(&mut self, id: VarId, decl: &VarDecl) -> Result<(), TransformerResult> {
         let name = self.to_label(decl);
 

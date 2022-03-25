@@ -43,6 +43,14 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
             // For each function, iterate over every BB
             self.function = Some(f);
 
+            for (id, _) in f.bb_iter() {
+                self.xfmr.create_bb(id);
+            }
+
+            // Allocate variables
+            self.xfmr.set_bb(BasicBlockId::new(0));
+            self.add_variables();
+
             // Convert every basic block
             for (id, bb) in f.bb_iter() {
                 self.basic_block(id, bb)
@@ -61,13 +69,7 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
     /// in the given [`BasicBlock`] and calls the appropriate conversion functions on the
     /// given [`Transformer`].
     pub fn basic_block(&mut self, id: BasicBlockId, bb: &BasicBlock) {
-        self.xfmr.start_bb(id);
-
-        // If this is the first BasicBlock then allocate all variables
-        if id == BasicBlockId::new(0) {
-            // Iterate over all the variables in the function
-            self.add_variables();
-        }
+        self.xfmr.set_bb(id);
 
         // Iterate over the statements in the basic block
         bb.stm_iter().for_each(|s| self.statement(s));
