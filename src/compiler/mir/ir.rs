@@ -250,7 +250,6 @@ impl Display for Procedure {
 
         // Print out the variables
         for idx in 0..self.vars.len() {
-            let vid = VarId::new(idx);
             f.write_str("let ")?;
 
             if self.vars[idx].mutable {
@@ -259,7 +258,7 @@ impl Display for Procedure {
 
             f.write_fmt(format_args!(
                 "{}: {:?}, {:?} // {} {}\n",
-                vid,
+                VarId::new(idx),
                 self.vars[idx].ty,
                 self.vars[idx].scope,
                 self.vars[idx].name,
