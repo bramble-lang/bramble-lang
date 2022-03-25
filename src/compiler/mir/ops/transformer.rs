@@ -41,10 +41,8 @@ use crate::compiler::{mir::ir::*, Span};
 /// mir module and the LLVM IR module and avoid having bi-directional imports creating
 /// a more confusing dependency graph.
 pub trait Transformer<L, V> {
-    /// Begins a new Basic Block with the given identifier.  The identifier is needed
-    /// because [`Terminators`](Terminator) will refer to target Basic Blocks with their
-    /// [`BasicBlockId`].
-    fn start_bb(&mut self, bb: BasicBlockId);
+    fn create_bb(&mut self, bb: BasicBlockId) -> Result<(), TransformerResult>;
+    fn set_bb(&mut self, bb: BasicBlockId) -> Result<(), TransformerResult>;
 
     /// Allocate space for the given variable declaration
     fn alloc_var(&mut self, id: VarId, vd: &VarDecl) -> Result<(), TransformerResult>;
@@ -52,6 +50,13 @@ pub trait Transformer<L, V> {
 
     /// Tells the program to exit this [`BasicBlock`] by returning to the calling function
     fn term_return(&mut self);
+
+    /// Tells the program to go to one of two [`BasicBlocks`](BasicBlock) based upon whether
+    /// the given conditional is true or false.
+    fn term_cond_goto(&mut self, cond: V, then_bb: BasicBlockId, else_bb: BasicBlockId);
+
+    /// Tells the program to go to the given [`BasicBlock`].
+    fn term_goto(&mut self, target_bb: BasicBlockId);
 
     /// Store the given value to the given memory location
     fn assign(&mut self, span: Span, l: L, v: V);
@@ -61,8 +66,11 @@ pub trait Transformer<L, V> {
 
     // The following methods correspond to [`RValue`] variants
 
-    /// Convert a constant value
+    /// Create a const [`i64`].
     fn const_i64(&self, i: i64) -> V;
+
+    /// Create a const [`bool`].
+    fn const_bool(&self, b: bool) -> V;
 
     /// Load a value from a memory location
     fn load(&self, lv: L) -> V;
@@ -77,4 +85,6 @@ pub trait Transformer<L, V> {
 #[derive(Debug, Clone, Copy)]
 pub enum TransformerResult {
     VariableAlreadyAllocated,
+    BasicBlockAlreadyCreated,
+    BasicBlockNotFound,
 }

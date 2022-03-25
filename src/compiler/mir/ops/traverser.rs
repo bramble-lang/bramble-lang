@@ -43,6 +43,13 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
             // For each function, iterate over every BB
             self.function = Some(f);
 
+            for (id, _) in f.bb_iter() {
+                self.xfmr.create_bb(id).expect("BasicBlock already created");
+            }
+
+            // Allocate variables
+            self.allocate_local_vars();
+
             // Convert every basic block
             for (id, bb) in f.bb_iter() {
                 self.basic_block(id, bb)
@@ -50,7 +57,14 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
         }
     }
 
-    fn add_variables(&mut self) {
+    fn allocate_local_vars(&mut self) {
+        // Tell the transformer to make the entry BasicBlock active
+        self.xfmr
+            .set_bb(ENTRY_BB)
+            .expect("There must be at least one BasicBlock for a function");
+
+        // Loop through all user defined variables and allocate them
+        // in the Entry BasicBlock
         for id in self.get_varid_iter() {
             let decl = *self.get_var(id);
             self.xfmr.alloc_var(id, &decl).unwrap();
@@ -61,13 +75,7 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
     /// in the given [`BasicBlock`] and calls the appropriate conversion functions on the
     /// given [`Transformer`].
     pub fn basic_block(&mut self, id: BasicBlockId, bb: &BasicBlock) {
-        self.xfmr.start_bb(id);
-
-        // If this is the first BasicBlock then allocate all variables
-        if id == BasicBlockId::new(0) {
-            // Iterate over all the variables in the function
-            self.add_variables();
-        }
+        self.xfmr.set_bb(id).expect("Could not find BasicBlock");
 
         // Iterate over the statements in the basic block
         bb.stm_iter().for_each(|s| self.statement(s));
@@ -79,8 +87,11 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
             .kind()
         {
             TerminatorKind::Return => self.xfmr.term_return(),
-            TerminatorKind::GoTo { .. } => todo!(),
-            TerminatorKind::CondGoTo { .. } => todo!(),
+            TerminatorKind::GoTo { target } => self.xfmr.term_goto(*target),
+            TerminatorKind::CondGoTo { cond, tru, fls } => {
+                let cond = self.operand(cond);
+                self.xfmr.term_cond_goto(cond, *tru, *fls)
+            }
             TerminatorKind::CallFn { .. } => todo!(),
         }
     }
@@ -132,7 +143,7 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
             Constant::U32(_) => todo!(),
             Constant::U64(_) => todo!(),
             Constant::F64(_) => todo!(),
-            Constant::Bool(_) => todo!(),
+            Constant::Bool(b) => self.xfmr.const_bool(b),
             Constant::StringLiteral(_) => todo!(),
             Constant::Null => todo!(),
             Constant::SizeOf(_) => todo!(),
