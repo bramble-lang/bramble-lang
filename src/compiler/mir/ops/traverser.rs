@@ -164,7 +164,7 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
                 // Convert VarDecl
                 self.xfmr.var(*vid)
             }
-            LValue::Temp(_) => todo!(),
+            LValue::Temp(tid) => self.xfmr.temp(*tid),
             LValue::Access(_, _) => todo!(),
             LValue::ReturnPointer => todo!(),
         }

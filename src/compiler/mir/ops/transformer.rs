@@ -64,6 +64,9 @@ pub trait Transformer<L, V> {
     /// Convert the given variable declaration to a specific location in memory
     fn var(&self, v: VarId) -> L;
 
+    /// Convert the given variable declaration to a specific location in memory
+    fn temp(&self, v: TempId) -> L;
+
     // The following methods correspond to [`RValue`] variants
 
     /// Create a const [`i64`].

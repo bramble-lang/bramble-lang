@@ -33,6 +33,10 @@ struct LlvmFunctionTransformer<'a, 'ctx> {
     /// variables after they have been allocated.
     vars: HashMap<VarId, PointerValue<'ctx>>,
 
+    /// Mapping of [`TempIds`](TempId) to their LLVM value, this is used to look up
+    /// variables after they have been allocated.
+    temps: HashMap<TempId, PointerValue<'ctx>>,
+
     /// Table to manage looking up the LLVM BasicBlock via the [`BasicBlockId`].
     blocks: HashMap<BasicBlockId, inkwell::basic_block::BasicBlock<'ctx>>,
 }
@@ -57,14 +61,19 @@ impl<'a, 'ctx> LlvmFunctionTransformer<'a, 'ctx> {
             str_table: table,
             function,
             vars: HashMap::default(),
+            temps: HashMap::default(),
             blocks: HashMap::new(),
         }
     }
 
-    fn to_label(&self, vd: &VarDecl) -> String {
+    fn var_label(&self, vd: &VarDecl) -> String {
         let name = self.str_table.get(vd.name()).unwrap();
         let scope = vd.scope();
         format!("{}_{}", name, scope)
+    }
+
+    fn temp_label(&self, id: TempId) -> String {
+        format!("_{}", id.index())
     }
 }
 
@@ -93,7 +102,7 @@ impl<'a, 'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
     }
 
     fn alloc_var(&mut self, id: VarId, decl: &VarDecl) -> Result<(), TransformerResult> {
-        let name = self.to_label(decl);
+        let name = self.var_label(decl);
 
         // Check if variable name already exists
         match self.vars.entry(id) {
@@ -112,7 +121,22 @@ impl<'a, 'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
     }
 
     fn alloc_temp(&mut self, id: TempId, vd: &TempDecl) -> Result<(), TransformerResult> {
-        todo!()
+        let name = self.temp_label(id);
+
+        // Check if variable name already exists
+        match self.temps.entry(id) {
+            // If it does -> return an error
+            Entry::Occupied(_) => Err(TransformerResult::VariableAlreadyAllocated),
+
+            // If not, then allocate a pointer in the Builder
+            Entry::Vacant(ve) => {
+                // and add a mapping from VarID to the pointer in the local var table
+                let ty = self.context.i64_type();
+                let ptr = self.builder.build_alloca(ty, &name);
+                ve.insert(ptr);
+                Ok(())
+            }
+        }
     }
 
     fn term_return(&mut self) {
@@ -150,6 +174,13 @@ impl<'a, 'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
             .expect("Cound not find given VarId in vars table")
     }
 
+    fn temp(&self, v: TempId) -> PointerValue<'ctx> {
+        *self
+            .temps
+            .get(&v)
+            .expect("Cound not find given TempId in vars table")
+    }
+
     fn const_i64(&self, i: i64) -> BasicValueEnum<'ctx> {
         self.context.i64_type().const_int(i as u64, true).into()
     }
@@ -160,7 +191,7 @@ impl<'a, 'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
     }
 
     fn load(&self, lv: PointerValue<'ctx>) -> BasicValueEnum<'ctx> {
-        todo!()
+        self.builder.build_load(lv, "")
     }
 
     fn add(&self, a: BasicValueEnum<'ctx>, b: BasicValueEnum<'ctx>) -> BasicValueEnum<'ctx> {
@@ -213,11 +244,11 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
-    fn if_expr_empty() {
+    fn if_expr() {
         compile_and_print_llvm(
             "
             fn test() {
-                if (true) {} else {};
+                let x: i64 := if (true) {2} else {3};
                 return;
             }
         ",
