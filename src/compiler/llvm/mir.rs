@@ -23,7 +23,7 @@ struct LlvmTransformer<'a, 'ctx> {
     builder: &'a Builder<'ctx>,
 
     /// Table mapping [`StringIds`](StringId) to the string value
-    table: &'ctx StringTable,
+    str_table: &'ctx StringTable,
 
     /// The LLVM function instance that is currently being built by the transformer
     /// all insructions will be added to this function.
@@ -51,14 +51,14 @@ impl<'a, 'ctx> LlvmTransformer<'a, 'ctx> {
             context: ctx,
             module,
             builder,
-            table,
+            str_table: table,
             function,
             vars: HashMap::default(),
         }
     }
 
     fn to_label(&self, vd: &VarDecl) -> String {
-        let name = self.table.get(vd.name()).unwrap();
+        let name = self.str_table.get(vd.name()).unwrap();
         let scope = vd.scope();
         format!("{}_{}", name, scope)
     }
