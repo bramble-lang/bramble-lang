@@ -116,6 +116,11 @@ impl<'a, 'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
         self.context.i64_type().const_int(i as u64, true).into()
     }
 
+    fn const_bool(&self, b: bool) -> BasicValueEnum<'ctx> {
+        let bt = self.context.bool_type();
+        bt.const_int(b as u64, true).into()
+    }
+
     fn load(&self, lv: PointerValue<'ctx>) -> BasicValueEnum<'ctx> {
         todo!()
     }
@@ -153,6 +158,7 @@ mod mir2llvm_tests {
         let text = "
             fn test() {
                 let x: i64 := 5;
+                let b: bool := true;
                 return;
             }
         ";

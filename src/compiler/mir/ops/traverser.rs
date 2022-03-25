@@ -132,7 +132,7 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
             Constant::U32(_) => todo!(),
             Constant::U64(_) => todo!(),
             Constant::F64(_) => todo!(),
-            Constant::Bool(_) => todo!(),
+            Constant::Bool(b) => self.xfmr.const_bool(b),
             Constant::StringLiteral(_) => todo!(),
             Constant::Null => todo!(),
             Constant::SizeOf(_) => todo!(),

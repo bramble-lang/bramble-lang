@@ -63,6 +63,7 @@ pub trait Transformer<L, V> {
 
     /// Convert a constant value
     fn const_i64(&self, i: i64) -> V;
+    fn const_bool(&self, b: bool) -> V;
 
     /// Load a value from a memory location
     fn load(&self, lv: L) -> V;
