@@ -32,6 +32,8 @@ struct LlvmFunctionTransformer<'a, 'ctx> {
     /// Mapping of [`VarIds`](VarId) to their LLVM value, this is used to look up
     /// variables after they have been allocated.
     vars: HashMap<VarId, PointerValue<'ctx>>,
+
+    blocks: HashMap<BasicBlockId, inkwell::basic_block::BasicBlock<'ctx>>,
 }
 
 impl<'a, 'ctx> LlvmFunctionTransformer<'a, 'ctx> {
@@ -54,6 +56,7 @@ impl<'a, 'ctx> LlvmFunctionTransformer<'a, 'ctx> {
             str_table: table,
             function,
             vars: HashMap::default(),
+            blocks: HashMap::new(),
         }
     }
 
@@ -67,6 +70,20 @@ impl<'a, 'ctx> LlvmFunctionTransformer<'a, 'ctx> {
 impl<'a, 'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
     for LlvmFunctionTransformer<'a, 'ctx>
 {
+    fn create_bb(&mut self, id: BasicBlockId) {
+        let bb = self
+            .context
+            .append_basic_block(self.function, &id.to_string());
+        if self.blocks.insert(id, bb).is_some() {
+            panic!("BB already exists")
+        }
+    }
+
+    fn set_bb(&mut self, id: BasicBlockId) {
+        let bb = self.blocks.get(&id).unwrap();
+        self.builder.position_at_end(*bb);
+    }
+
     fn start_bb(&mut self, bb: BasicBlockId) {
         let bb = self
             .context
@@ -99,6 +116,21 @@ impl<'a, 'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
 
     fn term_return(&mut self) {
         self.builder.build_return(None);
+    }
+
+    fn term_cond_goto(
+        &mut self,
+        cond: BasicValueEnum<'ctx>,
+        then_bb: BasicBlockId,
+        else_bb: BasicBlockId,
+    ) {
+        // Look up then_bb
+        let then_bb = self.blocks.get(&then_bb).unwrap();
+        // Look up else_bb
+        let else_bb = self.blocks.get(&else_bb).unwrap();
+        // Create conditional jump to then or else
+        self.builder
+            .build_conditional_branch(cond.into_int_value(), *then_bb, *else_bb);
     }
 
     fn assign(&mut self, span: Span, l: PointerValue<'ctx>, v: BasicValueEnum<'ctx>) {

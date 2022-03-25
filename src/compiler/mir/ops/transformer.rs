@@ -41,6 +41,9 @@ use crate::compiler::{mir::ir::*, Span};
 /// mir module and the LLVM IR module and avoid having bi-directional imports creating
 /// a more confusing dependency graph.
 pub trait Transformer<L, V> {
+    fn create_bb(&mut self, bb: BasicBlockId);
+    fn set_bb(&mut self, bb: BasicBlockId);
+
     /// Begins a new Basic Block with the given identifier.  The identifier is needed
     /// because [`Terminators`](Terminator) will refer to target Basic Blocks with their
     /// [`BasicBlockId`].
@@ -52,6 +55,8 @@ pub trait Transformer<L, V> {
 
     /// Tells the program to exit this [`BasicBlock`] by returning to the calling function
     fn term_return(&mut self);
+
+    fn term_cond_goto(&mut self, cond: V, then_bb: BasicBlockId, else_bb: BasicBlockId);
 
     /// Store the given value to the given memory location
     fn assign(&mut self, span: Span, l: L, v: V);
