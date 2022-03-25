@@ -41,12 +41,12 @@ use crate::compiler::{mir::ir::*, Span};
 /// mir module and the LLVM IR module and avoid having bi-directional imports creating
 /// a more confusing dependency graph.
 pub trait Transformer<L, V> {
-    fn create_bb(&mut self, bb: BasicBlockId) -> Result<(), TransformerResult>;
-    fn set_bb(&mut self, bb: BasicBlockId) -> Result<(), TransformerResult>;
+    fn create_bb(&mut self, bb: BasicBlockId) -> Result<(), TransformerError>;
+    fn set_bb(&mut self, bb: BasicBlockId) -> Result<(), TransformerError>;
 
     /// Allocate space for the given variable declaration
-    fn alloc_var(&mut self, id: VarId, vd: &VarDecl) -> Result<(), TransformerResult>;
-    fn alloc_temp(&mut self, id: TempId, vd: &TempDecl) -> Result<(), TransformerResult>;
+    fn alloc_var(&mut self, id: VarId, vd: &VarDecl) -> Result<(), TransformerError>;
+    fn alloc_temp(&mut self, id: TempId, vd: &TempDecl) -> Result<(), TransformerError>;
 
     /// Tells the program to exit this [`BasicBlock`] by returning to the calling function
     fn term_return(&mut self);
@@ -65,7 +65,7 @@ pub trait Transformer<L, V> {
     fn var(&self, v: VarId) -> L;
 
     /// Convert the given variable declaration to a specific location in memory
-    fn temp(&self, v: TempId) -> Result<L, TransformerResult>;
+    fn temp(&self, v: TempId) -> Result<L, TransformerError>;
 
     // The following methods correspond to [`RValue`] variants
 
@@ -86,7 +86,7 @@ pub trait Transformer<L, V> {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum TransformerResult {
+pub enum TransformerError {
     VariableAlreadyAllocated,
     BasicBlockAlreadyCreated,
     BasicBlockNotFound,

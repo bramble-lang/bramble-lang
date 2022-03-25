@@ -6,7 +6,7 @@ use inkwell::{builder::Builder, context::Context, module::Module, values::*};
 
 use crate::{
     compiler::{
-        mir::{ir::*, Transformer, TransformerResult},
+        mir::{ir::*, Transformer, TransformerError},
         Span,
     },
     StringId, StringTable,
@@ -80,34 +80,34 @@ impl<'a, 'ctx> LlvmFunctionTransformer<'a, 'ctx> {
 impl<'a, 'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
     for LlvmFunctionTransformer<'a, 'ctx>
 {
-    fn create_bb(&mut self, id: BasicBlockId) -> Result<(), TransformerResult> {
+    fn create_bb(&mut self, id: BasicBlockId) -> Result<(), TransformerError> {
         let bb = self
             .context
             .append_basic_block(self.function, &id.to_string());
         if self.blocks.insert(id, bb).is_none() {
             Ok(())
         } else {
-            Err(TransformerResult::BasicBlockAlreadyCreated)
+            Err(TransformerError::BasicBlockAlreadyCreated)
         }
     }
 
-    fn set_bb(&mut self, id: BasicBlockId) -> Result<(), TransformerResult> {
+    fn set_bb(&mut self, id: BasicBlockId) -> Result<(), TransformerError> {
         match self.blocks.get(&id) {
             Some(bb) => {
                 self.builder.position_at_end(*bb);
                 Ok(())
             }
-            None => Err(TransformerResult::BasicBlockNotFound),
+            None => Err(TransformerError::BasicBlockNotFound),
         }
     }
 
-    fn alloc_var(&mut self, id: VarId, decl: &VarDecl) -> Result<(), TransformerResult> {
+    fn alloc_var(&mut self, id: VarId, decl: &VarDecl) -> Result<(), TransformerError> {
         let name = self.var_label(decl);
 
         // Check if variable name already exists
         match self.vars.entry(id) {
             // If it does -> return an error
-            Entry::Occupied(_) => Err(TransformerResult::VariableAlreadyAllocated),
+            Entry::Occupied(_) => Err(TransformerError::VariableAlreadyAllocated),
 
             // If not, then allocate a pointer in the Builder
             Entry::Vacant(ve) => {
@@ -120,13 +120,13 @@ impl<'a, 'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
         }
     }
 
-    fn alloc_temp(&mut self, id: TempId, vd: &TempDecl) -> Result<(), TransformerResult> {
+    fn alloc_temp(&mut self, id: TempId, vd: &TempDecl) -> Result<(), TransformerError> {
         let name = self.temp_label(id);
 
         // Check if variable name already exists
         match self.temps.entry(id) {
             // If it does -> return an error
-            Entry::Occupied(_) => Err(TransformerResult::VariableAlreadyAllocated),
+            Entry::Occupied(_) => Err(TransformerError::VariableAlreadyAllocated),
 
             // If not, then allocate a pointer in the Builder
             Entry::Vacant(ve) => {
@@ -174,11 +174,11 @@ impl<'a, 'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
             .expect("Cound not find given VarId in vars table")
     }
 
-    fn temp(&self, v: TempId) -> Result<PointerValue<'ctx>, TransformerResult> {
+    fn temp(&self, v: TempId) -> Result<PointerValue<'ctx>, TransformerError> {
         self.temps
             .get(&v)
             .copied()
-            .ok_or(TransformerResult::TempNotFound)
+            .ok_or(TransformerError::TempNotFound)
     }
 
     fn const_i64(&self, i: i64) -> BasicValueEnum<'ctx> {
