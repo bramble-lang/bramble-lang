@@ -304,7 +304,7 @@ impl BasicBlockId {
 
 impl From<BasicBlockId> for String {
     fn from(bb: BasicBlockId) -> Self {
-        format!("BB{}", bb.0)
+        format!("{}", bb)
     }
 }
 
