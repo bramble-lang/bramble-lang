@@ -33,6 +33,7 @@ struct LlvmFunctionTransformer<'a, 'ctx> {
     /// variables after they have been allocated.
     vars: HashMap<VarId, PointerValue<'ctx>>,
 
+    /// Table to manage looking up the LLVM BasicBlock via the [`BasicBlockId`].
     blocks: HashMap<BasicBlockId, inkwell::basic_block::BasicBlock<'ctx>>,
 }
 

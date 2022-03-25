@@ -51,7 +51,11 @@ pub trait Transformer<L, V> {
     /// Tells the program to exit this [`BasicBlock`] by returning to the calling function
     fn term_return(&mut self);
 
+    /// Tells the program to go to one of two [`BasicBlocks`](BasicBlock) based upon whether
+    /// the given conditional is true or false.
     fn term_cond_goto(&mut self, cond: V, then_bb: BasicBlockId, else_bb: BasicBlockId);
+
+    /// Tells the program to go to the given [`BasicBlock`].
     fn term_goto(&mut self, target_bb: BasicBlockId);
 
     /// Store the given value to the given memory location
@@ -62,8 +66,10 @@ pub trait Transformer<L, V> {
 
     // The following methods correspond to [`RValue`] variants
 
-    /// Convert a constant value
+    /// Create a const [`i64`].
     fn const_i64(&self, i: i64) -> V;
+
+    /// Create a const [`bool`].
     fn const_bool(&self, b: bool) -> V;
 
     /// Load a value from a memory location
