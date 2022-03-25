@@ -213,7 +213,13 @@ mod mir2llvm_tests_visual {
     //! caused by the complexity that is created if we try to use LLVM's JIT to do
     //! automated unit testing for MIR to LLVM transformation.
 
-    use inkwell::context::Context;
+    use std::path::Path;
+
+    use inkwell::{
+        context::Context,
+        targets::{CodeModel, InitializationConfig, RelocMode},
+        OptimizationLevel,
+    };
 
     use crate::{
         compiler::{
@@ -274,7 +280,11 @@ mod mir2llvm_tests_visual {
         // call traverser.map(llvm) this will use the llvm xfmr to map MirProject to LlvmProject
         mvr.map();
         // Print LLVM
+        println!("=== LLVM IR ===:");
         llvm.module.print_to_stderr();
+
+        println!("\n\n=== x86 ===");
+        print_asm(&module);
     }
 
     fn compile(input: &str) -> (StringTable, Module<SemanticContext>) {
@@ -308,5 +318,40 @@ mod mir2llvm_tests_visual {
                 panic!("{}", err.fmt(&sm, &table).unwrap());
             }
         }
+    }
+
+    fn print_asm<'ctx>(module: &inkwell::module::Module<'ctx>) {
+        // Get target for current machine
+        let triple = inkwell::targets::TargetMachine::get_default_triple();
+
+        let config = InitializationConfig::default();
+        inkwell::targets::Target::initialize_all(&config);
+        let target = inkwell::targets::Target::from_triple(&triple).unwrap();
+
+        let machine = target
+            .create_target_machine(
+                &triple,
+                "generic",
+                "",
+                OptimizationLevel::None,
+                RelocMode::Default,
+                CodeModel::Default,
+            )
+            .ok_or("Could not create a target machine for compilation")
+            .unwrap();
+        let data = machine.get_target_data();
+
+        // Configure the module
+        module.set_data_layout(&data.get_data_layout());
+        module.set_triple(&triple);
+
+        // If emit asm is true, then also write the assembly for the target machine to a file
+        let path = Path::new("./output.s");
+        machine
+            .write_to_file(module, inkwell::targets::FileType::Assembly, &path)
+            .unwrap();
+        let contents =
+            std::fs::read_to_string(&path).expect("Something went wrong reading the file");
+        println!("{contents}");
     }
 }
