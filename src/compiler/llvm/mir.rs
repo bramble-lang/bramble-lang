@@ -5,7 +5,10 @@ use std::collections::{hash_map::Entry, HashMap};
 use inkwell::{builder::Builder, context::Context, module::Module, values::*};
 
 use crate::{
-    compiler::mir::{ir::*, Transformer},
+    compiler::{
+        mir::{ir::*, Transformer},
+        Span,
+    },
     StringId, StringTable,
 };
 
@@ -88,12 +91,7 @@ impl<'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>> for LlvmTransfo
         self.builder.build_return(None);
     }
 
-    fn assign(
-        &mut self,
-        span: crate::compiler::Span,
-        l: PointerValue<'ctx>,
-        v: BasicValueEnum<'ctx>,
-    ) {
+    fn assign(&mut self, span: Span, l: PointerValue<'ctx>, v: BasicValueEnum<'ctx>) {
         self.builder.build_store(l, v);
     }
 
