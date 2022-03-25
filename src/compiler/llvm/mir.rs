@@ -174,11 +174,11 @@ impl<'a, 'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
             .expect("Cound not find given VarId in vars table")
     }
 
-    fn temp(&self, v: TempId) -> PointerValue<'ctx> {
-        *self
-            .temps
+    fn temp(&self, v: TempId) -> Result<PointerValue<'ctx>, TransformerResult> {
+        self.temps
             .get(&v)
-            .expect("Cound not find given TempId in vars table")
+            .copied()
+            .ok_or(TransformerResult::TempNotFound)
     }
 
     fn const_i64(&self, i: i64) -> BasicValueEnum<'ctx> {

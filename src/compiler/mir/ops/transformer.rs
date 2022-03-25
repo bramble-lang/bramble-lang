@@ -65,7 +65,7 @@ pub trait Transformer<L, V> {
     fn var(&self, v: VarId) -> L;
 
     /// Convert the given variable declaration to a specific location in memory
-    fn temp(&self, v: TempId) -> L;
+    fn temp(&self, v: TempId) -> Result<L, TransformerResult>;
 
     // The following methods correspond to [`RValue`] variants
 
@@ -90,4 +90,5 @@ pub enum TransformerResult {
     VariableAlreadyAllocated,
     BasicBlockAlreadyCreated,
     BasicBlockNotFound,
+    TempNotFound,
 }
