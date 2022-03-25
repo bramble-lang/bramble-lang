@@ -69,6 +69,13 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
             let decl = *self.get_var(id);
             self.xfmr.alloc_var(id, &decl).unwrap();
         }
+
+        // Loop through all temp vars and allocate them
+        // in the Entry BasicBlock
+        for id in self.get_tempid_iter() {
+            let decl = *self.get_temp(id);
+            self.xfmr.alloc_temp(id, &decl).unwrap();
+        }
     }
 
     /// Traverses every variable, [statement](Statement), and the final [terminator](Terminator)
@@ -177,6 +184,20 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
         match self.function {
             Some(f) => f.get_var(id),
             None => panic!("Must be converting a fucntion to look up a VarId"),
+        }
+    }
+
+    fn get_tempid_iter(&self) -> impl Iterator<Item = TempId> {
+        match self.function {
+            Some(f) => f.tempid_iter(),
+            None => panic!(),
+        }
+    }
+
+    fn get_temp(&self, id: TempId) -> &TempDecl {
+        match self.function {
+            Some(f) => f.get_temp(id),
+            None => panic!("Must be converting a fucntion to look up a TempId"),
         }
     }
 }

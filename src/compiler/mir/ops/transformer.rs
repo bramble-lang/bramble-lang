@@ -46,7 +46,7 @@ pub trait Transformer<L, V> {
 
     /// Allocate space for the given variable declaration
     fn alloc_var(&mut self, id: VarId, vd: &VarDecl) -> Result<(), TransformerResult>;
-    fn alloc_temp(&mut self);
+    fn alloc_temp(&mut self, id: TempId, vd: &TempDecl) -> Result<(), TransformerResult>;
 
     /// Tells the program to exit this [`BasicBlock`] by returning to the calling function
     fn term_return(&mut self);

@@ -111,7 +111,7 @@ impl<'a, 'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
         }
     }
 
-    fn alloc_temp(&mut self) {
+    fn alloc_temp(&mut self, id: TempId, vd: &TempDecl) -> Result<(), TransformerResult> {
         todo!()
     }
 

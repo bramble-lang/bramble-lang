@@ -159,6 +159,11 @@ impl Procedure {
         &self.vars[id.index()]
     }
 
+    /// Iterate over all the [`VarIds`](VarId) in the [`BasicBlock`].
+    pub fn tempid_iter(&self) -> impl Iterator<Item = TempId> {
+        (0..self.temps.len()).map(TempId)
+    }
+
     /// Will return the [`VarId`] for the given variable name if it
     /// exists in the function's stack.
     pub fn find_var(&self, name: StringId, start: ScopeId) -> Option<VarId> {
