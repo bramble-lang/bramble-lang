@@ -12,27 +12,21 @@
  that is generated from the MIR compiler.
 */
 
-use self::ir::Procedure;
-
-use super::Span;
-
 mod builder;
-mod ir;
 mod ops;
 mod project;
 mod test;
 mod typetable;
 
 // imports which will be made accessible outside of this module
+pub mod ir;
 pub mod transform;
+
+pub use ops::{Transformer, TransformerResult, Traverser};
+pub use project::MirProject;
 
 // Unit test modules
 #[cfg(test)]
 mod project_test;
 #[cfg(test)]
 mod typetable_test;
-
-pub struct Module {
-    funcs: Vec<Procedure>,
-    span: Span,
-}

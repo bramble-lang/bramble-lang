@@ -35,14 +35,20 @@ use crate::compiler::{mir::ir::*, Span};
 /// `V` is used, this will be the type used by the Target IR to represent an expression
 /// result. The type parameter `L` will have the type used to represent variables
 /// and memory locations (i.e., addressable expressions).
+///
+/// Even though there will only be one implementation of this trait (LLVM), there
+/// is still a reason for this trait to exist. To create a decoupling between the
+/// mir module and the LLVM IR module and avoid having bi-directional imports creating
+/// a more confusing dependency graph.
 pub trait Transformer<L, V> {
     /// Begins a new Basic Block with the given identifier.  The identifier is needed
     /// because [`Terminators`](Terminator) will refer to target Basic Blocks with their
     /// [`BasicBlockId`].
     fn start_bb(&mut self, bb: BasicBlockId);
 
-    fn add_var(&mut self);
-    fn add_temp(&mut self);
+    /// Allocate space for the given variable declaration
+    fn alloc_var(&mut self, id: VarId, vd: &VarDecl) -> Result<(), TransformerResult>;
+    fn alloc_temp(&mut self);
 
     /// Tells the program to exit this [`BasicBlock`] by returning to the calling function
     fn term_return(&mut self);
@@ -50,13 +56,13 @@ pub trait Transformer<L, V> {
     /// Store the given value to the given memory location
     fn assign(&mut self, span: Span, l: L, v: V);
 
-    /// Convert a reference to a specific location in memory
-    fn lvalue(&self, l: &LValue) -> L;
+    /// Convert the given variable declaration to a specific location in memory
+    fn var(&self, v: VarId) -> L;
 
     // The following methods correspond to [`RValue`] variants
 
     /// Convert a constant value
-    fn constant(&self, c: Constant) -> V;
+    fn const_i64(&self, i: i64) -> V;
 
     /// Load a value from a memory location
     fn load(&self, lv: L) -> V;
@@ -66,4 +72,9 @@ pub trait Transformer<L, V> {
 
     /// Subtract two values
     fn sub(&self, a: V, b: V) -> V;
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum TransformerResult {
+    VariableAlreadyAllocated,
 }

@@ -3,6 +3,7 @@ mod import;
    Translate Bramble into LLVM IR.
 */
 mod llvmir;
+mod mir;
 mod scopestack;
 mod stringpool;
 mod writable;

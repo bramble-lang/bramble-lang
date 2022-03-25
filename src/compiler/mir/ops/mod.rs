@@ -3,3 +3,6 @@
 
 mod transformer;
 mod traverser;
+
+pub use transformer::*;
+pub use traverser::Traverser;

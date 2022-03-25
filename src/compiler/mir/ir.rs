@@ -113,6 +113,13 @@ impl Procedure {
         ArgId::new(id)
     }
 
+    pub fn bb_iter(&self) -> impl Iterator<Item = (BasicBlockId, &BasicBlock)> {
+        self.blocks
+            .iter()
+            .enumerate()
+            .map(|(id, bb)| (BasicBlockId::new(id), bb))
+    }
+
     /// Get a [`BasicBlock`] for this procedure
     pub fn get_bb(&self, id: BasicBlockId) -> &BasicBlock {
         &self.blocks[id.index()]
@@ -138,6 +145,11 @@ impl Procedure {
 
     pub fn parent_scope(&self, id: ScopeId) -> Option<ScopeId> {
         self.scopes.parent_of(id)
+    }
+
+    /// Iterate over all the [`VarIds`](VarId) in the [`BasicBlock`].
+    pub fn varid_iter(&self) -> impl Iterator<Item = VarId> {
+        (0..self.vars.len()).map(VarId)
     }
 
     /// Get the declaration details of a user defined variable in
@@ -238,7 +250,6 @@ impl Display for Procedure {
 
         // Print out the variables
         for idx in 0..self.vars.len() {
-            let vid = VarId::new(idx);
             f.write_str("let ")?;
 
             if self.vars[idx].mutable {
@@ -247,7 +258,7 @@ impl Display for Procedure {
 
             f.write_fmt(format_args!(
                 "{}: {:?}, {:?} // {} {}\n",
-                vid,
+                VarId::new(idx),
                 self.vars[idx].ty,
                 self.vars[idx].scope,
                 self.vars[idx].name,
@@ -290,6 +301,12 @@ impl BasicBlockId {
     }
 }
 
+impl From<BasicBlockId> for String {
+    fn from(bb: BasicBlockId) -> Self {
+        format!("{}", bb)
+    }
+}
+
 impl Display for BasicBlockId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("BB{}", self.0))
@@ -297,7 +314,7 @@ impl Display for BasicBlockId {
 }
 
 /// Identifier for a user declared variable
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, Hash, Eq, PartialEq, Copy, Clone)]
 pub struct VarId(usize);
 
 impl VarId {
@@ -347,6 +364,12 @@ impl ScopeId {
 
     pub fn index(&self) -> usize {
         self.0
+    }
+}
+
+impl Display for ScopeId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{}", self.0))
     }
 }
 
@@ -401,6 +424,22 @@ impl VarDecl {
             scope,
             span,
         }
+    }
+
+    pub fn name(&self) -> StringId {
+        self.name
+    }
+
+    pub fn ty(&self) -> TypeId {
+        self.ty
+    }
+
+    pub fn scope(&self) -> ScopeId {
+        self.scope
+    }
+
+    pub fn span(&self) -> Span {
+        self.span
     }
 }
 
