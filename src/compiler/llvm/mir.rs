@@ -12,31 +12,40 @@ use crate::{
     StringId, StringTable,
 };
 
-struct LlvmTransformer<'ctx> {
+struct LlvmTransformer<'a, 'ctx> {
+    /// LLVVM Context
     context: &'ctx Context,
-    module: Module<'ctx>,
-    builder: Builder<'ctx>,
+
+    /// LLVM Module
+    module: &'a Module<'ctx>,
+
+    /// Used to construct actual LLVM instructions and add them to a function
+    builder: &'a Builder<'ctx>,
+
+    /// Table mapping [`StringIds`](StringId) to the string value
     table: &'ctx StringTable,
+
+    /// The LLVM function instance that is currently being built by the transformer
+    /// all insructions will be added to this function.
     function: FunctionValue<'ctx>,
 
+    /// Mapping of [`VarIds`](VarId) to their LLVM value, this is used to look up
+    /// variables after they have been allocated.
     vars: HashMap<VarId, PointerValue<'ctx>>,
 }
 
-impl<'ctx> LlvmTransformer<'ctx> {
+impl<'a, 'ctx> LlvmTransformer<'a, 'ctx> {
     pub fn new(
         func_name: StringId,
         ctx: &'ctx Context,
-        module: &str,
+        module: &'a Module<'ctx>,
+        builder: &'a Builder<'ctx>,
         table: &'ctx StringTable,
     ) -> Self {
-        let module = ctx.create_module(module);
-
         // Create a function to build
         let ft = ctx.void_type().fn_type(&[], false);
         let name = table.get(func_name).unwrap();
         let function = module.add_function(&name, ft, None);
-
-        let builder = ctx.create_builder();
 
         Self {
             context: ctx,
@@ -55,7 +64,7 @@ impl<'ctx> LlvmTransformer<'ctx> {
     }
 }
 
-impl<'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>> for LlvmTransformer<'ctx> {
+impl<'a, 'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>> for LlvmTransformer<'a, 'ctx> {
     fn start_bb(&mut self, bb: BasicBlockId) {
         let bb = self
             .context
@@ -152,7 +161,9 @@ mod mir2llvm_tests {
         transform::transform(&module, &mut project).unwrap();
 
         let context = Context::create();
-        let mut llvm = LlvmTransformer::new(StringId::new(), &context, "test", &table);
+        let module = context.create_module("test");
+        let builder = context.create_builder();
+        let mut llvm = LlvmTransformer::new(StringId::new(), &context, &module, &builder, &table);
 
         let mut mvr = Traverser::new(&project, &mut llvm);
 
