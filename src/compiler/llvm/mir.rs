@@ -167,11 +167,12 @@ impl<'a, 'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
         self.builder.build_store(l, v);
     }
 
-    fn var(&self, v: VarId) -> PointerValue<'ctx> {
+    fn var(&self, v: VarId) -> Result<PointerValue<'ctx>, TransformerError> {
         *self
             .vars
             .get(&v)
-            .expect("Cound not find given VarId in vars table")
+            .copied()
+            .ok_or(TransformerError::VarNotFound)
     }
 
     fn temp(&self, v: TempId) -> Result<PointerValue<'ctx>, TransformerError> {

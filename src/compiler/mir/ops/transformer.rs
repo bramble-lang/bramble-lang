@@ -91,4 +91,5 @@ pub enum TransformerError {
     BasicBlockAlreadyCreated,
     BasicBlockNotFound,
     TempNotFound,
+    VarNotFound,
 }
