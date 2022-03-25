@@ -6,7 +6,7 @@ use inkwell::{builder::Builder, context::Context, module::Module, values::*};
 
 use crate::{
     compiler::{
-        mir::{ir::*, Transformer, TransformerResult},
+        mir::{ir::*, transform::TransformError, Transformer, TransformerResult},
         Span,
     },
     StringId, StringTable,
@@ -71,12 +71,14 @@ impl<'a, 'ctx> LlvmFunctionTransformer<'a, 'ctx> {
 impl<'a, 'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
     for LlvmFunctionTransformer<'a, 'ctx>
 {
-    fn create_bb(&mut self, id: BasicBlockId) {
+    fn create_bb(&mut self, id: BasicBlockId) -> Result<(), TransformerResult> {
         let bb = self
             .context
             .append_basic_block(self.function, &id.to_string());
-        if self.blocks.insert(id, bb).is_some() {
-            panic!("BB already exists")
+        if self.blocks.insert(id, bb).is_none() {
+            Ok(())
+        } else {
+            Err(TransformerResult::BasicBlockAlreadyCreated)
         }
     }
 

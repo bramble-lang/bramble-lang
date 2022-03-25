@@ -41,7 +41,7 @@ use crate::compiler::{mir::ir::*, Span};
 /// mir module and the LLVM IR module and avoid having bi-directional imports creating
 /// a more confusing dependency graph.
 pub trait Transformer<L, V> {
-    fn create_bb(&mut self, bb: BasicBlockId);
+    fn create_bb(&mut self, bb: BasicBlockId) -> Result<(), TransformerResult>;
     fn set_bb(&mut self, bb: BasicBlockId);
 
     /// Allocate space for the given variable declaration
@@ -85,4 +85,6 @@ pub trait Transformer<L, V> {
 #[derive(Debug, Clone, Copy)]
 pub enum TransformerResult {
     VariableAlreadyAllocated,
+    BasicBlockAlreadyCreated,
+    BasicBlockNotFound,
 }

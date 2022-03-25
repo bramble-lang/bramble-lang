@@ -44,7 +44,7 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
             self.function = Some(f);
 
             for (id, _) in f.bb_iter() {
-                self.xfmr.create_bb(id);
+                self.xfmr.create_bb(id).expect("BasicBlock already created");
             }
 
             // Allocate variables
