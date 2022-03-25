@@ -124,10 +124,6 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
         match lv {
             LValue::Static(_) => todo!(),
             LValue::Var(vid) => {
-                // Get function which is currently being converted
-                // Look up VarId to get the vardecl
-                //let vd = self.get_var(*vid);
-
                 // Convert VarDecl
                 self.xfmr.var(*vid)
             }
