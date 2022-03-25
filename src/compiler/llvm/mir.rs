@@ -346,7 +346,7 @@ mod mir2llvm_tests_visual {
         module.set_triple(&triple);
 
         // If emit asm is true, then also write the assembly for the target machine to a file
-        let path = Path::new("./output.s");
+        let path = Path::new("/tmp/output.s");
         machine
             .write_to_file(module, inkwell::targets::FileType::Assembly, &path)
             .unwrap();
