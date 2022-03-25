@@ -35,8 +35,8 @@ impl<'ctx> LlvmTransformer<'ctx> {
 
         let builder = ctx.create_builder();
 
-        let entry = ctx.append_basic_block(function, "entry");
-        builder.position_at_end(entry);
+        //let entry = ctx.append_basic_block(function, "entry");
+        //builder.position_at_end(entry);
 
         Self {
             context: ctx,
@@ -57,7 +57,9 @@ impl<'ctx> LlvmTransformer<'ctx> {
 
 impl<'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>> for LlvmTransformer<'ctx> {
     fn start_bb(&mut self, bb: BasicBlockId) {
-        let bb = self.context.append_basic_block(self.function, "");
+        let bb = self
+            .context
+            .append_basic_block(self.function, &bb.to_string());
         self.builder.position_at_end(bb);
     }
 

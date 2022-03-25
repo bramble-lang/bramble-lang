@@ -113,8 +113,11 @@ impl Procedure {
         ArgId::new(id)
     }
 
-    pub fn bb_iter(&self) -> impl Iterator<Item = &BasicBlock> {
-        self.blocks.iter()
+    pub fn bb_iter(&self) -> impl Iterator<Item = (BasicBlockId, &BasicBlock)> {
+        self.blocks
+            .iter()
+            .enumerate()
+            .map(|(id, bb)| (BasicBlockId::new(id), bb))
     }
 
     /// Get a [`BasicBlock`] for this procedure
