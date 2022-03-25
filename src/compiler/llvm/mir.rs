@@ -35,9 +35,6 @@ impl<'ctx> LlvmTransformer<'ctx> {
 
         let builder = ctx.create_builder();
 
-        //let entry = ctx.append_basic_block(function, "entry");
-        //builder.position_at_end(entry);
-
         Self {
             context: ctx,
             module,
