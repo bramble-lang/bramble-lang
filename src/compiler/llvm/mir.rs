@@ -12,7 +12,7 @@ use crate::{
     StringId, StringTable,
 };
 
-struct LlvmTransformer<'a, 'ctx> {
+struct LlvmFunctionTransformer<'a, 'ctx> {
     /// LLVVM Context
     context: &'ctx Context,
 
@@ -34,7 +34,7 @@ struct LlvmTransformer<'a, 'ctx> {
     vars: HashMap<VarId, PointerValue<'ctx>>,
 }
 
-impl<'a, 'ctx> LlvmTransformer<'a, 'ctx> {
+impl<'a, 'ctx> LlvmFunctionTransformer<'a, 'ctx> {
     pub fn new(
         func_name: StringId,
         ctx: &'ctx Context,
@@ -64,7 +64,9 @@ impl<'a, 'ctx> LlvmTransformer<'a, 'ctx> {
     }
 }
 
-impl<'a, 'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>> for LlvmTransformer<'a, 'ctx> {
+impl<'a, 'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
+    for LlvmFunctionTransformer<'a, 'ctx>
+{
     fn start_bb(&mut self, bb: BasicBlockId) {
         let bb = self
             .context
@@ -144,7 +146,7 @@ mod mir2llvm_tests {
         resolve_types, StringId, StringTable,
     };
 
-    use super::LlvmTransformer;
+    use super::LlvmFunctionTransformer;
 
     #[test]
     fn print_llvm() {
@@ -162,7 +164,8 @@ mod mir2llvm_tests {
         let context = Context::create();
         let module = context.create_module("test");
         let builder = context.create_builder();
-        let mut llvm = LlvmTransformer::new(StringId::new(), &context, &module, &builder, &table);
+        let mut llvm =
+            LlvmFunctionTransformer::new(StringId::new(), &context, &module, &builder, &table);
 
         let mut mvr = Traverser::new(&project, &mut llvm);
 
