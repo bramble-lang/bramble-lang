@@ -112,11 +112,30 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
     /// Use the [`Transformer`] to convert a Mir [`Operand`] to the target IR value type `V`
     fn operand(&mut self, o: &Operand) -> V {
         match o {
-            Operand::Constant(c) => self.xfmr.constant(*c),
+            Operand::Constant(c) => self.constant(*c),
             Operand::LValue(lv) => {
                 let l = self.lvalue(lv);
                 self.xfmr.load(l)
             }
+        }
+    }
+
+    fn constant(&mut self, c: Constant) -> V {
+        match c {
+            Constant::Unit => todo!(),
+            Constant::I8(_) => todo!(),
+            Constant::I16(_) => todo!(),
+            Constant::I32(_) => todo!(),
+            Constant::I64(i) => self.xfmr.const_i64(i),
+            Constant::U8(_) => todo!(),
+            Constant::U16(_) => todo!(),
+            Constant::U32(_) => todo!(),
+            Constant::U64(_) => todo!(),
+            Constant::F64(_) => todo!(),
+            Constant::Bool(_) => todo!(),
+            Constant::StringLiteral(_) => todo!(),
+            Constant::Null => todo!(),
+            Constant::SizeOf(_) => todo!(),
         }
     }
 

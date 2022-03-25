@@ -102,23 +102,8 @@ impl<'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>> for LlvmTransfo
             .expect("Cound not find given VarId in vars table")
     }
 
-    fn constant(&self, c: Constant) -> BasicValueEnum<'ctx> {
-        match c {
-            Constant::Unit => todo!(),
-            Constant::I8(_) => todo!(),
-            Constant::I16(_) => todo!(),
-            Constant::I32(_) => todo!(),
-            Constant::I64(i) => self.context.i64_type().const_int(i as u64, true).into(),
-            Constant::U8(_) => todo!(),
-            Constant::U16(_) => todo!(),
-            Constant::U32(_) => todo!(),
-            Constant::U64(_) => todo!(),
-            Constant::F64(_) => todo!(),
-            Constant::Bool(_) => todo!(),
-            Constant::StringLiteral(_) => todo!(),
-            Constant::Null => todo!(),
-            Constant::SizeOf(_) => todo!(),
-        }
+    fn const_i64(&self, i: i64) -> BasicValueEnum<'ctx> {
+        self.context.i64_type().const_int(i as u64, true).into()
     }
 
     fn load(&self, lv: PointerValue<'ctx>) -> BasicValueEnum<'ctx> {

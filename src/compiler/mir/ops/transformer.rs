@@ -61,7 +61,7 @@ pub trait Transformer<L, V> {
     // The following methods correspond to [`RValue`] variants
 
     /// Convert a constant value
-    fn constant(&self, c: Constant) -> V;
+    fn const_i64(&self, i: i64) -> V;
 
     /// Load a value from a memory location
     fn load(&self, lv: L) -> V;
