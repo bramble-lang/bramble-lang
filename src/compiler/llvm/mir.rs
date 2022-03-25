@@ -126,6 +126,11 @@ impl<'a, 'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
             .build_conditional_branch(cond.into_int_value(), *then_bb, *else_bb);
     }
 
+    fn term_goto(&mut self, target: BasicBlockId) {
+        let target = self.blocks.get(&target).unwrap();
+        self.builder.build_unconditional_branch(*target);
+    }
+
     fn assign(&mut self, span: Span, l: PointerValue<'ctx>, v: BasicValueEnum<'ctx>) {
         self.builder.build_store(l, v);
     }
@@ -184,6 +189,7 @@ mod mir2llvm_tests {
             fn test() {
                 let x: i64 := 5;
                 let b: bool := true;
+                if (true) {5} else {6};
                 return;
             }
         ";

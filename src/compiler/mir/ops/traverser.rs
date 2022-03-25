@@ -81,7 +81,7 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
             .kind()
         {
             TerminatorKind::Return => self.xfmr.term_return(),
-            TerminatorKind::GoTo { .. } => todo!(),
+            TerminatorKind::GoTo { target } => self.xfmr.term_goto(*target),
             TerminatorKind::CondGoTo { cond, tru, fls } => {
                 let cond = self.operand(cond);
                 self.xfmr.term_cond_goto(cond, *tru, *fls)

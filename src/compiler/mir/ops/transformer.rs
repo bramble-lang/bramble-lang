@@ -52,6 +52,7 @@ pub trait Transformer<L, V> {
     fn term_return(&mut self);
 
     fn term_cond_goto(&mut self, cond: V, then_bb: BasicBlockId, else_bb: BasicBlockId);
+    fn term_goto(&mut self, target_bb: BasicBlockId);
 
     /// Store the given value to the given memory location
     fn assign(&mut self, span: Span, l: L, v: V);
