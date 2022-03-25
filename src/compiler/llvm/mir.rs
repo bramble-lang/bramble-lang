@@ -92,7 +92,7 @@ impl<'a, 'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>> for LlvmTra
         }
     }
 
-    fn add_temp(&mut self) {
+    fn alloc_temp(&mut self) {
         todo!()
     }
 
