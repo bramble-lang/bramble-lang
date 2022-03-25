@@ -168,8 +168,7 @@ impl<'a, 'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
     }
 
     fn var(&self, v: VarId) -> Result<PointerValue<'ctx>, TransformerError> {
-        *self
-            .vars
+        self.vars
             .get(&v)
             .copied()
             .ok_or(TransformerError::VarNotFound)

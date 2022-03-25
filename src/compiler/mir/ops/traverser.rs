@@ -160,10 +160,7 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
     fn lvalue(&mut self, lv: &LValue) -> L {
         match lv {
             LValue::Static(_) => todo!(),
-            LValue::Var(vid) => {
-                // Convert VarDecl
-                self.xfmr.var(*vid)
-            }
+            LValue::Var(vid) => self.xfmr.var(*vid).unwrap(),
             LValue::Temp(tid) => self.xfmr.temp(*tid).unwrap(),
             LValue::Access(_, _) => todo!(),
             LValue::ReturnPointer => todo!(),

@@ -62,7 +62,7 @@ pub trait Transformer<L, V> {
     fn assign(&mut self, span: Span, l: L, v: V);
 
     /// Convert the given variable declaration to a specific location in memory
-    fn var(&self, v: VarId) -> L;
+    fn var(&self, v: VarId) -> Result<L, TransformerError>;
 
     /// Convert the given variable declaration to a specific location in memory
     fn temp(&self, v: TempId) -> Result<L, TransformerError>;
