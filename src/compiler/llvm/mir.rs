@@ -6,7 +6,7 @@ use inkwell::{builder::Builder, context::Context, module::Module, values::*};
 
 use crate::{
     compiler::{
-        mir::{ir::*, Transformer},
+        mir::{ir::*, Transformer, TransformerResult},
         Span,
     },
     StringId, StringTable,
@@ -72,15 +72,13 @@ impl<'a, 'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>> for LlvmTra
         self.builder.position_at_end(bb);
     }
 
-    fn alloc_var(&mut self, id: VarId, decl: &VarDecl) {
+    fn alloc_var(&mut self, id: VarId, decl: &VarDecl) -> Result<(), TransformerResult> {
         let name = self.to_label(decl);
 
         // Check if variable name already exists
         match self.vars.entry(id) {
             // If it does -> return an error
-            Entry::Occupied(_) => {
-                panic!("Attempting to add a variable that is already in the table")
-            }
+            Entry::Occupied(_) => Err(TransformerResult::VariableAlreadyAllocated),
 
             // If not, then allocate a pointer in the Builder
             Entry::Vacant(ve) => {
@@ -88,6 +86,7 @@ impl<'a, 'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>> for LlvmTra
                 let ty = self.context.i64_type();
                 let ptr = self.builder.build_alloca(ty, &name);
                 ve.insert(ptr);
+                Ok(())
             }
         }
     }

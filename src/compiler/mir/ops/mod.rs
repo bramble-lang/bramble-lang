@@ -4,5 +4,5 @@
 mod transformer;
 mod traverser;
 
-pub use transformer::Transformer;
+pub use transformer::*;
 pub use traverser::Traverser;

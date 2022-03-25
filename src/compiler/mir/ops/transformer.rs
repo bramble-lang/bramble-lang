@@ -47,7 +47,7 @@ pub trait Transformer<L, V> {
     fn start_bb(&mut self, bb: BasicBlockId);
 
     /// Allocate space for the given variable declaration
-    fn alloc_var(&mut self, id: VarId, vd: &VarDecl);
+    fn alloc_var(&mut self, id: VarId, vd: &VarDecl) -> Result<(), TransformerResult>;
     fn alloc_temp(&mut self);
 
     /// Tells the program to exit this [`BasicBlock`] by returning to the calling function
@@ -72,4 +72,9 @@ pub trait Transformer<L, V> {
 
     /// Subtract two values
     fn sub(&self, a: V, b: V) -> V;
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum TransformerResult {
+    VariableAlreadyAllocated,
 }

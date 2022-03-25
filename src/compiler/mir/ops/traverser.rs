@@ -53,7 +53,7 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
     fn add_variables(&mut self) {
         for id in self.get_varid_iter() {
             let decl = *self.get_var(id);
-            self.xfmr.alloc_var(id, &decl);
+            self.xfmr.alloc_var(id, &decl).unwrap();
         }
     }
 
