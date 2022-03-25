@@ -189,11 +189,17 @@ mod mir2llvm_tests {
             fn test() {
                 let x: i64 := 5;
                 let b: bool := true;
-                if (true) {5} else {6};
+                if (true) {} else {};
                 return;
             }
         ";
 
+        compile_and_print_llvm(text);
+    }
+
+    type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
+
+    fn compile_and_print_llvm(text: &str) {
         let (table, module) = compile(text);
         let mut project = MirProject::new();
         transform::transform(&module, &mut project).unwrap();
@@ -212,8 +218,6 @@ mod mir2llvm_tests {
         // Print LLVM
         llvm.module.print_to_stderr();
     }
-
-    type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
 
     fn compile(input: &str) -> (StringTable, Module<SemanticContext>) {
         let table = StringTable::new();
