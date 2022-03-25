@@ -46,7 +46,8 @@ pub trait Transformer<L, V> {
     /// [`BasicBlockId`].
     fn start_bb(&mut self, bb: BasicBlockId);
 
-    fn add_var(&mut self, id: VarId, vd: &VarDecl);
+    /// Allocate space for the given variable declaration
+    fn alloc_var(&mut self, id: VarId, vd: &VarDecl);
     fn add_temp(&mut self);
 
     /// Tells the program to exit this [`BasicBlock`] by returning to the calling function

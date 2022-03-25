@@ -72,7 +72,7 @@ impl<'a, 'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>> for LlvmTra
         self.builder.position_at_end(bb);
     }
 
-    fn add_var(&mut self, id: VarId, decl: &VarDecl) {
+    fn alloc_var(&mut self, id: VarId, decl: &VarDecl) {
         let name = self.to_label(decl);
 
         // Check if variable name already exists
