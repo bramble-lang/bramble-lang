@@ -147,8 +147,9 @@ impl Procedure {
         self.scopes.parent_of(id)
     }
 
+    /// Iterate over all the [`VarIds`](VarId) in the [`BasicBlock`].
     pub fn varid_iter(&self) -> impl Iterator<Item = VarId> {
-        (0..self.vars.len()).map(|idx| VarId(idx))
+        (0..self.vars.len()).map(VarId)
     }
 
     /// Get the declaration details of a user defined variable in
