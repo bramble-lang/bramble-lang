@@ -298,6 +298,12 @@ impl BasicBlockId {
     }
 }
 
+impl From<BasicBlockId> for String {
+    fn from(bb: BasicBlockId) -> Self {
+        format!("BB{}", bb.0)
+    }
+}
+
 impl Display for BasicBlockId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("BB{}", self.0))
