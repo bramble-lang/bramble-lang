@@ -6,7 +6,7 @@ use inkwell::{builder::Builder, context::Context, module::Module, values::*};
 
 use crate::{
     compiler::{
-        mir::{ir::*, transform::TransformError, Transformer, TransformerResult},
+        mir::{ir::*, Transformer, TransformerResult},
         Span,
     },
     StringId, StringTable,
