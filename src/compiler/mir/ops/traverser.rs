@@ -27,7 +27,7 @@ impl<'a> ProgramTraverser<'a> {
         }
 
         // Iterate over every function in MIR
-        /*for (id, f) in self.mir.function_iter() {
+        for (id, f) in self.mir.function_iter() {
             debug!("Transforming: {:?}", f.path());
 
             // For each function, iterate over every BB
@@ -37,7 +37,7 @@ impl<'a> ProgramTraverser<'a> {
             // Create function traverser and pass it the transformer
             let mut traverser = FunctionTraverser::new(self.mir, f, &mut fn_xfm);
             traverser.map();
-        }*/
+        }
     }
 }
 
