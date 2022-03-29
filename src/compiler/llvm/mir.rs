@@ -131,6 +131,31 @@ impl<'a, 'ctx> LlvmProgramTransformer<'a, 'ctx> {
             .collect::<Vec<_>>()
             .join("_")
     }
+}
+
+impl<'a, 'ctx>
+    ProgramTransformer<PointerValue<'ctx>, BasicValueEnum<'ctx>, LlvmFunctionTransformer<'a, 'ctx>>
+    for LlvmProgramTransformer<'a, 'ctx>
+{
+    fn add_function(
+        &mut self,
+        func_id: DefId,
+        canonical_path: &Path,
+    ) -> Result<(), TransformerError> {
+        let name = self.to_label(canonical_path);
+
+        debug!("Adding function to Module: {}", name);
+
+        // Create a function to build
+        let ft = self.context.void_type().fn_type(&[], false);
+        let function = self.module.add_function(&name, ft, None);
+
+        // Add function to function table
+        match self.fn_table.insert(func_id, function) {
+            Some(_) => Err(TransformerError::FunctionAlreadyDeclared),
+            None => Ok(()),
+        }
+    }
 
     fn add_type(&mut self, id: TypeId, ty: &Type) -> Result<(), TransformerError> {
         match ty {
@@ -159,31 +184,6 @@ impl<'a, 'ctx> LlvmProgramTransformer<'a, 'ctx> {
         }
         .map(|_| ())
         .ok_or(TransformerError::TypeAlreadyDefined)
-    }
-}
-
-impl<'a, 'ctx>
-    ProgramTransformer<PointerValue<'ctx>, BasicValueEnum<'ctx>, LlvmFunctionTransformer<'a, 'ctx>>
-    for LlvmProgramTransformer<'a, 'ctx>
-{
-    fn add_function(
-        &mut self,
-        func_id: DefId,
-        canonical_path: &Path,
-    ) -> Result<(), TransformerError> {
-        let name = self.to_label(canonical_path);
-
-        debug!("Adding function to Module: {}", name);
-
-        // Create a function to build
-        let ft = self.context.void_type().fn_type(&[], false);
-        let function = self.module.add_function(&name, ft, None);
-
-        // Add function to function table
-        match self.fn_table.insert(func_id, function) {
-            Some(_) => Err(TransformerError::FunctionAlreadyDeclared),
-            None => Ok(()),
-        }
     }
 
     fn get_function_transformer(

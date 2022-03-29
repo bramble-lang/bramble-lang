@@ -17,8 +17,8 @@
 //! 5. Need to construct the Phi operator in the merge point Basic Block.
 
 use crate::compiler::{
-    ast::Path,
-    mir::{ir::*, project::DefId},
+    ast::{Path, Type},
+    mir::{ir::*, project::DefId, TypeId},
     Span,
 };
 
@@ -32,6 +32,8 @@ pub trait ProgramTransformer<L, V, F: FunctionTransformer<L, V>> {
         func_id: DefId,
         canonical_path: &Path,
     ) -> Result<(), TransformerError>;
+
+    fn add_type(&mut self, id: TypeId, ty: &Type) -> Result<(), TransformerError>;
 
     /// Creates a new transformer for the given function
     fn get_function_transformer(&mut self, func_id: DefId) -> Result<F, TransformerError>;
