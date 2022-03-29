@@ -7,7 +7,7 @@ use inkwell::{
     context::Context,
     module::Module,
     targets::{CodeModel, InitializationConfig, RelocMode},
-    types::AnyTypeEnum,
+    types::{AnyTypeEnum, BasicTypeEnum},
     values::*,
     OptimizationLevel,
 };
@@ -24,6 +24,8 @@ use crate::{
     },
     StringTable,
 };
+
+use super::llvmir::LlvmToBasicTypeEnum;
 
 /// Represents the final result of a Bramble program in LLVM IR.
 struct LlvmProgram<'a, 'ctx> {
@@ -165,17 +167,32 @@ impl<'a, 'ctx, 'p>
     }
 
     fn add_type(&mut self, id: TypeId, ty: &MirTypeDef) -> Result<(), TransformerError> {
-        match ty {
+        let r = match ty {
             MirTypeDef::Base(base) => match base {
                 MirBaseType::I64 => self.ty_table.insert(id, self.context.i64_type().into()),
-                _ => todo!(),
+                MirBaseType::Bool => self.ty_table.insert(id, self.context.bool_type().into()),
+                MirBaseType::Unit => self.ty_table.insert(id, self.context.void_type().into()),
+                // TODO: Should Null this actually make it to MIR?
+                MirBaseType::Null => None,
+                MirBaseType::U8 => None,
+                MirBaseType::U16 => None,
+                MirBaseType::U32 => None,
+                MirBaseType::U64 => None,
+                MirBaseType::I8 => None,
+                MirBaseType::I16 => None,
+                MirBaseType::I32 => None,
+                MirBaseType::F64 => None,
+                MirBaseType::StringLiteral => None,
             },
             MirTypeDef::Array { ty, sz } => todo!(),
             MirTypeDef::RawPointer { mutable, target } => todo!(),
             MirTypeDef::Structure { path, def } => todo!(),
+        };
+
+        match r {
+            None => Ok(()),
+            Some(_) => Err(TransformerError::TypeAlreadyDefined),
         }
-        .map(|_| ())
-        .ok_or(TransformerError::TypeAlreadyDefined)
     }
 
     fn get_function_transformer(
@@ -301,8 +318,10 @@ impl<'a, 'ctx, 'p> FunctionTransformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
             // If not, then allocate a pointer in the Builder
             Entry::Vacant(ve) => {
                 // and add a mapping from VarID to the pointer in the local var table
-                let ty = self.context.i64_type();
-                let ptr = self.builder.build_alloca(ty, &name);
+                let ty = self.hm.get(&decl.ty()).unwrap();
+                let ptr = self
+                    .builder
+                    .build_alloca(ty.into_basic_type().unwrap(), &name);
                 ve.insert(ptr);
                 Ok(())
             }
