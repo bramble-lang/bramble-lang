@@ -16,7 +16,26 @@
 //! the vector.
 //! 5. Need to construct the Phi operator in the merge point Basic Block.
 
-use crate::compiler::{mir::ir::*, Span};
+use crate::compiler::{
+    ast::Path,
+    mir::{ir::*, project::DefId},
+    Span,
+};
+
+/// Defines the interface used by the [`ProgramTraverser`](super::ProgramTraverser)
+/// to convert a MIR program into another IR form.
+pub trait ProgramTransformer<L, V, F: FunctionTransformer<L, V>> {
+    /// Will attempt to Add the given function to the set of functions in the target
+    /// IR.
+    fn add_function(
+        &mut self,
+        func_id: DefId,
+        canonical_path: &Path,
+    ) -> Result<(), TransformerError>;
+
+    /// Creates a new transformer for the given function
+    fn get_function_transformer(&mut self, func_id: DefId) -> Result<F, TransformerError>;
+}
 
 /// The MIR Transformer defines an interface between the process which traverses
 /// the MIR (which is a Control Flow Graph) and the process which converts a MIR
@@ -28,7 +47,7 @@ use crate::compiler::{mir::ir::*, Span};
 /// deconstructing the [`RValue`] enumeration to extract the [`Operands`](Operand)
 /// exists only within the Traverser.
 ///
-/// Furhermore, the Traverser will be responsible for managing the intermediate
+/// Furthermore, the Traverser will be responsible for managing the intermediate
 /// results of converting the [`RValue`] or [`LValue`] prior to the conversion
 /// of the [`Statement`]. To allow for the Traverser to manage the intermediate
 /// values before the conversion of the [`Statement`] a generic type parameter
@@ -40,7 +59,7 @@ use crate::compiler::{mir::ir::*, Span};
 /// is still a reason for this trait to exist. To create a decoupling between the
 /// mir module and the LLVM IR module and avoid having bi-directional imports creating
 /// a more confusing dependency graph.
-pub trait Transformer<L, V> {
+pub trait FunctionTransformer<L, V> {
     fn create_bb(&mut self, bb: BasicBlockId) -> Result<(), TransformerError>;
     fn set_bb(&mut self, bb: BasicBlockId) -> Result<(), TransformerError>;
 
@@ -92,4 +111,6 @@ pub enum TransformerError {
     BasicBlockNotFound,
     TempNotFound,
     VarNotFound,
+    FunctionAlreadyDeclared,
+    FunctionNotFound,
 }

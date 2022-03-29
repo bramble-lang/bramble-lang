@@ -7,11 +7,107 @@ use log::debug;
 
 use crate::{
     compiler::{
-        mir::{ir::*, Transformer, TransformerError},
-        Span,
+        ast::Path,
+        mir::{ir::*, DefId, FunctionTransformer, ProgramTransformer, TransformerError},
+        CompilerDisplay, SourceMap, Span,
     },
-    StringId, StringTable,
+    StringTable,
 };
+
+/// Transforms a complete program from MIR to LLVM IR.
+struct LlvmProgramTransformer<'a, 'ctx> {
+    /// LLVVM Context
+    context: &'ctx Context,
+
+    /// LLVM Module
+    module: &'a Module<'ctx>,
+
+    /// Used to construct actual LLVM instructions and add them to a function
+    builder: &'a Builder<'ctx>,
+
+    /// Table mapping the [`DefId`] used to identify a function in MIR to the
+    /// [`FunctionValue`] used to identify a function in LLVM.
+    fn_table: HashMap<DefId, FunctionValue<'ctx>>,
+
+    /// Reference to the source map for the program being transformed to LLVM
+    source_map: &'ctx SourceMap,
+
+    /// Table mapping [`StringIds`](StringId) to the string value
+    str_table: &'ctx StringTable,
+}
+
+impl<'a, 'ctx> LlvmProgramTransformer<'a, 'ctx> {
+    pub fn new(
+        ctx: &'ctx Context,
+        module: &'a Module<'ctx>,
+        builder: &'a Builder<'ctx>,
+        source_map: &'ctx SourceMap,
+        table: &'ctx StringTable,
+    ) -> Self {
+        debug!("Creating LLVM Program Transformer");
+
+        Self {
+            context: ctx,
+            module,
+            builder,
+            fn_table: HashMap::new(),
+            source_map,
+            str_table: table,
+        }
+    }
+
+    fn to_label(&self, path: &Path) -> String {
+        path.iter()
+            .map(|element| element.fmt(self.source_map, self.str_table).unwrap())
+            .collect::<Vec<_>>()
+            .join("_")
+    }
+}
+
+impl<'a, 'ctx>
+    ProgramTransformer<PointerValue<'ctx>, BasicValueEnum<'ctx>, LlvmFunctionTransformer<'a, 'ctx>>
+    for LlvmProgramTransformer<'a, 'ctx>
+{
+    fn add_function(
+        &mut self,
+        func_id: DefId,
+        canonical_path: &Path,
+    ) -> Result<(), TransformerError> {
+        let name = self.to_label(canonical_path);
+
+        debug!("Adding function to Module: {}", name);
+
+        // Create a function to build
+        let ft = self.context.void_type().fn_type(&[], false);
+        let function = self.module.add_function(&name, ft, None);
+
+        // Add function to function table
+        match self.fn_table.insert(func_id, function) {
+            Some(_) => Err(TransformerError::FunctionAlreadyDeclared),
+            None => Ok(()),
+        }
+    }
+
+    fn get_function_transformer(
+        &mut self,
+        id: DefId,
+    ) -> std::result::Result<LlvmFunctionTransformer<'a, 'ctx>, TransformerError> {
+        // Look up the FunctionValue associated with the given id
+        let fv = self
+            .fn_table
+            .get(&id)
+            .ok_or(TransformerError::FunctionNotFound)?;
+
+        // Create a new fucntion transformer that will populate the assoicated function value
+        Ok(LlvmFunctionTransformer::new(
+            *fv,
+            self.context,
+            self.module,
+            self.builder,
+            self.str_table,
+        ))
+    }
+}
 
 struct LlvmFunctionTransformer<'a, 'ctx> {
     /// LLVVM Context
@@ -44,19 +140,13 @@ struct LlvmFunctionTransformer<'a, 'ctx> {
 
 impl<'a, 'ctx> LlvmFunctionTransformer<'a, 'ctx> {
     pub fn new(
-        func_name: StringId,
+        function: FunctionValue<'ctx>,
         ctx: &'ctx Context,
         module: &'a Module<'ctx>,
         builder: &'a Builder<'ctx>,
         table: &'ctx StringTable,
     ) -> Self {
-        let name = table.get(func_name).unwrap();
-
-        debug!("Creating LLVM Function Transformer for function: {}", name);
-
-        // Create a function to build
-        let ft = ctx.void_type().fn_type(&[], false);
-        let function = module.add_function(&name, ft, None);
+        debug!("Creating LLVM Function Transformer for function");
 
         Self {
             context: ctx,
@@ -81,7 +171,7 @@ impl<'a, 'ctx> LlvmFunctionTransformer<'a, 'ctx> {
     }
 }
 
-impl<'a, 'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
+impl<'a, 'ctx> FunctionTransformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
     for LlvmFunctionTransformer<'a, 'ctx>
 {
     fn create_bb(&mut self, id: BasicBlockId) -> Result<(), TransformerError> {
@@ -227,14 +317,15 @@ mod mir2llvm_tests_visual {
 
     use crate::{
         compiler::{
-            ast::{Module, MAIN_MODULE},
+            ast::{self, Element, Module, MAIN_MODULE},
             diagnostics::Logger,
             lexer::{tokens::Token, LexerError},
-            mir::{transform, MirProject, Traverser},
+            mir::{transform, MirProject, ProgramTraverser},
             parser::Parser,
             semantics::semanticnode::SemanticContext,
             CompilerDisplay, CompilerError, Lexer, SourceMap,
         },
+        llvm::mir::LlvmProgramTransformer,
         resolve_types, StringId, StringTable,
     };
 
@@ -265,24 +356,44 @@ mod mir2llvm_tests_visual {
         );
     }
 
+    #[test]
+    fn two_functions() {
+        compile_and_print_llvm(
+            "
+            fn foo() {
+                let x: i64 := if (true) {2} else {3};
+                return;
+            }
+           
+            mod bats {
+                fn bar() {
+                    let x: i64 := 5;
+                    let b: bool := true;
+                    return;
+                }
+            }
+        ",
+        );
+    }
+
     type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
 
     fn compile_and_print_llvm(text: &str) {
-        let (table, module) = compile(text);
+        let (sm, table, module) = compile(text);
         let mut project = MirProject::new();
         transform::transform(&module, &mut project).unwrap();
 
         let context = Context::create();
         let module = context.create_module("test");
         let builder = context.create_builder();
-        let mut llvm =
-            LlvmFunctionTransformer::new(StringId::new(), &context, &module, &builder, &table);
 
-        let mut mvr = Traverser::new(&project, &mut llvm);
+        let mut llvm = LlvmProgramTransformer::new(&context, &module, &builder, &sm, &table);
+
+        let proj_traverser = ProgramTraverser::new(&project);
 
         // Traverser is given a MirProject
         // call traverser.map(llvm) this will use the llvm xfmr to map MirProject to LlvmProject
-        mvr.map();
+        proj_traverser.map(&mut llvm);
         // Print LLVM
         println!("=== LLVM IR ===:");
         llvm.module.print_to_stderr();
@@ -291,7 +402,7 @@ mod mir2llvm_tests_visual {
         print_asm(&module);
     }
 
-    fn compile(input: &str) -> (StringTable, Module<SemanticContext>) {
+    fn compile(input: &str) -> (SourceMap, StringTable, Module<SemanticContext>) {
         let table = StringTable::new();
         let mut sm = SourceMap::new();
         sm.add_string(input, "/test".into()).unwrap();
@@ -317,7 +428,7 @@ mod mir2llvm_tests_visual {
             }
         };
         match resolve_types(&ast, main_mod, main_fn, &logger) {
-            Ok(module) => (table, module),
+            Ok(module) => (sm, table, module),
             Err(err) => {
                 panic!("{}", err.fmt(&sm, &table).unwrap());
             }

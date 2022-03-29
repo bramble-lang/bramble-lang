@@ -82,7 +82,9 @@ impl MirProject {
         self.static_defs.find(path)
     }
 
-    pub fn function_iter(&self) -> impl Iterator<Item = &Procedure> {
+    /// Returns an [`Iterator`] over all the functions defined within this
+    /// project.
+    pub fn function_iter(&self) -> impl Iterator<Item = (DefId, &Procedure)> {
         self.static_defs.function_iter()
     }
 }
@@ -157,16 +159,16 @@ impl StaticDefinitions {
     }
 
     /// Return an iterator over the functions that are defined in a  MIR Program.
-    fn function_iter(&self) -> impl Iterator<Item = &Procedure> {
-        self.defs.iter().map(|i| match i {
-            StaticItem::Function(f) => f,
+    fn function_iter(&self) -> impl Iterator<Item = (DefId, &Procedure)> {
+        self.defs.iter().enumerate().map(|(id, i)| match i {
+            StaticItem::Function(f) => (DefId(id as u32), f),
         })
     }
 }
 
 /// Uniquely identifies an item that exists in the static memory of a program
 /// e.g., a function or static variable.
-#[derive(PartialEq, Debug, Copy, Clone, Default)]
+#[derive(Hash, Eq, PartialEq, Debug, Copy, Clone, Default)]
 pub struct DefId(u32);
 
 impl DefId {
