@@ -7,7 +7,7 @@ use log::debug;
 
 use crate::{
     compiler::{
-        mir::{ir::*, Transformer, TransformerError},
+        mir::{ir::*, FunctionTransformer, TransformerError},
         Span,
     },
     StringId, StringTable,
@@ -81,7 +81,7 @@ impl<'a, 'ctx> LlvmFunctionTransformer<'a, 'ctx> {
     }
 }
 
-impl<'a, 'ctx> Transformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
+impl<'a, 'ctx> FunctionTransformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
     for LlvmFunctionTransformer<'a, 'ctx>
 {
     fn create_bb(&mut self, id: BasicBlockId) -> Result<(), TransformerError> {

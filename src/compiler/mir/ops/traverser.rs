@@ -7,7 +7,7 @@ use log::debug;
 
 use crate::compiler::mir::{ir::*, MirProject};
 
-use super::transformer::Transformer;
+use super::transformer::FunctionTransformer;
 
 /// This will traverse the MIR representation of a function and use the given
 /// [`Transformer`] implementation to generate a new IR for the function.
@@ -20,7 +20,7 @@ use super::transformer::Transformer;
 ///
 /// `T` - the type that implements the [`Transformer`] trait and will actually handle the
 /// conversion to the target IR.
-pub struct Traverser<'a, L, V, T: Transformer<L, V>> {
+pub struct Traverser<'a, L, V, T: FunctionTransformer<L, V>> {
     xfmr: &'a mut T,
     mir: &'a MirProject,
     function: Option<&'a Procedure>,
@@ -28,7 +28,7 @@ pub struct Traverser<'a, L, V, T: Transformer<L, V>> {
     _v: PhantomData<V>,
 }
 
-impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
+impl<'a, L, V, T: FunctionTransformer<L, V>> Traverser<'a, L, V, T> {
     pub fn new(mir: &'a MirProject, xfmr: &'a mut T) -> Self {
         debug!("New Function Traverser");
         Self {

@@ -40,7 +40,7 @@ use crate::compiler::{mir::ir::*, Span};
 /// is still a reason for this trait to exist. To create a decoupling between the
 /// mir module and the LLVM IR module and avoid having bi-directional imports creating
 /// a more confusing dependency graph.
-pub trait Transformer<L, V> {
+pub trait FunctionTransformer<L, V> {
     fn create_bb(&mut self, bb: BasicBlockId) -> Result<(), TransformerError>;
     fn set_bb(&mut self, bb: BasicBlockId) -> Result<(), TransformerError>;
 
