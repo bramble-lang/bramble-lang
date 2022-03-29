@@ -13,6 +13,38 @@ use crate::{
     StringId, StringTable,
 };
 
+struct LlvmProgramTransformer<'a, 'ctx> {
+    /// LLVVM Context
+    context: &'ctx Context,
+
+    /// LLVM Module
+    module: &'a Module<'ctx>,
+
+    /// Used to construct actual LLVM instructions and add them to a function
+    builder: &'a Builder<'ctx>,
+
+    /// Table mapping [`StringIds`](StringId) to the string value
+    str_table: &'ctx StringTable,
+}
+
+impl<'a, 'ctx> LlvmProgramTransformer<'a, 'ctx> {
+    pub fn new(
+        ctx: &'ctx Context,
+        module: &'a Module<'ctx>,
+        builder: &'a Builder<'ctx>,
+        table: &'ctx StringTable,
+    ) -> Self {
+        debug!("Creating LLVM Program Transformer");
+
+        Self {
+            context: ctx,
+            module,
+            builder,
+            str_table: table,
+        }
+    }
+}
+
 struct LlvmFunctionTransformer<'a, 'ctx> {
     /// LLVVM Context
     context: &'ctx Context,
