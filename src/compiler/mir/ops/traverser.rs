@@ -5,9 +5,36 @@ use std::marker::PhantomData;
 
 use log::debug;
 
-use crate::compiler::mir::{ir::*, MirProject};
+use crate::compiler::mir::{ir::*, ops::traverser, MirProject};
 
-use super::transformer::FunctionTransformer;
+use super::{transformer::FunctionTransformer, ProgramTransformer};
+
+pub struct ProgramTraverser<'a> {
+    mir: &'a MirProject,
+}
+
+impl<'a> ProgramTraverser<'a> {
+    pub fn new(mir: &'a MirProject) -> Self {
+        Self { mir }
+    }
+
+    pub fn map<P: ProgramTransformer>(&self, xfmr: &mut P) {
+        debug!("Applying given Transformer to MIR");
+
+        // Iterate over every function in MIR
+        for (id, f) in self.mir.function_iter() {
+            debug!("Transforming: {:?}", f.path());
+
+            // For each function, iterate over every BB
+            //self.function = Some(f);
+            let mut fn_xfm = xfmr.get_function_transformer(id).unwrap();
+
+            // Create function traverser and pass it the transformer
+            let mut traverser = FunctionTraverser::new(self.mir, &mut fn_xfm);
+            traverser.map();
+        }
+    }
+}
 
 /// This will traverse the MIR representation of a function and use the given
 /// [`Transformer`] implementation to generate a new IR for the function.
@@ -23,18 +50,18 @@ use super::transformer::FunctionTransformer;
 pub struct FunctionTraverser<'a, L, V, T: FunctionTransformer<L, V>> {
     xfmr: &'a mut T,
     mir: &'a MirProject,
-    function: Option<&'a Procedure>,
+    function: &'a Procedure,
     _l: PhantomData<L>,
     _v: PhantomData<V>,
 }
 
 impl<'a, L, V, T: FunctionTransformer<L, V>> FunctionTraverser<'a, L, V, T> {
-    pub fn new(mir: &'a MirProject, xfmr: &'a mut T) -> Self {
+    pub fn new(mir: &'a MirProject, function: &'a Procedure, xfmr: &'a mut T) -> Self {
         debug!("New Function Traverser");
         Self {
             xfmr,
             mir,
-            function: None,
+            function,
             _l: PhantomData,
             _v: PhantomData,
         }
@@ -43,24 +70,16 @@ impl<'a, L, V, T: FunctionTransformer<L, V>> FunctionTraverser<'a, L, V, T> {
     pub fn map(&mut self) {
         debug!("Applying given Transformer to MIR");
 
-        // Iterate over every function in MIR
-        for f in self.mir.function_iter() {
-            debug!("Transforming: {:?}", f.path());
+        for (id, _) in self.function.bb_iter() {
+            self.xfmr.create_bb(id).expect("BasicBlock already created");
+        }
 
-            // For each function, iterate over every BB
-            self.function = Some(f);
+        // Allocate variables
+        self.allocate_local_vars();
 
-            for (id, _) in f.bb_iter() {
-                self.xfmr.create_bb(id).expect("BasicBlock already created");
-            }
-
-            // Allocate variables
-            self.allocate_local_vars();
-
-            // Convert every basic block
-            for (id, bb) in f.bb_iter() {
-                self.basic_block(id, bb)
-            }
+        // Convert every basic block
+        for (id, bb) in self.function.bb_iter() {
+            self.basic_block(id, bb)
         }
     }
 
@@ -177,33 +196,21 @@ impl<'a, L, V, T: FunctionTransformer<L, V>> FunctionTraverser<'a, L, V, T> {
     }
 
     fn get_varid_iter(&self) -> impl Iterator<Item = VarId> {
-        match self.function {
-            Some(f) => f.varid_iter(),
-            None => panic!(),
-        }
+        self.function.varid_iter()
     }
 
     /// Given a [`VarId`] this will find the associated [`VarDecl`] from the currently
     /// transforming [`Procedure`].  If no [`Procedure`] is currently being transformed this
     /// will panic.
     fn get_var(&self, id: VarId) -> &VarDecl {
-        match self.function {
-            Some(f) => f.get_var(id),
-            None => panic!("Must be converting a fucntion to look up a VarId"),
-        }
+        self.function.get_var(id)
     }
 
     fn get_tempid_iter(&self) -> impl Iterator<Item = TempId> {
-        match self.function {
-            Some(f) => f.tempid_iter(),
-            None => panic!(),
-        }
+        self.function.tempid_iter()
     }
 
     fn get_temp(&self, id: TempId) -> &TempDecl {
-        match self.function {
-            Some(f) => f.get_temp(id),
-            None => panic!("Must be converting a fucntion to look up a TempId"),
-        }
+        self.function.get_temp(id)
     }
 }
