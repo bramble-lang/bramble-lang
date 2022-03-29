@@ -82,9 +82,22 @@ impl<'a, 'ctx>
 
     fn get_function_transformer(
         &mut self,
-        _: DefId,
+        id: DefId,
     ) -> std::result::Result<LlvmFunctionTransformer<'a, 'ctx>, TransformerError> {
-        todo!()
+        // Look up the FunctionValue associated with the given id
+        let fv = self
+            .fn_table
+            .get(&id)
+            .ok_or(TransformerError::FunctionNotFound)?;
+
+        // Create a new fucntion transformer that will populate the assoicated function value
+        Ok(LlvmFunctionTransformer::new(
+            *fv,
+            self.context,
+            self.module,
+            self.builder,
+            self.str_table,
+        ))
     }
 }
 
