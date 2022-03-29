@@ -166,7 +166,7 @@ impl StaticDefinitions {
 
 /// Uniquely identifies an item that exists in the static memory of a program
 /// e.g., a function or static variable.
-#[derive(PartialEq, Debug, Copy, Clone, Default)]
+#[derive(Hash, Eq, PartialEq, Debug, Copy, Clone, Default)]
 pub struct DefId(u32);
 
 impl DefId {

@@ -8,7 +8,7 @@ use log::debug;
 use crate::{
     compiler::{
         ast::Path,
-        mir::{ir::*, FunctionTransformer, TransformerError},
+        mir::{ir::*, DefId, FunctionTransformer, ProgramTransformer, TransformerError},
         SourceMap, Span,
     },
     StringId, StringTable,
@@ -24,6 +24,13 @@ struct LlvmProgramTransformer<'a, 'ctx> {
     /// Used to construct actual LLVM instructions and add them to a function
     builder: &'a Builder<'ctx>,
 
+    /// Table mapping the [`DefId`] used to identify a function in MIR to the
+    /// [`FunctionValue`] used to identify a function in LLVM.
+    fn_table: HashMap<DefId, FunctionValue<'ctx>>,
+
+    /// Reference to the source map for the program being transformed to LLVM
+    source_map: &'ctx SourceMap,
+
     /// Table mapping [`StringIds`](StringId) to the string value
     str_table: &'ctx StringTable,
 }
@@ -33,6 +40,7 @@ impl<'a, 'ctx> LlvmProgramTransformer<'a, 'ctx> {
         ctx: &'ctx Context,
         module: &'a Module<'ctx>,
         builder: &'a Builder<'ctx>,
+        source_map: &'ctx SourceMap,
         table: &'ctx StringTable,
     ) -> Self {
         debug!("Creating LLVM Program Transformer");
@@ -41,8 +49,42 @@ impl<'a, 'ctx> LlvmProgramTransformer<'a, 'ctx> {
             context: ctx,
             module,
             builder,
+            fn_table: HashMap::new(),
+            source_map,
             str_table: table,
         }
+    }
+}
+
+impl<'a, 'ctx> ProgramTransformer for LlvmProgramTransformer<'a, 'ctx> {
+    fn add_function(
+        &mut self,
+        func_id: DefId,
+        canonical_path: &Path,
+    ) -> Result<(), TransformerError> {
+        let name = canonical_path.to_label(self.source_map, self.str_table);
+
+        debug!("Adding function to Module: {}", name);
+
+        // Create a function to build
+        let ft = self.context.void_type().fn_type(&[], false);
+        let function = self.module.add_function(&name, ft, None);
+
+        // Add function to function table
+        match self.fn_table.insert(func_id, function) {
+            Some(_) => Err(TransformerError::FunctionAlreadyDeclared),
+            None => Ok(()),
+        }
+    }
+
+    fn get_function_transformer<L, V, F: FunctionTransformer<L, V>>(
+        &mut self,
+        func_id: DefId,
+    ) -> Result<F, TransformerError> {
+        // Look up function value from DefId
+        // If function not found then return an error
+        // Create a FunctionTransformer for function
+        todo!()
     }
 }
 
@@ -77,20 +119,13 @@ struct LlvmFunctionTransformer<'a, 'ctx> {
 
 impl<'a, 'ctx> LlvmFunctionTransformer<'a, 'ctx> {
     pub fn new(
-        func_name: &Path,
+        function: FunctionValue<'ctx>,
         ctx: &'ctx Context,
         module: &'a Module<'ctx>,
         builder: &'a Builder<'ctx>,
-        source_map: &'ctx SourceMap,
         table: &'ctx StringTable,
     ) -> Self {
-        let name = func_name.to_label(source_map, table);
-
-        debug!("Creating LLVM Function Transformer for function: {}", name);
-
-        // Create a function to build
-        let ft = ctx.void_type().fn_type(&[], false);
-        let function = module.add_function(&name, ft, None);
+        debug!("Creating LLVM Function Transformer for function");
 
         Self {
             context: ctx,
@@ -269,6 +304,7 @@ mod mir2llvm_tests_visual {
             semantics::semanticnode::SemanticContext,
             CompilerDisplay, CompilerError, Lexer, SourceMap,
         },
+        llvm::mir::LlvmProgramTransformer,
         resolve_types, StringId, StringTable,
     };
 
@@ -310,8 +346,10 @@ mod mir2llvm_tests_visual {
         let module = context.create_module("test");
         let builder = context.create_builder();
         let path: ast::Path = vec![Element::CanonicalRoot, Element::Id(StringId::new())].into();
-        let mut llvm =
-            LlvmFunctionTransformer::new(&path, &context, &module, &builder, &sm, &table);
+        //let mut llvm =
+        //LlvmFunctionTransformer::new(&path, &context, &module, &builder, &sm, &table);
+
+        let mut llvm = LlvmProgramTransformer::new(&context, &module, &builder, &sm, &table);
 
         let mut mvr = Traverser::new(&project, &mut llvm);
 

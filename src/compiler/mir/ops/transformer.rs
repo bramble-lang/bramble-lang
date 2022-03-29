@@ -112,4 +112,5 @@ pub enum TransformerError {
     BasicBlockNotFound,
     TempNotFound,
     VarNotFound,
+    FunctionAlreadyDeclared,
 }
