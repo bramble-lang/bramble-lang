@@ -7,6 +7,7 @@ use inkwell::{
     context::Context,
     module::Module,
     targets::{CodeModel, InitializationConfig, RelocMode},
+    types::{AnyTypeEnum, IntType},
     values::*,
     OptimizationLevel,
 };
@@ -14,8 +15,8 @@ use log::debug;
 
 use crate::{
     compiler::{
-        ast::Path,
-        mir::{ir::*, DefId, FunctionTransformer, ProgramTransformer, TransformerError},
+        ast::{Path, Type},
+        mir::{ir::*, DefId, FunctionTransformer, ProgramTransformer, TransformerError, TypeId},
         CompilerDisplay, SourceMap, Span,
     },
     StringTable,
@@ -90,6 +91,9 @@ struct LlvmProgramTransformer<'a, 'ctx> {
 
     /// Table mapping [`StringIds`](StringId) to the string value
     str_table: &'ctx StringTable,
+
+    /// Table mapping [`TypeId`] to the LLVM IR associated type.
+    ty_table: HashMap<TypeId, AnyTypeEnum<'ctx>>,
 }
 
 impl<'a, 'ctx> LlvmProgramTransformer<'a, 'ctx> {
@@ -109,6 +113,7 @@ impl<'a, 'ctx> LlvmProgramTransformer<'a, 'ctx> {
             fn_table: HashMap::new(),
             source_map,
             str_table: table,
+            ty_table: HashMap::new(),
         }
     }
 
@@ -125,6 +130,35 @@ impl<'a, 'ctx> LlvmProgramTransformer<'a, 'ctx> {
             .map(|element| element.fmt(self.source_map, self.str_table).unwrap())
             .collect::<Vec<_>>()
             .join("_")
+    }
+
+    fn add_type(&mut self, id: TypeId, ty: &Type) -> Result<(), TransformerError> {
+        match ty {
+            Type::Null => todo!(),
+            Type::U8 => todo!(),
+            Type::U16 => todo!(),
+            Type::U32 => todo!(),
+            Type::U64 => todo!(),
+            Type::I8 => todo!(),
+            Type::I16 => todo!(),
+            Type::I32 => todo!(),
+            Type::I64 => self.ty_table.insert(id, self.context.i64_type().into()),
+            Type::F64 => todo!(),
+            Type::Bool => todo!(),
+            Type::StringLiteral => todo!(),
+            Type::RawPointer(_, _) => todo!(),
+            Type::Array(_, _) => todo!(),
+            Type::Unit => todo!(),
+            Type::Custom(_) => todo!(),
+            Type::StructDef(_) => todo!(),
+            Type::FunctionDef(_, _) => todo!(),
+            Type::CoroutineDef(_, _) => todo!(),
+            Type::Coroutine(_) => todo!(),
+            Type::ExternDecl(_, _, _) => todo!(),
+            Type::Unknown => todo!(),
+        }
+        .map(|_| ())
+        .ok_or(TransformerError::TypeAlreadyDefined)
     }
 }
 

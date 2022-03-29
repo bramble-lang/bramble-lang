@@ -389,7 +389,7 @@ impl Display for MirTypeDef {
 /// including base types, be added to the [`TypeTable`], but because the implementation
 /// of [`TypeTable`] and [`TypeId`] is completely invisible to users, this
 /// was deemed acceptable.
-#[derive(Debug, PartialEq, PartialOrd, Clone, Copy)]
+#[derive(Hash, Eq, Debug, PartialEq, PartialOrd, Clone, Copy)]
 pub struct TypeId(u32);
 
 impl Display for TypeId {

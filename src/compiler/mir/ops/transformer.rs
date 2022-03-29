@@ -113,4 +113,5 @@ pub enum TransformerError {
     VarNotFound,
     FunctionAlreadyDeclared,
     FunctionNotFound,
+    TypeAlreadyDefined,
 }

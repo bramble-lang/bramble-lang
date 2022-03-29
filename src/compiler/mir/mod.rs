@@ -24,6 +24,7 @@ pub mod transform;
 
 pub use ops::{FunctionTransformer, ProgramTransformer, ProgramTraverser, TransformerError};
 pub use project::{DefId, MirProject};
+pub use typetable::TypeId;
 
 // Unit test modules
 #[cfg(test)]
