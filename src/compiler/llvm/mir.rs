@@ -7,8 +7,9 @@ use log::debug;
 
 use crate::{
     compiler::{
+        ast::Path,
         mir::{ir::*, FunctionTransformer, TransformerError},
-        Span,
+        SourceMap, Span,
     },
     StringId, StringTable,
 };
@@ -76,13 +77,14 @@ struct LlvmFunctionTransformer<'a, 'ctx> {
 
 impl<'a, 'ctx> LlvmFunctionTransformer<'a, 'ctx> {
     pub fn new(
-        func_name: StringId,
+        func_name: &Path,
         ctx: &'ctx Context,
         module: &'a Module<'ctx>,
         builder: &'a Builder<'ctx>,
+        source_map: &'ctx SourceMap,
         table: &'ctx StringTable,
     ) -> Self {
-        let name = table.get(func_name).unwrap();
+        let name = func_name.to_label(source_map, table);
 
         debug!("Creating LLVM Function Transformer for function: {}", name);
 
@@ -259,7 +261,7 @@ mod mir2llvm_tests_visual {
 
     use crate::{
         compiler::{
-            ast::{Module, MAIN_MODULE},
+            ast::{self, Element, Module, MAIN_MODULE},
             diagnostics::Logger,
             lexer::{tokens::Token, LexerError},
             mir::{transform, MirProject, Traverser},
@@ -300,15 +302,16 @@ mod mir2llvm_tests_visual {
     type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
 
     fn compile_and_print_llvm(text: &str) {
-        let (table, module) = compile(text);
+        let (sm, table, module) = compile(text);
         let mut project = MirProject::new();
         transform::transform(&module, &mut project).unwrap();
 
         let context = Context::create();
         let module = context.create_module("test");
         let builder = context.create_builder();
+        let path: ast::Path = vec![Element::CanonicalRoot, Element::Id(StringId::new())].into();
         let mut llvm =
-            LlvmFunctionTransformer::new(StringId::new(), &context, &module, &builder, &table);
+            LlvmFunctionTransformer::new(&path, &context, &module, &builder, &sm, &table);
 
         let mut mvr = Traverser::new(&project, &mut llvm);
 
@@ -323,7 +326,7 @@ mod mir2llvm_tests_visual {
         print_asm(&module);
     }
 
-    fn compile(input: &str) -> (StringTable, Module<SemanticContext>) {
+    fn compile(input: &str) -> (SourceMap, StringTable, Module<SemanticContext>) {
         let table = StringTable::new();
         let mut sm = SourceMap::new();
         sm.add_string(input, "/test".into()).unwrap();
@@ -349,7 +352,7 @@ mod mir2llvm_tests_visual {
             }
         };
         match resolve_types(&ast, main_mod, main_fn, &logger) {
-            Ok(module) => (table, module),
+            Ok(module) => (sm, table, module),
             Err(err) => {
                 panic!("{}", err.fmt(&sm, &table).unwrap());
             }
