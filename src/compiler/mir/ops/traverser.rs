@@ -20,7 +20,7 @@ use super::transformer::FunctionTransformer;
 ///
 /// `T` - the type that implements the [`Transformer`] trait and will actually handle the
 /// conversion to the target IR.
-pub struct Traverser<'a, L, V, T: FunctionTransformer<L, V>> {
+pub struct FunctionTraverser<'a, L, V, T: FunctionTransformer<L, V>> {
     xfmr: &'a mut T,
     mir: &'a MirProject,
     function: Option<&'a Procedure>,
@@ -28,7 +28,7 @@ pub struct Traverser<'a, L, V, T: FunctionTransformer<L, V>> {
     _v: PhantomData<V>,
 }
 
-impl<'a, L, V, T: FunctionTransformer<L, V>> Traverser<'a, L, V, T> {
+impl<'a, L, V, T: FunctionTransformer<L, V>> FunctionTraverser<'a, L, V, T> {
     pub fn new(mir: &'a MirProject, xfmr: &'a mut T) -> Self {
         debug!("New Function Traverser");
         Self {
