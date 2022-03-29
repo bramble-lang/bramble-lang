@@ -421,17 +421,11 @@ mod mir2llvm_tests_visual {
     //! caused by the complexity that is created if we try to use LLVM's JIT to do
     //! automated unit testing for MIR to LLVM transformation.
 
-    use std::path::Path;
-
-    use inkwell::{
-        context::Context,
-        targets::{CodeModel, InitializationConfig, RelocMode},
-        OptimizationLevel,
-    };
+    use inkwell::context::Context;
 
     use crate::{
         compiler::{
-            ast::{self, Element, Module, MAIN_MODULE},
+            ast::{Module, MAIN_MODULE},
             diagnostics::Logger,
             lexer::{tokens::Token, LexerError},
             mir::{transform, MirProject, ProgramTraverser},
@@ -440,10 +434,8 @@ mod mir2llvm_tests_visual {
             CompilerDisplay, CompilerError, Lexer, SourceMap,
         },
         llvm::mir::LlvmProgramTransformer,
-        resolve_types, StringId, StringTable,
+        resolve_types, StringTable,
     };
-
-    use super::LlvmFunctionTransformer;
 
     #[test]
     fn var_declaration() {
