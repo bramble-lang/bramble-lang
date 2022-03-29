@@ -38,6 +38,8 @@ fn add_module_items(
     project: &mut MirProject,
     module: &Module<SemanticContext>,
 ) -> Result<(), TransformError> {
+    debug!("Adding Module items to MIR");
+
     // Add all the types in this module
     add_struct_defs_to_typetable(project, module)?;
     add_types_to_typetable(project, module)?;
@@ -67,6 +69,8 @@ fn add_struct_defs_to_typetable(
     project: &mut MirProject,
     module: &Module<SemanticContext>,
 ) -> Result<(), TransformError> {
+    debug!("Adding Structure Definitions");
+
     for sd in module.get_structs() {
         if let Item::Struct(sd) = sd {
             project.add_struct_def(sd)?;
@@ -80,6 +84,8 @@ fn add_extern_declarations(
     project: &mut MirProject,
     module: &Module<SemanticContext>,
 ) -> Result<(), TransformError> {
+    debug!("Adding extern declarations");
+
     let externs: Vec<_> = module
         .get_externs()
         .iter()
@@ -126,6 +132,8 @@ fn add_fn_declarations(
     project: &mut MirProject,
     module: &Module<SemanticContext>,
 ) -> Result<(), TransformError> {
+    debug!("Adding function declarations");
+
     let funcs = module.get_functions().iter().filter_map(|f| {
         if let Item::Routine(r) = f {
             Some(r)
@@ -167,6 +175,8 @@ fn transform_fns(
     project: &mut MirProject,
     module: &Module<SemanticContext>,
 ) -> Result<(), TransformError> {
+    debug!("Transforming functions to MIR");
+
     let funcs = module.get_functions().iter().filter_map(|f| {
         if let Item::Routine(r) = f {
             Some(r)
