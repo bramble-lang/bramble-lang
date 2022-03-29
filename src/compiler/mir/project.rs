@@ -82,6 +82,8 @@ impl MirProject {
         self.static_defs.find(path)
     }
 
+    /// Returns an [`Iterator`] over all the functions defined within this
+    /// project.
     pub fn function_iter(&self) -> impl Iterator<Item = (DefId, &Procedure)> {
         self.static_defs.function_iter()
     }
