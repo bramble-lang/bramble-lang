@@ -21,16 +21,19 @@ use crate::{
     StringTable,
 };
 
+/// Represents the final result of a Bramble program in LLVM IR.
 struct LlvmProgram<'a, 'ctx> {
     /// LLVM Module
     module: &'a Module<'ctx>,
 }
 
 impl<'a, 'ctx> LlvmProgram<'a, 'ctx> {
+    /// Print the LLVM IR to `stderr`.
     pub fn print_to_stderr(&self) {
         self.module.print_to_stderr()
     }
 
+    /// Print the assembly representation of this Bramble program to `stdout`
     pub fn print_asm(&self) {
         // Get target for current machine
         let triple = inkwell::targets::TargetMachine::get_default_triple();
@@ -109,6 +112,8 @@ impl<'a, 'ctx> LlvmProgramTransformer<'a, 'ctx> {
         }
     }
 
+    /// Transforms this into the final [`LlvmProgram`] result, which can be used to
+    /// actually generate the object code necessary for linking and final compilation.
     pub fn complete(self) -> LlvmProgram<'a, 'ctx> {
         LlvmProgram {
             module: self.module,
