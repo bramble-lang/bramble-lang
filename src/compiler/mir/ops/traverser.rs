@@ -9,7 +9,11 @@ use crate::compiler::mir::{ir::*, MirProject};
 
 use super::{transformer::FunctionTransformer, ProgramTransformer};
 
+/// Traverses all the items in an input [`MirProject`] and orchestrates
+/// a [`ProgramTransformer`] to transform the input MIR into a target
+/// IR form.
 pub struct ProgramTraverser<'a> {
+    /// Reference to the [`MirProject`] being transformed.
     mir: &'a MirProject,
 }
 
@@ -18,6 +22,8 @@ impl<'a> ProgramTraverser<'a> {
         Self { mir }
     }
 
+    /// This function takes an implementation of [`ProgramTransformer`] and uses it to
+    /// conver source MIR value into the target IR form.
     pub fn map<L, V, F: FunctionTransformer<L, V>, P: ProgramTransformer<L, V, F>>(
         &self,
         xfmr: &mut P,
