@@ -14,6 +14,7 @@ use crate::{
     StringTable,
 };
 
+/// Transforms a complete program from MIR to LLVM IR.
 struct LlvmProgramTransformer<'a, 'ctx> {
     /// LLVVM Context
     context: &'ctx Context,

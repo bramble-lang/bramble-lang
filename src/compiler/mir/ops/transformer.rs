@@ -22,6 +22,8 @@ use crate::compiler::{
     Span,
 };
 
+/// Defines the interface used by the [`ProgramTraverser`](super::ProgramTraverser)
+/// to convert a MIR program into another IR form.
 pub trait ProgramTransformer<L, V, F: FunctionTransformer<L, V>> {
     /// Will attempt to Add the given function to the set of functions in the target
     /// IR.
