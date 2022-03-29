@@ -16,7 +16,27 @@
 //! the vector.
 //! 5. Need to construct the Phi operator in the merge point Basic Block.
 
-use crate::compiler::{mir::ir::*, Span};
+use crate::compiler::{
+    ast::Path,
+    mir::{ir::*, project::DefId},
+    Span,
+};
+
+pub trait ProgramTransformer {
+    /// Will attempt to Add the given function to the set of functions in the target
+    /// IR.
+    fn add_function(
+        &mut self,
+        func_id: DefId,
+        canonical_path: &Path,
+    ) -> Result<(), TransformerError>;
+
+    /// Creates a new transformer for the given function
+    fn get_function_transformer<L, V, F: FunctionTransformer<L, V>>(
+        &mut self,
+        func_id: DefId,
+    ) -> Result<F, TransformerError>;
+}
 
 /// The MIR Transformer defines an interface between the process which traverses
 /// the MIR (which is a Control Flow Graph) and the process which converts a MIR
