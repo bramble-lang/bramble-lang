@@ -136,9 +136,13 @@ impl<'a, 'ctx> LlvmProgramTransformer<'a, 'ctx> {
     }
 }
 
-impl<'a, 'ctx>
-    ProgramTransformer<PointerValue<'ctx>, BasicValueEnum<'ctx>, LlvmFunctionTransformer<'a, 'ctx>>
-    for LlvmProgramTransformer<'a, 'ctx>
+impl<'a, 'ctx, 'p>
+    ProgramTransformer<
+        'p,
+        PointerValue<'ctx>,
+        BasicValueEnum<'ctx>,
+        LlvmFunctionTransformer<'a, 'ctx, 'p>,
+    > for LlvmProgramTransformer<'a, 'ctx>
 {
     fn add_function(
         &mut self,
@@ -175,9 +179,9 @@ impl<'a, 'ctx>
     }
 
     fn get_function_transformer(
-        &mut self,
+        &'p self,
         id: DefId,
-    ) -> std::result::Result<LlvmFunctionTransformer<'a, 'ctx>, TransformerError> {
+    ) -> std::result::Result<LlvmFunctionTransformer<'a, 'ctx, 'p>, TransformerError> {
         // Look up the FunctionValue associated with the given id
         let fv = self
             .fn_table
@@ -191,11 +195,12 @@ impl<'a, 'ctx>
             self.module,
             self.builder,
             self.str_table,
+            &self.ty_table,
         ))
     }
 }
 
-struct LlvmFunctionTransformer<'a, 'ctx> {
+struct LlvmFunctionTransformer<'a, 'ctx, 'p> {
     /// LLVVM Context
     context: &'ctx Context,
 
@@ -204,6 +209,8 @@ struct LlvmFunctionTransformer<'a, 'ctx> {
 
     /// Used to construct actual LLVM instructions and add them to a function
     builder: &'a Builder<'ctx>,
+
+    hm: &'p HashMap<TypeId, AnyTypeEnum<'ctx>>,
 
     /// Table mapping [`StringIds`](StringId) to the string value
     str_table: &'ctx StringTable,
@@ -224,13 +231,14 @@ struct LlvmFunctionTransformer<'a, 'ctx> {
     blocks: HashMap<BasicBlockId, inkwell::basic_block::BasicBlock<'ctx>>,
 }
 
-impl<'a, 'ctx> LlvmFunctionTransformer<'a, 'ctx> {
+impl<'a, 'ctx, 'p> LlvmFunctionTransformer<'a, 'ctx, 'p> {
     pub fn new(
         function: FunctionValue<'ctx>,
         ctx: &'ctx Context,
         module: &'a Module<'ctx>,
         builder: &'a Builder<'ctx>,
         table: &'ctx StringTable,
+        hm: &'p HashMap<TypeId, AnyTypeEnum<'ctx>>,
     ) -> Self {
         debug!("Creating LLVM Function Transformer for function");
 
@@ -240,6 +248,7 @@ impl<'a, 'ctx> LlvmFunctionTransformer<'a, 'ctx> {
             builder,
             str_table: table,
             function,
+            hm,
             vars: HashMap::default(),
             temps: HashMap::default(),
             blocks: HashMap::new(),
@@ -257,8 +266,8 @@ impl<'a, 'ctx> LlvmFunctionTransformer<'a, 'ctx> {
     }
 }
 
-impl<'a, 'ctx> FunctionTransformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
-    for LlvmFunctionTransformer<'a, 'ctx>
+impl<'a, 'ctx, 'p> FunctionTransformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
+    for LlvmFunctionTransformer<'a, 'ctx, 'p>
 {
     fn create_bb(&mut self, id: BasicBlockId) -> Result<(), TransformerError> {
         let bb = self

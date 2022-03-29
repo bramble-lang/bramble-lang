@@ -24,7 +24,7 @@ use crate::compiler::{
 
 /// Defines the interface used by the [`ProgramTraverser`](super::ProgramTraverser)
 /// to convert a MIR program into another IR form.
-pub trait ProgramTransformer<L, V, F: FunctionTransformer<L, V>> {
+pub trait ProgramTransformer<'p, L, V, F: FunctionTransformer<L, V>> {
     /// Will attempt to Add the given function to the set of functions in the target
     /// IR.
     fn add_function(
@@ -36,7 +36,7 @@ pub trait ProgramTransformer<L, V, F: FunctionTransformer<L, V>> {
     fn add_type(&mut self, id: TypeId, ty: &MirTypeDef) -> Result<(), TransformerError>;
 
     /// Creates a new transformer for the given function
-    fn get_function_transformer(&mut self, func_id: DefId) -> Result<F, TransformerError>;
+    fn get_function_transformer(&'p self, func_id: DefId) -> Result<F, TransformerError>;
 }
 
 /// The MIR Transformer defines an interface between the process which traverses

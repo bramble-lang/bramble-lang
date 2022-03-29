@@ -24,9 +24,9 @@ impl<'a> ProgramTraverser<'a> {
 
     /// This function takes an implementation of [`ProgramTransformer`] and uses it to
     /// conver source MIR value into the target IR form.
-    pub fn map<L, V, F: FunctionTransformer<L, V>, P: ProgramTransformer<L, V, F>>(
+    pub fn map<'p, L, V, F: FunctionTransformer<L, V>, P: ProgramTransformer<'p, L, V, F>>(
         &self,
-        xfmr: &mut P,
+        xfmr: &'p mut P,
     ) {
         debug!("Applying given Transformer to MIR");
 
