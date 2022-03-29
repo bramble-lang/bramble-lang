@@ -3,6 +3,7 @@
 use std::collections::{hash_map::Entry, HashMap};
 
 use inkwell::{builder::Builder, context::Context, module::Module, values::*};
+use log::debug;
 
 use crate::{
     compiler::{
@@ -49,9 +50,12 @@ impl<'a, 'ctx> LlvmFunctionTransformer<'a, 'ctx> {
         builder: &'a Builder<'ctx>,
         table: &'ctx StringTable,
     ) -> Self {
+        let name = table.get(func_name).unwrap();
+
+        debug!("Creating LLVM Function Transformer for function: {}", name);
+
         // Create a function to build
         let ft = ctx.void_type().fn_type(&[], false);
-        let name = table.get(func_name).unwrap();
         let function = module.add_function(&name, ft, None);
 
         Self {
