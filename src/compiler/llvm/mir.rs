@@ -9,7 +9,7 @@ use crate::{
     compiler::{
         ast::Path,
         mir::{ir::*, DefId, FunctionTransformer, ProgramTransformer, TransformerError},
-        SourceMap, Span,
+        CompilerDisplay, SourceMap, Span,
     },
     StringTable,
 };
@@ -55,6 +55,13 @@ impl<'a, 'ctx> LlvmProgramTransformer<'a, 'ctx> {
             str_table: table,
         }
     }
+
+    fn to_label(&self, path: &Path) -> String {
+        path.iter()
+            .map(|element| element.fmt(self.source_map, self.str_table).unwrap())
+            .collect::<Vec<_>>()
+            .join("_")
+    }
 }
 
 impl<'a, 'ctx>
@@ -66,7 +73,7 @@ impl<'a, 'ctx>
         func_id: DefId,
         canonical_path: &Path,
     ) -> Result<(), TransformerError> {
-        let name = canonical_path.to_label(self.source_map, self.str_table);
+        let name = self.to_label(canonical_path);
 
         debug!("Adding function to Module: {}", name);
 
