@@ -348,6 +348,26 @@ mod mir2llvm_tests_visual {
         );
     }
 
+    #[test]
+    fn two_functions() {
+        compile_and_print_llvm(
+            "
+            fn foo() {
+                let x: i64 := if (true) {2} else {3};
+                return;
+            }
+           
+            mod bats {
+                fn bar() {
+                    let x: i64 := 5;
+                    let b: bool := true;
+                    return;
+                }
+            }
+        ",
+        );
+    }
+
     type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
 
     fn compile_and_print_llvm(text: &str) {
