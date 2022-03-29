@@ -21,8 +21,13 @@ impl<'a> ProgramTraverser<'a> {
     pub fn map<P: ProgramTransformer>(&self, xfmr: &mut P) {
         debug!("Applying given Transformer to MIR");
 
-        // Iterate over every function in MIR
+        // Declare every function in the ProgramTransformer
         for (id, f) in self.mir.function_iter() {
+            xfmr.add_function(id, f.path()).unwrap();
+        }
+
+        // Iterate over every function in MIR
+        /*for (id, f) in self.mir.function_iter() {
             debug!("Transforming: {:?}", f.path());
 
             // For each function, iterate over every BB
@@ -30,9 +35,9 @@ impl<'a> ProgramTraverser<'a> {
             let mut fn_xfm = xfmr.get_function_transformer(id).unwrap();
 
             // Create function traverser and pass it the transformer
-            let mut traverser = FunctionTraverser::new(self.mir, &mut fn_xfm);
+            let mut traverser = FunctionTraverser::new(self.mir, f, &mut fn_xfm);
             traverser.map();
-        }
+        }*/
     }
 }
 

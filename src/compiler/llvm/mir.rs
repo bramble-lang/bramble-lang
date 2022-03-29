@@ -299,7 +299,7 @@ mod mir2llvm_tests_visual {
             ast::{self, Element, Module, MAIN_MODULE},
             diagnostics::Logger,
             lexer::{tokens::Token, LexerError},
-            mir::{transform, FunctionTraverser, MirProject},
+            mir::{transform, MirProject, ProgramTraverser},
             parser::Parser,
             semantics::semanticnode::SemanticContext,
             CompilerDisplay, CompilerError, Lexer, SourceMap,
@@ -345,17 +345,14 @@ mod mir2llvm_tests_visual {
         let context = Context::create();
         let module = context.create_module("test");
         let builder = context.create_builder();
-        let path: ast::Path = vec![Element::CanonicalRoot, Element::Id(StringId::new())].into();
-        //let mut llvm =
-        //LlvmFunctionTransformer::new(&path, &context, &module, &builder, &sm, &table);
 
         let mut llvm = LlvmProgramTransformer::new(&context, &module, &builder, &sm, &table);
 
-        let mut mvr = FunctionTraverser::new(&project, &mut llvm);
+        let mut proj_traverser = ProgramTraverser::new(&project);
 
         // Traverser is given a MirProject
         // call traverser.map(llvm) this will use the llvm xfmr to map MirProject to LlvmProject
-        mvr.map();
+        proj_traverser.map(&mut llvm);
         // Print LLVM
         println!("=== LLVM IR ===:");
         llvm.module.print_to_stderr();

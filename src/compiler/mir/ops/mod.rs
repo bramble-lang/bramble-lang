@@ -5,4 +5,4 @@ mod transformer;
 mod traverser;
 
 pub use transformer::*;
-pub use traverser::FunctionTraverser;
+pub use traverser::ProgramTraverser;

@@ -22,7 +22,7 @@ mod typetable;
 pub mod ir;
 pub mod transform;
 
-pub use ops::{FunctionTransformer, FunctionTraverser, ProgramTransformer, TransformerError};
+pub use ops::{FunctionTransformer, ProgramTransformer, ProgramTraverser, TransformerError};
 pub use project::{DefId, MirProject};
 
 // Unit test modules
