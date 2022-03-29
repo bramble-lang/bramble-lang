@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 
 use log::debug;
 
-use crate::compiler::mir::{ir::*, ops::traverser, MirProject};
+use crate::compiler::mir::{ir::*, MirProject};
 
 use super::{transformer::FunctionTransformer, ProgramTransformer};
 

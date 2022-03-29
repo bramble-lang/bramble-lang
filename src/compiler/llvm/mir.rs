@@ -11,7 +11,7 @@ use crate::{
         mir::{ir::*, DefId, FunctionTransformer, ProgramTransformer, TransformerError},
         SourceMap, Span,
     },
-    StringId, StringTable,
+    StringTable,
 };
 
 struct LlvmProgramTransformer<'a, 'ctx> {
