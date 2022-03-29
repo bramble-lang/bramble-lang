@@ -2,7 +2,14 @@
 
 use std::collections::{hash_map::Entry, HashMap};
 
-use inkwell::{builder::Builder, context::Context, module::Module, values::*};
+use inkwell::{
+    builder::Builder,
+    context::Context,
+    module::Module,
+    targets::{CodeModel, InitializationConfig, RelocMode},
+    values::*,
+    OptimizationLevel,
+};
 use log::debug;
 
 use crate::{
@@ -13,6 +20,52 @@ use crate::{
     },
     StringTable,
 };
+
+struct LlvmProgram<'a, 'ctx> {
+    /// LLVM Module
+    module: &'a Module<'ctx>,
+}
+
+impl<'a, 'ctx> LlvmProgram<'a, 'ctx> {
+    pub fn print_to_stderr(&self) {
+        self.module.print_to_stderr()
+    }
+
+    pub fn print_asm(&self) {
+        // Get target for current machine
+        let triple = inkwell::targets::TargetMachine::get_default_triple();
+
+        let config = InitializationConfig::default();
+        inkwell::targets::Target::initialize_all(&config);
+        let target = inkwell::targets::Target::from_triple(&triple).unwrap();
+
+        let machine = target
+            .create_target_machine(
+                &triple,
+                "generic",
+                "",
+                OptimizationLevel::None,
+                RelocMode::Default,
+                CodeModel::Default,
+            )
+            .ok_or("Could not create a target machine for compilation")
+            .unwrap();
+        let data = machine.get_target_data();
+
+        // Configure the module
+        self.module.set_data_layout(&data.get_data_layout());
+        self.module.set_triple(&triple);
+
+        // If emit asm is true, then also write the assembly for the target machine to a file
+        let path = std::path::Path::new("/tmp/output.s");
+        machine
+            .write_to_file(self.module, inkwell::targets::FileType::Assembly, &path)
+            .unwrap();
+        let contents =
+            std::fs::read_to_string(&path).expect("Something went wrong reading the file");
+        println!("{contents}");
+    }
+}
 
 /// Transforms a complete program from MIR to LLVM IR.
 struct LlvmProgramTransformer<'a, 'ctx> {
@@ -53,6 +106,12 @@ impl<'a, 'ctx> LlvmProgramTransformer<'a, 'ctx> {
             fn_table: HashMap::new(),
             source_map,
             str_table: table,
+        }
+    }
+
+    pub fn complete(self) -> LlvmProgram<'a, 'ctx> {
+        LlvmProgram {
+            module: self.module,
         }
     }
 
@@ -387,19 +446,22 @@ mod mir2llvm_tests_visual {
         let module = context.create_module("test");
         let builder = context.create_builder();
 
-        let mut llvm = LlvmProgramTransformer::new(&context, &module, &builder, &sm, &table);
+        let mut xfmr = LlvmProgramTransformer::new(&context, &module, &builder, &sm, &table);
 
         let proj_traverser = ProgramTraverser::new(&project);
 
         // Traverser is given a MirProject
         // call traverser.map(llvm) this will use the llvm xfmr to map MirProject to LlvmProject
-        proj_traverser.map(&mut llvm);
+        proj_traverser.map(&mut xfmr);
+
+        let llvm = xfmr.complete();
+
         // Print LLVM
         println!("=== LLVM IR ===:");
-        llvm.module.print_to_stderr();
+        llvm.print_to_stderr();
 
         println!("\n\n=== x86 ===");
-        print_asm(&module);
+        llvm.print_asm();
     }
 
     fn compile(input: &str) -> (SourceMap, StringTable, Module<SemanticContext>) {
@@ -433,40 +495,5 @@ mod mir2llvm_tests_visual {
                 panic!("{}", err.fmt(&sm, &table).unwrap());
             }
         }
-    }
-
-    fn print_asm<'ctx>(module: &inkwell::module::Module<'ctx>) {
-        // Get target for current machine
-        let triple = inkwell::targets::TargetMachine::get_default_triple();
-
-        let config = InitializationConfig::default();
-        inkwell::targets::Target::initialize_all(&config);
-        let target = inkwell::targets::Target::from_triple(&triple).unwrap();
-
-        let machine = target
-            .create_target_machine(
-                &triple,
-                "generic",
-                "",
-                OptimizationLevel::None,
-                RelocMode::Default,
-                CodeModel::Default,
-            )
-            .ok_or("Could not create a target machine for compilation")
-            .unwrap();
-        let data = machine.get_target_data();
-
-        // Configure the module
-        module.set_data_layout(&data.get_data_layout());
-        module.set_triple(&triple);
-
-        // If emit asm is true, then also write the assembly for the target machine to a file
-        let path = Path::new("/tmp/output.s");
-        machine
-            .write_to_file(module, inkwell::targets::FileType::Assembly, &path)
-            .unwrap();
-        let contents =
-            std::fs::read_to_string(&path).expect("Something went wrong reading the file");
-        println!("{contents}");
     }
 }
