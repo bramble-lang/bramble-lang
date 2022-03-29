@@ -234,6 +234,13 @@ impl TypeTable {
         }
         true
     }
+
+    pub fn iter(&self) -> impl Iterator<Item = (TypeId, &MirTypeDef)> {
+        self.table
+            .iter()
+            .enumerate()
+            .map(|(id, ty)| (TypeId(id as u32), ty))
+    }
 }
 
 impl Display for TypeTable {

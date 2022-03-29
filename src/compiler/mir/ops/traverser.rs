@@ -30,6 +30,11 @@ impl<'a> ProgramTraverser<'a> {
     ) {
         debug!("Applying given Transformer to MIR");
 
+        // Add every type in the type table to the project
+        for (id, ty) in self.mir.type_iter() {
+            xfmr.add_type(id, ty).unwrap()
+        }
+
         // Declare every function in the ProgramTransformer
         for (id, f) in self.mir.function_iter() {
             xfmr.add_function(id, f.path()).unwrap();

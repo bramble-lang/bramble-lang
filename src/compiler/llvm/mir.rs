@@ -7,7 +7,7 @@ use inkwell::{
     context::Context,
     module::Module,
     targets::{CodeModel, InitializationConfig, RelocMode},
-    types::{AnyTypeEnum, IntType},
+    types::AnyTypeEnum,
     values::*,
     OptimizationLevel,
 };
@@ -15,8 +15,11 @@ use log::debug;
 
 use crate::{
     compiler::{
-        ast::{Path, Type},
-        mir::{ir::*, DefId, FunctionTransformer, ProgramTransformer, TransformerError, TypeId},
+        ast::Path,
+        mir::{
+            ir::*, DefId, FunctionTransformer, MirBaseType, MirTypeDef, ProgramTransformer,
+            TransformerError, TypeId,
+        },
         CompilerDisplay, SourceMap, Span,
     },
     StringTable,
@@ -157,30 +160,15 @@ impl<'a, 'ctx>
         }
     }
 
-    fn add_type(&mut self, id: TypeId, ty: &Type) -> Result<(), TransformerError> {
+    fn add_type(&mut self, id: TypeId, ty: &MirTypeDef) -> Result<(), TransformerError> {
         match ty {
-            Type::Null => todo!(),
-            Type::U8 => todo!(),
-            Type::U16 => todo!(),
-            Type::U32 => todo!(),
-            Type::U64 => todo!(),
-            Type::I8 => todo!(),
-            Type::I16 => todo!(),
-            Type::I32 => todo!(),
-            Type::I64 => self.ty_table.insert(id, self.context.i64_type().into()),
-            Type::F64 => todo!(),
-            Type::Bool => todo!(),
-            Type::StringLiteral => todo!(),
-            Type::RawPointer(_, _) => todo!(),
-            Type::Array(_, _) => todo!(),
-            Type::Unit => todo!(),
-            Type::Custom(_) => todo!(),
-            Type::StructDef(_) => todo!(),
-            Type::FunctionDef(_, _) => todo!(),
-            Type::CoroutineDef(_, _) => todo!(),
-            Type::Coroutine(_) => todo!(),
-            Type::ExternDecl(_, _, _) => todo!(),
-            Type::Unknown => todo!(),
+            MirTypeDef::Base(base) => match base {
+                MirBaseType::I64 => self.ty_table.insert(id, self.context.i64_type().into()),
+                _ => todo!(),
+            },
+            MirTypeDef::Array { ty, sz } => todo!(),
+            MirTypeDef::RawPointer { mutable, target } => todo!(),
+            MirTypeDef::Structure { path, def } => todo!(),
         }
         .map(|_| ())
         .ok_or(TransformerError::TypeAlreadyDefined)

@@ -87,6 +87,10 @@ impl MirProject {
     pub fn function_iter(&self) -> impl Iterator<Item = (DefId, &Procedure)> {
         self.static_defs.function_iter()
     }
+
+    pub fn type_iter(&self) -> impl Iterator<Item = (TypeId, &MirTypeDef)> {
+        self.types.iter()
+    }
 }
 
 impl Display for MirProject {
