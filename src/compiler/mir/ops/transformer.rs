@@ -28,7 +28,7 @@ use crate::compiler::{mir::ir::*, Span};
 /// deconstructing the [`RValue`] enumeration to extract the [`Operands`](Operand)
 /// exists only within the Traverser.
 ///
-/// Furhermore, the Traverser will be responsible for managing the intermediate
+/// Furthermore, the Traverser will be responsible for managing the intermediate
 /// results of converting the [`RValue`] or [`LValue`] prior to the conversion
 /// of the [`Statement`]. To allow for the Traverser to manage the intermediate
 /// values before the conversion of the [`Statement`] a generic type parameter
