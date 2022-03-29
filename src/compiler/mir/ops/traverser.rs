@@ -18,7 +18,10 @@ impl<'a> ProgramTraverser<'a> {
         Self { mir }
     }
 
-    pub fn map<P: ProgramTransformer>(&self, xfmr: &mut P) {
+    pub fn map<L, V, F: FunctionTransformer<L, V>, P: ProgramTransformer<L, V, F>>(
+        &self,
+        xfmr: &mut P,
+    ) {
         debug!("Applying given Transformer to MIR");
 
         // Declare every function in the ProgramTransformer

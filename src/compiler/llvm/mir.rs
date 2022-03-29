@@ -56,7 +56,10 @@ impl<'a, 'ctx> LlvmProgramTransformer<'a, 'ctx> {
     }
 }
 
-impl<'a, 'ctx> ProgramTransformer for LlvmProgramTransformer<'a, 'ctx> {
+impl<'a, 'ctx>
+    ProgramTransformer<PointerValue<'ctx>, BasicValueEnum<'ctx>, LlvmFunctionTransformer<'a, 'ctx>>
+    for LlvmProgramTransformer<'a, 'ctx>
+{
     fn add_function(
         &mut self,
         func_id: DefId,
@@ -77,13 +80,10 @@ impl<'a, 'ctx> ProgramTransformer for LlvmProgramTransformer<'a, 'ctx> {
         }
     }
 
-    fn get_function_transformer<L, V, F: FunctionTransformer<L, V>>(
+    fn get_function_transformer(
         &mut self,
-        func_id: DefId,
-    ) -> Result<F, TransformerError> {
-        // Look up function value from DefId
-        // If function not found then return an error
-        // Create a FunctionTransformer for function
+        _: DefId,
+    ) -> std::result::Result<LlvmFunctionTransformer<'a, 'ctx>, TransformerError> {
         todo!()
     }
 }

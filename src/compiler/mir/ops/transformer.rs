@@ -22,7 +22,7 @@ use crate::compiler::{
     Span,
 };
 
-pub trait ProgramTransformer {
+pub trait ProgramTransformer<L, V, F: FunctionTransformer<L, V>> {
     /// Will attempt to Add the given function to the set of functions in the target
     /// IR.
     fn add_function(
@@ -32,10 +32,7 @@ pub trait ProgramTransformer {
     ) -> Result<(), TransformerError>;
 
     /// Creates a new transformer for the given function
-    fn get_function_transformer<L, V, F: FunctionTransformer<L, V>>(
-        &mut self,
-        func_id: DefId,
-    ) -> Result<F, TransformerError>;
+    fn get_function_transformer(&mut self, func_id: DefId) -> Result<F, TransformerError>;
 }
 
 /// The MIR Transformer defines an interface between the process which traverses
