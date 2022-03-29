@@ -3,6 +3,8 @@
 
 use std::marker::PhantomData;
 
+use log::debug;
+
 use crate::compiler::mir::{ir::*, MirProject};
 
 use super::transformer::Transformer;
@@ -28,6 +30,7 @@ pub struct Traverser<'a, L, V, T: Transformer<L, V>> {
 
 impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
     pub fn new(mir: &'a MirProject, xfmr: &'a mut T) -> Self {
+        debug!("New Function Traverser");
         Self {
             xfmr,
             mir,
@@ -38,8 +41,12 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
     }
 
     pub fn map(&mut self) {
+        debug!("Applying given Transformer to MIR");
+
         // Iterate over every function in MIR
         for f in self.mir.function_iter() {
+            debug!("Transforming: {:?}", f.path());
+
             // For each function, iterate over every BB
             self.function = Some(f);
 
@@ -58,6 +65,8 @@ impl<'a, L, V, T: Transformer<L, V>> Traverser<'a, L, V, T> {
     }
 
     fn allocate_local_vars(&mut self) {
+        debug!("Allocating local variables");
+
         // Tell the transformer to make the entry BasicBlock active
         self.xfmr
             .set_bb(ENTRY_BB)
