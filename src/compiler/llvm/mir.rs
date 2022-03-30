@@ -138,12 +138,12 @@ impl<'module, 'ctx> LlvmProgramTransformer<'module, 'ctx> {
     }
 }
 
-impl<'module, 'ctx, 'p>
+impl<'p, 'module, 'ctx>
     ProgramTransformer<
         'p,
         PointerValue<'ctx>,
         BasicValueEnum<'ctx>,
-        LlvmFunctionTransformer<'module, 'ctx, 'p>,
+        LlvmFunctionTransformer<'p, 'module, 'ctx>,
     > for LlvmProgramTransformer<'module, 'ctx>
 {
     fn add_function(
@@ -200,7 +200,7 @@ impl<'module, 'ctx, 'p>
     fn get_function_transformer(
         &'p self,
         id: DefId,
-    ) -> std::result::Result<LlvmFunctionTransformer<'module, 'ctx, 'p>, TransformerError> {
+    ) -> std::result::Result<LlvmFunctionTransformer<'p, 'module, 'ctx>, TransformerError> {
         // Look up the FunctionValue associated with the given id
         let fv = self
             .fn_table
@@ -258,8 +258,8 @@ impl<'p, 'module, 'ctx> LlvmFunctionTransformer<'p, 'module, 'ctx> {
     }
 }
 
-impl<'module, 'ctx, 'p> FunctionTransformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
-    for LlvmFunctionTransformer<'module, 'ctx, 'p>
+impl<'p, 'module, 'ctx> FunctionTransformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
+    for LlvmFunctionTransformer<'p, 'module, 'ctx>
 {
     fn create_bb(&mut self, id: BasicBlockId) -> Result<(), TransformerError> {
         let bb = self
