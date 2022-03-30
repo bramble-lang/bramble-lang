@@ -28,12 +28,12 @@ use crate::{
 use super::llvmir::LlvmToBasicTypeEnum;
 
 /// Represents the final result of a Bramble program in LLVM IR.
-struct LlvmProgram<'a, 'ctx> {
+struct LlvmProgram<'module, 'ctx> {
     /// LLVM Module
-    module: &'a Module<'ctx>,
+    module: &'module Module<'ctx>,
 }
 
-impl<'a, 'ctx> LlvmProgram<'a, 'ctx> {
+impl<'module, 'ctx> LlvmProgram<'module, 'ctx> {
     /// Print the LLVM IR to `stderr`.
     pub fn print_to_stderr(&self) {
         self.module.print_to_stderr()
@@ -77,15 +77,15 @@ impl<'a, 'ctx> LlvmProgram<'a, 'ctx> {
 }
 
 /// Transforms a complete program from MIR to LLVM IR.
-struct LlvmProgramTransformer<'a, 'ctx> {
+struct LlvmProgramTransformer<'module, 'ctx> {
     /// LLVVM Context
     context: &'ctx Context,
 
     /// LLVM Module
-    module: &'a Module<'ctx>,
+    module: &'module Module<'ctx>,
 
     /// Used to construct actual LLVM instructions and add them to a function
-    builder: &'a Builder<'ctx>,
+    builder: &'module Builder<'ctx>,
 
     /// Table mapping the [`DefId`] used to identify a function in MIR to the
     /// [`FunctionValue`] used to identify a function in LLVM.
@@ -101,11 +101,11 @@ struct LlvmProgramTransformer<'a, 'ctx> {
     ty_table: HashMap<TypeId, AnyTypeEnum<'ctx>>,
 }
 
-impl<'a, 'ctx> LlvmProgramTransformer<'a, 'ctx> {
+impl<'module, 'ctx> LlvmProgramTransformer<'module, 'ctx> {
     pub fn new(
         ctx: &'ctx Context,
-        module: &'a Module<'ctx>,
-        builder: &'a Builder<'ctx>,
+        module: &'module Module<'ctx>,
+        builder: &'module Builder<'ctx>,
         source_map: &'ctx SourceMap,
         table: &'ctx StringTable,
     ) -> Self {
@@ -124,7 +124,7 @@ impl<'a, 'ctx> LlvmProgramTransformer<'a, 'ctx> {
 
     /// Transforms this into the final [`LlvmProgram`] result, which can be used to
     /// actually generate the object code necessary for linking and final compilation.
-    pub fn complete(self) -> LlvmProgram<'a, 'ctx> {
+    pub fn complete(self) -> LlvmProgram<'module, 'ctx> {
         LlvmProgram {
             module: self.module,
         }
@@ -138,13 +138,13 @@ impl<'a, 'ctx> LlvmProgramTransformer<'a, 'ctx> {
     }
 }
 
-impl<'a, 'ctx, 'p>
+impl<'module, 'ctx, 'p>
     ProgramTransformer<
         'p,
         PointerValue<'ctx>,
         BasicValueEnum<'ctx>,
-        LlvmFunctionTransformer<'a, 'ctx, 'p>,
-    > for LlvmProgramTransformer<'a, 'ctx>
+        LlvmFunctionTransformer<'module, 'ctx, 'p>,
+    > for LlvmProgramTransformer<'module, 'ctx>
 {
     fn add_function(
         &mut self,
@@ -200,7 +200,7 @@ impl<'a, 'ctx, 'p>
     fn get_function_transformer(
         &'p self,
         id: DefId,
-    ) -> std::result::Result<LlvmFunctionTransformer<'a, 'ctx, 'p>, TransformerError> {
+    ) -> std::result::Result<LlvmFunctionTransformer<'module, 'ctx, 'p>, TransformerError> {
         // Look up the FunctionValue associated with the given id
         let fv = self
             .fn_table
@@ -212,8 +212,8 @@ impl<'a, 'ctx, 'p>
     }
 }
 
-struct LlvmFunctionTransformer<'p, 'a, 'ctx> {
-    program: &'p LlvmProgramTransformer<'a, 'ctx>,
+struct LlvmFunctionTransformer<'p, 'module, 'ctx> {
+    program: &'p LlvmProgramTransformer<'module, 'ctx>,
 
     /// The LLVM function instance that is currently being built by the transformer
     /// all insructions will be added to this function.
@@ -231,10 +231,10 @@ struct LlvmFunctionTransformer<'p, 'a, 'ctx> {
     blocks: HashMap<BasicBlockId, inkwell::basic_block::BasicBlock<'ctx>>,
 }
 
-impl<'p, 'a, 'ctx> LlvmFunctionTransformer<'p, 'a, 'ctx> {
+impl<'p, 'module, 'ctx> LlvmFunctionTransformer<'p, 'module, 'ctx> {
     pub fn new(
         function: FunctionValue<'ctx>,
-        program: &'p LlvmProgramTransformer<'a, 'ctx>,
+        program: &'p LlvmProgramTransformer<'module, 'ctx>,
     ) -> Self {
         debug!("Creating LLVM Function Transformer for function");
 
@@ -258,8 +258,8 @@ impl<'p, 'a, 'ctx> LlvmFunctionTransformer<'p, 'a, 'ctx> {
     }
 }
 
-impl<'a, 'ctx, 'p> FunctionTransformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
-    for LlvmFunctionTransformer<'a, 'ctx, 'p>
+impl<'module, 'ctx, 'p> FunctionTransformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
+    for LlvmFunctionTransformer<'module, 'ctx, 'p>
 {
     fn create_bb(&mut self, id: BasicBlockId) -> Result<(), TransformerError> {
         let bb = self
