@@ -206,31 +206,12 @@ impl<'a, 'ctx, 'p>
             .ok_or(TransformerError::FunctionNotFound)?;
 
         // Create a new fucntion transformer that will populate the assoicated function value
-        Ok(LlvmFunctionTransformer::new(
-            *fv,
-            self.context,
-            self.module,
-            self.builder,
-            self.str_table,
-            self,
-        ))
+        Ok(LlvmFunctionTransformer::new(*fv, self))
     }
 }
 
 struct LlvmFunctionTransformer<'a, 'ctx, 'p> {
-    /// LLVVM Context
-    context: &'ctx Context,
-
-    /// LLVM Module
-    module: &'a Module<'ctx>,
-
-    /// Used to construct actual LLVM instructions and add them to a function
-    builder: &'a Builder<'ctx>,
-
-    hm: &'p LlvmProgramTransformer<'a, 'ctx>,
-
-    /// Table mapping [`StringIds`](StringId) to the string value
-    str_table: &'ctx StringTable,
+    builder: &'p LlvmProgramTransformer<'a, 'ctx>,
 
     /// The LLVM function instance that is currently being built by the transformer
     /// all insructions will be added to this function.
@@ -251,21 +232,13 @@ struct LlvmFunctionTransformer<'a, 'ctx, 'p> {
 impl<'a, 'ctx, 'p> LlvmFunctionTransformer<'a, 'ctx, 'p> {
     pub fn new(
         function: FunctionValue<'ctx>,
-        ctx: &'ctx Context,
-        module: &'a Module<'ctx>,
-        builder: &'a Builder<'ctx>,
-        table: &'ctx StringTable,
-        hm: &'p LlvmProgramTransformer<'a, 'ctx>,
+        builder: &'p LlvmProgramTransformer<'a, 'ctx>,
     ) -> Self {
         debug!("Creating LLVM Function Transformer for function");
 
         Self {
-            context: ctx,
-            module,
-            builder,
-            str_table: table,
             function,
-            hm,
+            builder,
             vars: HashMap::default(),
             temps: HashMap::default(),
             blocks: HashMap::new(),
@@ -273,7 +246,7 @@ impl<'a, 'ctx, 'p> LlvmFunctionTransformer<'a, 'ctx, 'p> {
     }
 
     fn var_label(&self, vd: &VarDecl) -> String {
-        let name = self.str_table.get(vd.name()).unwrap();
+        let name = self.builder.str_table.get(vd.name()).unwrap();
         let scope = vd.scope();
         format!("{}_{}", name, scope)
     }
@@ -288,6 +261,7 @@ impl<'a, 'ctx, 'p> FunctionTransformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
 {
     fn create_bb(&mut self, id: BasicBlockId) -> Result<(), TransformerError> {
         let bb = self
+            .builder
             .context
             .append_basic_block(self.function, &id.to_string());
         if self.blocks.insert(id, bb).is_none() {
@@ -300,7 +274,7 @@ impl<'a, 'ctx, 'p> FunctionTransformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
     fn set_bb(&mut self, id: BasicBlockId) -> Result<(), TransformerError> {
         match self.blocks.get(&id) {
             Some(bb) => {
-                self.builder.position_at_end(*bb);
+                self.builder.builder.position_at_end(*bb);
                 Ok(())
             }
             None => Err(TransformerError::BasicBlockNotFound),
@@ -318,8 +292,9 @@ impl<'a, 'ctx, 'p> FunctionTransformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
             // If not, then allocate a pointer in the Builder
             Entry::Vacant(ve) => {
                 // and add a mapping from VarID to the pointer in the local var table
-                let ty = self.hm.ty_table.get(&decl.ty()).unwrap();
+                let ty = self.builder.ty_table.get(&decl.ty()).unwrap();
                 let ptr = self
+                    .builder
                     .builder
                     .build_alloca(ty.into_basic_type().unwrap(), &name);
                 ve.insert(ptr);
@@ -339,8 +314,8 @@ impl<'a, 'ctx, 'p> FunctionTransformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
             // If not, then allocate a pointer in the Builder
             Entry::Vacant(ve) => {
                 // and add a mapping from VarID to the pointer in the local var table
-                let ty = self.context.i64_type();
-                let ptr = self.builder.build_alloca(ty, &name);
+                let ty = self.builder.context.i64_type();
+                let ptr = self.builder.builder.build_alloca(ty, &name);
                 ve.insert(ptr);
                 Ok(())
             }
@@ -348,7 +323,7 @@ impl<'a, 'ctx, 'p> FunctionTransformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
     }
 
     fn term_return(&mut self) {
-        self.builder.build_return(None);
+        self.builder.builder.build_return(None);
     }
 
     fn term_cond_goto(
@@ -363,16 +338,17 @@ impl<'a, 'ctx, 'p> FunctionTransformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
         let else_bb = self.blocks.get(&else_bb).unwrap();
         // Create conditional jump to then or else
         self.builder
+            .builder
             .build_conditional_branch(cond.into_int_value(), *then_bb, *else_bb);
     }
 
     fn term_goto(&mut self, target: BasicBlockId) {
         let target = self.blocks.get(&target).unwrap();
-        self.builder.build_unconditional_branch(*target);
+        self.builder.builder.build_unconditional_branch(*target);
     }
 
     fn assign(&mut self, span: Span, l: PointerValue<'ctx>, v: BasicValueEnum<'ctx>) {
-        self.builder.build_store(l, v);
+        self.builder.builder.build_store(l, v);
     }
 
     fn var(&self, v: VarId) -> Result<PointerValue<'ctx>, TransformerError> {
@@ -390,16 +366,20 @@ impl<'a, 'ctx, 'p> FunctionTransformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
     }
 
     fn const_i64(&self, i: i64) -> BasicValueEnum<'ctx> {
-        self.context.i64_type().const_int(i as u64, true).into()
+        self.builder
+            .context
+            .i64_type()
+            .const_int(i as u64, true)
+            .into()
     }
 
     fn const_bool(&self, b: bool) -> BasicValueEnum<'ctx> {
-        let bt = self.context.bool_type();
+        let bt = self.builder.context.bool_type();
         bt.const_int(b as u64, true).into()
     }
 
     fn load(&self, lv: PointerValue<'ctx>) -> BasicValueEnum<'ctx> {
-        self.builder.build_load(lv, "")
+        self.builder.builder.build_load(lv, "")
     }
 
     fn add(&self, a: BasicValueEnum<'ctx>, b: BasicValueEnum<'ctx>) -> BasicValueEnum<'ctx> {
