@@ -212,7 +212,7 @@ impl<'a, 'ctx, 'p>
             self.module,
             self.builder,
             self.str_table,
-            &self.ty_table,
+            self,
         ))
     }
 }
@@ -227,7 +227,7 @@ struct LlvmFunctionTransformer<'a, 'ctx, 'p> {
     /// Used to construct actual LLVM instructions and add them to a function
     builder: &'a Builder<'ctx>,
 
-    hm: &'p HashMap<TypeId, AnyTypeEnum<'ctx>>,
+    hm: &'p LlvmProgramTransformer<'a, 'ctx>,
 
     /// Table mapping [`StringIds`](StringId) to the string value
     str_table: &'ctx StringTable,
@@ -255,7 +255,7 @@ impl<'a, 'ctx, 'p> LlvmFunctionTransformer<'a, 'ctx, 'p> {
         module: &'a Module<'ctx>,
         builder: &'a Builder<'ctx>,
         table: &'ctx StringTable,
-        hm: &'p HashMap<TypeId, AnyTypeEnum<'ctx>>,
+        hm: &'p LlvmProgramTransformer<'a, 'ctx>,
     ) -> Self {
         debug!("Creating LLVM Function Transformer for function");
 
@@ -318,7 +318,7 @@ impl<'a, 'ctx, 'p> FunctionTransformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
             // If not, then allocate a pointer in the Builder
             Entry::Vacant(ve) => {
                 // and add a mapping from VarID to the pointer in the local var table
-                let ty = self.hm.get(&decl.ty()).unwrap();
+                let ty = self.hm.ty_table.get(&decl.ty()).unwrap();
                 let ptr = self
                     .builder
                     .build_alloca(ty.into_basic_type().unwrap(), &name);
