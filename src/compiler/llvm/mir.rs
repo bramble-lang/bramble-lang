@@ -7,7 +7,7 @@ use inkwell::{
     context::Context,
     module::Module,
     targets::{CodeModel, InitializationConfig, RelocMode},
-    types::{AnyTypeEnum, BasicTypeEnum},
+    types::{AnyTypeEnum, BasicType, BasicTypeEnum},
     values::*,
     OptimizationLevel,
 };
@@ -180,7 +180,12 @@ impl<'a, 'ctx, 'p>
                 MirBaseType::Null => None,
                 MirBaseType::StringLiteral => None,
             },
-            MirTypeDef::Array { ty, sz } => todo!(),
+            MirTypeDef::Array { ty, sz } => {
+                let el_llvm_ty = self.ty_table.get(ty).unwrap();
+                let len = *sz as u32;
+                let bt = el_llvm_ty.into_basic_type().unwrap().as_basic_type_enum(); // I don't know why as_basic_type_enum has to be called but without it the array_type method doesn't work!
+                Some(bt.array_type(len).into())
+            }
             MirTypeDef::RawPointer { mutable, target } => todo!(),
             MirTypeDef::Structure { path, def } => todo!(),
         }
@@ -504,6 +509,19 @@ mod mir2llvm_tests_visual {
                 let i: f64 := 9.0;
 
                 let bl:bool := true;
+
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    //#[test]
+    fn base_array_type() {
+        let text = "
+            fn test() {
+                let a: [i8; 2] :=  [1i8, 2i8];
 
                 return;
             }
