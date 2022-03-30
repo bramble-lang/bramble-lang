@@ -234,6 +234,15 @@ impl TypeTable {
         }
         true
     }
+
+    /// Creates an [`Iterator`] over the [`MirTypeDefs`](MirTypeDef) that are in this
+    /// MIR program. Each [`MirTypeDef`] is paired with its unique [`TypeId`].
+    pub fn iter(&self) -> impl Iterator<Item = (TypeId, &MirTypeDef)> {
+        self.table
+            .iter()
+            .enumerate()
+            .map(|(id, ty)| (TypeId(id as u32), ty))
+    }
 }
 
 impl Display for TypeTable {
@@ -389,7 +398,7 @@ impl Display for MirTypeDef {
 /// including base types, be added to the [`TypeTable`], but because the implementation
 /// of [`TypeTable`] and [`TypeId`] is completely invisible to users, this
 /// was deemed acceptable.
-#[derive(Debug, PartialEq, PartialOrd, Clone, Copy)]
+#[derive(Hash, Eq, Debug, PartialEq, PartialOrd, Clone, Copy)]
 pub struct TypeId(u32);
 
 impl Display for TypeId {

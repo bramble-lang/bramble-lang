@@ -18,13 +18,13 @@
 
 use crate::compiler::{
     ast::Path,
-    mir::{ir::*, project::DefId},
+    mir::{ir::*, project::DefId, MirTypeDef, TypeId},
     Span,
 };
 
 /// Defines the interface used by the [`ProgramTraverser`](super::ProgramTraverser)
 /// to convert a MIR program into another IR form.
-pub trait ProgramTransformer<L, V, F: FunctionTransformer<L, V>> {
+pub trait ProgramTransformer<'p, L, V, F: FunctionTransformer<L, V>> {
     /// Will attempt to Add the given function to the set of functions in the target
     /// IR.
     fn add_function(
@@ -33,8 +33,10 @@ pub trait ProgramTransformer<L, V, F: FunctionTransformer<L, V>> {
         canonical_path: &Path,
     ) -> Result<(), TransformerError>;
 
+    fn add_type(&mut self, id: TypeId, ty: &MirTypeDef) -> Result<(), TransformerError>;
+
     /// Creates a new transformer for the given function
-    fn get_function_transformer(&mut self, func_id: DefId) -> Result<F, TransformerError>;
+    fn get_function_transformer(&'p self, func_id: DefId) -> Result<F, TransformerError>;
 }
 
 /// The MIR Transformer defines an interface between the process which traverses
@@ -88,11 +90,35 @@ pub trait FunctionTransformer<L, V> {
 
     // The following methods correspond to [`RValue`] variants
 
+    /// Create a const [`i8`].
+    fn const_i8(&self, i: i8) -> V;
+
+    /// Create a const [`i16`].
+    fn const_i16(&self, i: i16) -> V;
+
+    /// Create a const [`i32`].
+    fn const_i32(&self, i: i32) -> V;
+
     /// Create a const [`i64`].
     fn const_i64(&self, i: i64) -> V;
 
+    /// Create a const [`u8`].
+    fn const_u8(&self, i: u8) -> V;
+
+    /// Create a const [`u16`].
+    fn const_u16(&self, i: u16) -> V;
+
+    /// Create a const [`u32`].
+    fn const_u32(&self, i: u32) -> V;
+
+    /// Create a const [`u64`].
+    fn const_u64(&self, i: u64) -> V;
+
     /// Create a const [`bool`].
     fn const_bool(&self, b: bool) -> V;
+
+    /// Create a const [`f64`].
+    fn const_f64(&self, f: f64) -> V;
 
     /// Load a value from a memory location
     fn load(&self, lv: L) -> V;
@@ -113,4 +139,5 @@ pub enum TransformerError {
     VarNotFound,
     FunctionAlreadyDeclared,
     FunctionNotFound,
+    TypeAlreadyDefined,
 }

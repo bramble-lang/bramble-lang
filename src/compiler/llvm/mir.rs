@@ -7,6 +7,7 @@ use inkwell::{
     context::Context,
     module::Module,
     targets::{CodeModel, InitializationConfig, RelocMode},
+    types::{AnyTypeEnum, BasicType, BasicTypeEnum},
     values::*,
     OptimizationLevel,
 };
@@ -15,19 +16,24 @@ use log::debug;
 use crate::{
     compiler::{
         ast::Path,
-        mir::{ir::*, DefId, FunctionTransformer, ProgramTransformer, TransformerError},
+        mir::{
+            ir::*, DefId, FunctionTransformer, MirBaseType, MirTypeDef, ProgramTransformer,
+            TransformerError, TypeId,
+        },
         CompilerDisplay, SourceMap, Span,
     },
     StringTable,
 };
 
+use super::llvmir::LlvmToBasicTypeEnum;
+
 /// Represents the final result of a Bramble program in LLVM IR.
-struct LlvmProgram<'a, 'ctx> {
+struct LlvmProgram<'module, 'ctx> {
     /// LLVM Module
-    module: &'a Module<'ctx>,
+    module: &'module Module<'ctx>,
 }
 
-impl<'a, 'ctx> LlvmProgram<'a, 'ctx> {
+impl<'module, 'ctx> LlvmProgram<'module, 'ctx> {
     /// Print the LLVM IR to `stderr`.
     pub fn print_to_stderr(&self) {
         self.module.print_to_stderr()
@@ -71,15 +77,15 @@ impl<'a, 'ctx> LlvmProgram<'a, 'ctx> {
 }
 
 /// Transforms a complete program from MIR to LLVM IR.
-struct LlvmProgramTransformer<'a, 'ctx> {
+struct LlvmProgramTransformer<'module, 'ctx> {
     /// LLVVM Context
     context: &'ctx Context,
 
     /// LLVM Module
-    module: &'a Module<'ctx>,
+    module: &'module Module<'ctx>,
 
     /// Used to construct actual LLVM instructions and add them to a function
-    builder: &'a Builder<'ctx>,
+    builder: &'module Builder<'ctx>,
 
     /// Table mapping the [`DefId`] used to identify a function in MIR to the
     /// [`FunctionValue`] used to identify a function in LLVM.
@@ -90,13 +96,16 @@ struct LlvmProgramTransformer<'a, 'ctx> {
 
     /// Table mapping [`StringIds`](StringId) to the string value
     str_table: &'ctx StringTable,
+
+    /// Table mapping [`TypeId`] to the LLVM IR associated type.
+    ty_table: HashMap<TypeId, AnyTypeEnum<'ctx>>,
 }
 
-impl<'a, 'ctx> LlvmProgramTransformer<'a, 'ctx> {
+impl<'module, 'ctx> LlvmProgramTransformer<'module, 'ctx> {
     pub fn new(
         ctx: &'ctx Context,
-        module: &'a Module<'ctx>,
-        builder: &'a Builder<'ctx>,
+        module: &'module Module<'ctx>,
+        builder: &'module Builder<'ctx>,
         source_map: &'ctx SourceMap,
         table: &'ctx StringTable,
     ) -> Self {
@@ -109,12 +118,13 @@ impl<'a, 'ctx> LlvmProgramTransformer<'a, 'ctx> {
             fn_table: HashMap::new(),
             source_map,
             str_table: table,
+            ty_table: HashMap::new(),
         }
     }
 
     /// Transforms this into the final [`LlvmProgram`] result, which can be used to
     /// actually generate the object code necessary for linking and final compilation.
-    pub fn complete(self) -> LlvmProgram<'a, 'ctx> {
+    pub fn complete(self) -> LlvmProgram<'module, 'ctx> {
         LlvmProgram {
             module: self.module,
         }
@@ -128,9 +138,13 @@ impl<'a, 'ctx> LlvmProgramTransformer<'a, 'ctx> {
     }
 }
 
-impl<'a, 'ctx>
-    ProgramTransformer<PointerValue<'ctx>, BasicValueEnum<'ctx>, LlvmFunctionTransformer<'a, 'ctx>>
-    for LlvmProgramTransformer<'a, 'ctx>
+impl<'p, 'module, 'ctx>
+    ProgramTransformer<
+        'p,
+        PointerValue<'ctx>,
+        BasicValueEnum<'ctx>,
+        LlvmFunctionTransformer<'p, 'module, 'ctx>,
+    > for LlvmProgramTransformer<'module, 'ctx>
 {
     fn add_function(
         &mut self,
@@ -152,10 +166,32 @@ impl<'a, 'ctx>
         }
     }
 
+    fn add_type(&mut self, id: TypeId, ty: &MirTypeDef) -> Result<(), TransformerError> {
+        let previous_value = match ty {
+            MirTypeDef::Base(base) => base.into_basic_type_enum(self.context),
+            MirTypeDef::Array { ty, sz } => {
+                let el_llvm_ty = self.ty_table.get(ty).unwrap();
+                let len = *sz as u32;
+                let bt = el_llvm_ty.into_basic_type().unwrap().as_basic_type_enum(); // I don't know why as_basic_type_enum has to be called but without it the array_type method doesn't work!
+                Some(bt.array_type(len).into())
+            }
+            MirTypeDef::RawPointer { mutable, target } => todo!(),
+            MirTypeDef::Structure { path, def } => todo!(),
+        }
+        .and_then(|llvm_ty| self.ty_table.insert(id, llvm_ty));
+
+        // If `insert` returns `None` then it means there was no previous value associated with `id`
+        // otherwise, `id` was already defined and this should thrown an error.
+        match previous_value {
+            None => Ok(()),
+            Some(_) => Err(TransformerError::TypeAlreadyDefined),
+        }
+    }
+
     fn get_function_transformer(
-        &mut self,
+        &'p self,
         id: DefId,
-    ) -> std::result::Result<LlvmFunctionTransformer<'a, 'ctx>, TransformerError> {
+    ) -> std::result::Result<LlvmFunctionTransformer<'p, 'module, 'ctx>, TransformerError> {
         // Look up the FunctionValue associated with the given id
         let fv = self
             .fn_table
@@ -163,28 +199,30 @@ impl<'a, 'ctx>
             .ok_or(TransformerError::FunctionNotFound)?;
 
         // Create a new fucntion transformer that will populate the assoicated function value
-        Ok(LlvmFunctionTransformer::new(
-            *fv,
-            self.context,
-            self.module,
-            self.builder,
-            self.str_table,
-        ))
+        Ok(LlvmFunctionTransformer::new(*fv, self))
     }
 }
 
-struct LlvmFunctionTransformer<'a, 'ctx> {
-    /// LLVVM Context
-    context: &'ctx Context,
+impl MirBaseType {
+    /// Convert into the corresponding LLVM type and then wrap that in an [`AnyTypeEnum`] variant.
+    fn into_basic_type_enum<'ctx>(&self, context: &'ctx Context) -> Option<AnyTypeEnum<'ctx>> {
+        match self {
+            MirBaseType::U8 | MirBaseType::I8 => Some(context.i8_type().into()),
+            MirBaseType::U16 | MirBaseType::I16 => Some(context.i16_type().into()),
+            MirBaseType::U32 | MirBaseType::I32 => Some(context.i32_type().into()),
+            MirBaseType::U64 | MirBaseType::I64 => Some(context.i64_type().into()),
+            MirBaseType::F64 => Some(context.f64_type().into()),
+            MirBaseType::Bool => Some(context.bool_type().into()),
+            MirBaseType::Unit => Some(context.void_type().into()),
+            // TODO: Should Null this actually make it to MIR?
+            MirBaseType::Null => None,
+            MirBaseType::StringLiteral => None,
+        }
+    }
+}
 
-    /// LLVM Module
-    module: &'a Module<'ctx>,
-
-    /// Used to construct actual LLVM instructions and add them to a function
-    builder: &'a Builder<'ctx>,
-
-    /// Table mapping [`StringIds`](StringId) to the string value
-    str_table: &'ctx StringTable,
+struct LlvmFunctionTransformer<'p, 'module, 'ctx> {
+    program: &'p LlvmProgramTransformer<'module, 'ctx>,
 
     /// The LLVM function instance that is currently being built by the transformer
     /// all insructions will be added to this function.
@@ -202,22 +240,16 @@ struct LlvmFunctionTransformer<'a, 'ctx> {
     blocks: HashMap<BasicBlockId, inkwell::basic_block::BasicBlock<'ctx>>,
 }
 
-impl<'a, 'ctx> LlvmFunctionTransformer<'a, 'ctx> {
+impl<'p, 'module, 'ctx> LlvmFunctionTransformer<'p, 'module, 'ctx> {
     pub fn new(
         function: FunctionValue<'ctx>,
-        ctx: &'ctx Context,
-        module: &'a Module<'ctx>,
-        builder: &'a Builder<'ctx>,
-        table: &'ctx StringTable,
+        program: &'p LlvmProgramTransformer<'module, 'ctx>,
     ) -> Self {
         debug!("Creating LLVM Function Transformer for function");
 
         Self {
-            context: ctx,
-            module,
-            builder,
-            str_table: table,
             function,
+            program,
             vars: HashMap::default(),
             temps: HashMap::default(),
             blocks: HashMap::new(),
@@ -225,7 +257,7 @@ impl<'a, 'ctx> LlvmFunctionTransformer<'a, 'ctx> {
     }
 
     fn var_label(&self, vd: &VarDecl) -> String {
-        let name = self.str_table.get(vd.name()).unwrap();
+        let name = self.program.str_table.get(vd.name()).unwrap();
         let scope = vd.scope();
         format!("{}_{}", name, scope)
     }
@@ -235,11 +267,12 @@ impl<'a, 'ctx> LlvmFunctionTransformer<'a, 'ctx> {
     }
 }
 
-impl<'a, 'ctx> FunctionTransformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
-    for LlvmFunctionTransformer<'a, 'ctx>
+impl<'p, 'module, 'ctx> FunctionTransformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
+    for LlvmFunctionTransformer<'p, 'module, 'ctx>
 {
     fn create_bb(&mut self, id: BasicBlockId) -> Result<(), TransformerError> {
         let bb = self
+            .program
             .context
             .append_basic_block(self.function, &id.to_string());
         if self.blocks.insert(id, bb).is_none() {
@@ -252,7 +285,7 @@ impl<'a, 'ctx> FunctionTransformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
     fn set_bb(&mut self, id: BasicBlockId) -> Result<(), TransformerError> {
         match self.blocks.get(&id) {
             Some(bb) => {
-                self.builder.position_at_end(*bb);
+                self.program.builder.position_at_end(*bb);
                 Ok(())
             }
             None => Err(TransformerError::BasicBlockNotFound),
@@ -270,8 +303,11 @@ impl<'a, 'ctx> FunctionTransformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
             // If not, then allocate a pointer in the Builder
             Entry::Vacant(ve) => {
                 // and add a mapping from VarID to the pointer in the local var table
-                let ty = self.context.i64_type();
-                let ptr = self.builder.build_alloca(ty, &name);
+                let ty = self.program.ty_table.get(&decl.ty()).unwrap();
+                let ptr = self
+                    .program
+                    .builder
+                    .build_alloca(ty.into_basic_type().unwrap(), &name);
                 ve.insert(ptr);
                 Ok(())
             }
@@ -289,8 +325,8 @@ impl<'a, 'ctx> FunctionTransformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
             // If not, then allocate a pointer in the Builder
             Entry::Vacant(ve) => {
                 // and add a mapping from VarID to the pointer in the local var table
-                let ty = self.context.i64_type();
-                let ptr = self.builder.build_alloca(ty, &name);
+                let ty = self.program.context.i64_type();
+                let ptr = self.program.builder.build_alloca(ty, &name);
                 ve.insert(ptr);
                 Ok(())
             }
@@ -298,7 +334,7 @@ impl<'a, 'ctx> FunctionTransformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
     }
 
     fn term_return(&mut self) {
-        self.builder.build_return(None);
+        self.program.builder.build_return(None);
     }
 
     fn term_cond_goto(
@@ -312,17 +348,18 @@ impl<'a, 'ctx> FunctionTransformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
         // Look up else_bb
         let else_bb = self.blocks.get(&else_bb).unwrap();
         // Create conditional jump to then or else
-        self.builder
+        self.program
+            .builder
             .build_conditional_branch(cond.into_int_value(), *then_bb, *else_bb);
     }
 
     fn term_goto(&mut self, target: BasicBlockId) {
         let target = self.blocks.get(&target).unwrap();
-        self.builder.build_unconditional_branch(*target);
+        self.program.builder.build_unconditional_branch(*target);
     }
 
     fn assign(&mut self, span: Span, l: PointerValue<'ctx>, v: BasicValueEnum<'ctx>) {
-        self.builder.build_store(l, v);
+        self.program.builder.build_store(l, v);
     }
 
     fn var(&self, v: VarId) -> Result<PointerValue<'ctx>, TransformerError> {
@@ -339,17 +376,81 @@ impl<'a, 'ctx> FunctionTransformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
             .ok_or(TransformerError::TempNotFound)
     }
 
+    fn const_i8(&self, i: i8) -> BasicValueEnum<'ctx> {
+        self.program
+            .context
+            .i8_type()
+            .const_int(i as u64, true)
+            .into()
+    }
+
+    fn const_i16(&self, i: i16) -> BasicValueEnum<'ctx> {
+        self.program
+            .context
+            .i16_type()
+            .const_int(i as u64, true)
+            .into()
+    }
+
+    fn const_i32(&self, i: i32) -> BasicValueEnum<'ctx> {
+        self.program
+            .context
+            .i32_type()
+            .const_int(i as u64, true)
+            .into()
+    }
+
     fn const_i64(&self, i: i64) -> BasicValueEnum<'ctx> {
-        self.context.i64_type().const_int(i as u64, true).into()
+        self.program
+            .context
+            .i64_type()
+            .const_int(i as u64, true)
+            .into()
+    }
+
+    fn const_u8(&self, i: u8) -> BasicValueEnum<'ctx> {
+        self.program
+            .context
+            .i8_type()
+            .const_int(i as u64, false)
+            .into()
+    }
+
+    fn const_u16(&self, i: u16) -> BasicValueEnum<'ctx> {
+        self.program
+            .context
+            .i16_type()
+            .const_int(i as u64, false)
+            .into()
+    }
+
+    fn const_u32(&self, i: u32) -> BasicValueEnum<'ctx> {
+        self.program
+            .context
+            .i32_type()
+            .const_int(i as u64, false)
+            .into()
+    }
+
+    fn const_u64(&self, i: u64) -> BasicValueEnum<'ctx> {
+        self.program
+            .context
+            .i64_type()
+            .const_int(i as u64, false)
+            .into()
     }
 
     fn const_bool(&self, b: bool) -> BasicValueEnum<'ctx> {
-        let bt = self.context.bool_type();
+        let bt = self.program.context.bool_type();
         bt.const_int(b as u64, true).into()
     }
 
+    fn const_f64(&self, f: f64) -> BasicValueEnum<'ctx> {
+        self.program.context.f64_type().const_float(f).into()
+    }
+
     fn load(&self, lv: PointerValue<'ctx>) -> BasicValueEnum<'ctx> {
-        self.builder.build_load(lv, "")
+        self.program.builder.build_load(lv, "")
     }
 
     fn add(&self, a: BasicValueEnum<'ctx>, b: BasicValueEnum<'ctx>) -> BasicValueEnum<'ctx> {
@@ -371,17 +472,11 @@ mod mir2llvm_tests_visual {
     //! caused by the complexity that is created if we try to use LLVM's JIT to do
     //! automated unit testing for MIR to LLVM transformation.
 
-    use std::path::Path;
-
-    use inkwell::{
-        context::Context,
-        targets::{CodeModel, InitializationConfig, RelocMode},
-        OptimizationLevel,
-    };
+    use inkwell::context::Context;
 
     use crate::{
         compiler::{
-            ast::{self, Element, Module, MAIN_MODULE},
+            ast::{Module, MAIN_MODULE},
             diagnostics::Logger,
             lexer::{tokens::Token, LexerError},
             mir::{transform, MirProject, ProgramTraverser},
@@ -390,10 +485,8 @@ mod mir2llvm_tests_visual {
             CompilerDisplay, CompilerError, Lexer, SourceMap,
         },
         llvm::mir::LlvmProgramTransformer,
-        resolve_types, StringId, StringTable,
+        resolve_types, StringTable,
     };
-
-    use super::LlvmFunctionTransformer;
 
     #[test]
     fn var_declaration() {
@@ -401,6 +494,44 @@ mod mir2llvm_tests_visual {
             fn test() {
                 let x: i64 := 5;
                 let b: bool := true;
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
+    fn base_numerical_types() {
+        let text = "
+            fn test() {
+                let a: i8 :=  1i8;
+                let b: i16 := 2i16;
+                let c: i32 := 3i32;
+                let d: i64 := 4i64;
+
+                let e: u8 :=  5u8;
+                let f: u16 := 6u16;
+                let g: u32 := 7u32;
+                let h: u64 := 8u64;
+                
+                let i: f64 := 9.0;
+
+                let bl:bool := true;
+
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    //#[test]
+    fn base_array_type() {
+        let text = "
+            fn test() {
+                let a: [i8; 2] :=  [1i8, 2i8];
+
                 return;
             }
         ";

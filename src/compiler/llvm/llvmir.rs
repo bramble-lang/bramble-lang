@@ -1658,7 +1658,7 @@ impl<'ctx> LlvmIsAggregateType for BasicTypeEnum<'ctx> {
     }
 }
 
-trait LlvmToBasicTypeEnum<'ctx> {
+pub trait LlvmToBasicTypeEnum<'ctx> {
     fn into_basic_type(self) -> Result<BasicTypeEnum<'ctx>>;
 }
 

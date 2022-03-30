@@ -24,11 +24,16 @@ impl<'a> ProgramTraverser<'a> {
 
     /// This function takes an implementation of [`ProgramTransformer`] and uses it to
     /// conver source MIR value into the target IR form.
-    pub fn map<L, V, F: FunctionTransformer<L, V>, P: ProgramTransformer<L, V, F>>(
+    pub fn map<'p, L, V, F: FunctionTransformer<L, V>, P: ProgramTransformer<'p, L, V, F>>(
         &self,
-        xfmr: &mut P,
+        xfmr: &'p mut P,
     ) {
         debug!("Applying given Transformer to MIR");
+
+        // Add every type in the type table to the project
+        for (id, ty) in self.mir.type_iter() {
+            xfmr.add_type(id, ty).unwrap()
+        }
 
         // Declare every function in the ProgramTransformer
         for (id, f) in self.mir.function_iter() {
@@ -183,15 +188,15 @@ impl<'a, L, V, T: FunctionTransformer<L, V>> FunctionTraverser<'a, L, V, T> {
     fn constant(&mut self, c: Constant) -> V {
         match c {
             Constant::Unit => todo!(),
-            Constant::I8(_) => todo!(),
-            Constant::I16(_) => todo!(),
-            Constant::I32(_) => todo!(),
+            Constant::I8(i) => self.xfmr.const_i8(i),
+            Constant::I16(i) => self.xfmr.const_i16(i),
+            Constant::I32(i) => self.xfmr.const_i32(i),
             Constant::I64(i) => self.xfmr.const_i64(i),
-            Constant::U8(_) => todo!(),
-            Constant::U16(_) => todo!(),
-            Constant::U32(_) => todo!(),
-            Constant::U64(_) => todo!(),
-            Constant::F64(_) => todo!(),
+            Constant::U8(u) => self.xfmr.const_u8(u),
+            Constant::U16(u) => self.xfmr.const_u16(u),
+            Constant::U32(u) => self.xfmr.const_u32(u),
+            Constant::U64(u) => self.xfmr.const_u64(u),
+            Constant::F64(f) => self.xfmr.const_f64(f),
             Constant::Bool(b) => self.xfmr.const_bool(b),
             Constant::StringLiteral(_) => todo!(),
             Constant::Null => todo!(),
