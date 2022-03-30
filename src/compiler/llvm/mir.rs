@@ -180,6 +180,8 @@ impl<'p, 'module, 'ctx>
         }
         .and_then(|llvm_ty| self.ty_table.insert(id, llvm_ty));
 
+        // If `insert` returns `None` then it means there was no previous value associated with `id`
+        // otherwise, `id` was already defined and this should thrown an error.
         match r {
             None => Ok(()),
             Some(_) => Err(TransformerError::TypeAlreadyDefined),
