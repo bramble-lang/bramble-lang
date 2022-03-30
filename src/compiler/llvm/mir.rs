@@ -212,7 +212,7 @@ impl<'a, 'ctx, 'p>
     }
 }
 
-struct LlvmFunctionTransformer<'a, 'ctx, 'p> {
+struct LlvmFunctionTransformer<'p, 'a, 'ctx> {
     program: &'p LlvmProgramTransformer<'a, 'ctx>,
 
     /// The LLVM function instance that is currently being built by the transformer
@@ -231,7 +231,7 @@ struct LlvmFunctionTransformer<'a, 'ctx, 'p> {
     blocks: HashMap<BasicBlockId, inkwell::basic_block::BasicBlock<'ctx>>,
 }
 
-impl<'a, 'ctx, 'p> LlvmFunctionTransformer<'a, 'ctx, 'p> {
+impl<'p, 'a, 'ctx> LlvmFunctionTransformer<'p, 'a, 'ctx> {
     pub fn new(
         function: FunctionValue<'ctx>,
         program: &'p LlvmProgramTransformer<'a, 'ctx>,
