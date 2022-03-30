@@ -169,25 +169,22 @@ impl<'a, 'ctx, 'p>
     fn add_type(&mut self, id: TypeId, ty: &MirTypeDef) -> Result<(), TransformerError> {
         let r = match ty {
             MirTypeDef::Base(base) => match base {
-                MirBaseType::I64 => self.ty_table.insert(id, self.context.i64_type().into()),
-                MirBaseType::Bool => self.ty_table.insert(id, self.context.bool_type().into()),
-                MirBaseType::Unit => self.ty_table.insert(id, self.context.void_type().into()),
+                MirBaseType::U8 | MirBaseType::I8 => Some(self.context.i8_type().into()),
+                MirBaseType::U16 | MirBaseType::I16 => Some(self.context.i16_type().into()),
+                MirBaseType::U32 | MirBaseType::I32 => Some(self.context.i32_type().into()),
+                MirBaseType::U64 | MirBaseType::I64 => Some(self.context.i64_type().into()),
+                MirBaseType::Bool => Some(self.context.bool_type().into()),
+                MirBaseType::Unit => Some(self.context.void_type().into()),
                 // TODO: Should Null this actually make it to MIR?
                 MirBaseType::Null => None,
-                MirBaseType::U8 => None,
-                MirBaseType::U16 => None,
-                MirBaseType::U32 => None,
-                MirBaseType::U64 => None,
-                MirBaseType::I8 => None,
-                MirBaseType::I16 => None,
-                MirBaseType::I32 => None,
                 MirBaseType::F64 => None,
                 MirBaseType::StringLiteral => None,
             },
             MirTypeDef::Array { ty, sz } => todo!(),
             MirTypeDef::RawPointer { mutable, target } => todo!(),
             MirTypeDef::Structure { path, def } => todo!(),
-        };
+        }
+        .and_then(|llvm_ty| self.ty_table.insert(id, llvm_ty));
 
         match r {
             None => Ok(()),
@@ -365,11 +362,67 @@ impl<'a, 'ctx, 'p> FunctionTransformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
             .ok_or(TransformerError::TempNotFound)
     }
 
+    fn const_i8(&self, i: i8) -> BasicValueEnum<'ctx> {
+        self.program
+            .context
+            .i8_type()
+            .const_int(i as u64, true)
+            .into()
+    }
+
+    fn const_i16(&self, i: i16) -> BasicValueEnum<'ctx> {
+        self.program
+            .context
+            .i16_type()
+            .const_int(i as u64, true)
+            .into()
+    }
+
+    fn const_i32(&self, i: i32) -> BasicValueEnum<'ctx> {
+        self.program
+            .context
+            .i32_type()
+            .const_int(i as u64, true)
+            .into()
+    }
+
     fn const_i64(&self, i: i64) -> BasicValueEnum<'ctx> {
         self.program
             .context
             .i64_type()
             .const_int(i as u64, true)
+            .into()
+    }
+
+    fn const_u8(&self, i: u8) -> BasicValueEnum<'ctx> {
+        self.program
+            .context
+            .i8_type()
+            .const_int(i as u64, false)
+            .into()
+    }
+
+    fn const_u16(&self, i: u16) -> BasicValueEnum<'ctx> {
+        self.program
+            .context
+            .i16_type()
+            .const_int(i as u64, false)
+            .into()
+    }
+
+    fn const_u32(&self, i: u32) -> BasicValueEnum<'ctx> {
+        self.program
+            .context
+            .i32_type()
+            .const_int(i as u64, false)
+            .into()
+    }
+
+    fn const_u64(&self, i: u64) -> BasicValueEnum<'ctx> {
+        self.program
+            .context
+            .i64_type()
+            .const_int(i as u64, false)
             .into()
     }
 
@@ -423,6 +476,29 @@ mod mir2llvm_tests_visual {
             fn test() {
                 let x: i64 := 5;
                 let b: bool := true;
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
+    fn base_types() {
+        let text = "
+            fn test() {
+                let a: i8 :=  1i8;
+                let b: i16 := 2i16;
+                let c: i32 := 3i32;
+                let d: i64 := 4i64;
+
+                let e: u8 :=  5u8;
+                let f: u16 := 6u16;
+                let g: u32 := 7u32;
+                let h: u64 := 8u64;
+
+                let bl:bool := true;
+
                 return;
             }
         ";

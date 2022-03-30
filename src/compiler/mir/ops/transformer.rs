@@ -90,8 +90,29 @@ pub trait FunctionTransformer<L, V> {
 
     // The following methods correspond to [`RValue`] variants
 
+    /// Create a const [`i8`].
+    fn const_i8(&self, i: i8) -> V;
+
+    /// Create a const [`i16`].
+    fn const_i16(&self, i: i16) -> V;
+
+    /// Create a const [`i32`].
+    fn const_i32(&self, i: i32) -> V;
+
     /// Create a const [`i64`].
     fn const_i64(&self, i: i64) -> V;
+
+    /// Create a const [`u8`].
+    fn const_u8(&self, i: u8) -> V;
+
+    /// Create a const [`u16`].
+    fn const_u16(&self, i: u16) -> V;
+
+    /// Create a const [`u32`].
+    fn const_u32(&self, i: u32) -> V;
+
+    /// Create a const [`u64`].
+    fn const_u64(&self, i: u64) -> V;
 
     /// Create a const [`bool`].
     fn const_bool(&self, b: bool) -> V;
