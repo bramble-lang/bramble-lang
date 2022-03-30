@@ -173,11 +173,11 @@ impl<'a, 'ctx, 'p>
                 MirBaseType::U16 | MirBaseType::I16 => Some(self.context.i16_type().into()),
                 MirBaseType::U32 | MirBaseType::I32 => Some(self.context.i32_type().into()),
                 MirBaseType::U64 | MirBaseType::I64 => Some(self.context.i64_type().into()),
+                MirBaseType::F64 => Some(self.context.f64_type().into()),
                 MirBaseType::Bool => Some(self.context.bool_type().into()),
                 MirBaseType::Unit => Some(self.context.void_type().into()),
                 // TODO: Should Null this actually make it to MIR?
                 MirBaseType::Null => None,
-                MirBaseType::F64 => None,
                 MirBaseType::StringLiteral => None,
             },
             MirTypeDef::Array { ty, sz } => todo!(),
@@ -431,6 +431,10 @@ impl<'a, 'ctx, 'p> FunctionTransformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
         bt.const_int(b as u64, true).into()
     }
 
+    fn const_f64(&self, f: f64) -> BasicValueEnum<'ctx> {
+        self.program.context.f64_type().const_float(f).into()
+    }
+
     fn load(&self, lv: PointerValue<'ctx>) -> BasicValueEnum<'ctx> {
         self.program.builder.build_load(lv, "")
     }
@@ -496,6 +500,8 @@ mod mir2llvm_tests_visual {
                 let f: u16 := 6u16;
                 let g: u32 := 7u32;
                 let h: u64 := 8u64;
+                
+                let i: f64 := 9.0;
 
                 let bl:bool := true;
 

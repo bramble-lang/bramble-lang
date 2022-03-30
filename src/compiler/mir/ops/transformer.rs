@@ -117,6 +117,9 @@ pub trait FunctionTransformer<L, V> {
     /// Create a const [`bool`].
     fn const_bool(&self, b: bool) -> V;
 
+    /// Create a const [`f64`].
+    fn const_f64(&self, f: f64) -> V;
+
     /// Load a value from a memory location
     fn load(&self, lv: L) -> V;
 
