@@ -488,7 +488,7 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
-    fn base_types() {
+    fn base_numerical_types() {
         let text = "
             fn test() {
                 let a: i8 :=  1i8;
