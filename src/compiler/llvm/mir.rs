@@ -168,18 +168,7 @@ impl<'p, 'module, 'ctx>
 
     fn add_type(&mut self, id: TypeId, ty: &MirTypeDef) -> Result<(), TransformerError> {
         let r = match ty {
-            MirTypeDef::Base(base) => match base {
-                MirBaseType::U8 | MirBaseType::I8 => Some(self.context.i8_type().into()),
-                MirBaseType::U16 | MirBaseType::I16 => Some(self.context.i16_type().into()),
-                MirBaseType::U32 | MirBaseType::I32 => Some(self.context.i32_type().into()),
-                MirBaseType::U64 | MirBaseType::I64 => Some(self.context.i64_type().into()),
-                MirBaseType::F64 => Some(self.context.f64_type().into()),
-                MirBaseType::Bool => Some(self.context.bool_type().into()),
-                MirBaseType::Unit => Some(self.context.void_type().into()),
-                // TODO: Should Null this actually make it to MIR?
-                MirBaseType::Null => None,
-                MirBaseType::StringLiteral => None,
-            },
+            MirTypeDef::Base(base) => base.into_basic_type_enum(self.context),
             MirTypeDef::Array { ty, sz } => {
                 let el_llvm_ty = self.ty_table.get(ty).unwrap();
                 let len = *sz as u32;
@@ -209,6 +198,24 @@ impl<'p, 'module, 'ctx>
 
         // Create a new fucntion transformer that will populate the assoicated function value
         Ok(LlvmFunctionTransformer::new(*fv, self))
+    }
+}
+
+impl MirBaseType {
+    /// Convert into the corresponding LLVM type and then wrap that in an [`AnyTypeEnum`] variant.
+    fn into_basic_type_enum<'ctx>(&self, context: &'ctx Context) -> Option<AnyTypeEnum<'ctx>> {
+        match self {
+            MirBaseType::U8 | MirBaseType::I8 => Some(context.i8_type().into()),
+            MirBaseType::U16 | MirBaseType::I16 => Some(context.i16_type().into()),
+            MirBaseType::U32 | MirBaseType::I32 => Some(context.i32_type().into()),
+            MirBaseType::U64 | MirBaseType::I64 => Some(context.i64_type().into()),
+            MirBaseType::F64 => Some(context.f64_type().into()),
+            MirBaseType::Bool => Some(context.bool_type().into()),
+            MirBaseType::Unit => Some(context.void_type().into()),
+            // TODO: Should Null this actually make it to MIR?
+            MirBaseType::Null => None,
+            MirBaseType::StringLiteral => None,
+        }
     }
 }
 
