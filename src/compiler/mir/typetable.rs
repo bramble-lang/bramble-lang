@@ -235,6 +235,8 @@ impl TypeTable {
         true
     }
 
+    /// Creates an [`Iterator`] over the [`MirTypeDefs`](MirTypeDef) that are in this
+    /// MIR program. Each [`MirTypeDef`] is paired with its unique [`TypeId`].
     pub fn iter(&self) -> impl Iterator<Item = (TypeId, &MirTypeDef)> {
         self.table
             .iter()
