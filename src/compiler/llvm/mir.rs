@@ -167,7 +167,7 @@ impl<'p, 'module, 'ctx>
     }
 
     fn add_type(&mut self, id: TypeId, ty: &MirTypeDef) -> Result<(), TransformerError> {
-        let r = match ty {
+        let previous_value = match ty {
             MirTypeDef::Base(base) => base.into_basic_type_enum(self.context),
             MirTypeDef::Array { ty, sz } => {
                 let el_llvm_ty = self.ty_table.get(ty).unwrap();
@@ -182,7 +182,7 @@ impl<'p, 'module, 'ctx>
 
         // If `insert` returns `None` then it means there was no previous value associated with `id`
         // otherwise, `id` was already defined and this should thrown an error.
-        match r {
+        match previous_value {
             None => Ok(()),
             Some(_) => Err(TransformerError::TypeAlreadyDefined),
         }
