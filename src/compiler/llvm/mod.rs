@@ -10,3 +10,6 @@ mod writable;
 
 use super::ast;
 pub use llvmir::IrGen;
+
+#[cfg(test)]
+mod mir_test;
