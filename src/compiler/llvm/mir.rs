@@ -169,18 +169,9 @@ impl<'p, 'module, 'ctx>
     fn add_type(&mut self, id: TypeId, ty: &MirTypeDef) -> Result<(), TransformerError> {
         debug!("Adding a type to the Module");
 
-        let previous_value = match ty {
-            MirTypeDef::Base(base) => base.into_basic_type_enum(self.context),
-            MirTypeDef::Array { ty, sz } => {
-                let el_llvm_ty = self.ty_table.get(ty).unwrap();
-                let len = *sz as u32;
-                let bt = el_llvm_ty.into_basic_type().unwrap().as_basic_type_enum(); // I don't know why as_basic_type_enum has to be called but without it the array_type method doesn't work!
-                Some(bt.array_type(len).into())
-            }
-            MirTypeDef::RawPointer { mutable, target } => todo!(),
-            MirTypeDef::Structure { path, def } => todo!(),
-        }
-        .and_then(|llvm_ty| self.ty_table.insert(id, llvm_ty));
+        let previous_value = ty
+            .into_basic_type_enum(self)
+            .and_then(|llvm_ty| self.ty_table.insert(id, llvm_ty));
 
         // If `insert` returns `None` then it means there was no previous value associated with `id`
         // otherwise, `id` was already defined and this should thrown an error.
@@ -202,6 +193,25 @@ impl<'p, 'module, 'ctx>
 
         // Create a new fucntion transformer that will populate the assoicated function value
         Ok(LlvmFunctionTransformer::new(*fv, self))
+    }
+}
+
+impl MirTypeDef {
+    fn into_basic_type_enum<'module, 'ctx>(
+        &self,
+        p: &LlvmProgramTransformer<'module, 'ctx>,
+    ) -> Option<AnyTypeEnum<'ctx>> {
+        match self {
+            MirTypeDef::Base(base) => base.into_basic_type_enum(p.context),
+            MirTypeDef::Array { ty, sz } => {
+                let el_llvm_ty = p.ty_table.get(ty).unwrap();
+                let len = *sz as u32;
+                let bt = el_llvm_ty.into_basic_type().unwrap().as_basic_type_enum(); // I don't know why as_basic_type_enum has to be called but without it the array_type method doesn't work!
+                Some(bt.array_type(len).into())
+            }
+            MirTypeDef::RawPointer { mutable, target } => todo!(),
+            MirTypeDef::Structure { path, def } => todo!(),
+        }
     }
 }
 
