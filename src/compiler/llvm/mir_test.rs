@@ -97,7 +97,7 @@ mod mir2llvm_tests_visual {
             }
            
             mod bats {
-                fn bar() {
+                fn bar(a: i64) {
                     let x: i64 := 5;
                     let b: bool := true;
                     return;

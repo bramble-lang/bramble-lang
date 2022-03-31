@@ -114,6 +114,17 @@ impl Procedure {
         ArgId::new(id)
     }
 
+    /// Returns an [`Iterator`] over the [arguments](ArgDecl) and their associated [`ArgIds`](ArgId)
+    /// that are defined for this function.
+    pub fn arg_iter(&self) -> impl Iterator<Item = (ArgId, &ArgDecl)> {
+        self.args
+            .iter()
+            .enumerate()
+            .map(|(id, arg)| (ArgId::new(id), arg))
+    }
+
+    /// Returns an [`Iterator`] over the [`BasicBlocks`](BasicBlock) and their associated [`BasicBlockIds`](BasicBlockId)
+    /// that comprise this function.
     pub fn bb_iter(&self) -> impl Iterator<Item = (BasicBlockId, &BasicBlock)> {
         self.blocks
             .iter()
