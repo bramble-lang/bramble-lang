@@ -167,6 +167,8 @@ impl<'p, 'module, 'ctx>
     }
 
     fn add_type(&mut self, id: TypeId, ty: &MirTypeDef) -> Result<(), TransformerError> {
+        debug!("Adding a type to the Module");
+
         let previous_value = match ty {
             MirTypeDef::Base(base) => base.into_basic_type_enum(self.context),
             MirTypeDef::Array { ty, sz } => {
