@@ -7,7 +7,7 @@ use log::debug;
 
 use crate::compiler::mir::{ir::*, MirProject};
 
-use super::{transformer::FunctionTransformer, ProgramTransformer};
+use super::{transformer::FunctionBuilder, ProgramTransformer};
 
 /// Traverses all the items in an input [`MirProject`] and orchestrates
 /// a [`ProgramTransformer`] to transform the input MIR into a target
@@ -24,7 +24,7 @@ impl<'a> ProgramTraverser<'a> {
 
     /// This function takes an implementation of [`ProgramTransformer`] and uses it to
     /// conver source MIR value into the target IR form.
-    pub fn map<'p, L, V, F: FunctionTransformer<L, V>, P: ProgramTransformer<'p, L, V, F>>(
+    pub fn map<'p, L, V, F: FunctionBuilder<L, V>, P: ProgramTransformer<'p, L, V, F>>(
         &self,
         xfmr: &'p mut P,
     ) {
@@ -66,7 +66,7 @@ impl<'a> ProgramTraverser<'a> {
 ///
 /// `T` - the type that implements the [`Transformer`] trait and will actually handle the
 /// conversion to the target IR.
-pub struct FunctionTraverser<'a, L, V, T: FunctionTransformer<L, V>> {
+pub struct FunctionTraverser<'a, L, V, T: FunctionBuilder<L, V>> {
     xfmr: &'a mut T,
     mir: &'a MirProject,
     function: &'a Procedure,
@@ -74,7 +74,7 @@ pub struct FunctionTraverser<'a, L, V, T: FunctionTransformer<L, V>> {
     _v: PhantomData<V>,
 }
 
-impl<'a, L, V, T: FunctionTransformer<L, V>> FunctionTraverser<'a, L, V, T> {
+impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
     pub fn new(mir: &'a MirProject, function: &'a Procedure, xfmr: &'a mut T) -> Self {
         debug!("New Function Traverser");
         Self {
