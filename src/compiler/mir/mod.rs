@@ -22,7 +22,7 @@ mod typetable;
 pub mod ir;
 pub mod transform;
 
-pub use ops::{FunctionBuilder, ProgramTransformer, ProgramTraverser, TransformerError};
+pub use ops::{FunctionBuilder, ProgramBuilder, ProgramTraverser, TransformerError};
 pub use project::{DefId, MirProject};
 pub use typetable::{MirBaseType, MirTypeDef, TypeId};
 

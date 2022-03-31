@@ -24,7 +24,7 @@ use crate::compiler::{
 
 /// Defines the interface used by the [`ProgramTraverser`](super::ProgramTraverser)
 /// to convert a MIR program into another IR form.
-pub trait ProgramTransformer<'p, L, V, F: FunctionBuilder<L, V>> {
+pub trait ProgramBuilder<'p, L, V, F: FunctionBuilder<L, V>> {
     /// Will attempt to Add the given function to the set of functions in the target
     /// IR.
     fn add_function(

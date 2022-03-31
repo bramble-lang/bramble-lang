@@ -17,7 +17,7 @@ use crate::{
     compiler::{
         ast::Path,
         mir::{
-            ir::*, DefId, FunctionBuilder, MirBaseType, MirTypeDef, ProgramTransformer,
+            ir::*, DefId, FunctionBuilder, MirBaseType, MirTypeDef, ProgramBuilder,
             TransformerError, TypeId,
         },
         CompilerDisplay, SourceMap, Span,
@@ -77,7 +77,7 @@ impl<'module, 'ctx> LlvmProgram<'module, 'ctx> {
 }
 
 /// Transforms a complete program from MIR to LLVM IR.
-struct LlvmProgramTransformer<'module, 'ctx> {
+struct LlvmProgramBuilder<'module, 'ctx> {
     /// LLVVM Context
     context: &'ctx Context,
 
@@ -101,7 +101,7 @@ struct LlvmProgramTransformer<'module, 'ctx> {
     ty_table: HashMap<TypeId, AnyTypeEnum<'ctx>>,
 }
 
-impl<'module, 'ctx> LlvmProgramTransformer<'module, 'ctx> {
+impl<'module, 'ctx> LlvmProgramBuilder<'module, 'ctx> {
     pub fn new(
         ctx: &'ctx Context,
         module: &'module Module<'ctx>,
@@ -139,12 +139,12 @@ impl<'module, 'ctx> LlvmProgramTransformer<'module, 'ctx> {
 }
 
 impl<'p, 'module, 'ctx>
-    ProgramTransformer<
+    ProgramBuilder<
         'p,
         PointerValue<'ctx>,
         BasicValueEnum<'ctx>,
         LlvmFunctionBuilder<'p, 'module, 'ctx>,
-    > for LlvmProgramTransformer<'module, 'ctx>
+    > for LlvmProgramBuilder<'module, 'ctx>
 {
     fn add_function(
         &mut self,
@@ -199,7 +199,7 @@ impl<'p, 'module, 'ctx>
 impl MirTypeDef {
     fn into_basic_type_enum<'module, 'ctx>(
         &self,
-        p: &LlvmProgramTransformer<'module, 'ctx>,
+        p: &LlvmProgramBuilder<'module, 'ctx>,
     ) -> Option<AnyTypeEnum<'ctx>> {
         match self {
             MirTypeDef::Base(base) => base.into_basic_type_enum(p.context),
@@ -234,7 +234,7 @@ impl MirBaseType {
 }
 
 struct LlvmFunctionBuilder<'p, 'module, 'ctx> {
-    program: &'p LlvmProgramTransformer<'module, 'ctx>,
+    program: &'p LlvmProgramBuilder<'module, 'ctx>,
 
     /// The LLVM function instance that is currently being built by the transformer
     /// all insructions will be added to this function.
@@ -255,7 +255,7 @@ struct LlvmFunctionBuilder<'p, 'module, 'ctx> {
 impl<'p, 'module, 'ctx> LlvmFunctionBuilder<'p, 'module, 'ctx> {
     pub fn new(
         function: FunctionValue<'ctx>,
-        program: &'p LlvmProgramTransformer<'module, 'ctx>,
+        program: &'p LlvmProgramBuilder<'module, 'ctx>,
     ) -> Self {
         debug!("Creating LLVM Function Transformer for function");
 
@@ -496,7 +496,7 @@ mod mir2llvm_tests_visual {
             semantics::semanticnode::SemanticContext,
             CompilerDisplay, CompilerError, Lexer, SourceMap,
         },
-        llvm::mir::LlvmProgramTransformer,
+        llvm::mir::LlvmProgramBuilder,
         resolve_types, StringTable,
     };
 
@@ -594,7 +594,7 @@ mod mir2llvm_tests_visual {
         let module = context.create_module("test");
         let builder = context.create_builder();
 
-        let mut xfmr = LlvmProgramTransformer::new(&context, &module, &builder, &sm, &table);
+        let mut xfmr = LlvmProgramBuilder::new(&context, &module, &builder, &sm, &table);
 
         let proj_traverser = ProgramTraverser::new(&project);
 

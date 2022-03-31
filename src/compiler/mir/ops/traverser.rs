@@ -7,7 +7,7 @@ use log::debug;
 
 use crate::compiler::mir::{ir::*, MirProject};
 
-use super::{transformer::FunctionBuilder, ProgramTransformer};
+use super::{transformer::FunctionBuilder, ProgramBuilder};
 
 /// Traverses all the items in an input [`MirProject`] and orchestrates
 /// a [`ProgramTransformer`] to transform the input MIR into a target
@@ -24,7 +24,7 @@ impl<'a> ProgramTraverser<'a> {
 
     /// This function takes an implementation of [`ProgramTransformer`] and uses it to
     /// conver source MIR value into the target IR form.
-    pub fn map<'p, L, V, F: FunctionBuilder<L, V>, P: ProgramTransformer<'p, L, V, F>>(
+    pub fn map<'p, L, V, F: FunctionBuilder<L, V>, P: ProgramBuilder<'p, L, V, F>>(
         &self,
         xfmr: &'p mut P,
     ) {
