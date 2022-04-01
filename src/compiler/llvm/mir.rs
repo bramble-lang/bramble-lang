@@ -76,6 +76,10 @@ impl<'module, 'ctx> LlvmProgram<'module, 'ctx> {
     }
 }
 
+struct FunctionData<'ctx> {
+    function: FunctionValue<'ctx>,
+}
+
 /// Transforms a complete program from MIR to LLVM IR.
 pub struct LlvmProgramBuilder<'module, 'ctx> {
     /// LLVVM Context
@@ -89,7 +93,7 @@ pub struct LlvmProgramBuilder<'module, 'ctx> {
 
     /// Table mapping the [`DefId`] used to identify a function in MIR to the
     /// [`FunctionValue`] used to identify a function in LLVM.
-    fn_table: HashMap<DefId, FunctionValue<'ctx>>,
+    fn_table: HashMap<DefId, FunctionData<'ctx>>,
 
     /// Reference to the source map for the program being transformed to LLVM
     source_map: &'ctx SourceMap,
@@ -162,6 +166,12 @@ impl<'p, 'module, 'ctx>
 
         debug!("Adding function to Module: {}", name);
 
+        // Determine the channel for the return value
+        // Set the return channel property for the function
+
+        // If the functoin returns values via a Output Reference Parameter
+        // then make that parameter the first parameter
+
         // Convert list of arguments into a list of LLVM types
         let llvm_args = args
             .iter()
@@ -173,7 +183,7 @@ impl<'p, 'module, 'ctx>
         let function = self.module.add_function(&name, ft, None);
 
         // Add function to function table
-        match self.fn_table.insert(func_id, function) {
+        match self.fn_table.insert(func_id, FunctionData { function }) {
             Some(_) => Err(TransformerError::FunctionAlreadyDeclared),
             None => Ok(()),
         }
@@ -205,7 +215,7 @@ impl<'p, 'module, 'ctx>
             .ok_or(TransformerError::FunctionNotFound)?;
 
         // Create a new fucntion transformer that will populate the assoicated function value
-        Ok(LlvmFunctionBuilder::new(*fv, self))
+        Ok(LlvmFunctionBuilder::new(fv.function, self))
     }
 }
 
