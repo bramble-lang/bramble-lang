@@ -7,6 +7,11 @@ mod mir2llvm_tests_visual {
     //! of the MIR to LLVM transformation process. They also serve to fill in a gap
     //! caused by the complexity that is created if we try to use LLVM's JIT to do
     //! automated unit testing for MIR to LLVM transformation.
+    //!
+    //! While the value of these tests as automatic tests is less than the unit tests
+    //! in other compiler stages, these do help insure that the LLVM libraries are being
+    //! used correctly: if LLVM is incorrectly used then it will fault and the unit tests
+    //! will fail.
 
     use inkwell::context::Context;
 
