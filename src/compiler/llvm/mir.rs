@@ -77,7 +77,24 @@ impl<'module, 'ctx> LlvmProgram<'module, 'ctx> {
 }
 
 struct FunctionData<'ctx> {
+    ret_method: ReturnMethod,
     function: FunctionValue<'ctx>,
+}
+
+/// Specifies the method that will be used to pass the result of this
+/// function back to its caller.
+enum ReturnMethod {
+    /// An extra "out" parameter is added to this function's parameters that
+    /// contains a pointer to a location in the caller's stack. The function's
+    /// result will be written to that location.
+    ///
+    /// This method should be used for aggregate types such as structures or
+    /// arrays.
+    OutParam,
+
+    /// This will use LLVM's return operator to pass the result back to the
+    /// caller function, via the platform appropriate method.
+    Return,
 }
 
 /// Transforms a complete program from MIR to LLVM IR.
@@ -183,7 +200,12 @@ impl<'p, 'module, 'ctx>
         let function = self.module.add_function(&name, ft, None);
 
         // Add function to function table
-        match self.fn_table.insert(func_id, FunctionData { function }) {
+        let function = FunctionData {
+            ret_method: ReturnMethod::Return,
+            function,
+        };
+
+        match self.fn_table.insert(func_id, function) {
             Some(_) => Err(TransformerError::FunctionAlreadyDeclared),
             None => Ok(()),
         }
