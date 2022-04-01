@@ -228,7 +228,7 @@ impl MirTypeDef {
         match self {
             MirTypeDef::Base(base) => base.into_basic_type_enum(p.context),
             MirTypeDef::Array { ty, sz } => {
-                let el_llvm_ty = p.ty_table.get(ty).unwrap();
+                let el_llvm_ty = p.get_type(*ty).unwrap();
                 let len = *sz as u32;
                 let bt = el_llvm_ty.into_basic_type().unwrap().as_basic_type_enum(); // I don't know why as_basic_type_enum has to be called but without it the array_type method doesn't work!
                 Some(bt.array_type(len).into())
@@ -357,7 +357,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<PointerValue<'ctx>, BasicValueEnum<'ctx>
             // If not, then allocate a pointer in the Builder
             Entry::Vacant(ve) => {
                 // and add a mapping from VarID to the pointer in the local var table
-                let ty = self.program.ty_table.get(&decl.ty()).unwrap();
+                let ty = self.program.get_type(decl.ty()).unwrap();
                 let ptr = self
                     .program
                     .builder
