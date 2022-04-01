@@ -24,13 +24,14 @@ use crate::compiler::{
 
 /// Defines the interface used by the [`ProgramTraverser`](super::ProgramTraverser)
 /// to convert a MIR program into another IR form.
-pub trait ProgramTransformer<'p, L, V, F: FunctionTransformer<L, V>> {
+pub trait ProgramBuilder<'p, L, V, F: FunctionBuilder<L, V>> {
     /// Will attempt to Add the given function to the set of functions in the target
     /// IR.
     fn add_function(
         &mut self,
         func_id: DefId,
         canonical_path: &Path,
+        args: &[ArgDecl],
     ) -> Result<(), TransformerError>;
 
     fn add_type(&mut self, id: TypeId, ty: &MirTypeDef) -> Result<(), TransformerError>;
@@ -61,13 +62,16 @@ pub trait ProgramTransformer<'p, L, V, F: FunctionTransformer<L, V>> {
 /// is still a reason for this trait to exist. To create a decoupling between the
 /// mir module and the LLVM IR module and avoid having bi-directional imports creating
 /// a more confusing dependency graph.
-pub trait FunctionTransformer<L, V> {
+pub trait FunctionBuilder<L, V> {
     fn create_bb(&mut self, bb: BasicBlockId) -> Result<(), TransformerError>;
     fn set_bb(&mut self, bb: BasicBlockId) -> Result<(), TransformerError>;
 
     /// Allocate space for the given variable declaration
     fn alloc_var(&mut self, id: VarId, vd: &VarDecl) -> Result<(), TransformerError>;
     fn alloc_temp(&mut self, id: TempId, vd: &TempDecl) -> Result<(), TransformerError>;
+
+    /// Store the value of the given function parameter in the given stack location
+    fn store_arg(&mut self, arg_id: ArgId, var_id: VarId) -> Result<(), TransformerError>;
 
     /// Tells the program to exit this [`BasicBlock`] by returning to the calling function
     fn term_return(&mut self);
@@ -140,4 +144,6 @@ pub enum TransformerError {
     FunctionAlreadyDeclared,
     FunctionNotFound,
     TypeAlreadyDefined,
+    TypeNotFound,
+    ArgNotFound,
 }

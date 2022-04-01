@@ -105,15 +105,31 @@ impl Procedure {
     /// Add an argument to this procedure's argument list and make the argument available as a variable.
     pub fn add_arg(&mut self, name: StringId, ty: TypeId, span: Span) -> ArgId {
         // Add the given argument to the set of variables
-        self.add_var(name, false, ty, ROOT_SCOPE, span);
+        let stack_loc = self.add_var(name, false, ty, ROOT_SCOPE, span);
 
         // Add the argument to the argument set of the function
-        let ad = ArgDecl::new(name, ty, span);
+        let ad = ArgDecl::new(name, ty, Some(stack_loc), span);
         self.args.push(ad);
         let id = self.args.len() - 1;
         ArgId::new(id)
     }
 
+    /// Returns an [`Iterator`] over the [arguments](ArgDecl) and their associated [`ArgIds`](ArgId)
+    /// that are defined for this function.
+    pub fn arg_iter(&self) -> impl Iterator<Item = (ArgId, &ArgDecl)> {
+        self.args
+            .iter()
+            .enumerate()
+            .map(|(id, arg)| (ArgId::new(id), arg))
+    }
+
+    /// Returns a reference to the list of [argments](ArgDecl) for this function.
+    pub fn get_args(&self) -> &[ArgDecl] {
+        &self.args
+    }
+
+    /// Returns an [`Iterator`] over the [`BasicBlocks`](BasicBlock) and their associated [`BasicBlockIds`](BasicBlockId)
+    /// that comprise this function.
     pub fn bb_iter(&self) -> impl Iterator<Item = (BasicBlockId, &BasicBlock)> {
         self.blocks
             .iter()
@@ -387,13 +403,30 @@ pub struct ArgDecl {
     name: StringId,
     /// The type of this variable
     ty: TypeId,
+    /// Location on the stack where the arg is stored
+    var_id: Option<VarId>,
     /// The span of code where this variable was declared
     span: Span,
 }
 
 impl ArgDecl {
-    pub fn new(name: StringId, ty: TypeId, span: Span) -> ArgDecl {
-        ArgDecl { name, ty, span }
+    pub fn new(name: StringId, ty: TypeId, var_id: Option<VarId>, span: Span) -> ArgDecl {
+        ArgDecl {
+            name,
+            ty,
+            var_id,
+            span,
+        }
+    }
+
+    /// Return the [`TypeId`] of this argument
+    pub fn ty(&self) -> TypeId {
+        self.ty
+    }
+
+    /// Return the location where this argument should be stored
+    pub fn var_id(&self) -> Option<VarId> {
+        self.var_id
     }
 }
 
@@ -403,6 +436,11 @@ pub struct ArgId(u32);
 impl ArgId {
     fn new(id: usize) -> ArgId {
         ArgId(id as u32)
+    }
+
+    /// Convert this to a [`u32`].
+    pub fn to_u32(&self) -> u32 {
+        self.0
     }
 }
 

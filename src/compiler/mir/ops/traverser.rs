@@ -7,7 +7,7 @@ use log::debug;
 
 use crate::compiler::mir::{ir::*, MirProject};
 
-use super::{transformer::FunctionTransformer, ProgramTransformer};
+use super::{transformer::FunctionBuilder, ProgramBuilder};
 
 /// Traverses all the items in an input [`MirProject`] and orchestrates
 /// a [`ProgramTransformer`] to transform the input MIR into a target
@@ -24,7 +24,7 @@ impl<'a> ProgramTraverser<'a> {
 
     /// This function takes an implementation of [`ProgramTransformer`] and uses it to
     /// conver source MIR value into the target IR form.
-    pub fn map<'p, L, V, F: FunctionTransformer<L, V>, P: ProgramTransformer<'p, L, V, F>>(
+    pub fn map<'p, L, V, F: FunctionBuilder<L, V>, P: ProgramBuilder<'p, L, V, F>>(
         &self,
         xfmr: &'p mut P,
     ) {
@@ -37,7 +37,7 @@ impl<'a> ProgramTraverser<'a> {
 
         // Declare every function in the ProgramTransformer
         for (id, f) in self.mir.function_iter() {
-            xfmr.add_function(id, f.path()).unwrap();
+            xfmr.add_function(id, f.path(), f.get_args()).unwrap();
         }
 
         // Iterate over every function in MIR
@@ -66,7 +66,7 @@ impl<'a> ProgramTraverser<'a> {
 ///
 /// `T` - the type that implements the [`Transformer`] trait and will actually handle the
 /// conversion to the target IR.
-pub struct FunctionTraverser<'a, L, V, T: FunctionTransformer<L, V>> {
+pub struct FunctionTraverser<'a, L, V, T: FunctionBuilder<L, V>> {
     xfmr: &'a mut T,
     mir: &'a MirProject,
     function: &'a Procedure,
@@ -74,7 +74,7 @@ pub struct FunctionTraverser<'a, L, V, T: FunctionTransformer<L, V>> {
     _v: PhantomData<V>,
 }
 
-impl<'a, L, V, T: FunctionTransformer<L, V>> FunctionTraverser<'a, L, V, T> {
+impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
     pub fn new(mir: &'a MirProject, function: &'a Procedure, xfmr: &'a mut T) -> Self {
         debug!("New Function Traverser");
         Self {
@@ -115,6 +115,15 @@ impl<'a, L, V, T: FunctionTransformer<L, V>> FunctionTraverser<'a, L, V, T> {
         for id in self.get_varid_iter() {
             let decl = *self.get_var(id);
             self.xfmr.alloc_var(id, &decl).unwrap();
+        }
+
+        // Move function parameters into local variables
+        for (id, arg) in self.function.arg_iter() {
+            // Use arg id to look up the associated var id
+            let var_id = arg.var_id().unwrap();
+            // get span from arg decl
+            // get value of the llvm function parameter associated with arg id
+            self.xfmr.store_arg(id, var_id).unwrap();
         }
 
         // Loop through all temp vars and allocate them

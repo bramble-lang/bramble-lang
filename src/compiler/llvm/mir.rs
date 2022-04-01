@@ -17,7 +17,7 @@ use crate::{
     compiler::{
         ast::Path,
         mir::{
-            ir::*, DefId, FunctionTransformer, MirBaseType, MirTypeDef, ProgramTransformer,
+            ir::*, DefId, FunctionBuilder, MirBaseType, MirTypeDef, ProgramBuilder,
             TransformerError, TypeId,
         },
         CompilerDisplay, SourceMap, Span,
@@ -28,7 +28,7 @@ use crate::{
 use super::llvmir::LlvmToBasicTypeEnum;
 
 /// Represents the final result of a Bramble program in LLVM IR.
-struct LlvmProgram<'module, 'ctx> {
+pub struct LlvmProgram<'module, 'ctx> {
     /// LLVM Module
     module: &'module Module<'ctx>,
 }
@@ -77,7 +77,7 @@ impl<'module, 'ctx> LlvmProgram<'module, 'ctx> {
 }
 
 /// Transforms a complete program from MIR to LLVM IR.
-struct LlvmProgramTransformer<'module, 'ctx> {
+pub struct LlvmProgramBuilder<'module, 'ctx> {
     /// LLVVM Context
     context: &'ctx Context,
 
@@ -101,7 +101,7 @@ struct LlvmProgramTransformer<'module, 'ctx> {
     ty_table: HashMap<TypeId, AnyTypeEnum<'ctx>>,
 }
 
-impl<'module, 'ctx> LlvmProgramTransformer<'module, 'ctx> {
+impl<'module, 'ctx> LlvmProgramBuilder<'module, 'ctx> {
     pub fn new(
         ctx: &'ctx Context,
         module: &'module Module<'ctx>,
@@ -136,27 +136,40 @@ impl<'module, 'ctx> LlvmProgramTransformer<'module, 'ctx> {
             .collect::<Vec<_>>()
             .join("_")
     }
+
+    /// Given a [`TypeId`] this will return its associated LLVM [`AnyTypeEnum`] variant.
+    /// If the [`TypeId`] has no associated LLVM type then an error is returned.
+    fn get_type(&self, id: TypeId) -> Result<&AnyTypeEnum<'ctx>, TransformerError> {
+        self.ty_table.get(&id).ok_or(TransformerError::TypeNotFound)
+    }
 }
 
 impl<'p, 'module, 'ctx>
-    ProgramTransformer<
+    ProgramBuilder<
         'p,
         PointerValue<'ctx>,
         BasicValueEnum<'ctx>,
-        LlvmFunctionTransformer<'p, 'module, 'ctx>,
-    > for LlvmProgramTransformer<'module, 'ctx>
+        LlvmFunctionBuilder<'p, 'module, 'ctx>,
+    > for LlvmProgramBuilder<'module, 'ctx>
 {
     fn add_function(
         &mut self,
         func_id: DefId,
         canonical_path: &Path,
+        args: &[ArgDecl],
     ) -> Result<(), TransformerError> {
         let name = self.to_label(canonical_path);
 
         debug!("Adding function to Module: {}", name);
 
+        // Convert list of arguments into a list of LLVM types
+        let llvm_args = args
+            .iter()
+            .map(|arg| arg.into_basic_type_enum(self))
+            .collect::<Result<Vec<_>, _>>()?;
+
         // Create a function to build
-        let ft = self.context.void_type().fn_type(&[], false);
+        let ft = self.context.void_type().fn_type(&llvm_args, false);
         let function = self.module.add_function(&name, ft, None);
 
         // Add function to function table
@@ -184,7 +197,7 @@ impl<'p, 'module, 'ctx>
     fn get_function_transformer(
         &'p self,
         id: DefId,
-    ) -> std::result::Result<LlvmFunctionTransformer<'p, 'module, 'ctx>, TransformerError> {
+    ) -> std::result::Result<LlvmFunctionBuilder<'p, 'module, 'ctx>, TransformerError> {
         // Look up the FunctionValue associated with the given id
         let fv = self
             .fn_table
@@ -192,19 +205,32 @@ impl<'p, 'module, 'ctx>
             .ok_or(TransformerError::FunctionNotFound)?;
 
         // Create a new fucntion transformer that will populate the assoicated function value
-        Ok(LlvmFunctionTransformer::new(*fv, self))
+        Ok(LlvmFunctionBuilder::new(*fv, self))
+    }
+}
+
+impl ArgDecl {
+    /// Convert the type of this [`ArgDecl`] into an LLVM [`BasicTypeEnum`].
+    fn into_basic_type_enum<'module, 'ctx>(
+        &self,
+        p: &LlvmProgramBuilder<'module, 'ctx>,
+    ) -> Result<BasicTypeEnum<'ctx>, TransformerError> {
+        p.get_type(self.ty()).map(|ty| {
+            ty.into_basic_type()
+                .expect("Argument type must be a Basic Type")
+        })
     }
 }
 
 impl MirTypeDef {
     fn into_basic_type_enum<'module, 'ctx>(
         &self,
-        p: &LlvmProgramTransformer<'module, 'ctx>,
+        p: &LlvmProgramBuilder<'module, 'ctx>,
     ) -> Option<AnyTypeEnum<'ctx>> {
         match self {
             MirTypeDef::Base(base) => base.into_basic_type_enum(p.context),
             MirTypeDef::Array { ty, sz } => {
-                let el_llvm_ty = p.ty_table.get(ty).unwrap();
+                let el_llvm_ty = p.get_type(*ty).unwrap();
                 let len = *sz as u32;
                 let bt = el_llvm_ty.into_basic_type().unwrap().as_basic_type_enum(); // I don't know why as_basic_type_enum has to be called but without it the array_type method doesn't work!
                 Some(bt.array_type(len).into())
@@ -233,8 +259,8 @@ impl MirBaseType {
     }
 }
 
-struct LlvmFunctionTransformer<'p, 'module, 'ctx> {
-    program: &'p LlvmProgramTransformer<'module, 'ctx>,
+pub struct LlvmFunctionBuilder<'p, 'module, 'ctx> {
+    program: &'p LlvmProgramBuilder<'module, 'ctx>,
 
     /// The LLVM function instance that is currently being built by the transformer
     /// all insructions will be added to this function.
@@ -252,10 +278,10 @@ struct LlvmFunctionTransformer<'p, 'module, 'ctx> {
     blocks: HashMap<BasicBlockId, inkwell::basic_block::BasicBlock<'ctx>>,
 }
 
-impl<'p, 'module, 'ctx> LlvmFunctionTransformer<'p, 'module, 'ctx> {
+impl<'p, 'module, 'ctx> LlvmFunctionBuilder<'p, 'module, 'ctx> {
     pub fn new(
         function: FunctionValue<'ctx>,
-        program: &'p LlvmProgramTransformer<'module, 'ctx>,
+        program: &'p LlvmProgramBuilder<'module, 'ctx>,
     ) -> Self {
         debug!("Creating LLVM Function Transformer for function");
 
@@ -279,8 +305,8 @@ impl<'p, 'module, 'ctx> LlvmFunctionTransformer<'p, 'module, 'ctx> {
     }
 }
 
-impl<'p, 'module, 'ctx> FunctionTransformer<PointerValue<'ctx>, BasicValueEnum<'ctx>>
-    for LlvmFunctionTransformer<'p, 'module, 'ctx>
+impl<'p, 'module, 'ctx> FunctionBuilder<PointerValue<'ctx>, BasicValueEnum<'ctx>>
+    for LlvmFunctionBuilder<'p, 'module, 'ctx>
 {
     fn create_bb(&mut self, id: BasicBlockId) -> Result<(), TransformerError> {
         let bb = self
@@ -304,6 +330,24 @@ impl<'p, 'module, 'ctx> FunctionTransformer<PointerValue<'ctx>, BasicValueEnum<'
         }
     }
 
+    fn store_arg(&mut self, arg_id: ArgId, var_id: VarId) -> Result<(), TransformerError> {
+        // Get the argument value
+        let arg_value = self
+            .function
+            .get_nth_param(arg_id.to_u32())
+            .ok_or(TransformerError::ArgNotFound)?;
+
+        // Get the location in the stack where the argument will be stored
+        let stack_location = self
+            .vars
+            .get(&var_id)
+            .ok_or(TransformerError::VarNotFound)?;
+
+        // Move the argument into the stack
+        self.program.builder.build_store(*stack_location, arg_value);
+        Ok(())
+    }
+
     fn alloc_var(&mut self, id: VarId, decl: &VarDecl) -> Result<(), TransformerError> {
         let name = self.var_label(decl);
 
@@ -315,7 +359,7 @@ impl<'p, 'module, 'ctx> FunctionTransformer<PointerValue<'ctx>, BasicValueEnum<'
             // If not, then allocate a pointer in the Builder
             Entry::Vacant(ve) => {
                 // and add a mapping from VarID to the pointer in the local var table
-                let ty = self.program.ty_table.get(&decl.ty()).unwrap();
+                let ty = self.program.get_type(decl.ty())?;
                 let ptr = self
                     .program
                     .builder
@@ -471,177 +515,5 @@ impl<'p, 'module, 'ctx> FunctionTransformer<PointerValue<'ctx>, BasicValueEnum<'
 
     fn sub(&self, a: BasicValueEnum<'ctx>, b: BasicValueEnum<'ctx>) -> BasicValueEnum<'ctx> {
         todo!()
-    }
-}
-
-#[cfg(test)]
-mod mir2llvm_tests_visual {
-    //! A set of unit tests which compile small examples of Bramble code and output
-    //! the LLVM IR generated by transforming MIR to LLVM IR.
-    //!
-    //! These visual tests are used to help with development, testing, and debugging
-    //! of the MIR to LLVM transformation process. They also serve to fill in a gap
-    //! caused by the complexity that is created if we try to use LLVM's JIT to do
-    //! automated unit testing for MIR to LLVM transformation.
-
-    use inkwell::context::Context;
-
-    use crate::{
-        compiler::{
-            ast::{Module, MAIN_MODULE},
-            diagnostics::Logger,
-            lexer::{tokens::Token, LexerError},
-            mir::{transform, MirProject, ProgramTraverser},
-            parser::Parser,
-            semantics::semanticnode::SemanticContext,
-            CompilerDisplay, CompilerError, Lexer, SourceMap,
-        },
-        llvm::mir::LlvmProgramTransformer,
-        resolve_types, StringTable,
-    };
-
-    #[test]
-    fn var_declaration() {
-        let text = "
-            fn test() {
-                let x: i64 := 5;
-                let b: bool := true;
-                return;
-            }
-        ";
-
-        compile_and_print_llvm(text);
-    }
-
-    #[test]
-    fn base_numerical_types() {
-        let text = "
-            fn test() {
-                let a: i8 :=  1i8;
-                let b: i16 := 2i16;
-                let c: i32 := 3i32;
-                let d: i64 := 4i64;
-
-                let e: u8 :=  5u8;
-                let f: u16 := 6u16;
-                let g: u32 := 7u32;
-                let h: u64 := 8u64;
-                
-                let i: f64 := 9.0;
-
-                let bl:bool := true;
-
-                return;
-            }
-        ";
-
-        compile_and_print_llvm(text);
-    }
-
-    //#[test]
-    fn base_array_type() {
-        let text = "
-            fn test() {
-                let a: [i8; 2] :=  [1i8, 2i8];
-
-                return;
-            }
-        ";
-
-        compile_and_print_llvm(text);
-    }
-
-    #[test]
-    fn if_expr() {
-        compile_and_print_llvm(
-            "
-            fn test() {
-                let x: i64 := if (true) {2} else {3};
-                return;
-            }
-        ",
-        );
-    }
-
-    #[test]
-    fn two_functions() {
-        compile_and_print_llvm(
-            "
-            fn foo() {
-                let x: i64 := if (true) {2} else {3};
-                return;
-            }
-           
-            mod bats {
-                fn bar() {
-                    let x: i64 := 5;
-                    let b: bool := true;
-                    return;
-                }
-            }
-        ",
-        );
-    }
-
-    type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
-
-    fn compile_and_print_llvm(text: &str) {
-        let (sm, table, module) = compile(text);
-        let mut project = MirProject::new();
-        transform::transform(&module, &mut project).unwrap();
-
-        let context = Context::create();
-        let module = context.create_module("test");
-        let builder = context.create_builder();
-
-        let mut xfmr = LlvmProgramTransformer::new(&context, &module, &builder, &sm, &table);
-
-        let proj_traverser = ProgramTraverser::new(&project);
-
-        // Traverser is given a MirProject
-        // call traverser.map(llvm) this will use the llvm xfmr to map MirProject to LlvmProject
-        proj_traverser.map(&mut xfmr);
-
-        let llvm = xfmr.complete();
-
-        // Print LLVM
-        println!("=== LLVM IR ===:");
-        llvm.print_to_stderr();
-
-        println!("\n\n=== x86 ===");
-        llvm.print_asm();
-    }
-
-    fn compile(input: &str) -> (SourceMap, StringTable, Module<SemanticContext>) {
-        let table = StringTable::new();
-        let mut sm = SourceMap::new();
-        sm.add_string(input, "/test".into()).unwrap();
-        let src = sm.get(0).unwrap().read().unwrap();
-
-        let main = table.insert("main".into());
-        let main_mod = table.insert(MAIN_MODULE.into());
-        let main_fn = table.insert("my_main".into());
-
-        let logger = Logger::new();
-        let tokens: Vec<Token> = Lexer::new(src, &table, &logger)
-            .unwrap()
-            .tokenize()
-            .into_iter()
-            .collect::<LResult>()
-            .unwrap();
-
-        let parser = Parser::new(&logger);
-        let ast = match parser.parse(main, &tokens) {
-            Ok(ast) => ast.unwrap(),
-            Err(err) => {
-                panic!("{}", err.fmt(&sm, &table).unwrap());
-            }
-        };
-        match resolve_types(&ast, main_mod, main_fn, &logger) {
-            Ok(module) => (sm, table, module),
-            Err(err) => {
-                panic!("{}", err.fmt(&sm, &table).unwrap());
-            }
-        }
     }
 }
