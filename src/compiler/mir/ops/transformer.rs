@@ -31,6 +31,7 @@ pub trait ProgramBuilder<'p, L, V, F: FunctionBuilder<L, V>> {
         &mut self,
         func_id: DefId,
         canonical_path: &Path,
+        args: &[ArgDecl],
     ) -> Result<(), TransformerError>;
 
     fn add_type(&mut self, id: TypeId, ty: &MirTypeDef) -> Result<(), TransformerError>;
@@ -66,6 +67,7 @@ pub trait FunctionBuilder<L, V> {
     fn set_bb(&mut self, bb: BasicBlockId) -> Result<(), TransformerError>;
 
     /// Allocate space for the given variable declaration
+    fn store_arg(&mut self, arg_id: ArgId, var_id: VarId) -> Result<(), TransformerError>;
     fn alloc_var(&mut self, id: VarId, vd: &VarDecl) -> Result<(), TransformerError>;
     fn alloc_temp(&mut self, id: TempId, vd: &TempDecl) -> Result<(), TransformerError>;
 
@@ -140,4 +142,5 @@ pub enum TransformerError {
     FunctionAlreadyDeclared,
     FunctionNotFound,
     TypeAlreadyDefined,
+    ArgNotFound,
 }

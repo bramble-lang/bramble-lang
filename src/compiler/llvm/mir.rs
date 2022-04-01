@@ -150,13 +150,26 @@ impl<'p, 'module, 'ctx>
         &mut self,
         func_id: DefId,
         canonical_path: &Path,
+        args: &[ArgDecl],
     ) -> Result<(), TransformerError> {
         let name = self.to_label(canonical_path);
 
         debug!("Adding function to Module: {}", name);
 
+        // Convert list of arguments into a list of LLVM types
+        let llvm_args: Vec<_> = args
+            .iter()
+            .map(|arg| {
+                self.ty_table
+                    .get(&arg.ty())
+                    .unwrap()
+                    .into_basic_type()
+                    .unwrap()
+            })
+            .collect();
+
         // Create a function to build
-        let ft = self.context.void_type().fn_type(&[], false);
+        let ft = self.context.void_type().fn_type(&llvm_args, false);
         let function = self.module.add_function(&name, ft, None);
 
         // Add function to function table
@@ -302,6 +315,24 @@ impl<'p, 'module, 'ctx> FunctionBuilder<PointerValue<'ctx>, BasicValueEnum<'ctx>
             }
             None => Err(TransformerError::BasicBlockNotFound),
         }
+    }
+
+    fn store_arg(&mut self, arg_id: ArgId, var_id: VarId) -> Result<(), TransformerError> {
+        // Get the argument value
+        let arg_value = self
+            .function
+            .get_nth_param(arg_id.to_u32())
+            .ok_or(TransformerError::ArgNotFound)?;
+
+        // Get the location in the stack where the argument will be stored
+        let stack_location = self
+            .vars
+            .get(&var_id)
+            .ok_or(TransformerError::VarNotFound)?;
+
+        // Move the argument into the stack
+        self.program.builder.build_store(*stack_location, arg_value);
+        Ok(())
     }
 
     fn alloc_var(&mut self, id: VarId, decl: &VarDecl) -> Result<(), TransformerError> {

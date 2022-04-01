@@ -37,7 +37,7 @@ impl<'a> ProgramTraverser<'a> {
 
         // Declare every function in the ProgramTransformer
         for (id, f) in self.mir.function_iter() {
-            xfmr.add_function(id, f.path()).unwrap();
+            xfmr.add_function(id, f.path(), f.get_args()).unwrap();
         }
 
         // Iterate over every function in MIR
@@ -115,6 +115,14 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
         for id in self.get_varid_iter() {
             let decl = *self.get_var(id);
             self.xfmr.alloc_var(id, &decl).unwrap();
+        }
+
+        // Move function parameters into local variables
+        for (id, arg) in self.function.arg_iter() {
+            // Use arg id to look up the associated var id
+            // get span from arg decl
+            // get value of the llvm function parameter associated with arg id
+            //self.xfmr.assign(Span::zero(), l, v)
         }
 
         // Loop through all temp vars and allocate them

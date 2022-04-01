@@ -123,6 +123,11 @@ impl Procedure {
             .map(|(id, arg)| (ArgId::new(id), arg))
     }
 
+    /// Returns a reference to the list of [argments](ArgDecl) for this function.
+    pub fn get_args(&self) -> &[ArgDecl] {
+        &self.args
+    }
+
     /// Returns an [`Iterator`] over the [`BasicBlocks`](BasicBlock) and their associated [`BasicBlockIds`](BasicBlockId)
     /// that comprise this function.
     pub fn bb_iter(&self) -> impl Iterator<Item = (BasicBlockId, &BasicBlock)> {
@@ -406,6 +411,10 @@ impl ArgDecl {
     pub fn new(name: StringId, ty: TypeId, span: Span) -> ArgDecl {
         ArgDecl { name, ty, span }
     }
+
+    pub fn ty(&self) -> TypeId {
+        self.ty
+    }
 }
 
 /// Unique identifier for an argument within the MIR of a function
@@ -414,6 +423,11 @@ pub struct ArgId(u32);
 impl ArgId {
     fn new(id: usize) -> ArgId {
         ArgId(id as u32)
+    }
+
+    /// Convert this to a [`u32`].
+    pub fn to_u32(&self) -> u32 {
+        self.0
     }
 }
 
