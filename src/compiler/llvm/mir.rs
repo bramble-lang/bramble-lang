@@ -137,6 +137,8 @@ impl<'module, 'ctx> LlvmProgramBuilder<'module, 'ctx> {
             .join("_")
     }
 
+    /// Given a [`TypeId`] this will return its associated LLVM [`AnyTypeEnum`] variant.
+    /// If the [`TypeId`] has no associated LLVM type then an error is returned.
     fn get_type(&self, id: TypeId) -> Result<&AnyTypeEnum<'ctx>, TransformerError> {
         self.ty_table.get(&id).ok_or(TransformerError::TypeNotFound)
     }
@@ -357,7 +359,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<PointerValue<'ctx>, BasicValueEnum<'ctx>
             // If not, then allocate a pointer in the Builder
             Entry::Vacant(ve) => {
                 // and add a mapping from VarID to the pointer in the local var table
-                let ty = self.program.get_type(decl.ty()).unwrap();
+                let ty = self.program.get_type(decl.ty())?;
                 let ptr = self
                     .program
                     .builder
