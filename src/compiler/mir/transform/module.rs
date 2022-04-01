@@ -107,7 +107,7 @@ fn add_extern_declarations(
                 let ty = project.find_type(p.context().ty()).unwrap_or_else(|| {
                     panic!("Cannot find type in project for parameter: {:?}", p)
                 });
-                ArgDecl::new(p.name, ty, p.context().span())
+                ArgDecl::new(p.name, ty, None, p.context().span())
             })
             .collect();
 
@@ -151,7 +151,7 @@ fn add_fn_declarations(
                 let ty = project
                     .find_type(p.context().ty())
                     .expect("Cannot find type in Project");
-                ArgDecl::new(p.name, ty, p.context().span())
+                ArgDecl::new(p.name, ty, None, p.context().span())
             })
             .collect();
 

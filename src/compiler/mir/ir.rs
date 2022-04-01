@@ -105,10 +105,10 @@ impl Procedure {
     /// Add an argument to this procedure's argument list and make the argument available as a variable.
     pub fn add_arg(&mut self, name: StringId, ty: TypeId, span: Span) -> ArgId {
         // Add the given argument to the set of variables
-        self.add_var(name, false, ty, ROOT_SCOPE, span);
+        let stack_loc = self.add_var(name, false, ty, ROOT_SCOPE, span);
 
         // Add the argument to the argument set of the function
-        let ad = ArgDecl::new(name, ty, span);
+        let ad = ArgDecl::new(name, ty, Some(stack_loc), span);
         self.args.push(ad);
         let id = self.args.len() - 1;
         ArgId::new(id)
@@ -403,17 +403,30 @@ pub struct ArgDecl {
     name: StringId,
     /// The type of this variable
     ty: TypeId,
+    /// Location on the stack where the arg is stored
+    var_id: Option<VarId>,
     /// The span of code where this variable was declared
     span: Span,
 }
 
 impl ArgDecl {
-    pub fn new(name: StringId, ty: TypeId, span: Span) -> ArgDecl {
-        ArgDecl { name, ty, span }
+    pub fn new(name: StringId, ty: TypeId, var_id: Option<VarId>, span: Span) -> ArgDecl {
+        ArgDecl {
+            name,
+            ty,
+            var_id,
+            span,
+        }
     }
 
+    /// Return the [`TypeId`] of this argument
     pub fn ty(&self) -> TypeId {
         self.ty
+    }
+
+    /// Return the location where this argument should be stored
+    pub fn var_id(&self) -> Option<VarId> {
+        self.var_id
     }
 }
 

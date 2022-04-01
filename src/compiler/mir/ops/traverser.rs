@@ -120,9 +120,10 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
         // Move function parameters into local variables
         for (id, arg) in self.function.arg_iter() {
             // Use arg id to look up the associated var id
+            let var_id = arg.var_id().unwrap();
             // get span from arg decl
             // get value of the llvm function parameter associated with arg id
-            //self.xfmr.assign(Span::zero(), l, v)
+            self.xfmr.store_arg(id, var_id).unwrap();
         }
 
         // Loop through all temp vars and allocate them
