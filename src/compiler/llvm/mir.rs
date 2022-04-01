@@ -315,6 +315,9 @@ pub struct LlvmFunctionBuilder<'p, 'module, 'ctx> {
     /// all insructions will be added to this function.
     function: FunctionValue<'ctx>,
 
+    /// Channel used to return the result back to the caller
+    ret_ptr: Option<AnyValueEnum<'ctx>>,
+
     /// Mapping of [`VarIds`](VarId) to their LLVM value, this is used to look up
     /// variables after they have been allocated.
     vars: HashMap<VarId, PointerValue<'ctx>>,
@@ -337,6 +340,7 @@ impl<'p, 'module, 'ctx> LlvmFunctionBuilder<'p, 'module, 'ctx> {
         Self {
             function,
             program,
+            ret_ptr: None,
             vars: HashMap::default(),
             temps: HashMap::default(),
             blocks: HashMap::new(),
