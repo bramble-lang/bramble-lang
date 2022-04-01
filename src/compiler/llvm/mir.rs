@@ -164,8 +164,19 @@ impl<'module, 'ctx> LlvmProgramBuilder<'module, 'ctx> {
         self.ty_table.get(&id).ok_or(TransformerError::TypeNotFound)
     }
 
-    fn get_ret_method(ty: TypeId) -> ReturnMethod {
-        ReturnMethod::Return
+    fn get_ret_method(&self, ty: TypeId) -> Result<ReturnMethod, TransformerError> {
+        let llvm_ty = self.get_type(ty)?;
+        let method = match llvm_ty {
+            AnyTypeEnum::PointerType(_) | AnyTypeEnum::FloatType(_) | AnyTypeEnum::IntType(_) => {
+                ReturnMethod::Return
+            }
+            AnyTypeEnum::ArrayType(_) => todo!(),
+            AnyTypeEnum::FunctionType(_) => todo!(),
+            AnyTypeEnum::StructType(_) => todo!(),
+            AnyTypeEnum::VectorType(_) => todo!(),
+            AnyTypeEnum::VoidType(_) => todo!(),
+        };
+        Ok(method)
     }
 }
 
@@ -190,7 +201,7 @@ impl<'p, 'module, 'ctx>
 
         // Determine the channel for the return value
         // Set the return channel property for the function
-        let ret_method = Self::get_ret_method(ret_ty);
+        let ret_method = self.get_ret_method(ret_ty)?;
 
         // If the functoin returns values via a Output Reference Parameter
         // then make that parameter the first parameter
