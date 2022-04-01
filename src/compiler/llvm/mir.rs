@@ -136,6 +136,10 @@ impl<'module, 'ctx> LlvmProgramBuilder<'module, 'ctx> {
             .collect::<Vec<_>>()
             .join("_")
     }
+
+    fn get_type(&self, id: TypeId) -> Result<&AnyTypeEnum<'ctx>, TransformerError> {
+        self.ty_table.get(&id).ok_or(TransformerError::TypeNotFound)
+    }
 }
 
 impl<'p, 'module, 'ctx>
@@ -157,16 +161,10 @@ impl<'p, 'module, 'ctx>
         debug!("Adding function to Module: {}", name);
 
         // Convert list of arguments into a list of LLVM types
-        let llvm_args: Vec<_> = args
+        let llvm_args = args
             .iter()
-            .map(|arg| {
-                self.ty_table
-                    .get(&arg.ty())
-                    .unwrap()
-                    .into_basic_type()
-                    .unwrap()
-            })
-            .collect();
+            .map(|arg| arg.into_basic_type_enum(self))
+            .collect::<Result<Vec<_>, _>>()?;
 
         // Create a function to build
         let ft = self.context.void_type().fn_type(&llvm_args, false);
@@ -206,6 +204,19 @@ impl<'p, 'module, 'ctx>
 
         // Create a new fucntion transformer that will populate the assoicated function value
         Ok(LlvmFunctionBuilder::new(*fv, self))
+    }
+}
+
+impl ArgDecl {
+    /// Convert the type of this [`ArgDecl`] into an LLVM [`BasicTypeEnum`].
+    fn into_basic_type_enum<'module, 'ctx>(
+        &self,
+        p: &LlvmProgramBuilder<'module, 'ctx>,
+    ) -> Result<BasicTypeEnum<'ctx>, TransformerError> {
+        p.get_type(self.ty()).map(|ty| {
+            ty.into_basic_type()
+                .expect("Argument type must be a Basic Type")
+        })
     }
 }
 
