@@ -37,7 +37,8 @@ impl<'a> ProgramTraverser<'a> {
 
         // Declare every function in the ProgramTransformer
         for (id, f) in self.mir.function_iter() {
-            xfmr.add_function(id, f.path(), f.get_args()).unwrap();
+            xfmr.add_function(id, f.path(), f.get_args(), f.ret_ty())
+                .unwrap();
         }
 
         // Iterate over every function in MIR

@@ -32,6 +32,7 @@ pub trait ProgramBuilder<'p, L, V, F: FunctionBuilder<L, V>> {
         func_id: DefId,
         canonical_path: &Path,
         args: &[ArgDecl],
+        ret_ty: TypeId,
     ) -> Result<(), TransformerError>;
 
     fn add_type(&mut self, id: TypeId, ty: &MirTypeDef) -> Result<(), TransformerError>;

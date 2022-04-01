@@ -163,6 +163,10 @@ impl<'module, 'ctx> LlvmProgramBuilder<'module, 'ctx> {
     fn get_type(&self, id: TypeId) -> Result<&AnyTypeEnum<'ctx>, TransformerError> {
         self.ty_table.get(&id).ok_or(TransformerError::TypeNotFound)
     }
+
+    fn get_ret_method(ty: TypeId) -> ReturnMethod {
+        ReturnMethod::Return
+    }
 }
 
 impl<'p, 'module, 'ctx>
@@ -178,6 +182,7 @@ impl<'p, 'module, 'ctx>
         func_id: DefId,
         canonical_path: &Path,
         args: &[ArgDecl],
+        ret_ty: TypeId,
     ) -> Result<(), TransformerError> {
         let name = self.to_label(canonical_path);
 
@@ -185,6 +190,7 @@ impl<'p, 'module, 'ctx>
 
         // Determine the channel for the return value
         // Set the return channel property for the function
+        let ret_method = Self::get_ret_method(ret_ty);
 
         // If the functoin returns values via a Output Reference Parameter
         // then make that parameter the first parameter
@@ -201,7 +207,7 @@ impl<'p, 'module, 'ctx>
 
         // Add function to function table
         let function = FunctionData {
-            ret_method: ReturnMethod::Return,
+            ret_method,
             function,
         };
 
