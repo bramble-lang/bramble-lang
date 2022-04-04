@@ -166,7 +166,6 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
 
         match stm.kind() {
             StatementKind::Assign(lv, rv) => {
-                //let lv = self.lvalue(lv);
                 let rv = self.rvalue(rv);
                 self.xfmr.store(span, lv, rv);
             }
