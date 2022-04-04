@@ -175,7 +175,7 @@ impl<'module, 'ctx> LlvmProgramBuilder<'module, 'ctx> {
             AnyTypeEnum::PointerType(_) | AnyTypeEnum::FloatType(_) | AnyTypeEnum::IntType(_) => {
                 (ReturnMethod::Return, *llvm_ty)
             }
-            AnyTypeEnum::ArrayType(_) => todo!(),
+            AnyTypeEnum::ArrayType(_) => (ReturnMethod::OutParam, *llvm_ty),
             AnyTypeEnum::FunctionType(_) => todo!(),
             AnyTypeEnum::StructType(_) => todo!(),
             AnyTypeEnum::VectorType(_) => todo!(),
@@ -211,29 +211,41 @@ impl<'p, 'module, 'ctx>
         // If the functoin returns values via a Output Reference Parameter
         // then make that parameter the first parameter
 
-        // Convert list of arguments into a list of LLVM types
-        let llvm_args = args
-            .iter()
-            .map(|arg| arg.into_basic_type_enum(self))
-            .collect::<Result<Vec<_>, _>>()?;
-
         // Create a function to build
         let ft = match ret_method {
-            ReturnMethod::OutParam => todo!(),
-            ReturnMethod::Return => match llvm_ret_ty {
-                AnyTypeEnum::IntType(it) => it.fn_type(&llvm_args, false),
-                AnyTypeEnum::VoidType(vt) => vt.fn_type(&llvm_args, false),
-                AnyTypeEnum::FloatType(ft) => ft.fn_type(&llvm_args, false),
-                AnyTypeEnum::PointerType(pt) => pt.fn_type(&llvm_args, false),
-                AnyTypeEnum::FunctionType(_) => todo!(),
-                AnyTypeEnum::VectorType(_) => todo!(),
-                AnyTypeEnum::ArrayType(_) => {
-                    panic!("Returning array values need to use the out parameter method.")
+            ReturnMethod::OutParam => {
+                // prepend the out parameter to the args list
+                let basic_ty = llvm_ret_ty.into_basic_type().unwrap();
+                let mut llvm_args = vec![basic_ty];
+                for a in args {
+                    let llvm_ty = a.into_basic_type_enum(self)?;
+                    llvm_args.push(llvm_ty);
                 }
-                AnyTypeEnum::StructType(_) => {
-                    panic!("Returning structure value need to use the out parameter method.")
+
+                self.context.void_type().fn_type(&llvm_args, false)
+            }
+            ReturnMethod::Return => {
+                // Convert list of arguments into a list of LLVM types
+                let llvm_args = args
+                    .iter()
+                    .map(|arg| arg.into_basic_type_enum(self))
+                    .collect::<Result<Vec<_>, _>>()?;
+
+                match llvm_ret_ty {
+                    AnyTypeEnum::IntType(it) => it.fn_type(&llvm_args, false),
+                    AnyTypeEnum::VoidType(vt) => vt.fn_type(&llvm_args, false),
+                    AnyTypeEnum::FloatType(ft) => ft.fn_type(&llvm_args, false),
+                    AnyTypeEnum::PointerType(pt) => pt.fn_type(&llvm_args, false),
+                    AnyTypeEnum::FunctionType(_) => todo!(),
+                    AnyTypeEnum::VectorType(_) => todo!(),
+                    AnyTypeEnum::ArrayType(_) => {
+                        panic!("Returning array values need to use the out parameter method.")
+                    }
+                    AnyTypeEnum::StructType(_) => {
+                        panic!("Returning structure value need to use the out parameter method.")
+                    }
                 }
-            },
+            }
         };
 
         let function = self.module.add_function(&name, ft, None);
@@ -359,13 +371,15 @@ enum ReturnPointer<'ctx> {
     /// This function returns this primitive value and will use the LLVM return
     /// operator to return the value back using the platform appropriate methods.
     Value(Option<BasicValueEnum<'ctx>>),
+
+    OutParam,
 }
 
 impl<'p, 'module, 'ctx> LlvmFunctionBuilder<'p, 'module, 'ctx> {
     fn new(function: FunctionData<'ctx>, program: &'p LlvmProgramBuilder<'module, 'ctx>) -> Self {
         debug!("Creating LLVM Function Transformer for function");
         let ret_ptr = match function.ret_method {
-            ReturnMethod::OutParam => todo!(),
+            ReturnMethod::OutParam => ReturnPointer::OutParam,
             ReturnMethod::Return => match function.function.get_type().get_return_type() {
                 None => ReturnPointer::Unit,
                 Some(_) => ReturnPointer::Value(None),
@@ -485,6 +499,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<PointerValue<'ctx>, BasicValueEnum<'ctx>
                 let val = v.unwrap();
                 self.program.builder.build_return(Some(&val))
             }
+            ReturnPointer::OutParam => self.program.builder.build_return(None),
         };
     }
 
@@ -528,6 +543,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<PointerValue<'ctx>, BasicValueEnum<'ctx>
             LValue::ReturnPointer => match &mut self.ret_ptr {
                 ReturnPointer::Unit => panic!("Attempting to return a value on a Unit function"),
                 ReturnPointer::Value(val) => *val = Some(r),
+                ReturnPointer::OutParam => (),
             },
         }
     }
