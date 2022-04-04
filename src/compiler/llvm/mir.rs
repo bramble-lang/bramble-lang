@@ -333,10 +333,7 @@ pub struct LlvmFunctionBuilder<'p, 'module, 'ctx> {
 }
 
 impl<'p, 'module, 'ctx> LlvmFunctionBuilder<'p, 'module, 'ctx> {
-    pub fn new(
-        function: FunctionData<'ctx>,
-        program: &'p LlvmProgramBuilder<'module, 'ctx>,
-    ) -> Self {
+    fn new(function: FunctionData<'ctx>, program: &'p LlvmProgramBuilder<'module, 'ctx>) -> Self {
         debug!("Creating LLVM Function Transformer for function");
         Self {
             function,
