@@ -166,17 +166,20 @@ impl<'module, 'ctx> LlvmProgramBuilder<'module, 'ctx> {
         self.ty_table.get(&id).ok_or(TransformerError::TypeNotFound)
     }
 
-    fn get_ret_method(&self, ty: TypeId) -> Result<ReturnMethod, TransformerError> {
+    fn get_ret_method(
+        &self,
+        ty: TypeId,
+    ) -> Result<(ReturnMethod, AnyTypeEnum<'ctx>), TransformerError> {
         let llvm_ty = self.get_type(ty)?;
         let method = match llvm_ty {
             AnyTypeEnum::PointerType(_) | AnyTypeEnum::FloatType(_) | AnyTypeEnum::IntType(_) => {
-                ReturnMethod::Return
+                (ReturnMethod::Return, *llvm_ty)
             }
             AnyTypeEnum::ArrayType(_) => todo!(),
             AnyTypeEnum::FunctionType(_) => todo!(),
             AnyTypeEnum::StructType(_) => todo!(),
             AnyTypeEnum::VectorType(_) => todo!(),
-            AnyTypeEnum::VoidType(_) => ReturnMethod::Return,
+            AnyTypeEnum::VoidType(_) => (ReturnMethod::Return, self.context.void_type().into()),
         };
         Ok(method)
     }
@@ -203,7 +206,7 @@ impl<'p, 'module, 'ctx>
 
         // Determine the channel for the return value
         // Set the return channel property for the function
-        let ret_method = self.get_ret_method(ret_ty)?;
+        let (ret_method, llvm_ret_ty) = self.get_ret_method(ret_ty)?;
 
         // If the functoin returns values via a Output Reference Parameter
         // then make that parameter the first parameter
@@ -215,7 +218,24 @@ impl<'p, 'module, 'ctx>
             .collect::<Result<Vec<_>, _>>()?;
 
         // Create a function to build
-        let ft = self.context.void_type().fn_type(&llvm_args, false);
+        let ft = match ret_method {
+            ReturnMethod::OutParam => todo!(),
+            ReturnMethod::Return => match llvm_ret_ty {
+                AnyTypeEnum::IntType(it) => it.fn_type(&llvm_args, false),
+                AnyTypeEnum::VoidType(vt) => vt.fn_type(&llvm_args, false),
+                AnyTypeEnum::FloatType(ft) => ft.fn_type(&llvm_args, false),
+                AnyTypeEnum::PointerType(pt) => pt.fn_type(&llvm_args, false),
+                AnyTypeEnum::FunctionType(_) => todo!(),
+                AnyTypeEnum::VectorType(_) => todo!(),
+                AnyTypeEnum::ArrayType(_) => {
+                    panic!("Returning array values need to use the out parameter method.")
+                }
+                AnyTypeEnum::StructType(_) => {
+                    panic!("Returning structure value need to use the out parameter method.")
+                }
+            },
+        };
+
         let function = self.module.add_function(&name, ft, None);
 
         // Add function to function table
@@ -318,7 +338,7 @@ pub struct LlvmFunctionBuilder<'p, 'module, 'ctx> {
     function: FunctionData<'ctx>,
 
     /// Channel used to return the result back to the caller
-    ret_ptr: Option<BasicValueEnum<'ctx>>,
+    ret_ptr: ReturnPointer<'ctx>,
 
     /// Mapping of [`VarIds`](VarId) to their LLVM value, this is used to look up
     /// variables after they have been allocated.
@@ -332,13 +352,30 @@ pub struct LlvmFunctionBuilder<'p, 'module, 'ctx> {
     blocks: HashMap<BasicBlockId, inkwell::basic_block::BasicBlock<'ctx>>,
 }
 
+enum ReturnPointer<'ctx> {
+    /// This function returns no value
+    Unit,
+
+    /// This function returns this primitive value and will use the LLVM return
+    /// operator to return the value back using the platform appropriate methods.
+    Value(Option<BasicValueEnum<'ctx>>),
+}
+
 impl<'p, 'module, 'ctx> LlvmFunctionBuilder<'p, 'module, 'ctx> {
     fn new(function: FunctionData<'ctx>, program: &'p LlvmProgramBuilder<'module, 'ctx>) -> Self {
         debug!("Creating LLVM Function Transformer for function");
+        let ret_ptr = match function.ret_method {
+            ReturnMethod::OutParam => todo!(),
+            ReturnMethod::Return => match function.function.get_type().get_return_type() {
+                None => ReturnPointer::Unit,
+                Some(_) => ReturnPointer::Value(None),
+            },
+        };
+
         Self {
             function,
             program,
-            ret_ptr: None,
+            ret_ptr,
             vars: HashMap::default(),
             temps: HashMap::default(),
             blocks: HashMap::new(),
@@ -443,8 +480,11 @@ impl<'p, 'module, 'ctx> FunctionBuilder<PointerValue<'ctx>, BasicValueEnum<'ctx>
 
     fn term_return(&mut self) {
         match self.ret_ptr {
-            Some(rp) => self.program.builder.build_return(Some(&rp)),
-            None => self.program.builder.build_return(None),
+            ReturnPointer::Unit => self.program.builder.build_return(None),
+            ReturnPointer::Value(v) => {
+                let val = v.unwrap();
+                self.program.builder.build_return(Some(&val))
+            }
         };
     }
 
@@ -485,7 +525,10 @@ impl<'p, 'module, 'ctx> FunctionBuilder<PointerValue<'ctx>, BasicValueEnum<'ctx>
                 self.program.builder.build_store(temp, r);
             }
             LValue::Access(_, _) => todo!(),
-            LValue::ReturnPointer => self.ret_ptr = Some(r),
+            LValue::ReturnPointer => match &mut self.ret_ptr {
+                ReturnPointer::Unit => panic!("Attempting to return a value on a Unit function"),
+                ReturnPointer::Value(val) => *val = Some(r),
+            },
         }
     }
 
