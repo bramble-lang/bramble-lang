@@ -27,6 +27,8 @@ use crate::{
 
 use super::llvmir::{get_ptr_alignment, LlvmIsAggregateType, LlvmToBasicTypeEnum};
 
+const ADDRESS_SPACE: AddressSpace = AddressSpace::Generic;
+
 /// Represents the final result of a Bramble program in LLVM IR.
 pub struct LlvmProgram<'module, 'ctx> {
     /// LLVM Module
@@ -181,10 +183,9 @@ impl<'module, 'ctx> LlvmProgramBuilder<'module, 'ctx> {
             AnyTypeEnum::PointerType(_) | AnyTypeEnum::FloatType(_) | AnyTypeEnum::IntType(_) => {
                 (ReturnMethod::Return, *llvm_ty)
             }
-            AnyTypeEnum::ArrayType(a_ty) => (
-                ReturnMethod::OutParam,
-                a_ty.ptr_type(AddressSpace::Generic).into(),
-            ),
+            AnyTypeEnum::ArrayType(a_ty) => {
+                (ReturnMethod::OutParam, a_ty.ptr_type(ADDRESS_SPACE).into())
+            }
             AnyTypeEnum::FunctionType(_) => todo!(),
             AnyTypeEnum::StructType(_) => todo!(),
             AnyTypeEnum::VectorType(_) => todo!(),
@@ -326,7 +327,7 @@ impl ArgDecl {
             })
             .map(|ty| {
                 if ty.is_aggregate_type() {
-                    ty.ptr_type(AddressSpace::Generic).into()
+                    ty.ptr_type(ADDRESS_SPACE).into()
                 } else {
                     ty
                 }
