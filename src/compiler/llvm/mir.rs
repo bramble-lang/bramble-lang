@@ -7,7 +7,7 @@ use inkwell::{
     context::Context,
     module::Module,
     targets::{CodeModel, InitializationConfig, RelocMode},
-    types::{AnyTypeEnum, BasicType, BasicTypeEnum},
+    types::{AnyTypeEnum, BasicType, BasicTypeEnum, FunctionType},
     values::*,
     AddressSpace, OptimizationLevel,
 };
@@ -192,27 +192,12 @@ impl<'module, 'ctx> LlvmProgramBuilder<'module, 'ctx> {
         };
         Ok(method)
     }
-}
 
-impl<'p, 'module, 'ctx>
-    ProgramBuilder<
-        'p,
-        PointerValue<'ctx>,
-        BasicValueEnum<'ctx>,
-        LlvmFunctionBuilder<'p, 'module, 'ctx>,
-    > for LlvmProgramBuilder<'module, 'ctx>
-{
-    fn add_function(
-        &mut self,
-        func_id: DefId,
-        canonical_path: &Path,
+    fn fn_type(
+        &self,
         args: &[ArgDecl],
         ret_ty: TypeId,
-    ) -> Result<(), TransformerError> {
-        let name = self.to_label(canonical_path);
-
-        debug!("Adding function to Module: {}", name);
-
+    ) -> Result<(FunctionType<'ctx>, ReturnMethod), TransformerError> {
         // Determine the channel for the return value
         // Set the return channel property for the function
         let (ret_method, llvm_ret_ty) = self.determine_ret_method(ret_ty)?;
@@ -257,7 +242,34 @@ impl<'p, 'module, 'ctx>
             }
         };
 
-        let function = self.module.add_function(&name, ft, None);
+        Ok((ft, ret_method))
+    }
+}
+
+impl<'p, 'module, 'ctx>
+    ProgramBuilder<
+        'p,
+        PointerValue<'ctx>,
+        BasicValueEnum<'ctx>,
+        LlvmFunctionBuilder<'p, 'module, 'ctx>,
+    > for LlvmProgramBuilder<'module, 'ctx>
+{
+    fn add_function(
+        &mut self,
+        func_id: DefId,
+        canonical_path: &Path,
+        args: &[ArgDecl],
+        ret_ty: TypeId,
+    ) -> Result<(), TransformerError> {
+        let name = self.to_label(canonical_path);
+
+        debug!("Adding function to Module: {}", name);
+
+        // Determine the channel for the return value
+        // Set the return channel property for the function
+        let (fn_type, ret_method) = self.fn_type(args, ret_ty)?;
+
+        let function = self.module.add_function(&name, fn_type, None);
 
         // Add function to function table
         let function = FunctionData {
