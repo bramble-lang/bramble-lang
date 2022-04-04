@@ -129,6 +129,32 @@ mod mir2llvm_tests_visual {
         );
     }
 
+    #[test]
+    fn function_return_base_value() {
+        compile_and_print_llvm(
+            "
+            fn foo() -> i64 {
+                return 5;
+            }
+
+            fn bar() -> f64 {
+                return 5.0;
+            }
+        ",
+        );
+    }
+
+    #[test]
+    fn function_return_array() {
+        compile_and_print_llvm(
+            "
+            fn foo(a: [i32; 4]) {
+                return;
+            }
+        ",
+        );
+    }
+
     type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
 
     fn compile_and_print_llvm(text: &str) {

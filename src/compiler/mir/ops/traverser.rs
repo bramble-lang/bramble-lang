@@ -37,7 +37,8 @@ impl<'a> ProgramTraverser<'a> {
 
         // Declare every function in the ProgramTransformer
         for (id, f) in self.mir.function_iter() {
-            xfmr.add_function(id, f.path(), f.get_args()).unwrap();
+            xfmr.add_function(id, f.path(), f.get_args(), f.ret_ty())
+                .unwrap();
         }
 
         // Iterate over every function in MIR
@@ -165,9 +166,8 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
 
         match stm.kind() {
             StatementKind::Assign(lv, rv) => {
-                let lv = self.lvalue(lv);
                 let rv = self.rvalue(rv);
-                self.xfmr.assign(span, lv, rv);
+                self.xfmr.store(span, lv, rv);
             }
         }
     }

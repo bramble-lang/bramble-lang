@@ -1633,7 +1633,7 @@ fn convert_esc_seq_to_ascii(s: &str) -> Result<String> {
     Ok(escaped_str)
 }
 
-fn get_ptr_alignment(ptr: PointerValue) -> u32 {
+pub fn get_ptr_alignment(ptr: PointerValue) -> u32 {
     ptr.get_type()
         .get_alignment()
         .get_zero_extended_constant()
@@ -1641,7 +1641,7 @@ fn get_ptr_alignment(ptr: PointerValue) -> u32 {
 }
 
 /// Defines helper functions for interacting with LLVM types
-trait LlvmIsAggregateType {
+pub trait LlvmIsAggregateType {
     /// Returns `true` if the type is an array or a struct
     fn is_aggregate_type(&self) -> bool;
 }
