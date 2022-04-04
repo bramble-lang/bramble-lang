@@ -136,6 +136,10 @@ mod mir2llvm_tests_visual {
             fn foo() -> i64 {
                 return 5;
             }
+
+            fn bar() -> f64 {
+                return 5.0;
+            }
         ",
         );
     }
@@ -144,8 +148,8 @@ mod mir2llvm_tests_visual {
     fn function_return_array() {
         compile_and_print_llvm(
             "
-            fn foo(a: [i32; 4]) -> [i32; 4] {
-                return a;
+            fn foo(a: [i32; 4]) {
+                return;
             }
         ",
         );
