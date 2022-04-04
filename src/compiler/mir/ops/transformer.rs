@@ -85,8 +85,6 @@ pub trait FunctionBuilder<L, V> {
     fn term_goto(&mut self, target_bb: BasicBlockId);
 
     /// Store the given value to the given memory location
-    fn assign(&mut self, span: Span, l: L, v: V);
-
     fn store(&mut self, span: Span, l: &LValue, r: V);
 
     /// Convert the given variable declaration to a specific location in memory

@@ -585,10 +585,6 @@ impl<'p, 'module, 'ctx> FunctionBuilder<PointerValue<'ctx>, BasicValueEnum<'ctx>
         self.program.builder.build_unconditional_branch(*target);
     }
 
-    fn assign(&mut self, span: Span, l: PointerValue<'ctx>, v: BasicValueEnum<'ctx>) {
-        self.program.builder.build_store(l, v);
-    }
-
     fn store(&mut self, span: Span, l: &LValue, r: BasicValueEnum<'ctx>) {
         match l {
             LValue::Static(_) => todo!(),
