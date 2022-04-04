@@ -170,7 +170,9 @@ impl<'module, 'ctx> LlvmProgramBuilder<'module, 'ctx> {
         self.ty_table.get(&id).ok_or(TransformerError::TypeNotFound)
     }
 
-    fn get_ret_method(
+    /// Given a type, determine how a value of that type is returned from a function to
+    /// its caller.
+    fn determine_ret_method(
         &self,
         ty: TypeId,
     ) -> Result<(ReturnMethod, AnyTypeEnum<'ctx>), TransformerError> {
@@ -213,7 +215,7 @@ impl<'p, 'module, 'ctx>
 
         // Determine the channel for the return value
         // Set the return channel property for the function
-        let (ret_method, llvm_ret_ty) = self.get_ret_method(ret_ty)?;
+        let (ret_method, llvm_ret_ty) = self.determine_ret_method(ret_ty)?;
 
         // If the functoin returns values via a Output Reference Parameter
         // then make that parameter the first parameter
@@ -385,8 +387,13 @@ enum ReturnPointer<'ctx> {
 
     /// This function returns this primitive value and will use the LLVM return
     /// operator to return the value back using the platform appropriate methods.
+    ///
+    /// This variant is initialized to [`None`] because the actual value to use
+    /// is not known until the the function has been converted from MIR to LLVM.
     Value(Option<BasicValueEnum<'ctx>>),
 
+    /// This function uses an out paramter which contains an address to a location in
+    /// the calling function's stack to return a value.
     OutParam(PointerValue<'ctx>),
 }
 
