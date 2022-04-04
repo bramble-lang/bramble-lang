@@ -76,6 +76,7 @@ impl<'module, 'ctx> LlvmProgram<'module, 'ctx> {
     }
 }
 
+#[derive(Clone, Copy)]
 struct FunctionData<'ctx> {
     ret_method: ReturnMethod,
     function: FunctionValue<'ctx>,
@@ -83,6 +84,7 @@ struct FunctionData<'ctx> {
 
 /// Specifies the method that will be used to pass the result of this
 /// function back to its caller.
+#[derive(Clone, Copy)]
 enum ReturnMethod {
     /// An extra "out" parameter is added to this function's parameters that
     /// contains a pointer to a location in the caller's stack. The function's
@@ -174,7 +176,7 @@ impl<'module, 'ctx> LlvmProgramBuilder<'module, 'ctx> {
             AnyTypeEnum::FunctionType(_) => todo!(),
             AnyTypeEnum::StructType(_) => todo!(),
             AnyTypeEnum::VectorType(_) => todo!(),
-            AnyTypeEnum::VoidType(_) => todo!(),
+            AnyTypeEnum::VoidType(_) => ReturnMethod::Return,
         };
         Ok(method)
     }
@@ -254,7 +256,7 @@ impl<'p, 'module, 'ctx>
             .ok_or(TransformerError::FunctionNotFound)?;
 
         // Create a new fucntion transformer that will populate the assoicated function value
-        Ok(LlvmFunctionBuilder::new(fv.function, self))
+        Ok(LlvmFunctionBuilder::new(*fv, self))
     }
 }
 
@@ -313,10 +315,10 @@ pub struct LlvmFunctionBuilder<'p, 'module, 'ctx> {
 
     /// The LLVM function instance that is currently being built by the transformer
     /// all insructions will be added to this function.
-    function: FunctionValue<'ctx>,
+    function: FunctionData<'ctx>,
 
     /// Channel used to return the result back to the caller
-    ret_ptr: Option<AnyValueEnum<'ctx>>,
+    ret_ptr: Option<BasicValueEnum<'ctx>>,
 
     /// Mapping of [`VarIds`](VarId) to their LLVM value, this is used to look up
     /// variables after they have been allocated.
@@ -332,11 +334,10 @@ pub struct LlvmFunctionBuilder<'p, 'module, 'ctx> {
 
 impl<'p, 'module, 'ctx> LlvmFunctionBuilder<'p, 'module, 'ctx> {
     pub fn new(
-        function: FunctionValue<'ctx>,
+        function: FunctionData<'ctx>,
         program: &'p LlvmProgramBuilder<'module, 'ctx>,
     ) -> Self {
         debug!("Creating LLVM Function Transformer for function");
-
         Self {
             function,
             program,
@@ -365,7 +366,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<PointerValue<'ctx>, BasicValueEnum<'ctx>
         let bb = self
             .program
             .context
-            .append_basic_block(self.function, &id.to_string());
+            .append_basic_block(self.function.function, &id.to_string());
         if self.blocks.insert(id, bb).is_none() {
             Ok(())
         } else {
@@ -386,6 +387,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<PointerValue<'ctx>, BasicValueEnum<'ctx>
     fn store_arg(&mut self, arg_id: ArgId, var_id: VarId) -> Result<(), TransformerError> {
         // Get the argument value
         let arg_value = self
+            .function
             .function
             .get_nth_param(arg_id.to_u32())
             .ok_or(TransformerError::ArgNotFound)?;
@@ -443,7 +445,10 @@ impl<'p, 'module, 'ctx> FunctionBuilder<PointerValue<'ctx>, BasicValueEnum<'ctx>
     }
 
     fn term_return(&mut self) {
-        self.program.builder.build_return(None);
+        match self.ret_ptr {
+            Some(rp) => self.program.builder.build_return(Some(&rp)),
+            None => self.program.builder.build_return(None),
+        };
     }
 
     fn term_cond_goto(
@@ -469,6 +474,22 @@ impl<'p, 'module, 'ctx> FunctionBuilder<PointerValue<'ctx>, BasicValueEnum<'ctx>
 
     fn assign(&mut self, span: Span, l: PointerValue<'ctx>, v: BasicValueEnum<'ctx>) {
         self.program.builder.build_store(l, v);
+    }
+
+    fn store(&mut self, span: Span, l: &LValue, r: BasicValueEnum<'ctx>) {
+        match l {
+            LValue::Static(_) => todo!(),
+            LValue::Var(id) => {
+                let var = self.var(*id).unwrap();
+                self.program.builder.build_store(var, r);
+            }
+            LValue::Temp(id) => {
+                let temp = self.temp(*id).unwrap();
+                self.program.builder.build_store(temp, r);
+            }
+            LValue::Access(_, _) => todo!(),
+            LValue::ReturnPointer => self.ret_ptr = Some(r),
+        }
     }
 
     fn var(&self, v: VarId) -> Result<PointerValue<'ctx>, TransformerError> {
