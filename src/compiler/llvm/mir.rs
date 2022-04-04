@@ -76,10 +76,14 @@ impl<'module, 'ctx> LlvmProgram<'module, 'ctx> {
     }
 }
 
+/// Groups the data which describes an LLVM function together.
 #[derive(Clone, Copy)]
 struct FunctionData<'ctx> {
-    ret_method: ReturnMethod,
+    /// A reference to the function within the LLVM module.
     function: FunctionValue<'ctx>,
+
+    /// Describes how values are returned from the funciton to the caller.
+    ret_method: ReturnMethod,
 }
 
 /// Specifies the method that will be used to pass the result of this
