@@ -9,7 +9,7 @@ use inkwell::{
     targets::{CodeModel, InitializationConfig, RelocMode},
     types::{AnyTypeEnum, BasicType, BasicTypeEnum},
     values::*,
-    OptimizationLevel,
+    AddressSpace, OptimizationLevel,
 };
 use log::debug;
 
@@ -175,7 +175,10 @@ impl<'module, 'ctx> LlvmProgramBuilder<'module, 'ctx> {
             AnyTypeEnum::PointerType(_) | AnyTypeEnum::FloatType(_) | AnyTypeEnum::IntType(_) => {
                 (ReturnMethod::Return, *llvm_ty)
             }
-            AnyTypeEnum::ArrayType(_) => (ReturnMethod::OutParam, *llvm_ty),
+            AnyTypeEnum::ArrayType(a_ty) => (
+                ReturnMethod::OutParam,
+                a_ty.ptr_type(AddressSpace::Generic).into(),
+            ),
             AnyTypeEnum::FunctionType(_) => todo!(),
             AnyTypeEnum::StructType(_) => todo!(),
             AnyTypeEnum::VectorType(_) => todo!(),
@@ -372,14 +375,21 @@ enum ReturnPointer<'ctx> {
     /// operator to return the value back using the platform appropriate methods.
     Value(Option<BasicValueEnum<'ctx>>),
 
-    OutParam,
+    OutParam(PointerValue<'ctx>),
 }
 
 impl<'p, 'module, 'ctx> LlvmFunctionBuilder<'p, 'module, 'ctx> {
     fn new(function: FunctionData<'ctx>, program: &'p LlvmProgramBuilder<'module, 'ctx>) -> Self {
         debug!("Creating LLVM Function Transformer for function");
         let ret_ptr = match function.ret_method {
-            ReturnMethod::OutParam => ReturnPointer::OutParam,
+            ReturnMethod::OutParam => {
+                let out_ptr = function
+                    .function
+                    .get_nth_param(0)
+                    .unwrap()
+                    .into_pointer_value();
+                ReturnPointer::OutParam(out_ptr)
+            }
             ReturnMethod::Return => match function.function.get_type().get_return_type() {
                 None => ReturnPointer::Unit,
                 Some(_) => ReturnPointer::Value(None),
@@ -499,7 +509,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<PointerValue<'ctx>, BasicValueEnum<'ctx>
                 let val = v.unwrap();
                 self.program.builder.build_return(Some(&val))
             }
-            ReturnPointer::OutParam => self.program.builder.build_return(None),
+            ReturnPointer::OutParam(_) => self.program.builder.build_return(None),
         };
     }
 
@@ -543,7 +553,9 @@ impl<'p, 'module, 'ctx> FunctionBuilder<PointerValue<'ctx>, BasicValueEnum<'ctx>
             LValue::ReturnPointer => match &mut self.ret_ptr {
                 ReturnPointer::Unit => panic!("Attempting to return a value on a Unit function"),
                 ReturnPointer::Value(val) => *val = Some(r),
-                ReturnPointer::OutParam => (),
+                ReturnPointer::OutParam(out_ptr) => {
+                    self.program.builder.build_store(*out_ptr, r);
+                }
             },
         }
     }
