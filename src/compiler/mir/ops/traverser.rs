@@ -167,9 +167,12 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
                     Operand::LValue(l) => self.lvalue(l),
                 };
                 // evaluate arguments?
+
                 // convert LValue?
+                let reentry = (self.lvalue(&reentry.0), reentry.1);
+
                 // create function call
-                self.xfmr.term_call_fn(target, reentry.1)
+                self.xfmr.term_call_fn(target, reentry)
             }
         }
     }

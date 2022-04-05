@@ -620,11 +620,18 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
             .build_conditional_branch(cond.into_int_value(), *then_bb, *else_bb);
     }
 
-    fn term_call_fn(&mut self, target: Location<'ctx>, reentry: BasicBlockId) {
+    fn term_call_fn(&mut self, target: Location<'ctx>, reentry: (Location<'ctx>, BasicBlockId)) {
+        let result =
+            self.program
+                .builder
+                .build_call(target.into_function().unwrap().function, &[], "");
+
+        let loc = reentry.0.into_pointer().unwrap();
         self.program
             .builder
-            .build_call(target.into_function().unwrap().function, &[], "");
-        let bb = self.blocks.get(&reentry).unwrap();
+            .build_store(loc, result.try_as_basic_value().unwrap_left());
+
+        let bb = self.blocks.get(&reentry.1).unwrap();
         self.program.builder.build_unconditional_branch(*bb);
     }
 
