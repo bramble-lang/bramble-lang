@@ -149,10 +149,10 @@ mod mir2llvm_tests_visual {
         compile_and_print_llvm(
             "
             fn foo() -> i64 {
-                return bar();
+                return bar(2);
             }
 
-            fn bar() -> i64 {
+            fn bar(i: i64) -> i64 {
                 return 5;
             }
         ",

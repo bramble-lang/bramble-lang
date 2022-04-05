@@ -166,13 +166,15 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
                     Operand::Constant(_) => todo!(),
                     Operand::LValue(l) => self.lvalue(l),
                 };
+
                 // evaluate arguments?
+                let args: Vec<_> = args.iter().map(|a| self.operand(a)).collect();
 
                 // convert LValue?
                 let reentry = (self.lvalue(&reentry.0), reentry.1);
 
                 // create function call
-                self.xfmr.term_call_fn(target, reentry)
+                self.xfmr.term_call_fn(target, &args, reentry)
             }
         }
     }
