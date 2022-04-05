@@ -91,6 +91,7 @@ pub trait FunctionBuilder<L, V> {
     /// Store the given value to the given memory location
     fn store(&mut self, span: Span, l: &LValue, r: V);
 
+    /// Returns a location value for a specific static item.
     fn static_loc(&self, id: DefId) -> Result<L, TransformerError>;
 
     /// Convert the given variable declaration to a specific location in memory
