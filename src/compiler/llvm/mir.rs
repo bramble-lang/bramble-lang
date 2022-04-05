@@ -620,7 +620,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
             .build_conditional_branch(cond.into_int_value(), *then_bb, *else_bb);
     }
 
-    fn term_fn_call(&mut self, target: Location<'ctx>, reentry: BasicBlockId) {
+    fn term_call_fn(&mut self, target: Location<'ctx>, reentry: BasicBlockId) {
         self.program
             .builder
             .build_call(target.into_function().unwrap().function, &[], "");
