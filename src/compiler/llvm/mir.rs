@@ -29,17 +29,28 @@ use super::llvmir::{get_ptr_alignment, LlvmIsAggregateType, LlvmToBasicTypeEnum}
 
 const ADDRESS_SPACE: AddressSpace = AddressSpace::Generic;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub enum Location<'ctx> {
     Pointer(PointerValue<'ctx>),
-    Function(FunctionValue<'ctx>),
+    Function(FunctionData<'ctx>),
 }
 
 impl<'ctx> Location<'ctx> {
+    /// Will attempt to turn this value into a [`PointerValue`]. If this is a
+    /// [`Location::Function`] variant then this will return an error.
     fn into_pointer(&self) -> Result<PointerValue<'ctx>, TransformerError> {
         match self {
             Location::Pointer(p) => Ok(*p),
             Location::Function(_) => todo!(),
+        }
+    }
+
+    /// Will attempt to turn this value into a [`FunctionData`] value. If this is a
+    /// [`Location::Pointer`] variant then this will return an error.
+    fn into_function(&self) -> Result<FunctionData<'ctx>, TransformerError> {
+        match self {
+            Location::Pointer(_) => todo!(),
+            Location::Function(f) => Ok(*f),
         }
     }
 }
@@ -95,7 +106,7 @@ impl<'module, 'ctx> LlvmProgram<'module, 'ctx> {
 
 /// Groups the data which describes an LLVM function together.
 #[derive(Clone, Copy)]
-struct FunctionData<'ctx> {
+pub struct FunctionData<'ctx> {
     /// A reference to the function within the LLVM module.
     function: FunctionValue<'ctx>,
 
@@ -612,7 +623,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
     fn term_fn_call(&mut self, target: Location<'ctx>, reentry: BasicBlockId) {
         self.program
             .builder
-            .build_call(target.into_pointer().unwrap(), &[], "");
+            .build_call(target.into_function().unwrap().function, &[], "");
         let bb = self.blocks.get(&reentry).unwrap();
         self.program.builder.build_unconditional_branch(*bb);
     }
@@ -650,8 +661,8 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
             .program
             .fn_table
             .get(&id)
-            .ok_or(TransformerError::FunctionNotFound);
-        todo!()
+            .ok_or(TransformerError::FunctionNotFound)?;
+        Ok(Location::Function(*f))
     }
 
     fn var(&self, v: VarId) -> Result<Location<'ctx>, TransformerError> {
