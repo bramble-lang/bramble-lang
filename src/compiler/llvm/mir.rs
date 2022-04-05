@@ -598,7 +598,8 @@ impl<'p, 'module, 'ctx> FunctionBuilder<PointerValue<'ctx>, BasicValueEnum<'ctx>
             .build_conditional_branch(cond.into_int_value(), *then_bb, *else_bb);
     }
 
-    fn term_fn_call(&mut self, reentry: BasicBlockId) {
+    fn term_fn_call(&mut self, target: PointerValue<'ctx>, reentry: BasicBlockId) {
+        self.program.builder.build_call(target, &[], "");
         let bb = self.blocks.get(&reentry).unwrap();
         self.program.builder.build_unconditional_branch(*bb);
     }
@@ -629,6 +630,15 @@ impl<'p, 'module, 'ctx> FunctionBuilder<PointerValue<'ctx>, BasicValueEnum<'ctx>
                 }
             },
         }
+    }
+
+    fn static_loc(&self, id: DefId) -> Result<PointerValue<'ctx>, TransformerError> {
+        let f = self
+            .program
+            .fn_table
+            .get(&id)
+            .ok_or(TransformerError::FunctionNotFound);
+        todo!()
     }
 
     fn var(&self, v: VarId) -> Result<PointerValue<'ctx>, TransformerError> {

@@ -161,10 +161,15 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
                 args,
                 reentry,
             } => {
+                // Get the target function
+                let target = match func {
+                    Operand::Constant(_) => todo!(),
+                    Operand::LValue(l) => self.lvalue(l),
+                };
                 // evaluate arguments?
                 // convert LValue?
                 // create function call
-                self.xfmr.term_fn_call(reentry.1)
+                self.xfmr.term_fn_call(target, reentry.1)
             }
         }
     }
@@ -224,7 +229,7 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
 
     fn lvalue(&mut self, lv: &LValue) -> L {
         match lv {
-            LValue::Static(_) => todo!(),
+            LValue::Static(sid) => self.xfmr.static_loc(*sid).unwrap(),
             LValue::Var(vid) => self.xfmr.var(*vid).unwrap(),
             LValue::Temp(tid) => self.xfmr.temp(*tid).unwrap(),
             LValue::Access(_, _) => todo!(),

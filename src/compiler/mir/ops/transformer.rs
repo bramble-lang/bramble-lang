@@ -83,13 +83,15 @@ pub trait FunctionBuilder<L, V> {
 
     /// Tells the program to enter into a new function and, when that function is complete,
     /// where to store the result and where to reenter this function.
-    fn term_fn_call(&mut self, reentry: BasicBlockId);
+    fn term_fn_call(&mut self, target: L, reentry: BasicBlockId);
 
     /// Tells the program to go to the given [`BasicBlock`].
     fn term_goto(&mut self, target_bb: BasicBlockId);
 
     /// Store the given value to the given memory location
     fn store(&mut self, span: Span, l: &LValue, r: V);
+
+    fn static_loc(&self, id: DefId) -> Result<L, TransformerError>;
 
     /// Convert the given variable declaration to a specific location in memory
     fn var(&self, v: VarId) -> Result<L, TransformerError>;
