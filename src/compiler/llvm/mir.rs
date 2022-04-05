@@ -482,7 +482,7 @@ impl<'p, 'module, 'ctx> LlvmFunctionBuilder<'p, 'module, 'ctx> {
 
         self.function
             .function
-            .get_nth_param(id.to_u32() - arg_offset)
+            .get_nth_param(id.to_u32() + arg_offset)
             .ok_or(TransformerError::ArgNotFound)
     }
 
