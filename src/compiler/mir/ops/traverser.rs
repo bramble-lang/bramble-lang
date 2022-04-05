@@ -164,6 +164,7 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
                 // evaluate arguments?
                 // convert LValue?
                 // create function call
+                self.xfmr.term_fn_call(reentry.1)
             }
         }
     }

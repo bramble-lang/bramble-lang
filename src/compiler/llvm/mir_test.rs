@@ -145,6 +145,21 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
+    fn function_call() {
+        compile_and_print_llvm(
+            "
+            fn foo() -> i64 {
+                return bar();
+            }
+
+            fn bar() -> i64 {
+                return 5;
+            }
+        ",
+        );
+    }
+
+    #[test]
     fn function_return_array() {
         compile_and_print_llvm(
             "

@@ -598,12 +598,9 @@ impl<'p, 'module, 'ctx> FunctionBuilder<PointerValue<'ctx>, BasicValueEnum<'ctx>
             .build_conditional_branch(cond.into_int_value(), *then_bb, *else_bb);
     }
 
-    fn term_fn_call(
-        &mut self,
-        target: DefId,
-        args: &[BasicValueEnum<'ctx>],
-        reentry: (PointerValue<'ctx>, BasicBlockId),
-    ) {
+    fn term_fn_call(&mut self, reentry: BasicBlockId) {
+        let bb = self.blocks.get(&reentry).unwrap();
+        self.program.builder.build_unconditional_branch(*bb);
     }
 
     fn term_goto(&mut self, target: BasicBlockId) {

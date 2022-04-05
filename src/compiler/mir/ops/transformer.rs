@@ -83,7 +83,7 @@ pub trait FunctionBuilder<L, V> {
 
     /// Tells the program to enter into a new function and, when that function is complete,
     /// where to store the result and where to reenter this function.
-    fn term_fn_call(&mut self, target: DefId, args: &[V], reentry: (L, BasicBlockId));
+    fn term_fn_call(&mut self, reentry: BasicBlockId);
 
     /// Tells the program to go to the given [`BasicBlock`].
     fn term_goto(&mut self, target_bb: BasicBlockId);
