@@ -116,7 +116,7 @@ pub struct FunctionData<'ctx> {
 
 /// Specifies the method that will be used to pass the result of this
 /// function back to its caller.
-#[derive(Clone, Copy)]
+#[derive(PartialEq, Clone, Copy)]
 enum ReturnMethod {
     /// An extra "out" parameter is added to this function's parameters that
     /// contains a pointer to a location in the caller's stack. The function's
@@ -626,15 +626,34 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         args: &[BasicValueEnum<'ctx>],
         reentry: (Location<'ctx>, BasicBlockId),
     ) {
+        let f = target.into_function().unwrap();
+        let args = match f.ret_method {
+            ReturnMethod::OutParam => {
+                // If the return method is to use an out parameter, then push the
+                // return value location to the front of the argument list for the functoin
+                let out = reentry.0.into_pointer().unwrap().as_basic_value_enum();
+                let mut out_args = vec![out];
+                for a in args {
+                    out_args.push(*a);
+                }
+                out_args
+            }
+            ReturnMethod::Return => args.into(),
+        };
+
         let result =
             self.program
                 .builder
-                .build_call(target.into_function().unwrap().function, args, "");
+                .build_call(target.into_function().unwrap().function, &args, "");
 
-        let loc = reentry.0.into_pointer().unwrap();
-        self.program
-            .builder
-            .build_store(loc, result.try_as_basic_value().unwrap_left());
+        // If the return method is to return with the LLVM Return operator, then store
+        // that value into the temp location
+        if f.ret_method == ReturnMethod::Return {
+            let loc = reentry.0.into_pointer().unwrap();
+            self.program
+                .builder
+                .build_store(loc, result.try_as_basic_value().unwrap_left());
+        }
 
         let bb = self.blocks.get(&reentry.1).unwrap();
         self.program.builder.build_unconditional_branch(*bb);
