@@ -358,7 +358,15 @@ impl MirProcedureBuilder {
 
         let cid = self
             .current_bb
-            .expect("Cannot set terminator when there is not current BasicBlock");
+            .expect("Cannot set terminator when there is no current BasicBlock");
+
+        // The re-entry BB ID must come after the ID of the BB making the function call
+        // Providing this invariant makes transformation operations on the MIR easier.
+        assert!(
+            cid < reentry.1,
+            "The ID of the re-entry BasicBlock must be greater than the caller BasicBlock"
+        );
+
         let bb = self.proc.get_bb_mut(cid);
         bb.set_terminator(Terminator::new(
             TerminatorKind::CallFn {

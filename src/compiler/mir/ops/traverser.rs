@@ -156,7 +156,15 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
                 let cond = self.operand(cond);
                 self.xfmr.term_cond_goto(cond, *tru, *fls)
             }
-            TerminatorKind::CallFn { .. } => todo!(),
+            TerminatorKind::CallFn {
+                func,
+                args,
+                reentry,
+            } => {
+                // evaluate arguments?
+                // convert LValue?
+                // create function call
+            }
         }
     }
 

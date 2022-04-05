@@ -310,7 +310,7 @@ impl Display for Procedure {
 }
 
 /// Identifier for a specific basic block in a procedure
-#[derive(Debug, Hash, Eq, PartialEq, Copy, Clone)]
+#[derive(Debug, Hash, Eq, PartialEq, PartialOrd, Copy, Clone)]
 pub struct BasicBlockId(usize);
 
 impl BasicBlockId {
