@@ -391,6 +391,11 @@ pub struct LlvmFunctionBuilder<'p, 'module, 'ctx> {
     temps: HashMap<TempId, PointerValue<'ctx>>,
 
     /// Table to manage looking up the LLVM BasicBlock via the [`BasicBlockId`].
+    /// Some [`BasicBlockIds`](BasicBlockId) may map to the same
+    /// [`inkwell::BasicBlock`](inkwell::basic_block::BasicBlock). This is because
+    /// the LLVM Builder may decide that two adjacent MIR BasicBlocks need to be
+    /// merged into a single LLVM BasicBlock in order to maintain idiomatic LLVM
+    /// code.
     blocks: HashMap<BasicBlockId, inkwell::basic_block::BasicBlock<'ctx>>,
 }
 
@@ -591,6 +596,14 @@ impl<'p, 'module, 'ctx> FunctionBuilder<PointerValue<'ctx>, BasicValueEnum<'ctx>
         self.program
             .builder
             .build_conditional_branch(cond.into_int_value(), *then_bb, *else_bb);
+    }
+
+    fn term_fn_call(
+        &mut self,
+        target: DefId,
+        args: &[BasicValueEnum<'ctx>],
+        reentry: (PointerValue<'ctx>, BasicBlockId),
+    ) {
     }
 
     fn term_goto(&mut self, target: BasicBlockId) {
