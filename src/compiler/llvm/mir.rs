@@ -650,9 +650,12 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         // that value into the temp location
         if f.ret_method == ReturnMethod::Return {
             let loc = reentry.0.into_pointer().unwrap();
-            self.program
-                .builder
-                .build_store(loc, result.try_as_basic_value().unwrap_left());
+            match result.try_as_basic_value().left() {
+                Some(r) => {
+                    self.program.builder.build_store(loc, r);
+                }
+                None => (),
+            }
         }
 
         let bb = self.blocks.get(&reentry.1).unwrap();
