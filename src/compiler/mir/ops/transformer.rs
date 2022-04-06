@@ -143,7 +143,7 @@ pub trait FunctionBuilder<L, V> {
     fn const_f64(&self, f: f64) -> V;
 
     /// Load a value from a memory location
-    fn load(&self, lv: L) -> V;
+    fn load(&self, lv: L) -> Result<V, TransformerError>;
 
     /// Add two values together
     fn add(&self, a: V, b: V) -> V;

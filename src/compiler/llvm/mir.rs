@@ -822,10 +822,8 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         self.program.context.f64_type().const_float(f).into()
     }
 
-    fn load(&self, lv: Location<'ctx>) -> BasicValueEnum<'ctx> {
-        self.program
-            .builder
-            .build_load(lv.into_pointer().unwrap(), "")
+    fn load(&self, lv: Location<'ctx>) -> Result<BasicValueEnum<'ctx>, TransformerError> {
+        Ok(self.program.builder.build_load(lv.into_pointer()?, ""))
     }
 
     fn add(&self, a: BasicValueEnum<'ctx>, b: BasicValueEnum<'ctx>) -> BasicValueEnum<'ctx> {

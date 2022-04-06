@@ -210,7 +210,7 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
             Operand::Constant(c) => self.constant(*c),
             Operand::LValue(lv) => {
                 let l = self.lvalue(lv);
-                self.xfmr.load(l)
+                self.xfmr.load(l).unwrap()
             }
         }
     }
