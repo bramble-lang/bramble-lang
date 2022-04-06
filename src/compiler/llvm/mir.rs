@@ -649,23 +649,25 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
     fn term_call_fn(
         &mut self,
         target: Location<'ctx>,
-        args: &[BasicValueEnum<'ctx>],
+        mut args: Vec<BasicValueEnum<'ctx>>,
         reentry: (Location<'ctx>, BasicBlockId),
     ) -> Result<(), TransformerError> {
         let f = target.into_function()?;
-        let args = match f.ret_method {
+        match f.ret_method {
             ReturnMethod::OutParam => {
                 // If the return method is to use an out parameter, then push the
                 // return value location to the front of the argument list for the functoin
                 let out = reentry.0.into_pointer()?.as_basic_value_enum();
-                let mut out_args = vec![out];
-                for a in args {
-                    out_args.push(*a);
-                }
-                out_args
+
+                // This is done to try and minimize the memory usage. The out pointer parameter must be prepended
+                // to the vector of arguments, but the `inkwell` API takes a slice, which means the collection of
+                // arguments must be contiguous in memory.
+                args.reverse();
+                args.push(out);
+                args.reverse();
             }
-            ReturnMethod::Return => args.into(),
-        };
+            ReturnMethod::Return => (),
+        }
 
         let result = self
             .program

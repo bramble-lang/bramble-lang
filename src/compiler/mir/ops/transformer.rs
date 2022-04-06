@@ -91,7 +91,7 @@ pub trait FunctionBuilder<L, V> {
     fn term_call_fn(
         &mut self,
         target: L,
-        arg: &[V],
+        args: Vec<V>,
         reentry: (L, BasicBlockId),
     ) -> Result<(), TransformerError>;
 
