@@ -165,7 +165,9 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
             } => {
                 // Get the target function
                 let target = match func {
-                    Operand::Constant(_) => todo!(),
+                    Operand::Constant(_) => {
+                        panic!("Attempting to use a constant in a function call")
+                    }
                     Operand::LValue(l) => self.lvalue(l),
                 };
 
