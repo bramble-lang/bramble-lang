@@ -541,18 +541,6 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
             _ => panic!("Terminator must be set for BB before lowering to LLVM"),
         };
         Ok(())
-
-        /*
-        let bb = self
-            .program
-            .context
-            .append_basic_block(self.function.function, &id.to_string());
-        if self.blocks.insert(id, bb).is_none() {
-            Ok(())
-        } else {
-            Err(TransformerError::BasicBlockAlreadyCreated)
-        }
-        */
     }
 
     fn set_bb(&mut self, id: BasicBlockId) -> Result<(), TransformerError> {
