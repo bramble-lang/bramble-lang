@@ -176,7 +176,7 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
                 let reentry = (self.lvalue(&reentry.0), reentry.1);
 
                 // create function call
-                self.xfmr.term_call_fn(target, &args, reentry)
+                self.xfmr.term_call_fn(target, &args, reentry).unwrap()
             }
         }
     }

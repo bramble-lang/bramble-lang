@@ -651,13 +651,13 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         target: Location<'ctx>,
         args: &[BasicValueEnum<'ctx>],
         reentry: (Location<'ctx>, BasicBlockId),
-    ) {
-        let f = target.into_function().unwrap();
+    ) -> Result<(), TransformerError> {
+        let f = target.into_function()?;
         let args = match f.ret_method {
             ReturnMethod::OutParam => {
                 // If the return method is to use an out parameter, then push the
                 // return value location to the front of the argument list for the functoin
-                let out = reentry.0.into_pointer().unwrap().as_basic_value_enum();
+                let out = reentry.0.into_pointer()?.as_basic_value_enum();
                 let mut out_args = vec![out];
                 for a in args {
                     out_args.push(*a);
@@ -667,10 +667,10 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
             ReturnMethod::Return => args.into(),
         };
 
-        let result =
-            self.program
-                .builder
-                .build_call(target.into_function().unwrap().function, &args, "");
+        let result = self
+            .program
+            .builder
+            .build_call(target.into_function()?.function, &args, "");
 
         // If the return method is to return with the LLVM Return operator, then store
         // that value into the temp location
@@ -684,8 +684,13 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
             }
         }
 
-        let bb = self.blocks.get(&reentry.1).unwrap();
+        let bb = self
+            .blocks
+            .get(&reentry.1)
+            .ok_or(TransformerError::BasicBlockNotFound)?;
         self.program.builder.build_unconditional_branch(*bb);
+
+        Ok(())
     }
 
     fn term_goto(&mut self, target: BasicBlockId) -> Result<(), TransformerError> {
