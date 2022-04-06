@@ -148,6 +148,18 @@ mod mir2llvm_tests_visual {
     fn function_call() {
         compile_and_print_llvm(
             "
+            fn blah() {
+                goo();
+
+                return;
+            }
+
+            fn goo() {
+                foo();
+
+                return;
+            }
+
             fn foo() -> i64 {
                 return bar(2);
             }
