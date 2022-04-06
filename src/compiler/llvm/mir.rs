@@ -27,7 +27,19 @@ use crate::{
 
 use super::llvmir::{get_ptr_alignment, LlvmIsAggregateType, LlvmToBasicTypeEnum};
 
+/// Use the [`Generic`](AddressSpace::Generic) address space for all memory operations.
+/// This is done because this seems to be the safest choice and because I cannot find
+/// much documentation about what I should be using.
 const ADDRESS_SPACE: AddressSpace = AddressSpace::Generic;
+
+/// For functions that take an output parameter, the parameter is always placed as the
+/// first parameter in the functions parameter list. We use the first parameter rather
+/// than placing the Out Parameter as the last parameter, because if a function is
+/// variadic it becomes impossible to deterministically determine which argument is
+/// the output parameter. While Bramble does not support variadic functions, as of
+/// this time, this makes it easier to reason about how the out parameter affects
+/// the compilation of a program.
+const OUT_PARAM_INDEX: usize = 0;
 
 /// Represents an LLVM value which represents an address somewhere in memory. This
 /// includes [`pointers`](PointerValue) and [`function labels`](FunctionValue).
@@ -466,7 +478,10 @@ impl<'p, 'module, 'ctx> LlvmFunctionBuilder<'p, 'module, 'ctx> {
     fn get_out_param(f: &FunctionData<'ctx>) -> Option<Location<'ctx>> {
         match f.ret_method {
             ReturnMethod::OutParam => Some(Location::Pointer(
-                f.function.get_nth_param(0).unwrap().into_pointer_value(),
+                f.function
+                    .get_nth_param(OUT_PARAM_INDEX)
+                    .unwrap()
+                    .into_pointer_value(),
             )),
             ReturnMethod::Return => None,
         }
