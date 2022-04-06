@@ -16,6 +16,8 @@
 //! the vector.
 //! 5. Need to construct the Phi operator in the merge point Basic Block.
 
+use std::collections::VecDeque;
+
 use crate::compiler::{
     ast::Path,
     mir::{ir::*, project::DefId, MirTypeDef, TypeId},
@@ -64,7 +66,7 @@ pub trait ProgramBuilder<'p, L, V, F: FunctionBuilder<L, V>> {
 /// mir module and the LLVM IR module and avoid having bi-directional imports creating
 /// a more confusing dependency graph.
 pub trait FunctionBuilder<L, V> {
-    fn create_bb(&mut self, bb: BasicBlockId) -> Result<(), TransformerError>;
+    fn create_bb(&mut self, id: BasicBlockId, bb: &BasicBlock) -> Result<(), TransformerError>;
     fn set_bb(&mut self, bb: BasicBlockId) -> Result<(), TransformerError>;
 
     /// Allocate space for the given variable declaration
@@ -79,13 +81,30 @@ pub trait FunctionBuilder<L, V> {
 
     /// Tells the program to go to one of two [`BasicBlocks`](BasicBlock) based upon whether
     /// the given conditional is true or false.
-    fn term_cond_goto(&mut self, cond: V, then_bb: BasicBlockId, else_bb: BasicBlockId);
+    fn term_cond_goto(
+        &mut self,
+        cond: V,
+        then_bb: BasicBlockId,
+        else_bb: BasicBlockId,
+    ) -> Result<(), TransformerError>;
+
+    /// Tells the program to enter into a new function and, when that function is complete,
+    /// where to store the result and where to reenter this function.
+    fn term_call_fn(
+        &mut self,
+        target: L,
+        args: VecDeque<V>,
+        reentry: (L, BasicBlockId),
+    ) -> Result<(), TransformerError>;
 
     /// Tells the program to go to the given [`BasicBlock`].
-    fn term_goto(&mut self, target_bb: BasicBlockId);
+    fn term_goto(&mut self, target_bb: BasicBlockId) -> Result<(), TransformerError>;
 
     /// Store the given value to the given memory location
     fn store(&mut self, span: Span, l: &LValue, r: V);
+
+    /// Returns a location value for a specific static item.
+    fn static_loc(&self, id: DefId) -> Result<L, TransformerError>;
 
     /// Convert the given variable declaration to a specific location in memory
     fn var(&self, v: VarId) -> Result<L, TransformerError>;
@@ -126,7 +145,7 @@ pub trait FunctionBuilder<L, V> {
     fn const_f64(&self, f: f64) -> V;
 
     /// Load a value from a memory location
-    fn load(&self, lv: L) -> V;
+    fn load(&self, lv: L) -> Result<V, TransformerError>;
 
     /// Add two values together
     fn add(&self, a: V, b: V) -> V;

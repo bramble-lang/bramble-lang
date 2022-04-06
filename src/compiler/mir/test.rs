@@ -113,6 +113,25 @@ pub mod tests {
         }
 
         #[test]
+        fn print_mir_unit_fn_call() {
+            let text = "
+        fn test() -> i64 {
+            test2();
+            return 1 + 2 + 3;
+        }
+        
+        fn test2() {
+            return;
+        }
+        ";
+            let mut table = StringTable::new();
+            let module = compile(text, &mut table);
+            let mut project = MirProject::new();
+            transform::transform(&module, &mut project).unwrap();
+            println!("{}", project);
+        }
+
+        #[test]
         fn print_mir_extern() {
             let text = "
         extern fn printf(x: i64, ...);

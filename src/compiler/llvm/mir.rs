@@ -1,6 +1,6 @@
 //! Transforms the MIR representation into LLVM
 
-use std::collections::{hash_map::Entry, HashMap};
+use std::collections::{hash_map::Entry, HashMap, VecDeque};
 
 use inkwell::{
     builder::Builder,
@@ -27,7 +27,47 @@ use crate::{
 
 use super::llvmir::{get_ptr_alignment, LlvmIsAggregateType, LlvmToBasicTypeEnum};
 
+/// Use the [`Generic`](AddressSpace::Generic) address space for all memory operations.
+/// This is done because this seems to be the safest choice and because I cannot find
+/// much documentation about what I should be using.
 const ADDRESS_SPACE: AddressSpace = AddressSpace::Generic;
+
+/// For functions that take an output parameter, the parameter is always placed as the
+/// first parameter in the functions parameter list. We use the first parameter rather
+/// than placing the Out Parameter as the last parameter, because if a function is
+/// variadic it becomes impossible to deterministically determine which argument is
+/// the output parameter. While Bramble does not support variadic functions, as of
+/// this time, this makes it easier to reason about how the out parameter affects
+/// the compilation of a program.
+const OUT_PARAM_INDEX: u32 = 0;
+
+/// Represents an LLVM value which represents an address somewhere in memory. This
+/// includes [`pointers`](PointerValue) and [`function labels`](FunctionValue).
+#[derive(Clone, Copy)]
+pub enum Location<'ctx> {
+    Pointer(PointerValue<'ctx>),
+    Function(FunctionData<'ctx>),
+}
+
+impl<'ctx> Location<'ctx> {
+    /// Will attempt to turn this value into a [`PointerValue`]. If this is a
+    /// [`Location::Function`] variant then this will return an error.
+    fn into_pointer(&self) -> Result<PointerValue<'ctx>, TransformerError> {
+        match self {
+            Location::Pointer(p) => Ok(*p),
+            Location::Function(_) => todo!(),
+        }
+    }
+
+    /// Will attempt to turn this value into a [`FunctionData`] value. If this is a
+    /// [`Location::Pointer`] variant then this will return an error.
+    fn into_function(&self) -> Result<FunctionData<'ctx>, TransformerError> {
+        match self {
+            Location::Pointer(_) => todo!(),
+            Location::Function(f) => Ok(*f),
+        }
+    }
+}
 
 /// Represents the final result of a Bramble program in LLVM IR.
 pub struct LlvmProgram<'module, 'ctx> {
@@ -80,7 +120,7 @@ impl<'module, 'ctx> LlvmProgram<'module, 'ctx> {
 
 /// Groups the data which describes an LLVM function together.
 #[derive(Clone, Copy)]
-struct FunctionData<'ctx> {
+pub struct FunctionData<'ctx> {
     /// A reference to the function within the LLVM module.
     function: FunctionValue<'ctx>,
 
@@ -90,7 +130,7 @@ struct FunctionData<'ctx> {
 
 /// Specifies the method that will be used to pass the result of this
 /// function back to its caller.
-#[derive(Clone, Copy)]
+#[derive(PartialEq, Clone, Copy)]
 enum ReturnMethod {
     /// An extra "out" parameter is added to this function's parameters that
     /// contains a pointer to a location in the caller's stack. The function's
@@ -248,12 +288,8 @@ impl<'module, 'ctx> LlvmProgramBuilder<'module, 'ctx> {
 }
 
 impl<'p, 'module, 'ctx>
-    ProgramBuilder<
-        'p,
-        PointerValue<'ctx>,
-        BasicValueEnum<'ctx>,
-        LlvmFunctionBuilder<'p, 'module, 'ctx>,
-    > for LlvmProgramBuilder<'module, 'ctx>
+    ProgramBuilder<'p, Location<'ctx>, BasicValueEnum<'ctx>, LlvmFunctionBuilder<'p, 'module, 'ctx>>
+    for LlvmProgramBuilder<'module, 'ctx>
 {
     fn add_function(
         &mut self,
@@ -384,13 +420,18 @@ pub struct LlvmFunctionBuilder<'p, 'module, 'ctx> {
 
     /// Mapping of [`VarIds`](VarId) to their LLVM value, this is used to look up
     /// variables after they have been allocated.
-    vars: HashMap<VarId, PointerValue<'ctx>>,
+    vars: HashMap<VarId, Location<'ctx>>,
 
     /// Mapping of [`TempIds`](TempId) to their LLVM value, this is used to look up
     /// variables after they have been allocated.
-    temps: HashMap<TempId, PointerValue<'ctx>>,
+    temps: HashMap<TempId, Location<'ctx>>,
 
     /// Table to manage looking up the LLVM BasicBlock via the [`BasicBlockId`].
+    /// Some [`BasicBlockIds`](BasicBlockId) may map to the same
+    /// [`inkwell::BasicBlock`](inkwell::basic_block::BasicBlock). This is because
+    /// the LLVM Builder may decide that two adjacent MIR BasicBlocks need to be
+    /// merged into a single LLVM BasicBlock in order to maintain idiomatic LLVM
+    /// code.
     blocks: HashMap<BasicBlockId, inkwell::basic_block::BasicBlock<'ctx>>,
 }
 
@@ -407,7 +448,7 @@ enum ReturnPointer<'ctx> {
 
     /// This function uses an out paramter which contains an address to a location in
     /// the calling function's stack to return a value.
-    OutParam(PointerValue<'ctx>),
+    OutParam(Location<'ctx>),
 }
 
 impl<'p, 'module, 'ctx> LlvmFunctionBuilder<'p, 'module, 'ctx> {
@@ -434,11 +475,14 @@ impl<'p, 'module, 'ctx> LlvmFunctionBuilder<'p, 'module, 'ctx> {
         }
     }
 
-    fn get_out_param(f: &FunctionData<'ctx>) -> Option<PointerValue<'ctx>> {
+    fn get_out_param(f: &FunctionData<'ctx>) -> Option<Location<'ctx>> {
         match f.ret_method {
-            ReturnMethod::OutParam => {
-                Some(f.function.get_nth_param(0).unwrap().into_pointer_value())
-            }
+            ReturnMethod::OutParam => Some(Location::Pointer(
+                f.function
+                    .get_nth_param(OUT_PARAM_INDEX)
+                    .unwrap()
+                    .into_pointer_value(),
+            )),
             ReturnMethod::Return => None,
         }
     }
@@ -455,7 +499,7 @@ impl<'p, 'module, 'ctx> LlvmFunctionBuilder<'p, 'module, 'ctx> {
 
         self.function
             .function
-            .get_nth_param(id.to_u32() - arg_offset)
+            .get_nth_param(id.to_u32() + arg_offset)
             .ok_or(TransformerError::ArgNotFound)
     }
 
@@ -485,19 +529,35 @@ impl<'p, 'module, 'ctx> LlvmFunctionBuilder<'p, 'module, 'ctx> {
     }
 }
 
-impl<'p, 'module, 'ctx> FunctionBuilder<PointerValue<'ctx>, BasicValueEnum<'ctx>>
+impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
     for LlvmFunctionBuilder<'p, 'module, 'ctx>
 {
-    fn create_bb(&mut self, id: BasicBlockId) -> Result<(), TransformerError> {
-        let bb = self
-            .program
-            .context
-            .append_basic_block(self.function.function, &id.to_string());
-        if self.blocks.insert(id, bb).is_none() {
-            Ok(())
-        } else {
-            Err(TransformerError::BasicBlockAlreadyCreated)
-        }
+    fn create_bb(&mut self, id: BasicBlockId, bb: &BasicBlock) -> Result<(), TransformerError> {
+        let llvm_bb = match self.blocks.entry(id) {
+            Entry::Occupied(occ) => *occ.get(),
+            Entry::Vacant(entry) => {
+                let llvm_bb = self
+                    .program
+                    .context
+                    .append_basic_block(self.function.function, &id.to_string());
+                entry.insert(llvm_bb);
+                llvm_bb
+            }
+        };
+
+        // If this basic block ends with a CallFn then set the reentry BB to point to this same BB
+        // LLVM IR does not treat function calls as terminators, so we should merge the block succeeding
+        // a function call with the block making a function call when lowering into LLVM.
+        match bb.get_term().map(|term| term.kind()) {
+            Some(kind) => match kind {
+                TerminatorKind::CallFn { reentry, .. } => {
+                    self.blocks.insert(reentry.1, llvm_bb);
+                }
+                _ => (),
+            },
+            _ => panic!("Terminator must be set for BB before lowering to LLVM"),
+        };
+        Ok(())
     }
 
     fn set_bb(&mut self, id: BasicBlockId) -> Result<(), TransformerError> {
@@ -515,14 +575,14 @@ impl<'p, 'module, 'ctx> FunctionBuilder<PointerValue<'ctx>, BasicValueEnum<'ctx>
         let arg_value = self.get_arg(arg_id)?;
 
         // Get the location in the stack where the argument will be stored
-        let stack_location = self
-            .vars
+        self.vars
             .get(&var_id)
-            .ok_or(TransformerError::VarNotFound)?;
-
-        // Move the argument into the stack
-        self.program.builder.build_store(*stack_location, arg_value);
-        Ok(())
+            .ok_or(TransformerError::VarNotFound)?
+            .into_pointer()
+            .and_then(|loc| {
+                self.program.builder.build_store(loc, arg_value);
+                Ok(())
+            })
     }
 
     fn alloc_var(&mut self, id: VarId, decl: &VarDecl) -> Result<(), TransformerError> {
@@ -541,7 +601,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<PointerValue<'ctx>, BasicValueEnum<'ctx>
                     .program
                     .builder
                     .build_alloca(ty.into_basic_type().unwrap(), &name);
-                ve.insert(ptr);
+                ve.insert(Location::Pointer(ptr));
                 Ok(())
             }
         }
@@ -560,7 +620,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<PointerValue<'ctx>, BasicValueEnum<'ctx>
                 // and add a mapping from VarID to the pointer in the local var table
                 let ty = self.program.context.i64_type();
                 let ptr = self.program.builder.build_alloca(ty, &name);
-                ve.insert(ptr);
+                ve.insert(Location::Pointer(ptr));
                 Ok(())
             }
         }
@@ -582,31 +642,91 @@ impl<'p, 'module, 'ctx> FunctionBuilder<PointerValue<'ctx>, BasicValueEnum<'ctx>
         cond: BasicValueEnum<'ctx>,
         then_bb: BasicBlockId,
         else_bb: BasicBlockId,
-    ) {
+    ) -> Result<(), TransformerError> {
         // Look up then_bb
-        let then_bb = self.blocks.get(&then_bb).unwrap();
+        let then_bb = self
+            .blocks
+            .get(&then_bb)
+            .ok_or(TransformerError::BasicBlockNotFound)?;
         // Look up else_bb
-        let else_bb = self.blocks.get(&else_bb).unwrap();
+        let else_bb = self
+            .blocks
+            .get(&else_bb)
+            .ok_or(TransformerError::BasicBlockNotFound)?;
         // Create conditional jump to then or else
         self.program
             .builder
             .build_conditional_branch(cond.into_int_value(), *then_bb, *else_bb);
+
+        Ok(())
     }
 
-    fn term_goto(&mut self, target: BasicBlockId) {
-        let target = self.blocks.get(&target).unwrap();
+    fn term_call_fn(
+        &mut self,
+        target: Location<'ctx>,
+        mut args: VecDeque<BasicValueEnum<'ctx>>,
+        reentry: (Location<'ctx>, BasicBlockId),
+    ) -> Result<(), TransformerError> {
+        let f = target.into_function()?;
+        match f.ret_method {
+            ReturnMethod::OutParam => {
+                // If the return method is to use an out parameter, then push the
+                // return value location to the front of the argument list for the functoin
+                let out = reentry.0.into_pointer()?.as_basic_value_enum();
+                args.push_front(out);
+            }
+            ReturnMethod::Return => (),
+        }
+
+        // This is done to try and minimize the memory usage. The out pointer parameter must be prepended
+        // to the vector of arguments, but the `inkwell` API takes a slice, which means the collection of
+        // arguments must be contiguous in memory.
+        let arg_slice = args.make_contiguous();
+        let result =
+            self.program
+                .builder
+                .build_call(target.into_function()?.function, arg_slice, "");
+
+        // If the return method is to return with the LLVM Return operator, then store
+        // that value into the temp location
+        if f.ret_method == ReturnMethod::Return {
+            let loc = reentry.0.into_pointer().unwrap();
+            match result.try_as_basic_value().left() {
+                Some(r) => {
+                    self.program.builder.build_store(loc, r);
+                }
+                None => (),
+            }
+        }
+
+        let bb = self
+            .blocks
+            .get(&reentry.1)
+            .ok_or(TransformerError::BasicBlockNotFound)?;
+        self.program.builder.build_unconditional_branch(*bb);
+
+        Ok(())
+    }
+
+    fn term_goto(&mut self, target: BasicBlockId) -> Result<(), TransformerError> {
+        let target = self
+            .blocks
+            .get(&target)
+            .ok_or(TransformerError::BasicBlockNotFound)?;
         self.program.builder.build_unconditional_branch(*target);
+
+        Ok(())
     }
 
     fn store(&mut self, span: Span, l: &LValue, r: BasicValueEnum<'ctx>) {
         match l {
             LValue::Static(_) => todo!(),
             LValue::Var(id) => {
-                let var = self.var(*id).unwrap();
+                let var = self.var(*id).unwrap().into_pointer().unwrap();
                 self.program.builder.build_store(var, r);
             }
             LValue::Temp(id) => {
-                let temp = self.temp(*id).unwrap();
+                let temp = self.temp(*id).unwrap().into_pointer().unwrap();
                 self.program.builder.build_store(temp, r);
             }
             LValue::Access(_, _) => todo!(),
@@ -614,21 +734,30 @@ impl<'p, 'module, 'ctx> FunctionBuilder<PointerValue<'ctx>, BasicValueEnum<'ctx>
                 ReturnPointer::Unit => panic!("Attempting to return a value on a Unit function"),
                 ReturnPointer::Value(val) => *val = Some(r),
                 ReturnPointer::OutParam(out_ptr) => {
-                    let dest = *out_ptr;
+                    let dest = out_ptr.into_pointer().unwrap();
                     self.build_memcpy(dest, r.into_pointer_value(), span)
                 }
             },
         }
     }
 
-    fn var(&self, v: VarId) -> Result<PointerValue<'ctx>, TransformerError> {
+    fn static_loc(&self, id: DefId) -> Result<Location<'ctx>, TransformerError> {
+        let f = self
+            .program
+            .fn_table
+            .get(&id)
+            .ok_or(TransformerError::FunctionNotFound)?;
+        Ok(Location::Function(*f))
+    }
+
+    fn var(&self, v: VarId) -> Result<Location<'ctx>, TransformerError> {
         self.vars
             .get(&v)
             .copied()
             .ok_or(TransformerError::VarNotFound)
     }
 
-    fn temp(&self, v: TempId) -> Result<PointerValue<'ctx>, TransformerError> {
+    fn temp(&self, v: TempId) -> Result<Location<'ctx>, TransformerError> {
         self.temps
             .get(&v)
             .copied()
@@ -708,8 +837,8 @@ impl<'p, 'module, 'ctx> FunctionBuilder<PointerValue<'ctx>, BasicValueEnum<'ctx>
         self.program.context.f64_type().const_float(f).into()
     }
 
-    fn load(&self, lv: PointerValue<'ctx>) -> BasicValueEnum<'ctx> {
-        self.program.builder.build_load(lv, "")
+    fn load(&self, lv: Location<'ctx>) -> Result<BasicValueEnum<'ctx>, TransformerError> {
+        Ok(self.program.builder.build_load(lv.into_pointer()?, ""))
     }
 
     fn add(&self, a: BasicValueEnum<'ctx>, b: BasicValueEnum<'ctx>) -> BasicValueEnum<'ctx> {

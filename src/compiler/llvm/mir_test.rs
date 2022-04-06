@@ -145,11 +145,59 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
-    fn function_return_array() {
+    fn function_call() {
         compile_and_print_llvm(
             "
-            fn foo(a: [i32; 4]) {
+            fn blah() {
+                goo();
+                goo();
+                goo();
+
                 return;
+            }
+
+            fn goo() {
+                foo();
+
+                return;
+            }
+
+            fn foo() -> i64 {
+                return bar(2);
+            }
+
+            fn bar(i: i64) -> i64 {
+                return 5;
+            }
+        ",
+        );
+    }
+
+    #[test]
+    fn function_call_multi_args() {
+        compile_and_print_llvm(
+            "
+            fn foo() -> i64 {
+                return bar(2, 1i32);
+            }
+
+            fn bar(i: i64, j: i32) -> i64 {
+                return 5;
+            }
+        ",
+        );
+    }
+
+    //#[test]
+    fn function_call_return_array() {
+        compile_and_print_llvm(
+            "
+            fn foo(a: [i64; 4]) -> [i64; 4] {
+                return bar(a);
+            }
+
+            fn bar(a: [i64; 4]) -> [i64; 4] {
+                return a;
             }
         ",
         );

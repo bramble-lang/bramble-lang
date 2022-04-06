@@ -1,7 +1,7 @@
 //! Traverses the MIR representation of a function and calls the appropriate
 //! methods on a value which implements the [`super::transformer::Transformer`] trait.
 
-use std::marker::PhantomData;
+use std::{collections::VecDeque, marker::PhantomData};
 
 use log::debug;
 
@@ -90,8 +90,10 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
     pub fn map(&mut self) {
         debug!("Applying given Transformer to MIR");
 
-        for (id, _) in self.function.bb_iter() {
-            self.xfmr.create_bb(id).expect("BasicBlock already created");
+        for (id, bb) in self.function.bb_iter() {
+            self.xfmr
+                .create_bb(id, bb)
+                .expect("BasicBlock already created");
         }
 
         // Allocate variables
@@ -151,12 +153,33 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
             .kind()
         {
             TerminatorKind::Return => self.xfmr.term_return(),
-            TerminatorKind::GoTo { target } => self.xfmr.term_goto(*target),
+            TerminatorKind::GoTo { target } => self.xfmr.term_goto(*target).unwrap(),
             TerminatorKind::CondGoTo { cond, tru, fls } => {
                 let cond = self.operand(cond);
-                self.xfmr.term_cond_goto(cond, *tru, *fls)
+                self.xfmr.term_cond_goto(cond, *tru, *fls).unwrap()
             }
-            TerminatorKind::CallFn { .. } => todo!(),
+            TerminatorKind::CallFn {
+                func,
+                args,
+                reentry,
+            } => {
+                // Get the target function
+                let target = match func {
+                    Operand::Constant(_) => {
+                        panic!("Attempting to use a constant in a function call")
+                    }
+                    Operand::LValue(l) => self.lvalue(l),
+                };
+
+                // evaluate arguments?
+                let args: VecDeque<_> = args.iter().map(|a| self.operand(a)).collect();
+
+                // convert LValue?
+                let reentry = (self.lvalue(&reentry.0), reentry.1);
+
+                // create function call
+                self.xfmr.term_call_fn(target, args, reentry).unwrap()
+            }
         }
     }
 
@@ -189,7 +212,7 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
             Operand::Constant(c) => self.constant(*c),
             Operand::LValue(lv) => {
                 let l = self.lvalue(lv);
-                self.xfmr.load(l)
+                self.xfmr.load(l).unwrap()
             }
         }
     }
@@ -215,7 +238,7 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
 
     fn lvalue(&mut self, lv: &LValue) -> L {
         match lv {
-            LValue::Static(_) => todo!(),
+            LValue::Static(sid) => self.xfmr.static_loc(*sid).unwrap(),
             LValue::Var(vid) => self.xfmr.var(*vid).unwrap(),
             LValue::Temp(tid) => self.xfmr.temp(*tid).unwrap(),
             LValue::Access(_, _) => todo!(),
