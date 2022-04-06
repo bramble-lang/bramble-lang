@@ -1,7 +1,7 @@
 //! Traverses the MIR representation of a function and calls the appropriate
 //! methods on a value which implements the [`super::transformer::Transformer`] trait.
 
-use std::marker::PhantomData;
+use std::{collections::VecDeque, marker::PhantomData};
 
 use log::debug;
 
@@ -172,7 +172,7 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
                 };
 
                 // evaluate arguments?
-                let args: Vec<_> = args.iter().map(|a| self.operand(a)).collect();
+                let args: VecDeque<_> = args.iter().map(|a| self.operand(a)).collect();
 
                 // convert LValue?
                 let reentry = (self.lvalue(&reentry.0), reentry.1);

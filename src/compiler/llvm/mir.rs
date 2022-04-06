@@ -1,6 +1,6 @@
 //! Transforms the MIR representation into LLVM
 
-use std::collections::{hash_map::Entry, HashMap};
+use std::collections::{hash_map::Entry, HashMap, VecDeque};
 
 use inkwell::{
     builder::Builder,
@@ -664,7 +664,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
     fn term_call_fn(
         &mut self,
         target: Location<'ctx>,
-        mut args: Vec<BasicValueEnum<'ctx>>,
+        mut args: VecDeque<BasicValueEnum<'ctx>>,
         reentry: (Location<'ctx>, BasicBlockId),
     ) -> Result<(), TransformerError> {
         let f = target.into_function()?;
@@ -673,21 +673,19 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                 // If the return method is to use an out parameter, then push the
                 // return value location to the front of the argument list for the functoin
                 let out = reentry.0.into_pointer()?.as_basic_value_enum();
-
-                // This is done to try and minimize the memory usage. The out pointer parameter must be prepended
-                // to the vector of arguments, but the `inkwell` API takes a slice, which means the collection of
-                // arguments must be contiguous in memory.
-                args.reverse();
-                args.push(out);
-                args.reverse();
+                args.push_front(out);
             }
             ReturnMethod::Return => (),
         }
 
-        let result = self
-            .program
-            .builder
-            .build_call(target.into_function()?.function, &args, "");
+        // This is done to try and minimize the memory usage. The out pointer parameter must be prepended
+        // to the vector of arguments, but the `inkwell` API takes a slice, which means the collection of
+        // arguments must be contiguous in memory.
+        let arg_slice = args.make_contiguous();
+        let result =
+            self.program
+                .builder
+                .build_call(target.into_function()?.function, arg_slice, "");
 
         // If the return method is to return with the LLVM Return operator, then store
         // that value into the temp location

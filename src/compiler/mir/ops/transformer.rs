@@ -16,6 +16,8 @@
 //! the vector.
 //! 5. Need to construct the Phi operator in the merge point Basic Block.
 
+use std::collections::VecDeque;
+
 use crate::compiler::{
     ast::Path,
     mir::{ir::*, project::DefId, MirTypeDef, TypeId},
@@ -91,7 +93,7 @@ pub trait FunctionBuilder<L, V> {
     fn term_call_fn(
         &mut self,
         target: L,
-        args: Vec<V>,
+        args: VecDeque<V>,
         reentry: (L, BasicBlockId),
     ) -> Result<(), TransformerError>;
 
