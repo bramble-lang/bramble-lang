@@ -93,6 +93,29 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
+    fn var_scopes() {
+        compile_and_print_llvm(
+            "
+            fn test() -> i64{
+                let x: i64 := 1;
+
+                if (true) {
+                    let a: i64 := x;
+                    let x: i64 := 2;
+                    let b: i64 := x;
+                } else {
+                    let a: i64 := x;
+                    let x: i64 := 3;
+                    let b: i64 := x;
+                };
+
+                return x;
+            }
+        ",
+        );
+    }
+
+    #[test]
     fn two_functions() {
         compile_and_print_llvm(
             "
