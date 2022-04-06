@@ -39,7 +39,7 @@ const ADDRESS_SPACE: AddressSpace = AddressSpace::Generic;
 /// the output parameter. While Bramble does not support variadic functions, as of
 /// this time, this makes it easier to reason about how the out parameter affects
 /// the compilation of a program.
-const OUT_PARAM_INDEX: usize = 0;
+const OUT_PARAM_INDEX: u32 = 0;
 
 /// Represents an LLVM value which represents an address somewhere in memory. This
 /// includes [`pointers`](PointerValue) and [`function labels`](FunctionValue).
