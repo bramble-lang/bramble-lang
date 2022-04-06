@@ -515,7 +515,34 @@ impl<'p, 'module, 'ctx> LlvmFunctionBuilder<'p, 'module, 'ctx> {
 impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
     for LlvmFunctionBuilder<'p, 'module, 'ctx>
 {
-    fn create_bb(&mut self, id: BasicBlockId) -> Result<(), TransformerError> {
+    fn create_bb(&mut self, id: BasicBlockId, bb: &BasicBlock) -> Result<(), TransformerError> {
+        let llvm_bb = match self.blocks.entry(id) {
+            Entry::Occupied(occ) => *occ.get(),
+            Entry::Vacant(entry) => {
+                let llvm_bb = self
+                    .program
+                    .context
+                    .append_basic_block(self.function.function, &id.to_string());
+                entry.insert(llvm_bb);
+                llvm_bb
+            }
+        };
+
+        // If this basic block ends with a CallFn then set the reentry BB to point to this same BB
+        // LLVM IR does not treat function calls as terminators, so we should merge the block succeeding
+        // a function call with the block making a function call when lowering into LLVM.
+        match bb.get_term().map(|term| term.kind()) {
+            Some(kind) => match kind {
+                TerminatorKind::CallFn { reentry, .. } => {
+                    self.blocks.insert(reentry.1, llvm_bb);
+                }
+                _ => (),
+            },
+            _ => panic!("Terminator must be set for BB before lowering to LLVM"),
+        };
+        Ok(())
+
+        /*
         let bb = self
             .program
             .context
@@ -525,6 +552,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         } else {
             Err(TransformerError::BasicBlockAlreadyCreated)
         }
+        */
     }
 
     fn set_bb(&mut self, id: BasicBlockId) -> Result<(), TransformerError> {

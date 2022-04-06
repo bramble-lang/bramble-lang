@@ -90,8 +90,10 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
     pub fn map(&mut self) {
         debug!("Applying given Transformer to MIR");
 
-        for (id, _) in self.function.bb_iter() {
-            self.xfmr.create_bb(id).expect("BasicBlock already created");
+        for (id, bb) in self.function.bb_iter() {
+            self.xfmr
+                .create_bb(id, bb)
+                .expect("BasicBlock already created");
         }
 
         // Allocate variables

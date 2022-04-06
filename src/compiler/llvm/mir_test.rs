@@ -150,6 +150,8 @@ mod mir2llvm_tests_visual {
             "
             fn blah() {
                 goo();
+                goo();
+                goo();
 
                 return;
             }
@@ -165,6 +167,21 @@ mod mir2llvm_tests_visual {
             }
 
             fn bar(i: i64) -> i64 {
+                return 5;
+            }
+        ",
+        );
+    }
+
+    #[test]
+    fn function_call_multi_args() {
+        compile_and_print_llvm(
+            "
+            fn foo() -> i64 {
+                return bar(2, 1i32);
+            }
+
+            fn bar(i: i64, j: i32) -> i64 {
                 return 5;
             }
         ",

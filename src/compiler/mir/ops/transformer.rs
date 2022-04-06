@@ -64,7 +64,7 @@ pub trait ProgramBuilder<'p, L, V, F: FunctionBuilder<L, V>> {
 /// mir module and the LLVM IR module and avoid having bi-directional imports creating
 /// a more confusing dependency graph.
 pub trait FunctionBuilder<L, V> {
-    fn create_bb(&mut self, bb: BasicBlockId) -> Result<(), TransformerError>;
+    fn create_bb(&mut self, id: BasicBlockId, bb: &BasicBlock) -> Result<(), TransformerError>;
     fn set_bb(&mut self, bb: BasicBlockId) -> Result<(), TransformerError>;
 
     /// Allocate space for the given variable declaration
