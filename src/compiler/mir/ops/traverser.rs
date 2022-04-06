@@ -153,10 +153,10 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
             .kind()
         {
             TerminatorKind::Return => self.xfmr.term_return(),
-            TerminatorKind::GoTo { target } => self.xfmr.term_goto(*target),
+            TerminatorKind::GoTo { target } => self.xfmr.term_goto(*target).unwrap(),
             TerminatorKind::CondGoTo { cond, tru, fls } => {
                 let cond = self.operand(cond);
-                self.xfmr.term_cond_goto(cond, *tru, *fls)
+                self.xfmr.term_cond_goto(cond, *tru, *fls).unwrap()
             }
             TerminatorKind::CallFn {
                 func,

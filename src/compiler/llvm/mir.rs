@@ -29,6 +29,8 @@ use super::llvmir::{get_ptr_alignment, LlvmIsAggregateType, LlvmToBasicTypeEnum}
 
 const ADDRESS_SPACE: AddressSpace = AddressSpace::Generic;
 
+/// Represents an LLVM value which represents an address somewhere in memory. This
+/// includes [`pointers`](PointerValue) and [`function labels`](FunctionValue).
 #[derive(Clone, Copy)]
 pub enum Location<'ctx> {
     Pointer(PointerValue<'ctx>),
@@ -625,15 +627,23 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         cond: BasicValueEnum<'ctx>,
         then_bb: BasicBlockId,
         else_bb: BasicBlockId,
-    ) {
+    ) -> Result<(), TransformerError> {
         // Look up then_bb
-        let then_bb = self.blocks.get(&then_bb).unwrap();
+        let then_bb = self
+            .blocks
+            .get(&then_bb)
+            .ok_or(TransformerError::BasicBlockNotFound)?;
         // Look up else_bb
-        let else_bb = self.blocks.get(&else_bb).unwrap();
+        let else_bb = self
+            .blocks
+            .get(&else_bb)
+            .ok_or(TransformerError::BasicBlockNotFound)?;
         // Create conditional jump to then or else
         self.program
             .builder
             .build_conditional_branch(cond.into_int_value(), *then_bb, *else_bb);
+
+        Ok(())
     }
 
     fn term_call_fn(
@@ -678,9 +688,14 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         self.program.builder.build_unconditional_branch(*bb);
     }
 
-    fn term_goto(&mut self, target: BasicBlockId) {
-        let target = self.blocks.get(&target).unwrap();
+    fn term_goto(&mut self, target: BasicBlockId) -> Result<(), TransformerError> {
+        let target = self
+            .blocks
+            .get(&target)
+            .ok_or(TransformerError::BasicBlockNotFound)?;
         self.program.builder.build_unconditional_branch(*target);
+
+        Ok(())
     }
 
     fn store(&mut self, span: Span, l: &LValue, r: BasicValueEnum<'ctx>) {

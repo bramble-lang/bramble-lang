@@ -79,14 +79,19 @@ pub trait FunctionBuilder<L, V> {
 
     /// Tells the program to go to one of two [`BasicBlocks`](BasicBlock) based upon whether
     /// the given conditional is true or false.
-    fn term_cond_goto(&mut self, cond: V, then_bb: BasicBlockId, else_bb: BasicBlockId);
+    fn term_cond_goto(
+        &mut self,
+        cond: V,
+        then_bb: BasicBlockId,
+        else_bb: BasicBlockId,
+    ) -> Result<(), TransformerError>;
 
     /// Tells the program to enter into a new function and, when that function is complete,
     /// where to store the result and where to reenter this function.
     fn term_call_fn(&mut self, target: L, arg: &[V], reentry: (L, BasicBlockId));
 
     /// Tells the program to go to the given [`BasicBlock`].
-    fn term_goto(&mut self, target_bb: BasicBlockId);
+    fn term_goto(&mut self, target_bb: BasicBlockId) -> Result<(), TransformerError>;
 
     /// Store the given value to the given memory location
     fn store(&mut self, span: Span, l: &LValue, r: V);
