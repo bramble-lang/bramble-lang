@@ -815,7 +815,6 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
             Location::Argument(_) => panic!("Cannot store to an argument"),
             Location::Temp(id, _) => {
                 self.temps.insert(id, Location::Temp(id, Some(r)));
-                ()
             }
         }
     }
