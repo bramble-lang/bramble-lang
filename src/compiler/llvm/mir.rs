@@ -18,7 +18,7 @@ use crate::{
         ast::Path,
         mir::{
             ir::*, DefId, FunctionBuilder, MirBaseType, MirTypeDef, ProgramBuilder,
-            TransformerError, TypeId,
+            TransformerError, TransformerInternalError, TypeId,
         },
         CompilerDisplay, SourceMap, Span,
     },
@@ -51,27 +51,47 @@ pub enum Location<'ctx> {
     Void,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum LlvmBuilderError {
+    CoerceVoidLocationIntoPointer,
+    CoerceVoidLocationIntoFunction,
+    CoerceFnLocationIntoPointer,
+    CoercePtrLocationIntoFn,
+    CoerceRetPtrIntoPtr,
+    CoerceRetPtrIntoFn,
+}
+
+impl TransformerInternalError for LlvmBuilderError {}
+
+impl From<&'static LlvmBuilderError> for TransformerError {
+    fn from(e: &'static LlvmBuilderError) -> Self {
+        TransformerError::Internal(e)
+    }
+}
+
 impl<'ctx> Location<'ctx> {
     /// Will attempt to turn this value into a [`PointerValue`]. If this is a
     /// [`Location::Function`] variant then this will return an error.
     fn into_pointer(&self) -> Result<PointerValue<'ctx>, TransformerError> {
         match self {
             Location::Pointer(p) => Ok(*p),
-            Location::Function(_) => Err(TransformerError::CoerceFnLocationIntoPointer),
-            Location::ReturnPointer => Err(TransformerError::CoerceRetPtrIntoPtr),
-            Location::Void => Err(TransformerError::CoerceVoidLocationIntoPointer),
+            Location::Function(_) => Err(&LlvmBuilderError::CoerceFnLocationIntoPointer),
+            Location::ReturnPointer => Err(&LlvmBuilderError::CoerceRetPtrIntoPtr),
+            Location::Void => Err(&LlvmBuilderError::CoerceVoidLocationIntoPointer),
         }
+        .map_err(|e| TransformerError::Internal(e))
     }
 
     /// Will attempt to turn this value into a [`FunctionData`] value. If this is a
     /// [`Location::Pointer`] variant then this will return an error.
     fn into_function(&self) -> Result<FunctionData<'ctx>, TransformerError> {
         match self {
-            Location::Pointer(_) => Err(TransformerError::CoercePtrLocationIntoFn),
+            Location::Pointer(_) => Err(&LlvmBuilderError::CoercePtrLocationIntoFn),
             Location::Function(f) => Ok(*f),
-            Location::ReturnPointer => Err(TransformerError::CoerceRetPtrIntoFn),
-            Location::Void => Err(TransformerError::CoerceVoidLocationIntoFunction),
+            Location::ReturnPointer => Err(&LlvmBuilderError::CoerceRetPtrIntoFn),
+            Location::Void => Err(&LlvmBuilderError::CoerceVoidLocationIntoFunction),
         }
+        .map_err(|e| TransformerError::Internal(e))
     }
 }
 

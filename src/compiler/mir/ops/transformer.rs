@@ -16,7 +16,7 @@
 //! the vector.
 //! 5. Need to construct the Phi operator in the merge point Basic Block.
 
-use std::collections::VecDeque;
+use std::{collections::VecDeque, fmt::Debug};
 
 use crate::compiler::{
     ast::Path,
@@ -174,10 +174,7 @@ pub enum TransformerError {
     TypeAlreadyDefined,
     TypeNotFound,
     ArgNotFound,
-    CoerceVoidLocationIntoPointer,
-    CoerceVoidLocationIntoFunction,
-    CoerceFnLocationIntoPointer,
-    CoercePtrLocationIntoFn,
-    CoerceRetPtrIntoPtr,
-    CoerceRetPtrIntoFn,
+    Internal(&'static dyn TransformerInternalError),
 }
+
+pub trait TransformerInternalError: Debug {}
