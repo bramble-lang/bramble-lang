@@ -1,6 +1,6 @@
 
 fn my_main() -> i64 {
-    let add:i64 := 5 + -2;
+    let add:i64 := 5 + -1 + -1;
     let sub:i64 := add - 2;
     let negative:i64 := 0 - sub;
     let multiply:i64 := 5 * -negative;
