@@ -60,7 +60,8 @@ pub enum LlvmBuilderError {
     CoercePtrLocationIntoFn,
     CoerceRetPtrIntoPtr,
     CoerceRetPtrIntoFn,
-    CoerceArgIntoPointer,
+    CoerceValueIntoPointer,
+    CoerceValueIntoFn,
 }
 
 impl TransformerInternalError for LlvmBuilderError {}
@@ -80,7 +81,10 @@ impl<'ctx> Location<'ctx> {
             Location::Function(_) => Err(&LlvmBuilderError::CoerceFnLocationIntoPointer),
             Location::ReturnPointer => Err(&LlvmBuilderError::CoerceRetPtrIntoPtr),
             Location::Void => Err(&LlvmBuilderError::CoerceVoidLocationIntoPointer),
-            Location::Argument(_) => Err(&LlvmBuilderError::CoerceArgIntoPointer),
+            Location::Argument(arg) => match arg {
+                BasicValueEnum::PointerValue(ptr) => Ok(*ptr),
+                _ => Err(&LlvmBuilderError::CoerceValueIntoPointer),
+            },
         }
         .map_err(|e| TransformerError::Internal(e))
     }
@@ -93,7 +97,7 @@ impl<'ctx> Location<'ctx> {
             Location::Function(f) => Ok(*f),
             Location::ReturnPointer => Err(&LlvmBuilderError::CoerceRetPtrIntoFn),
             Location::Void => Err(&LlvmBuilderError::CoerceVoidLocationIntoFunction),
-            Location::Argument(_) => todo!(),
+            Location::Argument(_) => Err(&LlvmBuilderError::CoerceValueIntoFn),
         }
         .map_err(|e| TransformerError::Internal(e))
     }

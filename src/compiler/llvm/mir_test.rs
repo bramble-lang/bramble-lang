@@ -230,6 +230,17 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
+    fn function_array_argument() {
+        compile_and_print_llvm(
+            "
+            fn baz(arr: [i64; 2]) -> i64 {
+                return arr[0];
+            }
+        ",
+        );
+    }
+
+    #[test]
     fn function_return_array() {
         compile_and_print_llvm(
             "
