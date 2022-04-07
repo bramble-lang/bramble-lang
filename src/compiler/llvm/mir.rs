@@ -672,21 +672,6 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         }
     }
 
-    fn store_arg(&mut self, arg_id: ArgId, var_id: VarId) -> Result<(), TransformerError> {
-        // Get the argument value
-        let arg_value = self.get_arg(arg_id)?;
-
-        // Get the location in the stack where the argument will be stored
-        self.vars
-            .get(&var_id)
-            .ok_or(TransformerError::VarNotFound)?
-            .into_pointer()
-            .and_then(|loc| {
-                self.program.builder.build_store(loc, arg_value);
-                Ok(())
-            })
-    }
-
     fn term_return(&mut self) {
         match self.ret_ptr {
             ReturnPointer::Unit => self.program.builder.build_return(None),
