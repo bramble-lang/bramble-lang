@@ -147,11 +147,10 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
         bb.stm_iter().for_each(|s| self.statement(s));
 
         // Convert the terminator
-        match bb
+        let term = bb
             .get_term()
-            .expect("Terminator must be defined for a basic block")
-            .kind()
-        {
+            .expect("Terminator must be defined for a basic block");
+        match term.kind() {
             TerminatorKind::Return => self.xfmr.term_return(),
             TerminatorKind::GoTo { target } => self.xfmr.term_goto(*target).unwrap(),
             TerminatorKind::CondGoTo { cond, tru, fls } => {
@@ -178,7 +177,9 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
                 let reentry = (self.lvalue(&reentry.0), reentry.1);
 
                 // create function call
-                self.xfmr.term_call_fn(target, args, reentry).unwrap()
+                self.xfmr
+                    .term_call_fn(term.span(), target, args, reentry)
+                    .unwrap()
             }
         }
     }
@@ -200,7 +201,7 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
     fn rvalue(&mut self, rv: &RValue) -> V {
         match rv {
             RValue::Use(o) => self.operand(o),
-            RValue::BinOp(op, lv, rv) => todo!(),
+            RValue::BinOp(_, _, _) => todo!(),
             RValue::UnOp(_, _) => todo!(),
             RValue::Cast(_, _) => todo!(),
             RValue::AddressOf(_) => todo!(),

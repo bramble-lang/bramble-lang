@@ -92,6 +92,7 @@ pub trait FunctionBuilder<L, V> {
     /// where to store the result and where to reenter this function.
     fn term_call_fn(
         &mut self,
+        span: Span,
         target: L,
         args: VecDeque<V>,
         reentry: (L, BasicBlockId),
@@ -173,4 +174,6 @@ pub enum TransformerError {
     TypeAlreadyDefined,
     TypeNotFound,
     ArgNotFound,
+    CoerceVoidLocationIntoPointer,
+    CoerceVoidLocationIntoFunction,
 }

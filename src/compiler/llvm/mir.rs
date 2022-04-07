@@ -43,7 +43,7 @@ const OUT_PARAM_INDEX: u32 = 0;
 
 /// Represents an LLVM value which represents an address somewhere in memory. This
 /// includes [`pointers`](PointerValue) and [`function labels`](FunctionValue).
-#[derive(Clone, Copy)]
+#[derive(PartialEq, Clone, Copy)]
 pub enum Location<'ctx> {
     Pointer(PointerValue<'ctx>),
     Function(FunctionData<'ctx>),
@@ -59,7 +59,7 @@ impl<'ctx> Location<'ctx> {
             Location::Pointer(p) => Ok(*p),
             Location::Function(_) => todo!(),
             Location::ReturnPointer => todo!(),
-            Location::Void => todo!(),
+            Location::Void => Err(TransformerError::CoerceVoidLocationIntoPointer),
         }
     }
 
@@ -70,7 +70,7 @@ impl<'ctx> Location<'ctx> {
             Location::Pointer(_) => todo!(),
             Location::Function(f) => Ok(*f),
             Location::ReturnPointer => todo!(),
-            Location::Void => todo!(),
+            Location::Void => Err(TransformerError::CoerceVoidLocationIntoFunction),
         }
     }
 }
@@ -125,7 +125,7 @@ impl<'module, 'ctx> LlvmProgram<'module, 'ctx> {
 }
 
 /// Groups the data which describes an LLVM function together.
-#[derive(Clone, Copy)]
+#[derive(PartialEq, Clone, Copy)]
 pub struct FunctionData<'ctx> {
     /// A reference to the function within the LLVM module.
     function: FunctionValue<'ctx>,
@@ -608,7 +608,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
 
             // If not, then allocate a pointer in the Builder
             Entry::Vacant(ve) => {
-                // and add a mapping from VarID to the pointer in the local var table
+                // and add a mapping from TempID to the pointer in the local var table
                 let loc = if let Ok(ty) = self.program.get_type(vd.ty())?.into_basic_type() {
                     let ptr = self.program.builder.build_alloca(ty, &name);
                     Location::Pointer(ptr)
@@ -673,6 +673,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
 
     fn term_call_fn(
         &mut self,
+        span: Span,
         target: Location<'ctx>,
         mut args: VecDeque<BasicValueEnum<'ctx>>,
         reentry: (Location<'ctx>, BasicBlockId),
@@ -700,22 +701,15 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         // If the return method is to return with the LLVM Return operator, then store
         // that value into the temp location
         if f.ret_method == ReturnMethod::Return {
-            match reentry.0 {
-                Location::Void => (),
-                _ => {
-                    let loc = reentry.0.into_pointer().unwrap();
-                    match result.try_as_basic_value().left() {
-                        Some(r) => {
-                            self.program.builder.build_store(loc, r);
-                        }
-                        None => (),
-                    }
+            match result.try_as_basic_value().left() {
+                Some(r) => self.store(span, reentry.0, r),
+                None => {
+                    assert!(reentry.0 == Location::Void, "If function called is void, then the call site value location must be Void")
                 }
             }
         }
 
-        let bb = self
-            .blocks
+        self.blocks
             .get(&reentry.1)
             .ok_or(TransformerError::BasicBlockNotFound)?;
 

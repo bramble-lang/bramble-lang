@@ -817,6 +817,11 @@ impl Terminator {
     pub fn kind(&self) -> &TerminatorKind {
         &self.kind
     }
+
+    /// Returns the [`Span`] from which this terminator was derived.
+    pub fn span(&self) -> Span {
+        self.span
+    }
 }
 
 impl Display for Terminator {
