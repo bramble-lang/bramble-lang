@@ -57,8 +57,8 @@ impl<'ctx> Location<'ctx> {
     fn into_pointer(&self) -> Result<PointerValue<'ctx>, TransformerError> {
         match self {
             Location::Pointer(p) => Ok(*p),
-            Location::Function(_) => todo!(),
-            Location::ReturnPointer => todo!(),
+            Location::Function(_) => Err(TransformerError::CoerceFnLocationIntoPointer),
+            Location::ReturnPointer => Err(TransformerError::CoerceRetPtrIntoPtr),
             Location::Void => Err(TransformerError::CoerceVoidLocationIntoPointer),
         }
     }
@@ -67,9 +67,9 @@ impl<'ctx> Location<'ctx> {
     /// [`Location::Pointer`] variant then this will return an error.
     fn into_function(&self) -> Result<FunctionData<'ctx>, TransformerError> {
         match self {
-            Location::Pointer(_) => todo!(),
+            Location::Pointer(_) => Err(TransformerError::CoercePtrLocationIntoFn),
             Location::Function(f) => Ok(*f),
-            Location::ReturnPointer => todo!(),
+            Location::ReturnPointer => Err(TransformerError::CoerceRetPtrIntoFn),
             Location::Void => Err(TransformerError::CoerceVoidLocationIntoFunction),
         }
     }

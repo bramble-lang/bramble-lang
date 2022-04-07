@@ -176,4 +176,8 @@ pub enum TransformerError {
     ArgNotFound,
     CoerceVoidLocationIntoPointer,
     CoerceVoidLocationIntoFunction,
+    CoerceFnLocationIntoPointer,
+    CoercePtrLocationIntoFn,
+    CoerceRetPtrIntoPtr,
+    CoerceRetPtrIntoFn,
 }
