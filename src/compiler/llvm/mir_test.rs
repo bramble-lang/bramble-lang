@@ -67,8 +67,8 @@ mod mir2llvm_tests_visual {
         compile_and_print_llvm(text);
     }
 
-    //#[test]
-    fn base_array_type() {
+    #[test]
+    fn base_array_expressions() {
         let text = "
             fn test() {
                 let a: [i8; 2] :=  [1i8, 2i8];

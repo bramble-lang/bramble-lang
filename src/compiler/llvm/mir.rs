@@ -570,21 +570,6 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         }
     }
 
-    fn store_arg(&mut self, arg_id: ArgId, var_id: VarId) -> Result<(), TransformerError> {
-        // Get the argument value
-        let arg_value = self.get_arg(arg_id)?;
-
-        // Get the location in the stack where the argument will be stored
-        self.vars
-            .get(&var_id)
-            .ok_or(TransformerError::VarNotFound)?
-            .into_pointer()
-            .and_then(|loc| {
-                self.program.builder.build_store(loc, arg_value);
-                Ok(())
-            })
-    }
-
     fn alloc_var(&mut self, id: VarId, decl: &VarDecl) -> Result<(), TransformerError> {
         let name = self.var_label(decl);
 
@@ -624,6 +609,21 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                 Ok(())
             }
         }
+    }
+
+    fn store_arg(&mut self, arg_id: ArgId, var_id: VarId) -> Result<(), TransformerError> {
+        // Get the argument value
+        let arg_value = self.get_arg(arg_id)?;
+
+        // Get the location in the stack where the argument will be stored
+        self.vars
+            .get(&var_id)
+            .ok_or(TransformerError::VarNotFound)?
+            .into_pointer()
+            .and_then(|loc| {
+                self.program.builder.build_store(loc, arg_value);
+                Ok(())
+            })
     }
 
     fn term_return(&mut self) {
@@ -729,7 +729,17 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                 let temp = self.temp(*id).unwrap().into_pointer().unwrap();
                 self.program.builder.build_store(temp, r);
             }
-            LValue::Access(_, _) => todo!(),
+            LValue::Access(lv, method) => {
+                // This should be coordinated by the Traverser
+                match method {
+                    Accessor::Index(idx) => match idx.as_ref() {
+                        Operand::Constant(_) => todo!(),
+                        Operand::LValue(lv) => todo!(),
+                    },
+                    Accessor::Field(_, _) => todo!(),
+                    Accessor::Deref => todo!(),
+                }
+            }
             LValue::ReturnPointer => match &mut self.ret_ptr {
                 ReturnPointer::Unit => panic!("Attempting to return a value on a Unit function"),
                 ReturnPointer::Value(val) => *val = Some(r),
@@ -762,6 +772,28 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
             .get(&v)
             .copied()
             .ok_or(TransformerError::TempNotFound)
+    }
+
+    fn array_access(
+        &self,
+        l: Location<'ctx>,
+        idx: BasicValueEnum<'ctx>,
+    ) -> std::result::Result<Location<'ctx>, TransformerError> {
+        let ptr = l.into_pointer()?;
+
+        // Convert the index into an IntValue.  This will panic if `idx` is not an integer but
+        // the semantic analysis should prevent that from happening
+        let llvm_index = idx.into_int_value();
+
+        // Compute the GEP to the element in the array
+        let outer_idx = self.program.context.i64_type().const_int(0, false);
+        let el_ptr = unsafe {
+            self.program
+                .builder
+                .build_gep(ptr, &[outer_idx, llvm_index], "")
+        };
+
+        Ok(Location::Pointer(el_ptr))
     }
 
     fn const_i8(&self, i: i8) -> BasicValueEnum<'ctx> {

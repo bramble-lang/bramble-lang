@@ -112,6 +112,8 @@ pub trait FunctionBuilder<L, V> {
     /// Convert the given variable declaration to a specific location in memory
     fn temp(&self, v: TempId) -> Result<L, TransformerError>;
 
+    fn array_access(&self, l: L, idx: V) -> Result<L, TransformerError>;
+
     // The following methods correspond to [`RValue`] variants
 
     /// Create a const [`i8`].
