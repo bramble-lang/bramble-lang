@@ -429,6 +429,7 @@ impl ArgDecl {
         self.var_id
     }
 
+    /// Return the name of this argument
     pub fn name(&self) -> StringId {
         self.name
     }
