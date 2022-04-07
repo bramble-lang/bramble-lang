@@ -189,6 +189,7 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
 
         match stm.kind() {
             StatementKind::Assign(lv, rv) => {
+                let lv = self.lvalue(lv);
                 let rv = self.rvalue(rv);
                 self.xfmr.store(span, lv, rv);
             }
@@ -236,13 +237,14 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
         }
     }
 
+    // TODO: return a result and move the error handling up
     fn lvalue(&mut self, lv: &LValue) -> L {
         match lv {
             LValue::Static(sid) => self.xfmr.static_loc(*sid).unwrap(),
             LValue::Var(vid) => self.xfmr.var(*vid).unwrap(),
             LValue::Temp(tid) => self.xfmr.temp(*tid).unwrap(),
             LValue::Access(_, _) => todo!(),
-            LValue::ReturnPointer => todo!(),
+            LValue::ReturnPointer => self.xfmr.return_ptr().unwrap(),
         }
     }
 

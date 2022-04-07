@@ -101,7 +101,7 @@ pub trait FunctionBuilder<L, V> {
     fn term_goto(&mut self, target_bb: BasicBlockId) -> Result<(), TransformerError>;
 
     /// Store the given value to the given memory location
-    fn store(&mut self, span: Span, l: &LValue, r: V);
+    fn store(&mut self, span: Span, l: L, r: V);
 
     /// Returns a location value for a specific static item.
     fn static_loc(&self, id: DefId) -> Result<L, TransformerError>;
@@ -113,6 +113,8 @@ pub trait FunctionBuilder<L, V> {
     fn temp(&self, v: TempId) -> Result<L, TransformerError>;
 
     fn array_access(&self, l: L, idx: V) -> Result<L, TransformerError>;
+
+    fn return_ptr(&self) -> Result<L, TransformerError>;
 
     // The following methods correspond to [`RValue`] variants
 

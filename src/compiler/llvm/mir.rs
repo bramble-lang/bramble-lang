@@ -47,6 +47,7 @@ const OUT_PARAM_INDEX: u32 = 0;
 pub enum Location<'ctx> {
     Pointer(PointerValue<'ctx>),
     Function(FunctionData<'ctx>),
+    ReturnPointer,
 }
 
 impl<'ctx> Location<'ctx> {
@@ -56,6 +57,7 @@ impl<'ctx> Location<'ctx> {
         match self {
             Location::Pointer(p) => Ok(*p),
             Location::Function(_) => todo!(),
+            Location::ReturnPointer => todo!(),
         }
     }
 
@@ -65,6 +67,7 @@ impl<'ctx> Location<'ctx> {
         match self {
             Location::Pointer(_) => todo!(),
             Location::Function(f) => Ok(*f),
+            Location::ReturnPointer => todo!(),
         }
     }
 }
@@ -718,8 +721,22 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         Ok(())
     }
 
-    fn store(&mut self, span: Span, l: &LValue, r: BasicValueEnum<'ctx>) {
+    fn store(&mut self, span: Span, l: Location<'ctx>, r: BasicValueEnum<'ctx>) {
         match l {
+            Location::Pointer(ptr) => {
+                self.program.builder.build_store(ptr, r);
+            }
+            Location::Function(_) => panic!("Cannot store in a function location"),
+            Location::ReturnPointer => match &mut self.ret_ptr {
+                ReturnPointer::Unit => panic!("Attempting to return a value on a Unit function"),
+                ReturnPointer::Value(val) => *val = Some(r),
+                ReturnPointer::OutParam(out_ptr) => {
+                    let dest = out_ptr.into_pointer().unwrap();
+                    self.build_memcpy(dest, r.into_pointer_value(), span)
+                }
+            },
+        }
+        /*match l {
             LValue::Static(_) => todo!(),
             LValue::Var(id) => {
                 let var = self.var(*id).unwrap().into_pointer().unwrap();
@@ -748,7 +765,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                     self.build_memcpy(dest, r.into_pointer_value(), span)
                 }
             },
-        }
+        }*/
     }
 
     fn static_loc(&self, id: DefId) -> Result<Location<'ctx>, TransformerError> {
@@ -794,6 +811,10 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         };
 
         Ok(Location::Pointer(el_ptr))
+    }
+
+    fn return_ptr(&self) -> Result<Location<'ctx>, TransformerError> {
+        Ok(Location::ReturnPointer)
     }
 
     fn const_i8(&self, i: i8) -> BasicValueEnum<'ctx> {
