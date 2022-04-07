@@ -612,6 +612,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
     fn alloc_arg(&mut self, arg_id: ArgId, decl: &ArgDecl) -> Result<(), TransformerError> {
         let name = self.arg_label(decl);
         let arg_value = self.get_arg(arg_id)?;
+        arg_value.set_name(&name);
 
         // Check if variable name already exists
         let var_id = decl.var_id().unwrap();
