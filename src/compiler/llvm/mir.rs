@@ -635,7 +635,10 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         // Check if variable name already exists
         match self.vars.entry(id) {
             // If it does -> return an error
-            Entry::Occupied(_) => Ok(()),
+            Entry::Occupied(occ) => match occ.get() {
+                Location::Argument(_) => Ok(()),
+                _ => Err(TransformerError::VariableAlreadyAllocated),
+            },
 
             // If not, then allocate a pointer in the Builder
             Entry::Vacant(ve) => {
