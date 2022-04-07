@@ -70,13 +70,15 @@ mod mir2llvm_tests_visual {
     #[test]
     fn base_array_expressions() {
         let text = "
-            fn test() {
+            fn test() -> f64 {
                 let mut a: [i8; 2] :=  [1i8, 2i8];
+                let b: [i8; 4] := [3i8, 4i8, 5i8, 6i8];
+                let c: [f64; 1] := [5.3];
 
                 let e: i8 := a[0];
-                mut a[1] := 3i8;
+                mut a[1] := b[3];
 
-                return;
+                return c[0];
             }
         ";
 
