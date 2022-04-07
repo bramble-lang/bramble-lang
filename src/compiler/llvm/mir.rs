@@ -736,36 +736,6 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                 }
             },
         }
-        /*match l {
-            LValue::Static(_) => todo!(),
-            LValue::Var(id) => {
-                let var = self.var(*id).unwrap().into_pointer().unwrap();
-                self.program.builder.build_store(var, r);
-            }
-            LValue::Temp(id) => {
-                let temp = self.temp(*id).unwrap().into_pointer().unwrap();
-                self.program.builder.build_store(temp, r);
-            }
-            LValue::Access(lv, method) => {
-                // This should be coordinated by the Traverser
-                match method {
-                    Accessor::Index(idx) => match idx.as_ref() {
-                        Operand::Constant(_) => todo!(),
-                        Operand::LValue(lv) => todo!(),
-                    },
-                    Accessor::Field(_, _) => todo!(),
-                    Accessor::Deref => todo!(),
-                }
-            }
-            LValue::ReturnPointer => match &mut self.ret_ptr {
-                ReturnPointer::Unit => panic!("Attempting to return a value on a Unit function"),
-                ReturnPointer::Value(val) => *val = Some(r),
-                ReturnPointer::OutParam(out_ptr) => {
-                    let dest = out_ptr.into_pointer().unwrap();
-                    self.build_memcpy(dest, r.into_pointer_value(), span)
-                }
-            },
-        }*/
     }
 
     fn static_loc(&self, id: DefId) -> Result<Location<'ctx>, TransformerError> {
