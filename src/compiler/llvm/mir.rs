@@ -48,6 +48,7 @@ pub enum Location<'ctx> {
     Pointer(PointerValue<'ctx>),
     Function(FunctionData<'ctx>),
     ReturnPointer,
+    Void,
 }
 
 impl<'ctx> Location<'ctx> {
@@ -58,6 +59,7 @@ impl<'ctx> Location<'ctx> {
             Location::Pointer(p) => Ok(*p),
             Location::Function(_) => todo!(),
             Location::ReturnPointer => todo!(),
+            Location::Void => todo!(),
         }
     }
 
@@ -68,6 +70,7 @@ impl<'ctx> Location<'ctx> {
             Location::Pointer(_) => todo!(),
             Location::Function(f) => Ok(*f),
             Location::ReturnPointer => todo!(),
+            Location::Void => todo!(),
         }
     }
 }
@@ -606,9 +609,13 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
             // If not, then allocate a pointer in the Builder
             Entry::Vacant(ve) => {
                 // and add a mapping from VarID to the pointer in the local var table
-                let ty = self.program.get_type(vd.ty())?.into_basic_type().unwrap();
-                let ptr = self.program.builder.build_alloca(ty, &name);
-                ve.insert(Location::Pointer(ptr));
+                let loc = if let Ok(ty) = self.program.get_type(vd.ty())?.into_basic_type() {
+                    let ptr = self.program.builder.build_alloca(ty, &name);
+                    Location::Pointer(ptr)
+                } else {
+                    Location::Void
+                };
+                ve.insert(loc);
                 Ok(())
             }
         }
@@ -693,12 +700,17 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         // If the return method is to return with the LLVM Return operator, then store
         // that value into the temp location
         if f.ret_method == ReturnMethod::Return {
-            let loc = reentry.0.into_pointer().unwrap();
-            match result.try_as_basic_value().left() {
-                Some(r) => {
-                    self.program.builder.build_store(loc, r);
+            match reentry.0 {
+                Location::Void => (),
+                _ => {
+                    let loc = reentry.0.into_pointer().unwrap();
+                    match result.try_as_basic_value().left() {
+                        Some(r) => {
+                            self.program.builder.build_store(loc, r);
+                        }
+                        None => (),
+                    }
                 }
-                None => (),
             }
         }
 
@@ -706,7 +718,6 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
             .blocks
             .get(&reentry.1)
             .ok_or(TransformerError::BasicBlockNotFound)?;
-        self.program.builder.build_unconditional_branch(*bb);
 
         Ok(())
     }
@@ -735,6 +746,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                     self.build_memcpy(dest, r.into_pointer_value(), span)
                 }
             },
+            Location::Void => (),
         }
     }
 
