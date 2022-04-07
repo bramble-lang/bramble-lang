@@ -101,6 +101,9 @@ pub trait FunctionBuilder<L, V> {
     /// Tells the program to go to the given [`BasicBlock`].
     fn term_goto(&mut self, target_bb: BasicBlockId) -> Result<(), TransformerError>;
 
+    /// Load a value from a memory location
+    fn load(&self, lv: L) -> Result<V, TransformerError>;
+
     /// Store the given value to the given memory location
     fn store(&mut self, span: Span, l: L, r: V);
 
@@ -151,9 +154,6 @@ pub trait FunctionBuilder<L, V> {
 
     /// Create a const [`f64`].
     fn const_f64(&self, f: f64) -> V;
-
-    /// Load a value from a memory location
-    fn load(&self, lv: L) -> Result<V, TransformerError>;
 
     /// Add two values together
     fn add(&self, a: V, b: V) -> V;

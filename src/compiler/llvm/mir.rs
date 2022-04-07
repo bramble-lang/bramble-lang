@@ -746,10 +746,24 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         Ok(())
     }
 
+    fn load(&self, lv: Location<'ctx>) -> Result<BasicValueEnum<'ctx>, TransformerError> {
+        let ptr = lv.into_pointer()?;
+        if ptr.get_type().get_element_type().is_aggregate_type() {
+            Ok(ptr.into())
+        } else {
+            Ok(self.program.builder.build_load(lv.into_pointer()?, ""))
+        }
+    }
+
     fn store(&mut self, span: Span, l: Location<'ctx>, r: BasicValueEnum<'ctx>) {
         match l {
             Location::Pointer(ptr) => {
-                self.program.builder.build_store(ptr, r);
+                // If we're dealing with aggregate values, then memcpy
+                if ptr.get_type().get_element_type().is_aggregate_type() {
+                    self.build_memcpy(ptr, r.into_pointer_value(), span)
+                } else {
+                    self.program.builder.build_store(ptr, r);
+                }
             }
             Location::Function(_) => panic!("Cannot store in a function location"),
             Location::ReturnPointer => match &mut self.ret_ptr {
@@ -884,15 +898,6 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
 
     fn const_f64(&self, f: f64) -> BasicValueEnum<'ctx> {
         self.program.context.f64_type().const_float(f).into()
-    }
-
-    fn load(&self, lv: Location<'ctx>) -> Result<BasicValueEnum<'ctx>, TransformerError> {
-        let ptr = lv.into_pointer()?;
-        if ptr.get_type().get_element_type().is_aggregate_type() {
-            Ok(ptr.into())
-        } else {
-            Ok(self.program.builder.build_load(lv.into_pointer()?, ""))
-        }
     }
 
     fn add(&self, a: BasicValueEnum<'ctx>, b: BasicValueEnum<'ctx>) -> BasicValueEnum<'ctx> {
