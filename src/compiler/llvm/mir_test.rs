@@ -238,6 +238,10 @@ mod mir2llvm_tests_visual {
                 return;
             }
 
+            fn baz() -> [i64; 2] {
+                return [1, 2];
+            }
+
             fn bar() -> [i64; 2] {
                 let a: [i64; 2] := [1, 2];
                 return a;

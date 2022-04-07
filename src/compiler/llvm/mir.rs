@@ -887,7 +887,12 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
     }
 
     fn load(&self, lv: Location<'ctx>) -> Result<BasicValueEnum<'ctx>, TransformerError> {
-        Ok(self.program.builder.build_load(lv.into_pointer()?, ""))
+        let ptr = lv.into_pointer()?;
+        if ptr.get_type().get_element_type().is_aggregate_type() {
+            Ok(ptr.into())
+        } else {
+            Ok(self.program.builder.build_load(lv.into_pointer()?, ""))
+        }
     }
 
     fn add(&self, a: BasicValueEnum<'ctx>, b: BasicValueEnum<'ctx>) -> BasicValueEnum<'ctx> {
