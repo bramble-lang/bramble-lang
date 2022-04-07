@@ -68,6 +68,19 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
+    fn simple_array_expression() {
+        let text = "
+            fn test() {
+                let mut a: [i8; 2] :=  [1i8, 2i8];
+
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
     fn base_array_expressions() {
         let text = "
             fn test() -> f64 {
@@ -221,10 +234,16 @@ mod mir2llvm_tests_visual {
         compile_and_print_llvm(
             "
             fn foo(a: [i64; 4]) {
+                let x: i64 := a[0];
                 return;
             }
 
-            /*fn bar(a: [i64; 4]) -> [i64; 4] {
+            fn bar() -> [i64; 2] {
+                let a: [i64; 2] := [1, 2];
+                return a;
+            }
+
+            /*fn bar(a: [i64; 4], b: [i64; 8], c: [i64; 16]) -> [i64; 4] {
                 return a;
             }*/
         ",
@@ -237,6 +256,9 @@ mod mir2llvm_tests_visual {
         let (sm, table, module) = compile(text);
         let mut project = MirProject::new();
         transform::transform(&module, &mut project).unwrap();
+
+        println!("=== MIR ===:");
+        println!("{}\n\n", project);
 
         let context = Context::create();
         let module = context.create_module("test");
