@@ -230,26 +230,28 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
-    fn function_call_return_array() {
+    fn function_return_array() {
         compile_and_print_llvm(
             "
-            /*fn foo(a: [i64; 4]) {
-                let x: i64 := a[0];
-                return;
-            }*/
-
             fn baz() -> [i64; 2] {
                 return [1, 2];
             }
+        ",
+        );
+    }
 
-            /*fn bar() -> [i64; 2] {
-                let a: [i64; 2] := [1, 2];
-                return a;
+    #[test]
+    fn function_call_return_array() {
+        compile_and_print_llvm(
+            "
+            fn foo() {
+                let a: [i64; 2] := bar();
+                return;
             }
 
-            fn bar(a: [i64; 4], b: [i64; 8], c: [i64; 16]) -> [i64; 4] {
-                return a;
-            }*/
+            fn bar() -> [i64; 2] {
+                return [1, 2];
+            }
         ",
         );
     }
