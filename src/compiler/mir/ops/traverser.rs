@@ -243,16 +243,20 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
             LValue::Static(sid) => self.xfmr.static_loc(*sid).unwrap(),
             LValue::Var(vid) => self.xfmr.var(*vid).unwrap(),
             LValue::Temp(tid) => self.xfmr.temp(*tid).unwrap(),
-            LValue::Access(loc, method) => match method {
-                Accessor::Index(idx) => {
-                    let loc = self.lvalue(loc);
-                    let idx = self.operand(idx);
-                    self.xfmr.array_access(loc, idx).unwrap()
-                }
-                Accessor::Field(_, _) => todo!(),
-                Accessor::Deref => todo!(),
-            },
+            LValue::Access(loc, method) => self.accessor(loc, method),
             LValue::ReturnPointer => self.xfmr.return_ptr().unwrap(),
+        }
+    }
+
+    fn accessor(&mut self, loc: &LValue, method: &Accessor) -> L {
+        match method {
+            Accessor::Index(idx) => {
+                let loc = self.lvalue(loc);
+                let idx = self.operand(idx);
+                self.xfmr.array_access(loc, idx).unwrap()
+            }
+            Accessor::Field(_, _) => todo!(),
+            Accessor::Deref => todo!(),
         }
     }
 
