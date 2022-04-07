@@ -67,13 +67,18 @@ mod mir2llvm_tests_visual {
         compile_and_print_llvm(text);
     }
 
-    //#[test]
-    fn base_array_type() {
+    #[test]
+    fn base_array_expressions() {
         let text = "
-            fn test() {
-                let a: [i8; 2] :=  [1i8, 2i8];
+            fn test() -> f64 {
+                let mut a: [i8; 2] :=  [1i8, 2i8];
+                let b: [i8; 4] := [3i8, 4i8, 5i8, 6i8];
+                let c: [f64; 1] := [5.3];
 
-                return;
+                let e: i8 := a[0];
+                mut a[1] := b[3];
+
+                return c[0];
             }
         ";
 
@@ -211,17 +216,17 @@ mod mir2llvm_tests_visual {
         );
     }
 
-    //#[test]
+    #[test]
     fn function_call_return_array() {
         compile_and_print_llvm(
             "
-            fn foo(a: [i64; 4]) -> [i64; 4] {
-                return bar(a);
+            fn foo(a: [i64; 4]) {
+                return;
             }
 
-            fn bar(a: [i64; 4]) -> [i64; 4] {
+            /*fn bar(a: [i64; 4]) -> [i64; 4] {
                 return a;
-            }
+            }*/
         ",
         );
     }

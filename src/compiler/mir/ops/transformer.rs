@@ -16,7 +16,7 @@
 //! the vector.
 //! 5. Need to construct the Phi operator in the merge point Basic Block.
 
-use std::collections::VecDeque;
+use std::{collections::VecDeque, fmt::Debug};
 
 use crate::compiler::{
     ast::Path,
@@ -92,6 +92,7 @@ pub trait FunctionBuilder<L, V> {
     /// where to store the result and where to reenter this function.
     fn term_call_fn(
         &mut self,
+        span: Span,
         target: L,
         args: VecDeque<V>,
         reentry: (L, BasicBlockId),
@@ -101,7 +102,7 @@ pub trait FunctionBuilder<L, V> {
     fn term_goto(&mut self, target_bb: BasicBlockId) -> Result<(), TransformerError>;
 
     /// Store the given value to the given memory location
-    fn store(&mut self, span: Span, l: &LValue, r: V);
+    fn store(&mut self, span: Span, l: L, r: V);
 
     /// Returns a location value for a specific static item.
     fn static_loc(&self, id: DefId) -> Result<L, TransformerError>;
@@ -111,6 +112,13 @@ pub trait FunctionBuilder<L, V> {
 
     /// Convert the given variable declaration to a specific location in memory
     fn temp(&self, v: TempId) -> Result<L, TransformerError>;
+
+    /// Returns the location of the element at an index in an array.
+    fn array_access(&self, l: L, idx: V) -> Result<L, TransformerError>;
+
+    /// Returns a location that manages passing the return value back
+    /// to the calling function.
+    fn return_ptr(&self) -> Result<L, TransformerError>;
 
     // The following methods correspond to [`RValue`] variants
 
@@ -166,4 +174,7 @@ pub enum TransformerError {
     TypeAlreadyDefined,
     TypeNotFound,
     ArgNotFound,
+    Internal(&'static dyn TransformerInternalError),
 }
+
+pub trait TransformerInternalError: Debug {}

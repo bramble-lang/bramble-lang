@@ -147,11 +147,10 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
         bb.stm_iter().for_each(|s| self.statement(s));
 
         // Convert the terminator
-        match bb
+        let term = bb
             .get_term()
-            .expect("Terminator must be defined for a basic block")
-            .kind()
-        {
+            .expect("Terminator must be defined for a basic block");
+        match term.kind() {
             TerminatorKind::Return => self.xfmr.term_return(),
             TerminatorKind::GoTo { target } => self.xfmr.term_goto(*target).unwrap(),
             TerminatorKind::CondGoTo { cond, tru, fls } => {
@@ -178,7 +177,9 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
                 let reentry = (self.lvalue(&reentry.0), reentry.1);
 
                 // create function call
-                self.xfmr.term_call_fn(target, args, reentry).unwrap()
+                self.xfmr
+                    .term_call_fn(term.span(), target, args, reentry)
+                    .unwrap()
             }
         }
     }
@@ -189,6 +190,7 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
 
         match stm.kind() {
             StatementKind::Assign(lv, rv) => {
+                let lv = self.lvalue(lv);
                 let rv = self.rvalue(rv);
                 self.xfmr.store(span, lv, rv);
             }
@@ -236,13 +238,26 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
         }
     }
 
+    // TODO: return a result and move the error handling up
     fn lvalue(&mut self, lv: &LValue) -> L {
         match lv {
             LValue::Static(sid) => self.xfmr.static_loc(*sid).unwrap(),
             LValue::Var(vid) => self.xfmr.var(*vid).unwrap(),
             LValue::Temp(tid) => self.xfmr.temp(*tid).unwrap(),
-            LValue::Access(_, _) => todo!(),
-            LValue::ReturnPointer => todo!(),
+            LValue::Access(loc, method) => self.accessor(loc, method),
+            LValue::ReturnPointer => self.xfmr.return_ptr().unwrap(),
+        }
+    }
+
+    fn accessor(&mut self, loc: &LValue, method: &Accessor) -> L {
+        match method {
+            Accessor::Index(idx) => {
+                let loc = self.lvalue(loc);
+                let idx = self.operand(idx);
+                self.xfmr.array_access(loc, idx).unwrap()
+            }
+            Accessor::Field(_, _) => todo!(),
+            Accessor::Deref => todo!(),
         }
     }
 
