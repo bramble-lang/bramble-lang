@@ -214,17 +214,17 @@ mod mir2llvm_tests_visual {
         );
     }
 
-    //#[test]
+    #[test]
     fn function_call_return_array() {
         compile_and_print_llvm(
             "
-            fn foo(a: [i64; 4]) -> [i64; 4] {
-                return bar(a);
+            fn foo(a: [i64; 4]) {
+                return;
             }
 
-            fn bar(a: [i64; 4]) -> [i64; 4] {
+            /*fn bar(a: [i64; 4]) -> [i64; 4] {
                 return a;
-            }
+            }*/
         ",
         );
     }

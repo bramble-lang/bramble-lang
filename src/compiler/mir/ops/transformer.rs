@@ -112,8 +112,11 @@ pub trait FunctionBuilder<L, V> {
     /// Convert the given variable declaration to a specific location in memory
     fn temp(&self, v: TempId) -> Result<L, TransformerError>;
 
+    /// Returns the location of the element at an index in an array.
     fn array_access(&self, l: L, idx: V) -> Result<L, TransformerError>;
 
+    /// Returns a location that manages passing the return value back
+    /// to the calling function.
     fn return_ptr(&self) -> Result<L, TransformerError>;
 
     // The following methods correspond to [`RValue`] variants
