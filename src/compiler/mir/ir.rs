@@ -428,6 +428,10 @@ impl ArgDecl {
     pub fn var_id(&self) -> Option<VarId> {
         self.var_id
     }
+
+    pub fn name(&self) -> StringId {
+        self.name
+    }
 }
 
 /// Unique identifier for an argument within the MIR of a function

@@ -223,7 +223,7 @@ mod mir2llvm_tests_visual {
             }
 
             fn bar(i: i64, j: i32) -> i64 {
-                return 5;
+                return i;
             }
         ",
         );

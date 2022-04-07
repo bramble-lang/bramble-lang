@@ -47,6 +47,7 @@ const OUT_PARAM_INDEX: u32 = 0;
 pub enum Location<'ctx> {
     Pointer(PointerValue<'ctx>),
     Function(FunctionData<'ctx>),
+    Argument(BasicValueEnum<'ctx>),
     ReturnPointer,
     Void,
 }
@@ -59,6 +60,7 @@ pub enum LlvmBuilderError {
     CoercePtrLocationIntoFn,
     CoerceRetPtrIntoPtr,
     CoerceRetPtrIntoFn,
+    CoerceArgIntoPointer,
 }
 
 impl TransformerInternalError for LlvmBuilderError {}
@@ -78,6 +80,7 @@ impl<'ctx> Location<'ctx> {
             Location::Function(_) => Err(&LlvmBuilderError::CoerceFnLocationIntoPointer),
             Location::ReturnPointer => Err(&LlvmBuilderError::CoerceRetPtrIntoPtr),
             Location::Void => Err(&LlvmBuilderError::CoerceVoidLocationIntoPointer),
+            Location::Argument(_) => Err(&LlvmBuilderError::CoerceArgIntoPointer),
         }
         .map_err(|e| TransformerError::Internal(e))
     }
@@ -90,6 +93,7 @@ impl<'ctx> Location<'ctx> {
             Location::Function(f) => Ok(*f),
             Location::ReturnPointer => Err(&LlvmBuilderError::CoerceRetPtrIntoFn),
             Location::Void => Err(&LlvmBuilderError::CoerceVoidLocationIntoFunction),
+            Location::Argument(_) => todo!(),
         }
         .map_err(|e| TransformerError::Internal(e))
     }
@@ -513,7 +517,7 @@ impl<'p, 'module, 'ctx> LlvmFunctionBuilder<'p, 'module, 'ctx> {
         }
     }
 
-    fn get_arg(&self, id: ArgId) -> Result<BasicValueEnum, TransformerError> {
+    fn get_arg(&self, id: ArgId) -> Result<BasicValueEnum<'ctx>, TransformerError> {
         // If this function is using an out parameter to return a value to the caller then
         // the `ArgId` index will be off by one, because the out parameter will be pushed
         // to the head of the parameter list, shifting all the user defined parameter down
@@ -527,6 +531,10 @@ impl<'p, 'module, 'ctx> LlvmFunctionBuilder<'p, 'module, 'ctx> {
             .function
             .get_nth_param(id.to_u32() + arg_offset)
             .ok_or(TransformerError::ArgNotFound)
+    }
+
+    fn arg_label(&self, ad: &ArgDecl) -> String {
+        self.program.str_table.get(ad.name()).unwrap()
     }
 
     fn var_label(&self, vd: &VarDecl) -> String {
@@ -596,13 +604,32 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         }
     }
 
+    fn alloc_arg(&mut self, arg_id: ArgId, decl: &ArgDecl) -> Result<(), TransformerError> {
+        let name = self.arg_label(decl);
+        let arg_value = self.get_arg(arg_id)?;
+
+        // Check if variable name already exists
+        let var_id = decl.var_id().unwrap();
+        match self.vars.entry(var_id) {
+            // If it does -> return an error
+            Entry::Occupied(_) => Err(TransformerError::VariableAlreadyAllocated),
+
+            // If not, then allocate a pointer in the Builder
+            Entry::Vacant(ve) => {
+                // and add a mapping from VarID to the pointer in the local var table
+                ve.insert(Location::Argument(arg_value));
+                Ok(())
+            }
+        }
+    }
+
     fn alloc_var(&mut self, id: VarId, decl: &VarDecl) -> Result<(), TransformerError> {
         let name = self.var_label(decl);
 
         // Check if variable name already exists
         match self.vars.entry(id) {
             // If it does -> return an error
-            Entry::Occupied(_) => Err(TransformerError::VariableAlreadyAllocated),
+            Entry::Occupied(_) => Ok(()),
 
             // If not, then allocate a pointer in the Builder
             Entry::Vacant(ve) => {
@@ -747,11 +774,18 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
     }
 
     fn load(&self, lv: Location<'ctx>) -> Result<BasicValueEnum<'ctx>, TransformerError> {
-        let ptr = lv.into_pointer()?;
-        if ptr.get_type().get_element_type().is_aggregate_type() {
-            Ok(ptr.into())
-        } else {
-            Ok(self.program.builder.build_load(lv.into_pointer()?, ""))
+        match lv {
+            Location::Pointer(ptr) => {
+                if ptr.get_type().get_element_type().is_aggregate_type() {
+                    Ok(ptr.into())
+                } else {
+                    Ok(self.program.builder.build_load(lv.into_pointer()?, ""))
+                }
+            }
+            Location::Function(_) => todo!(),
+            Location::Argument(arg) => Ok(arg),
+            Location::ReturnPointer => todo!(),
+            Location::Void => todo!(),
         }
     }
 
@@ -775,6 +809,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                 }
             },
             Location::Void => (),
+            Location::Argument(_) => todo!(),
         }
     }
 

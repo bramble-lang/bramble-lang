@@ -70,6 +70,7 @@ pub trait FunctionBuilder<L, V> {
     fn set_bb(&mut self, bb: BasicBlockId) -> Result<(), TransformerError>;
 
     /// Allocate space for the given variable declaration
+    fn alloc_arg(&mut self, id: ArgId, decl: &ArgDecl) -> Result<(), TransformerError>;
     fn alloc_var(&mut self, id: VarId, vd: &VarDecl) -> Result<(), TransformerError>;
     fn alloc_temp(&mut self, id: TempId, vd: &TempDecl) -> Result<(), TransformerError>;
 
