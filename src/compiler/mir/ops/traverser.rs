@@ -200,25 +200,7 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
     fn rvalue(&mut self, rv: &RValue) -> V {
         match rv {
             RValue::Use(o) => self.operand(o),
-            RValue::BinOp(op, lv, rv) => {
-                let lv = self.operand(lv);
-                let rv = self.operand(rv);
-                match op {
-                    BinOp::Add => self.xfmr.add(lv, rv),
-                    BinOp::Sub => todo!(),
-                    BinOp::Mul => todo!(),
-                    BinOp::Div => todo!(),
-                    BinOp::Eq => todo!(),
-                    BinOp::Ne => todo!(),
-                    BinOp::Le => todo!(),
-                    BinOp::Lt => todo!(),
-                    BinOp::Ge => todo!(),
-                    BinOp::Gt => todo!(),
-                    BinOp::And => todo!(),
-                    BinOp::Or => todo!(),
-                    BinOp::RawPointerOffset => todo!(),
-                }
-            }
+            RValue::BinOp(op, lv, rv) => todo!(),
             RValue::UnOp(_, _) => todo!(),
             RValue::Cast(_, _) => todo!(),
             RValue::AddressOf(_) => todo!(),
