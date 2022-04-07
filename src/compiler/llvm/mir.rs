@@ -62,6 +62,7 @@ pub enum LlvmBuilderError {
     CoerceRetPtrIntoFn,
     CoerceValueIntoPointer,
     CoerceValueIntoFn,
+    ReadInvalidLocation,
 }
 
 impl TransformerInternalError for LlvmBuilderError {}
@@ -771,10 +772,10 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                     Ok(self.program.builder.build_load(lv.into_pointer()?, ""))
                 }
             }
-            Location::Function(_) => todo!(),
             Location::Argument(arg) => Ok(arg),
-            Location::ReturnPointer => todo!(),
-            Location::Void => todo!(),
+            Location::Function(_) | Location::ReturnPointer | Location::Void => Err(
+                TransformerError::Internal(&LlvmBuilderError::ReadInvalidLocation),
+            ),
         }
     }
 
@@ -798,7 +799,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                 }
             },
             Location::Void => (),
-            Location::Argument(_) => todo!(),
+            Location::Argument(_) => panic!("Cannot store to an argument"),
         }
     }
 
