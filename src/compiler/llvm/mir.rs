@@ -930,7 +930,14 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
     }
 
     fn add(&self, a: BasicValueEnum<'ctx>, b: BasicValueEnum<'ctx>) -> BasicValueEnum<'ctx> {
-        todo!()
+        match (a, b) {
+            (BasicValueEnum::IntValue(l), BasicValueEnum::IntValue(r)) => {
+                self.program.builder.build_int_add(l, r, "").into()
+            }
+            (BasicValueEnum::FloatValue(_), BasicValueEnum::FloatValue(_)) => todo!(),
+            (BasicValueEnum::PointerValue(_), BasicValueEnum::PointerValue(_)) => todo!(),
+            _ => todo!(),
+        }
     }
 
     fn sub(&self, a: BasicValueEnum<'ctx>, b: BasicValueEnum<'ctx>) -> BasicValueEnum<'ctx> {
