@@ -70,11 +70,9 @@ pub trait FunctionBuilder<L, V> {
     fn set_bb(&mut self, bb: BasicBlockId) -> Result<(), TransformerError>;
 
     /// Allocate space for the given variable declaration
+    fn alloc_arg(&mut self, id: ArgId, decl: &ArgDecl) -> Result<(), TransformerError>;
     fn alloc_var(&mut self, id: VarId, vd: &VarDecl) -> Result<(), TransformerError>;
     fn alloc_temp(&mut self, id: TempId, vd: &TempDecl) -> Result<(), TransformerError>;
-
-    /// Store the value of the given function parameter in the given stack location
-    fn store_arg(&mut self, arg_id: ArgId, var_id: VarId) -> Result<(), TransformerError>;
 
     /// Tells the program to exit this [`BasicBlock`] by returning to the calling function
     fn term_return(&mut self);
@@ -100,6 +98,9 @@ pub trait FunctionBuilder<L, V> {
 
     /// Tells the program to go to the given [`BasicBlock`].
     fn term_goto(&mut self, target_bb: BasicBlockId) -> Result<(), TransformerError>;
+
+    /// Load a value from a memory location
+    fn load(&self, lv: L) -> Result<V, TransformerError>;
 
     /// Store the given value to the given memory location
     fn store(&mut self, span: Span, l: L, r: V);
@@ -151,9 +152,6 @@ pub trait FunctionBuilder<L, V> {
 
     /// Create a const [`f64`].
     fn const_f64(&self, f: f64) -> V;
-
-    /// Load a value from a memory location
-    fn load(&self, lv: L) -> Result<V, TransformerError>;
 
     /// Add two values together
     fn add(&self, a: V, b: V) -> V;

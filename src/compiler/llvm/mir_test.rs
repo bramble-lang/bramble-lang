@@ -68,6 +68,19 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
+    fn simple_array_expression() {
+        let text = "
+            fn test() {
+                let mut a: [i8; 2] :=  [1i8, 2i8];
+
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
     fn base_array_expressions() {
         let text = "
             fn test() -> f64 {
@@ -210,7 +223,40 @@ mod mir2llvm_tests_visual {
             }
 
             fn bar(i: i64, j: i32) -> i64 {
-                return 5;
+                return i;
+            }
+        ",
+        );
+    }
+
+    #[test]
+    fn function_array_argument() {
+        compile_and_print_llvm(
+            "
+            fn baz(arr: [i64; 2]) -> i64 {
+                return arr[0];
+            }
+        ",
+        );
+    }
+
+    #[test]
+    fn function_return_array() {
+        compile_and_print_llvm(
+            "
+            fn baz() -> [i64; 2] {
+                return [1, 2];
+            }
+        ",
+        );
+    }
+
+    #[test]
+    fn function_return_array_parameter() {
+        compile_and_print_llvm(
+            "
+            fn baz(a: [i64; 2]) -> [i64; 2] {
+                return a;
             }
         ",
         );
@@ -220,13 +266,14 @@ mod mir2llvm_tests_visual {
     fn function_call_return_array() {
         compile_and_print_llvm(
             "
-            fn foo(a: [i64; 4]) {
+            fn foo() {
+                let a: [i64; 2] := bar();
                 return;
             }
 
-            /*fn bar(a: [i64; 4]) -> [i64; 4] {
-                return a;
-            }*/
+            fn bar() -> [i64; 2] {
+                return [1, 2];
+            }
         ",
         );
     }
@@ -237,6 +284,9 @@ mod mir2llvm_tests_visual {
         let (sm, table, module) = compile(text);
         let mut project = MirProject::new();
         transform::transform(&module, &mut project).unwrap();
+
+        println!("=== MIR ===:");
+        println!("{}\n\n", project);
 
         let context = Context::create();
         let module = context.create_module("test");

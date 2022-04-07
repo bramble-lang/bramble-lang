@@ -113,20 +113,20 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
             .set_bb(ENTRY_BB)
             .expect("There must be at least one BasicBlock for a function");
 
+        // Loop through all arguments and add them to the function builder
+
+        // Move function parameters into local variables
+        for (id, arg) in self.function.arg_iter() {
+            // get span from arg decl
+            // get value of the llvm function parameter associated with arg id
+            self.xfmr.alloc_arg(id, arg).unwrap();
+        }
+
         // Loop through all user defined variables and allocate them
         // in the Entry BasicBlock
         for id in self.get_varid_iter() {
             let decl = *self.get_var(id);
             self.xfmr.alloc_var(id, &decl).unwrap();
-        }
-
-        // Move function parameters into local variables
-        for (id, arg) in self.function.arg_iter() {
-            // Use arg id to look up the associated var id
-            let var_id = arg.var_id().unwrap();
-            // get span from arg decl
-            // get value of the llvm function parameter associated with arg id
-            self.xfmr.store_arg(id, var_id).unwrap();
         }
 
         // Loop through all temp vars and allocate them

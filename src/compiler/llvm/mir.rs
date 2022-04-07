@@ -47,6 +47,7 @@ const OUT_PARAM_INDEX: u32 = 0;
 pub enum Location<'ctx> {
     Pointer(PointerValue<'ctx>),
     Function(FunctionData<'ctx>),
+    Argument(BasicValueEnum<'ctx>),
     ReturnPointer,
     Void,
 }
@@ -59,6 +60,9 @@ pub enum LlvmBuilderError {
     CoercePtrLocationIntoFn,
     CoerceRetPtrIntoPtr,
     CoerceRetPtrIntoFn,
+    CoerceValueIntoPointer,
+    CoerceValueIntoFn,
+    ReadInvalidLocation,
 }
 
 impl TransformerInternalError for LlvmBuilderError {}
@@ -78,6 +82,10 @@ impl<'ctx> Location<'ctx> {
             Location::Function(_) => Err(&LlvmBuilderError::CoerceFnLocationIntoPointer),
             Location::ReturnPointer => Err(&LlvmBuilderError::CoerceRetPtrIntoPtr),
             Location::Void => Err(&LlvmBuilderError::CoerceVoidLocationIntoPointer),
+            Location::Argument(arg) => match arg {
+                BasicValueEnum::PointerValue(ptr) => Ok(*ptr),
+                _ => Err(&LlvmBuilderError::CoerceValueIntoPointer),
+            },
         }
         .map_err(|e| TransformerError::Internal(e))
     }
@@ -90,6 +98,7 @@ impl<'ctx> Location<'ctx> {
             Location::Function(f) => Ok(*f),
             Location::ReturnPointer => Err(&LlvmBuilderError::CoerceRetPtrIntoFn),
             Location::Void => Err(&LlvmBuilderError::CoerceVoidLocationIntoFunction),
+            Location::Argument(_) => Err(&LlvmBuilderError::CoerceValueIntoFn),
         }
         .map_err(|e| TransformerError::Internal(e))
     }
@@ -513,7 +522,7 @@ impl<'p, 'module, 'ctx> LlvmFunctionBuilder<'p, 'module, 'ctx> {
         }
     }
 
-    fn get_arg(&self, id: ArgId) -> Result<BasicValueEnum, TransformerError> {
+    fn get_arg(&self, id: ArgId) -> Result<BasicValueEnum<'ctx>, TransformerError> {
         // If this function is using an out parameter to return a value to the caller then
         // the `ArgId` index will be off by one, because the out parameter will be pushed
         // to the head of the parameter list, shifting all the user defined parameter down
@@ -527,6 +536,10 @@ impl<'p, 'module, 'ctx> LlvmFunctionBuilder<'p, 'module, 'ctx> {
             .function
             .get_nth_param(id.to_u32() + arg_offset)
             .ok_or(TransformerError::ArgNotFound)
+    }
+
+    fn arg_label(&self, ad: &ArgDecl) -> String {
+        self.program.str_table.get(ad.name()).unwrap()
     }
 
     fn var_label(&self, vd: &VarDecl) -> String {
@@ -596,13 +609,36 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         }
     }
 
+    fn alloc_arg(&mut self, arg_id: ArgId, decl: &ArgDecl) -> Result<(), TransformerError> {
+        let name = self.arg_label(decl);
+        let arg_value = self.get_arg(arg_id)?;
+        arg_value.set_name(&name);
+
+        // Check if variable name already exists
+        let var_id = decl.var_id().unwrap();
+        match self.vars.entry(var_id) {
+            // If it does -> return an error
+            Entry::Occupied(_) => Err(TransformerError::VariableAlreadyAllocated),
+
+            // If not, then allocate a pointer in the Builder
+            Entry::Vacant(ve) => {
+                // and add a mapping from VarID to the pointer in the local var table
+                ve.insert(Location::Argument(arg_value));
+                Ok(())
+            }
+        }
+    }
+
     fn alloc_var(&mut self, id: VarId, decl: &VarDecl) -> Result<(), TransformerError> {
         let name = self.var_label(decl);
 
         // Check if variable name already exists
         match self.vars.entry(id) {
             // If it does -> return an error
-            Entry::Occupied(_) => Err(TransformerError::VariableAlreadyAllocated),
+            Entry::Occupied(occ) => match occ.get() {
+                Location::Argument(_) => Ok(()),
+                _ => Err(TransformerError::VariableAlreadyAllocated),
+            },
 
             // If not, then allocate a pointer in the Builder
             Entry::Vacant(ve) => {
@@ -639,21 +675,6 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                 Ok(())
             }
         }
-    }
-
-    fn store_arg(&mut self, arg_id: ArgId, var_id: VarId) -> Result<(), TransformerError> {
-        // Get the argument value
-        let arg_value = self.get_arg(arg_id)?;
-
-        // Get the location in the stack where the argument will be stored
-        self.vars
-            .get(&var_id)
-            .ok_or(TransformerError::VarNotFound)?
-            .into_pointer()
-            .and_then(|loc| {
-                self.program.builder.build_store(loc, arg_value);
-                Ok(())
-            })
     }
 
     fn term_return(&mut self) {
@@ -746,10 +767,31 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         Ok(())
     }
 
+    fn load(&self, lv: Location<'ctx>) -> Result<BasicValueEnum<'ctx>, TransformerError> {
+        match lv {
+            Location::Pointer(ptr) => {
+                if ptr.get_type().get_element_type().is_aggregate_type() {
+                    Ok(ptr.into())
+                } else {
+                    Ok(self.program.builder.build_load(lv.into_pointer()?, ""))
+                }
+            }
+            Location::Argument(arg) => Ok(arg),
+            Location::Function(_) | Location::ReturnPointer | Location::Void => Err(
+                TransformerError::Internal(&LlvmBuilderError::ReadInvalidLocation),
+            ),
+        }
+    }
+
     fn store(&mut self, span: Span, l: Location<'ctx>, r: BasicValueEnum<'ctx>) {
         match l {
             Location::Pointer(ptr) => {
-                self.program.builder.build_store(ptr, r);
+                // If we're dealing with aggregate values, then memcpy
+                if ptr.get_type().get_element_type().is_aggregate_type() {
+                    self.build_memcpy(ptr, r.into_pointer_value(), span)
+                } else {
+                    self.program.builder.build_store(ptr, r);
+                }
             }
             Location::Function(_) => panic!("Cannot store in a function location"),
             Location::ReturnPointer => match &mut self.ret_ptr {
@@ -761,6 +803,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                 }
             },
             Location::Void => (),
+            Location::Argument(_) => panic!("Cannot store to an argument"),
         }
     }
 
@@ -884,10 +927,6 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
 
     fn const_f64(&self, f: f64) -> BasicValueEnum<'ctx> {
         self.program.context.f64_type().const_float(f).into()
-    }
-
-    fn load(&self, lv: Location<'ctx>) -> Result<BasicValueEnum<'ctx>, TransformerError> {
-        Ok(self.program.builder.build_load(lv.into_pointer()?, ""))
     }
 
     fn add(&self, a: BasicValueEnum<'ctx>, b: BasicValueEnum<'ctx>) -> BasicValueEnum<'ctx> {
