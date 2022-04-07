@@ -606,7 +606,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
             // If not, then allocate a pointer in the Builder
             Entry::Vacant(ve) => {
                 // and add a mapping from VarID to the pointer in the local var table
-                let ty = self.program.context.i64_type();
+                let ty = self.program.get_type(vd.ty())?.into_basic_type().unwrap();
                 let ptr = self.program.builder.build_alloca(ty, &name);
                 ve.insert(Location::Pointer(ptr));
                 Ok(())

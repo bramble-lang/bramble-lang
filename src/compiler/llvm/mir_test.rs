@@ -73,6 +73,8 @@ mod mir2llvm_tests_visual {
             fn test() {
                 let a: [i8; 2] :=  [1i8, 2i8];
 
+                let e: i8 := a[0];
+
                 return;
             }
         ";
