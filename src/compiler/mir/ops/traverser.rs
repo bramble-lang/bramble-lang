@@ -208,7 +208,7 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
                     BinOp::Add => self.xfmr.add(lv, rv),
                     BinOp::Sub => self.xfmr.sub(lv, rv),
                     BinOp::Mul => self.xfmr.mul(lv, rv),
-                    BinOp::Div => todo!(),
+                    BinOp::Div => self.xfmr.div(lv, rv),
                     BinOp::Eq => todo!(),
                     BinOp::Ne => todo!(),
                     BinOp::Le => todo!(),
