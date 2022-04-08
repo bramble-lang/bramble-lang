@@ -131,7 +131,7 @@ impl<'a> FuncTransformer<'a> {
 
             // Operations
             Expression::BinaryOp(ctx, op, left, right) => {
-                let rv = self.binary_op(*op, left, right);
+                let rv = self.binary_op(ctx, *op, left, right);
                 let ty = self.find_type(ctx.ty());
                 self.mir.temp_store(rv, ty, ctx.span())
             }
@@ -498,6 +498,7 @@ impl<'a> FuncTransformer<'a> {
 
     fn binary_op(
         &mut self,
+        ctx: &SemanticContext,
         op: BinaryOperator,
         left: &Expression<SemanticContext>,
         right: &Expression<SemanticContext>,
@@ -521,7 +522,11 @@ impl<'a> FuncTransformer<'a> {
             BinaryOperator::Div => {
                 let left = self.expression(left);
                 let right = self.expression(right);
-                self.mir.div(left, right)
+                if ctx.ty().is_unsigned_int() {
+                    self.mir.ui_div(left, right)
+                } else {
+                    self.mir.div(left, right)
+                }
             }
             BinaryOperator::BAnd => {
                 let left = self.expression(left);
@@ -544,24 +549,40 @@ impl<'a> FuncTransformer<'a> {
                 self.mir.neq(left, right)
             }
             BinaryOperator::Ls => {
-                let left = self.expression(left);
-                let right = self.expression(right);
-                self.mir.lt(left, right)
+                let l = self.expression(left);
+                let r = self.expression(right);
+                if left.context().ty().is_unsigned_int() {
+                    self.mir.ui_lt(l, r)
+                } else {
+                    self.mir.lt(l, r)
+                }
             }
             BinaryOperator::LsEq => {
-                let left = self.expression(left);
-                let right = self.expression(right);
-                self.mir.le(left, right)
+                let l = self.expression(left);
+                let r = self.expression(right);
+                if left.context().ty().is_unsigned_int() {
+                    self.mir.ui_le(l, r)
+                } else {
+                    self.mir.le(l, r)
+                }
             }
             BinaryOperator::Gr => {
-                let left = self.expression(left);
-                let right = self.expression(right);
-                self.mir.gt(left, right)
+                let l = self.expression(left);
+                let r = self.expression(right);
+                if left.context().ty().is_unsigned_int() {
+                    self.mir.ui_gt(l, r)
+                } else {
+                    self.mir.gt(l, r)
+                }
             }
             BinaryOperator::GrEq => {
-                let left = self.expression(left);
-                let right = self.expression(right);
-                self.mir.ge(left, right)
+                let l = self.expression(left);
+                let r = self.expression(right);
+                if left.context().ty().is_unsigned_int() {
+                    self.mir.ui_ge(l, r)
+                } else {
+                    self.mir.ge(l, r)
+                }
             }
             BinaryOperator::RawPointerOffset => {
                 let left = self.expression(left);

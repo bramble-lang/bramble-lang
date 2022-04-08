@@ -571,13 +571,13 @@ pub mod tests {
             (BinaryOperator::Add, BinOp::Add, None),
             (BinaryOperator::Sub, BinOp::Sub, None),
             (BinaryOperator::Mul, BinOp::Mul, None),
-            (BinaryOperator::Div, BinOp::Div, None),
+            (BinaryOperator::Div, BinOp::SIDiv, None),
             (BinaryOperator::Eq, BinOp::Eq, Some(Type::Bool)),
             (BinaryOperator::NEq, BinOp::Ne, Some(Type::Bool)),
-            (BinaryOperator::Ls, BinOp::Lt, Some(Type::Bool)),
-            (BinaryOperator::LsEq, BinOp::Le, Some(Type::Bool)),
-            (BinaryOperator::Gr, BinOp::Gt, Some(Type::Bool)),
-            (BinaryOperator::GrEq, BinOp::Ge, Some(Type::Bool)),
+            (BinaryOperator::Ls, BinOp::SILt, Some(Type::Bool)),
+            (BinaryOperator::LsEq, BinOp::SILe, Some(Type::Bool)),
+            (BinaryOperator::Gr, BinOp::SIGt, Some(Type::Bool)),
+            (BinaryOperator::GrEq, BinOp::SIGe, Some(Type::Bool)),
         ] {
             for (literal_ty, v, exp) in &[
                 (Type::I8, Expression::I8((), 1), Constant::I8(1)),
@@ -590,6 +590,32 @@ pub mod tests {
                 (Type::U64, Expression::U64((), 1), Constant::U64(1)),
                 (Type::F64, Expression::F64((), 5.0), Constant::F64(5.0)),
             ] {
+                // If the test input is an unsigned integer then swap the expected operator to the
+                // unsigned form
+                let exp_op = if literal_ty.is_signed() {
+                    exp_op
+                } else {
+                    match exp_op {
+                        BinOp::Add => BinOp::Add,
+                        BinOp::Sub => BinOp::Sub,
+                        BinOp::Mul => BinOp::Mul,
+                        BinOp::SIDiv => BinOp::UIDiv,
+                        BinOp::UIDiv => BinOp::UIDiv,
+                        BinOp::Eq => BinOp::Eq,
+                        BinOp::Ne => BinOp::Ne,
+                        BinOp::SILe => BinOp::UILe,
+                        BinOp::SILt => BinOp::UILt,
+                        BinOp::UILe => todo!(),
+                        BinOp::UILt => todo!(),
+                        BinOp::SIGe => BinOp::UIGe,
+                        BinOp::SIGt => BinOp::UIGt,
+                        BinOp::And => BinOp::And,
+                        BinOp::Or => BinOp::Or,
+                        BinOp::RawPointerOffset => todo!(),
+                        BinOp::UIGe => todo!(),
+                        BinOp::UIGt => todo!(),
+                    }
+                };
                 let literal = to_code(v, &table);
                 let ty = ty_override.as_ref().unwrap_or(literal_ty);
                 let text = format!(

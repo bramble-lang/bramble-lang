@@ -136,11 +136,47 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
+    fn unsigned_int_division() {
+        let text = "
+            fn test() {
+                let a: u64 := 1u64;
+                let b: u64 := 2u64;
+                let x: u64 := a / b;
+
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
     fn signed_int_comparison() {
         let text = "
             fn test() {
                 let a: i64 := 1;
                 let b: i64 := 2;
+
+                a == b;
+                a != b;
+                a < b;
+                a <= b;
+                a > b;
+                a >= b;
+
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
+    fn unsigned_int_comparison() {
+        let text = "
+            fn test() {
+                let a: u64 := 1u64;
+                let b: u64 := 2u64;
 
                 a == b;
                 a != b;

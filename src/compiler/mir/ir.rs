@@ -895,20 +895,30 @@ pub enum BinOp {
     Sub,
     /// '*' multiply two primitive numbers
     Mul,
-    /// '/' divive a primitive by another primitive
-    Div,
+    /// '/' divide a primitive by another primitive
+    SIDiv,
+    /// '/' divide an unsigned integer primitive by another unsigned integer primitive
+    UIDiv,
     /// '==' compare two primitives and see if they are equal
     Eq,
     /// '!=' check if two primitives are not equal
     Ne,
     /// '<=' check if one primitive is less than or equal to another
-    Le,
+    SILe,
+    /// '<=' check if one primitive is less than or equal to another
+    UILe,
     /// '<' check if one primitive is less than another
-    Lt,
+    SILt,
+    /// '<' check if one primitive is less than another
+    UILt,
     /// '>=' check if one primitive is greater than or equal to another
-    Ge,
+    SIGe,
+    /// '>=' check if one primitive is greater than or equal to another
+    UIGe,
     /// '>' check if one primitive is greater than another
-    Gt,
+    SIGt,
+    /// '>' check if one primitive is greater than another
+    UIGt,
     /// '&' bitwise and operation on two primitives
     And,
     /// '|' bitwise or operation on two primitives
@@ -923,13 +933,18 @@ impl Display for BinOp {
             BinOp::Add => "Add",
             BinOp::Sub => "Sub",
             BinOp::Mul => "Mul",
-            BinOp::Div => "Div",
+            BinOp::SIDiv => "Div",
+            BinOp::UIDiv => "UIDiv",
             BinOp::Eq => "Eq",
             BinOp::Ne => "Neq",
-            BinOp::Le => "Le",
-            BinOp::Lt => "Lt",
-            BinOp::Ge => "Ge",
-            BinOp::Gt => "Gt",
+            BinOp::SILe => "Le",
+            BinOp::UILe => "SILe",
+            BinOp::SILt => "Lt",
+            BinOp::UILt => "SILt",
+            BinOp::SIGe => "Ge",
+            BinOp::SIGt => "Gt",
+            BinOp::UIGe => "UIGe",
+            BinOp::UIGt => "UIGt",
             BinOp::And => "BitwiseAnd",
             BinOp::Or => "BitwiseOr",
             BinOp::RawPointerOffset => "RawPointerOffset",
