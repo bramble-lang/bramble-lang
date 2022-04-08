@@ -970,6 +970,8 @@ impl Display for BinOp {
 pub enum UnOp {
     /// '-' negate a primitive value
     Negate,
+    /// '-' negate a primitive value
+    FNegate,
     /// '!' bitwise not a primitive value
     Not,
 }
@@ -978,6 +980,7 @@ impl Display for UnOp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let txt = match self {
             UnOp::Negate => "-",
+            UnOp::FNegate => "-",
             UnOp::Not => "!",
         };
         f.write_str(txt)

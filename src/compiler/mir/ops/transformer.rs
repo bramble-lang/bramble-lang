@@ -212,6 +212,9 @@ pub trait FunctionBuilder<L, V> {
 
     /// Negate an integer
     fn i_neg(&self, a: V) -> Result<V, TransformerError>;
+
+    /// Negate an integer
+    fn f_neg(&self, a: V) -> Result<V, TransformerError>;
 }
 
 #[derive(Debug, Clone, Copy)]
