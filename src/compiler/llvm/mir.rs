@@ -1117,8 +1117,6 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                 .builder
                 .build_int_compare(IntPredicate::SLE, l, r, "")
                 .into()),
-            (BasicValueEnum::FloatValue(_), BasicValueEnum::FloatValue(_)) => todo!(),
-            (BasicValueEnum::PointerValue(_), BasicValueEnum::PointerValue(_)) => todo!(),
             _ => Err(TransformerError::Internal(
                 &LlvmBuilderError::InvalidArithmeticOperands,
             )),
@@ -1130,7 +1128,16 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         a: BasicValueEnum<'ctx>,
         b: BasicValueEnum<'ctx>,
     ) -> Result<BasicValueEnum<'ctx>, TransformerError> {
-        todo!()
+        match (a, b) {
+            (BasicValueEnum::IntValue(l), BasicValueEnum::IntValue(r)) => Ok(self
+                .program
+                .builder
+                .build_int_compare(IntPredicate::ULE, l, r, "")
+                .into()),
+            _ => Err(TransformerError::Internal(
+                &LlvmBuilderError::InvalidArithmeticOperands,
+            )),
+        }
     }
 
     fn gt(
@@ -1144,8 +1151,6 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                 .builder
                 .build_int_compare(IntPredicate::SGT, l, r, "")
                 .into()),
-            (BasicValueEnum::FloatValue(_), BasicValueEnum::FloatValue(_)) => todo!(),
-            (BasicValueEnum::PointerValue(_), BasicValueEnum::PointerValue(_)) => todo!(),
             _ => Err(TransformerError::Internal(
                 &LlvmBuilderError::InvalidArithmeticOperands,
             )),
@@ -1157,7 +1162,16 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         a: BasicValueEnum<'ctx>,
         b: BasicValueEnum<'ctx>,
     ) -> Result<BasicValueEnum<'ctx>, TransformerError> {
-        todo!()
+        match (a, b) {
+            (BasicValueEnum::IntValue(l), BasicValueEnum::IntValue(r)) => Ok(self
+                .program
+                .builder
+                .build_int_compare(IntPredicate::UGT, l, r, "")
+                .into()),
+            _ => Err(TransformerError::Internal(
+                &LlvmBuilderError::InvalidArithmeticOperands,
+            )),
+        }
     }
 
     fn gte(
@@ -1171,8 +1185,6 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                 .builder
                 .build_int_compare(IntPredicate::SGE, l, r, "")
                 .into()),
-            (BasicValueEnum::FloatValue(_), BasicValueEnum::FloatValue(_)) => todo!(),
-            (BasicValueEnum::PointerValue(_), BasicValueEnum::PointerValue(_)) => todo!(),
             _ => Err(TransformerError::Internal(
                 &LlvmBuilderError::InvalidArithmeticOperands,
             )),
@@ -1184,7 +1196,16 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         a: BasicValueEnum<'ctx>,
         b: BasicValueEnum<'ctx>,
     ) -> Result<BasicValueEnum<'ctx>, TransformerError> {
-        todo!()
+        match (a, b) {
+            (BasicValueEnum::IntValue(l), BasicValueEnum::IntValue(r)) => Ok(self
+                .program
+                .builder
+                .build_int_compare(IntPredicate::UGE, l, r, "")
+                .into()),
+            _ => Err(TransformerError::Internal(
+                &LlvmBuilderError::InvalidArithmeticOperands,
+            )),
+        }
     }
 
     fn neg(
