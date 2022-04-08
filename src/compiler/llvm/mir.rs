@@ -975,4 +975,21 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
             )),
         }
     }
+
+    fn mul(
+        &self,
+        a: BasicValueEnum<'ctx>,
+        b: BasicValueEnum<'ctx>,
+    ) -> Result<BasicValueEnum<'ctx>, TransformerError> {
+        match (a, b) {
+            (BasicValueEnum::IntValue(l), BasicValueEnum::IntValue(r)) => {
+                Ok(self.program.builder.build_int_mul(l, r, "").into())
+            }
+            (BasicValueEnum::FloatValue(_), BasicValueEnum::FloatValue(_)) => todo!(),
+            (BasicValueEnum::PointerValue(_), BasicValueEnum::PointerValue(_)) => todo!(),
+            _ => Err(TransformerError::Internal(
+                &LlvmBuilderError::InvalidArithmeticOperands,
+            )),
+        }
+    }
 }

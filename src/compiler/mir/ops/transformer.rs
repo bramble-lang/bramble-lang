@@ -158,6 +158,9 @@ pub trait FunctionBuilder<L, V> {
 
     /// Subtract two values
     fn sub(&self, a: V, b: V) -> Result<V, TransformerError>;
+
+    /// Multiply two values
+    fn mul(&self, a: V, b: V) -> Result<V, TransformerError>;
 }
 
 #[derive(Debug, Clone, Copy)]
