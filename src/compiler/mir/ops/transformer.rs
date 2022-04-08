@@ -182,6 +182,9 @@ pub trait FunctionBuilder<L, V> {
 
     /// Greater than or equal
     fn gte(&self, a: V, b: V) -> Result<V, TransformerError>;
+
+    /// Greater than or equal
+    fn neg(&self, a: V) -> Result<V, TransformerError>;
 }
 
 #[derive(Debug, Clone, Copy)]

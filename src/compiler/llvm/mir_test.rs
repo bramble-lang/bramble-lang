@@ -157,6 +157,20 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
+    fn signed_int_negate() {
+        let text = "
+            fn test() {
+                let a: i64 := 1;
+                let b: i64 := -a;
+
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
     fn simple_array_expression() {
         let text = "
             fn test() {

@@ -1129,4 +1129,18 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
             )),
         }
     }
+
+    fn neg(
+        &self,
+        a: BasicValueEnum<'ctx>,
+    ) -> std::result::Result<BasicValueEnum<'ctx>, TransformerError> {
+        match a {
+            BasicValueEnum::IntValue(a) => Ok(self.program.builder.build_int_neg(a, "").into()),
+            BasicValueEnum::FloatValue(_) => todo!(),
+            BasicValueEnum::PointerValue(_) => todo!(),
+            _ => Err(TransformerError::Internal(
+                &LlvmBuilderError::InvalidArithmeticOperands,
+            )),
+        }
+    }
 }

@@ -221,7 +221,14 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
                 }
                 .unwrap()
             }
-            RValue::UnOp(_, _) => todo!(),
+            RValue::UnOp(op, v) => {
+                let v = self.operand(v);
+                match op {
+                    UnOp::Negate => self.xfmr.neg(v),
+                    UnOp::Not => todo!(),
+                }
+                .unwrap()
+            }
             RValue::Cast(_, _) => todo!(),
             RValue::AddressOf(_) => todo!(),
         }
