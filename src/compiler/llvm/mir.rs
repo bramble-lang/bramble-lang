@@ -1037,7 +1037,14 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         a: BasicValueEnum<'ctx>,
         b: BasicValueEnum<'ctx>,
     ) -> Result<BasicValueEnum<'ctx>, TransformerError> {
-        todo!()
+        match (a, b) {
+            (BasicValueEnum::FloatValue(l), BasicValueEnum::FloatValue(r)) => {
+                Ok(self.program.builder.build_float_add(l, r, "").into())
+            }
+            _ => Err(TransformerError::Internal(
+                &LlvmBuilderError::InvalidArithmeticOperands,
+            )),
+        }
     }
 
     fn f_sub(
@@ -1045,7 +1052,14 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         a: BasicValueEnum<'ctx>,
         b: BasicValueEnum<'ctx>,
     ) -> Result<BasicValueEnum<'ctx>, TransformerError> {
-        todo!()
+        match (a, b) {
+            (BasicValueEnum::FloatValue(l), BasicValueEnum::FloatValue(r)) => {
+                Ok(self.program.builder.build_float_sub(l, r, "").into())
+            }
+            _ => Err(TransformerError::Internal(
+                &LlvmBuilderError::InvalidArithmeticOperands,
+            )),
+        }
     }
 
     fn f_mul(
@@ -1053,7 +1067,14 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         a: BasicValueEnum<'ctx>,
         b: BasicValueEnum<'ctx>,
     ) -> Result<BasicValueEnum<'ctx>, TransformerError> {
-        todo!()
+        match (a, b) {
+            (BasicValueEnum::FloatValue(l), BasicValueEnum::FloatValue(r)) => {
+                Ok(self.program.builder.build_float_mul(l, r, "").into())
+            }
+            _ => Err(TransformerError::Internal(
+                &LlvmBuilderError::InvalidArithmeticOperands,
+            )),
+        }
     }
 
     fn f_div(
@@ -1061,7 +1082,14 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         a: BasicValueEnum<'ctx>,
         b: BasicValueEnum<'ctx>,
     ) -> Result<BasicValueEnum<'ctx>, TransformerError> {
-        todo!()
+        match (a, b) {
+            (BasicValueEnum::FloatValue(l), BasicValueEnum::FloatValue(r)) => {
+                Ok(self.program.builder.build_float_div(l, r, "").into())
+            }
+            _ => Err(TransformerError::Internal(
+                &LlvmBuilderError::InvalidArithmeticOperands,
+            )),
+        }
     }
 
     fn i_eq(
