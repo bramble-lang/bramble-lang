@@ -592,9 +592,9 @@ pub mod tests {
             ] {
                 // If the test input is an unsigned integer then swap the expected operator to the
                 // unsigned form
-                let exp_op = if literal_ty.is_signed() {
+                let exp_op = if literal_ty.is_signed_int() {
                     exp_op
-                } else if literal_ty.is_integral() {
+                } else if literal_ty.is_unsigned_int() {
                     match exp_op {
                         BinOp::Add => BinOp::Add,
                         BinOp::Sub => BinOp::Sub,

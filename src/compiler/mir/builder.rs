@@ -251,6 +251,30 @@ impl MirProcedureBuilder {
         RValue::BinOp(BinOp::UIDiv, left, right)
     }
 
+    /// Add an addition operation to the current [`BasicBlock`].
+    pub fn fadd(&self, left: Operand, right: Operand) -> RValue {
+        debug!("FAdd: {:?}, {:?}", left, right);
+        RValue::BinOp(BinOp::FAdd, left, right)
+    }
+
+    /// Add a subtraction operation to the current [`BasicBlock`].
+    pub fn fsub(&self, left: Operand, right: Operand) -> RValue {
+        debug!("FSub: {:?}, {:?}", left, right);
+        RValue::BinOp(BinOp::FSub, left, right)
+    }
+
+    /// Add a multiply operation to the current [`BasicBlock`].
+    pub fn fmul(&self, left: Operand, right: Operand) -> RValue {
+        debug!("FMul: {:?}, {:?}", left, right);
+        RValue::BinOp(BinOp::FMul, left, right)
+    }
+
+    /// Add a divide operation to the current [`BasicBlock`].
+    pub fn fdiv(&self, left: Operand, right: Operand) -> RValue {
+        debug!("FDiv: {:?}, {:?}", left, right);
+        RValue::BinOp(BinOp::FDiv, left, right)
+    }
+
     /// Add a bitwise and operation to the current [`BasicBlock`].
     pub fn bitwise_and(&self, left: Operand, right: Operand) -> RValue {
         debug!("And: {:?}, {:?}", left, right);

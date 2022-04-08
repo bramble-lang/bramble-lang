@@ -503,26 +503,43 @@ impl<'a> FuncTransformer<'a> {
         left: &Expression<SemanticContext>,
         right: &Expression<SemanticContext>,
     ) -> RValue {
+        let is_float = left.context().ty().is_float();
+
         match op {
             BinaryOperator::Add => {
                 let left = self.expression(left);
                 let right = self.expression(right);
-                self.mir.add(left, right)
+                if is_float {
+                    self.mir.fadd(left, right)
+                } else {
+                    self.mir.add(left, right)
+                }
             }
             BinaryOperator::Sub => {
                 let left = self.expression(left);
                 let right = self.expression(right);
-                self.mir.sub(left, right)
+
+                if is_float {
+                    self.mir.fsub(left, right)
+                } else {
+                    self.mir.sub(left, right)
+                }
             }
             BinaryOperator::Mul => {
                 let left = self.expression(left);
                 let right = self.expression(right);
-                self.mir.mul(left, right)
+                if is_float {
+                    self.mir.fmul(left, right)
+                } else {
+                    self.mir.mul(left, right)
+                }
             }
             BinaryOperator::Div => {
                 let left = self.expression(left);
                 let right = self.expression(right);
-                if ctx.ty().is_unsigned_int() {
+                if is_float {
+                    self.mir.fdiv(left, right)
+                } else if ctx.ty().is_unsigned_int() {
                     self.mir.ui_div(left, right)
                 } else {
                     self.mir.div(left, right)
