@@ -622,6 +622,12 @@ pub mod tests {
                         BinaryOperator::Sub => BinOp::FSub,
                         BinaryOperator::Mul => BinOp::FMul,
                         BinaryOperator::Div => BinOp::FDiv,
+                        BinaryOperator::Eq => BinOp::FEq,
+                        BinaryOperator::NEq => BinOp::FNe,
+                        BinaryOperator::Ls => BinOp::FLt,
+                        BinaryOperator::LsEq => BinOp::FLe,
+                        BinaryOperator::Gr => BinOp::FGt,
+                        BinaryOperator::GrEq => BinOp::FGe,
                         _ => exp_op,
                     }
                 };

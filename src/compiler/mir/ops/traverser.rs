@@ -227,6 +227,12 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
                     BinOp::FSub => self.xfmr.f_sub(lv, rv),
                     BinOp::FMul => self.xfmr.f_mul(lv, rv),
                     BinOp::FDiv => self.xfmr.f_div(lv, rv),
+                    BinOp::FEq => self.xfmr.f_eq(lv, rv),
+                    BinOp::FNe => self.xfmr.f_neq(lv, rv),
+                    BinOp::FLe => self.xfmr.f_lte(lv, rv),
+                    BinOp::FLt => self.xfmr.f_lt(lv, rv),
+                    BinOp::FGe => self.xfmr.f_gte(lv, rv),
+                    BinOp::FGt => self.xfmr.f_gt(lv, rv),
                 }
                 .unwrap()
             }

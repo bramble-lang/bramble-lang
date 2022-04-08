@@ -563,18 +563,28 @@ impl<'a> FuncTransformer<'a> {
             BinaryOperator::Eq => {
                 let left = self.expression(left);
                 let right = self.expression(right);
-                self.mir.eq(left, right)
+                if is_float {
+                    self.mir.f_eq(left, right)
+                } else {
+                    self.mir.eq(left, right)
+                }
             }
             BinaryOperator::NEq => {
                 let left = self.expression(left);
                 let right = self.expression(right);
-                self.mir.neq(left, right)
+                if is_float {
+                    self.mir.f_neq(left, right)
+                } else {
+                    self.mir.neq(left, right)
+                }
             }
             BinaryOperator::Ls => {
                 let l = self.expression(left);
                 let r = self.expression(right);
                 if left.context().ty().is_unsigned_int() {
                     self.mir.ui_lt(l, r)
+                } else if is_float {
+                    self.mir.f_lt(l, r)
                 } else {
                     self.mir.lt(l, r)
                 }
@@ -584,6 +594,8 @@ impl<'a> FuncTransformer<'a> {
                 let r = self.expression(right);
                 if left.context().ty().is_unsigned_int() {
                     self.mir.ui_le(l, r)
+                } else if is_float {
+                    self.mir.f_le(l, r)
                 } else {
                     self.mir.le(l, r)
                 }
@@ -593,6 +605,8 @@ impl<'a> FuncTransformer<'a> {
                 let r = self.expression(right);
                 if left.context().ty().is_unsigned_int() {
                     self.mir.ui_gt(l, r)
+                } else if is_float {
+                    self.mir.f_gt(l, r)
                 } else {
                     self.mir.gt(l, r)
                 }
@@ -602,6 +616,8 @@ impl<'a> FuncTransformer<'a> {
                 let r = self.expression(right);
                 if left.context().ty().is_unsigned_int() {
                     self.mir.ui_ge(l, r)
+                } else if is_float {
+                    self.mir.f_ge(l, r)
                 } else {
                     self.mir.ge(l, r)
                 }

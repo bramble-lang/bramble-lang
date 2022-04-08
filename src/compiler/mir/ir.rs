@@ -911,6 +911,10 @@ pub enum BinOp {
     Eq,
     /// '!=' check if two primitives are not equal
     Ne,
+    /// '==' compare two primitives and see if they are equal
+    FEq,
+    /// '!=' check if two primitives are not equal
+    FNe,
     /// '<=' check if one primitive is less than or equal to another
     SILe,
     /// '<=' check if one primitive is less than or equal to another
@@ -927,6 +931,14 @@ pub enum BinOp {
     SIGt,
     /// '>' check if one primitive is greater than another
     UIGt,
+    /// '<=' check if one primitive is less than or equal to another
+    FLe,
+    /// '<' check if one primitive is less than another
+    FLt,
+    /// '>=' check if one primitive is greater than or equal to another
+    FGe,
+    /// '>' check if one primitive is greater than another
+    FGt,
     /// '&' bitwise and operation on two primitives
     And,
     /// '|' bitwise or operation on two primitives
@@ -960,6 +972,12 @@ impl Display for BinOp {
             BinOp::FSub => "FSub",
             BinOp::FMul => "FMul",
             BinOp::FDiv => "FDiv",
+            BinOp::FEq => "FEq",
+            BinOp::FNe => "FNe",
+            BinOp::FLe => "FLe",
+            BinOp::FLt => "FLt",
+            BinOp::FGe => "FGe",
+            BinOp::FGt => "FGt",
         };
         f.write_str(txt)
     }
