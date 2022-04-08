@@ -168,6 +168,18 @@ pub trait FunctionBuilder<L, V> {
     /// Divide two unsigned integer values
     fn ui_div(&self, a: V, b: V) -> Result<V, TransformerError>;
 
+    /// Add two values together
+    fn f_add(&self, a: V, b: V) -> Result<V, TransformerError>;
+
+    /// Subtract two values
+    fn f_sub(&self, a: V, b: V) -> Result<V, TransformerError>;
+
+    /// Multiply two values
+    fn f_mul(&self, a: V, b: V) -> Result<V, TransformerError>;
+
+    /// Divide two values
+    fn f_div(&self, a: V, b: V) -> Result<V, TransformerError>;
+
     /// Equal
     fn i_eq(&self, a: V, b: V) -> Result<V, TransformerError>;
 
