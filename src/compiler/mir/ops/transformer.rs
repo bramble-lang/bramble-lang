@@ -182,6 +182,8 @@ pub trait FunctionBuilder<L, V> {
 
     /// Less than or equal
     fn si_lte(&self, a: V, b: V) -> Result<V, TransformerError>;
+
+    /// Less than or equal
     fn ui_lte(&self, a: V, b: V) -> Result<V, TransformerError>;
 
     /// Greater than
