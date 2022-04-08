@@ -154,10 +154,10 @@ pub trait FunctionBuilder<L, V> {
     fn const_f64(&self, f: f64) -> V;
 
     /// Add two values together
-    fn add(&self, a: V, b: V) -> V;
+    fn add(&self, a: V, b: V) -> Result<V, TransformerError>;
 
     /// Subtract two values
-    fn sub(&self, a: V, b: V) -> V;
+    fn sub(&self, a: V, b: V) -> Result<V, TransformerError>;
 }
 
 #[derive(Debug, Clone, Copy)]

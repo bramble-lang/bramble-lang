@@ -64,6 +64,7 @@ pub enum LlvmBuilderError {
     CoerceValueIntoPointer,
     CoerceValueIntoFn,
     ReadInvalidLocation,
+    InvalidArithmeticOperands,
 }
 
 impl TransformerInternalError for LlvmBuilderError {}
@@ -941,18 +942,37 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         self.program.context.f64_type().const_float(f).into()
     }
 
-    fn add(&self, a: BasicValueEnum<'ctx>, b: BasicValueEnum<'ctx>) -> BasicValueEnum<'ctx> {
+    fn add(
+        &self,
+        a: BasicValueEnum<'ctx>,
+        b: BasicValueEnum<'ctx>,
+    ) -> Result<BasicValueEnum<'ctx>, TransformerError> {
         match (a, b) {
             (BasicValueEnum::IntValue(l), BasicValueEnum::IntValue(r)) => {
-                self.program.builder.build_int_add(l, r, "").into()
+                Ok(self.program.builder.build_int_add(l, r, "").into())
             }
             (BasicValueEnum::FloatValue(_), BasicValueEnum::FloatValue(_)) => todo!(),
             (BasicValueEnum::PointerValue(_), BasicValueEnum::PointerValue(_)) => todo!(),
-            _ => todo!(),
+            _ => Err(TransformerError::Internal(
+                &LlvmBuilderError::InvalidArithmeticOperands,
+            )),
         }
     }
 
-    fn sub(&self, a: BasicValueEnum<'ctx>, b: BasicValueEnum<'ctx>) -> BasicValueEnum<'ctx> {
-        todo!()
+    fn sub(
+        &self,
+        a: BasicValueEnum<'ctx>,
+        b: BasicValueEnum<'ctx>,
+    ) -> Result<BasicValueEnum<'ctx>, TransformerError> {
+        match (a, b) {
+            (BasicValueEnum::IntValue(l), BasicValueEnum::IntValue(r)) => {
+                Ok(self.program.builder.build_int_sub(l, r, "").into())
+            }
+            (BasicValueEnum::FloatValue(_), BasicValueEnum::FloatValue(_)) => todo!(),
+            (BasicValueEnum::PointerValue(_), BasicValueEnum::PointerValue(_)) => todo!(),
+            _ => Err(TransformerError::Internal(
+                &LlvmBuilderError::InvalidArithmeticOperands,
+            )),
+        }
     }
 }
