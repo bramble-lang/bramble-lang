@@ -665,12 +665,37 @@ pub mod tests {
     fn negate() {
         let mut table = StringTable::new();
         // this can only be used on signed types
-        for (literal_ty, v, exp) in &[
-            (Type::I8, Expression::I8((), 1), Constant::I8(1)),
-            (Type::I16, Expression::I16((), 1), Constant::I16(1)),
-            (Type::I32, Expression::I32((), 1), Constant::I32(1)),
-            (Type::I64, Expression::I64((), 1), Constant::I64(1)),
-            (Type::F64, Expression::F64((), 5.0), Constant::F64(5.0)),
+        for (literal_ty, v, exp_op, exp) in &[
+            (
+                Type::I8,
+                Expression::I8((), 1),
+                UnOp::Negate,
+                Constant::I8(1),
+            ),
+            (
+                Type::I16,
+                Expression::I16((), 1),
+                UnOp::Negate,
+                Constant::I16(1),
+            ),
+            (
+                Type::I32,
+                Expression::I32((), 1),
+                UnOp::Negate,
+                Constant::I32(1),
+            ),
+            (
+                Type::I64,
+                Expression::I64((), 1),
+                UnOp::Negate,
+                Constant::I64(1),
+            ),
+            (
+                Type::F64,
+                Expression::F64((), 5.0),
+                UnOp::FNegate,
+                Constant::F64(5.0),
+            ),
         ] {
             let literal = to_code(v, &table);
             let text = format!(
@@ -693,10 +718,7 @@ pub mod tests {
             let stm = bb.get_stm(0);
             match stm.kind() {
                 StatementKind::Assign(_, r) => {
-                    assert_eq!(
-                        *r,
-                        RValue::UnOp(UnOp::Negate, Operand::Constant(exp.clone()))
-                    );
+                    assert_eq!(*r, RValue::UnOp(*exp_op, Operand::Constant(exp.clone())));
                 }
             }
         }

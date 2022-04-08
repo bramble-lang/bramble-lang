@@ -219,6 +219,20 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
+    fn fp_negate() {
+        let text = "
+            fn test() {
+                let a: f64 := 1.0;
+                let x: f64 := -a;
+
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
     fn signed_int_comparison() {
         let text = "
             fn test() {

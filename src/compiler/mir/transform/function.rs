@@ -463,10 +463,15 @@ impl<'a> FuncTransformer<'a> {
         op: UnaryOperator,
         right: &Expression<SemanticContext>,
     ) -> Operand {
+        let is_float = right.context().ty().is_float();
         let right = self.expression(right);
         match op {
             UnaryOperator::Negate => {
-                let rv = self.mir.negate(right);
+                let rv = if is_float {
+                    self.mir.fnegate(right)
+                } else {
+                    self.mir.negate(right)
+                };
                 let ty = self.find_type(ctx.ty());
                 self.mir.temp_store(rv, ty, ctx.span())
             }

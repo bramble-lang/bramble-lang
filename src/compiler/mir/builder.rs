@@ -221,6 +221,12 @@ impl MirProcedureBuilder {
         RValue::UnOp(UnOp::Negate, right)
     }
 
+    /// Add a negate to the current [`BasicBlock`].
+    pub fn fnegate(&self, right: Operand) -> RValue {
+        debug!("FNegate: {:?}", right);
+        RValue::UnOp(UnOp::FNegate, right)
+    }
+
     /// Add an addition operation to the current [`BasicBlock`].
     pub fn add(&self, left: Operand, right: Operand) -> RValue {
         debug!("Add: {:?}, {:?}", left, right);
