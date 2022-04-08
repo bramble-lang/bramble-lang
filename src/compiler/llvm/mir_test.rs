@@ -119,7 +119,7 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
-    fn int_division() {
+    fn signed_int_division() {
         let text = "
             fn test() {
                 let a: i64 := 1;
@@ -127,6 +127,27 @@ mod mir2llvm_tests_visual {
                 let c: i64 := 3;
                 let d: i64 := 4;
                 let x: i64 := a / b / c / d / 5;
+
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
+    fn signed_int_comparison() {
+        let text = "
+            fn test() {
+                let a: i64 := 1;
+                let b: i64 := 2;
+
+                a == b;
+                a != b;
+                a < b;
+                a <= b;
+                a > b;
+                a >= b;
 
                 return;
             }

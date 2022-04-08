@@ -164,6 +164,24 @@ pub trait FunctionBuilder<L, V> {
 
     /// Divide two values
     fn div(&self, a: V, b: V) -> Result<V, TransformerError>;
+
+    /// Equal
+    fn eq(&self, a: V, b: V) -> Result<V, TransformerError>;
+
+    /// Not equal
+    fn neq(&self, a: V, b: V) -> Result<V, TransformerError>;
+
+    /// Less than
+    fn lt(&self, a: V, b: V) -> Result<V, TransformerError>;
+
+    /// Less than or equal
+    fn lte(&self, a: V, b: V) -> Result<V, TransformerError>;
+
+    /// Greater than
+    fn gt(&self, a: V, b: V) -> Result<V, TransformerError>;
+
+    /// Greater than or equal
+    fn gte(&self, a: V, b: V) -> Result<V, TransformerError>;
 }
 
 #[derive(Debug, Clone, Copy)]
