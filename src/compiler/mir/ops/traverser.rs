@@ -206,21 +206,29 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
                 let rv = self.operand(r);
                 match op {
                     BinOp::Add => self.xfmr.add(lv, rv),
-                    BinOp::Sub => todo!(),
-                    BinOp::Mul => todo!(),
-                    BinOp::Div => todo!(),
-                    BinOp::Eq => todo!(),
-                    BinOp::Ne => todo!(),
-                    BinOp::Le => todo!(),
-                    BinOp::Lt => todo!(),
-                    BinOp::Ge => todo!(),
-                    BinOp::Gt => todo!(),
+                    BinOp::Sub => self.xfmr.sub(lv, rv),
+                    BinOp::Mul => self.xfmr.mul(lv, rv),
+                    BinOp::Div => self.xfmr.div(lv, rv),
+                    BinOp::Eq => self.xfmr.eq(lv, rv),
+                    BinOp::Ne => self.xfmr.neq(lv, rv),
+                    BinOp::Le => self.xfmr.lte(lv, rv),
+                    BinOp::Lt => self.xfmr.lt(lv, rv),
+                    BinOp::Ge => self.xfmr.gte(lv, rv),
+                    BinOp::Gt => self.xfmr.gt(lv, rv),
                     BinOp::And => todo!(),
                     BinOp::Or => todo!(),
                     BinOp::RawPointerOffset => todo!(),
                 }
+                .unwrap()
             }
-            RValue::UnOp(_, _) => todo!(),
+            RValue::UnOp(op, v) => {
+                let v = self.operand(v);
+                match op {
+                    UnOp::Negate => self.xfmr.neg(v),
+                    UnOp::Not => todo!(),
+                }
+                .unwrap()
+            }
             RValue::Cast(_, _) => todo!(),
             RValue::AddressOf(_) => todo!(),
         }

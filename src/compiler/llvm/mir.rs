@@ -9,7 +9,7 @@ use inkwell::{
     targets::{CodeModel, InitializationConfig, RelocMode},
     types::{AnyTypeEnum, BasicType, BasicTypeEnum, FunctionType},
     values::*,
-    AddressSpace, OptimizationLevel,
+    AddressSpace, IntPredicate, OptimizationLevel,
 };
 use log::debug;
 
@@ -64,6 +64,7 @@ pub enum LlvmBuilderError {
     CoerceValueIntoPointer,
     CoerceValueIntoFn,
     ReadInvalidLocation,
+    InvalidArithmeticOperands,
 }
 
 impl TransformerInternalError for LlvmBuilderError {}
@@ -941,18 +942,205 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         self.program.context.f64_type().const_float(f).into()
     }
 
-    fn add(&self, a: BasicValueEnum<'ctx>, b: BasicValueEnum<'ctx>) -> BasicValueEnum<'ctx> {
+    fn add(
+        &self,
+        a: BasicValueEnum<'ctx>,
+        b: BasicValueEnum<'ctx>,
+    ) -> Result<BasicValueEnum<'ctx>, TransformerError> {
         match (a, b) {
             (BasicValueEnum::IntValue(l), BasicValueEnum::IntValue(r)) => {
-                self.program.builder.build_int_add(l, r, "").into()
+                Ok(self.program.builder.build_int_add(l, r, "").into())
             }
             (BasicValueEnum::FloatValue(_), BasicValueEnum::FloatValue(_)) => todo!(),
             (BasicValueEnum::PointerValue(_), BasicValueEnum::PointerValue(_)) => todo!(),
-            _ => todo!(),
+            _ => Err(TransformerError::Internal(
+                &LlvmBuilderError::InvalidArithmeticOperands,
+            )),
         }
     }
 
-    fn sub(&self, a: BasicValueEnum<'ctx>, b: BasicValueEnum<'ctx>) -> BasicValueEnum<'ctx> {
-        todo!()
+    fn sub(
+        &self,
+        a: BasicValueEnum<'ctx>,
+        b: BasicValueEnum<'ctx>,
+    ) -> Result<BasicValueEnum<'ctx>, TransformerError> {
+        match (a, b) {
+            (BasicValueEnum::IntValue(l), BasicValueEnum::IntValue(r)) => {
+                Ok(self.program.builder.build_int_sub(l, r, "").into())
+            }
+            (BasicValueEnum::FloatValue(_), BasicValueEnum::FloatValue(_)) => todo!(),
+            (BasicValueEnum::PointerValue(_), BasicValueEnum::PointerValue(_)) => todo!(),
+            _ => Err(TransformerError::Internal(
+                &LlvmBuilderError::InvalidArithmeticOperands,
+            )),
+        }
+    }
+
+    fn mul(
+        &self,
+        a: BasicValueEnum<'ctx>,
+        b: BasicValueEnum<'ctx>,
+    ) -> Result<BasicValueEnum<'ctx>, TransformerError> {
+        match (a, b) {
+            (BasicValueEnum::IntValue(l), BasicValueEnum::IntValue(r)) => {
+                Ok(self.program.builder.build_int_mul(l, r, "").into())
+            }
+            (BasicValueEnum::FloatValue(_), BasicValueEnum::FloatValue(_)) => todo!(),
+            (BasicValueEnum::PointerValue(_), BasicValueEnum::PointerValue(_)) => todo!(),
+            _ => Err(TransformerError::Internal(
+                &LlvmBuilderError::InvalidArithmeticOperands,
+            )),
+        }
+    }
+
+    fn div(
+        &self,
+        a: BasicValueEnum<'ctx>,
+        b: BasicValueEnum<'ctx>,
+    ) -> Result<BasicValueEnum<'ctx>, TransformerError> {
+        match (a, b) {
+            (BasicValueEnum::IntValue(l), BasicValueEnum::IntValue(r)) => {
+                // With the current design, the difference between signed and unsigned division is
+                // a hardware difference and falls squarely within the field of the LLVM generator
+                // module.  But this violates the precept that this module makes no decisions and only
+                // transcribes exactly what it is given.  Ultimately, I need to capture the notion
+                // of operators for each operand type in the language layer; especially when I get
+                // to implementing FP values and operations.
+                Ok(self.program.builder.build_int_signed_div(l, r, "").into())
+            }
+            (BasicValueEnum::FloatValue(_), BasicValueEnum::FloatValue(_)) => todo!(),
+            (BasicValueEnum::PointerValue(_), BasicValueEnum::PointerValue(_)) => todo!(),
+            _ => Err(TransformerError::Internal(
+                &LlvmBuilderError::InvalidArithmeticOperands,
+            )),
+        }
+    }
+
+    fn eq(
+        &self,
+        a: BasicValueEnum<'ctx>,
+        b: BasicValueEnum<'ctx>,
+    ) -> Result<BasicValueEnum<'ctx>, TransformerError> {
+        match (a, b) {
+            (BasicValueEnum::IntValue(l), BasicValueEnum::IntValue(r)) => Ok(self
+                .program
+                .builder
+                .build_int_compare(IntPredicate::EQ, l, r, "")
+                .into()),
+            (BasicValueEnum::FloatValue(_), BasicValueEnum::FloatValue(_)) => todo!(),
+            (BasicValueEnum::PointerValue(_), BasicValueEnum::PointerValue(_)) => todo!(),
+            _ => Err(TransformerError::Internal(
+                &LlvmBuilderError::InvalidArithmeticOperands,
+            )),
+        }
+    }
+
+    fn neq(
+        &self,
+        a: BasicValueEnum<'ctx>,
+        b: BasicValueEnum<'ctx>,
+    ) -> Result<BasicValueEnum<'ctx>, TransformerError> {
+        match (a, b) {
+            (BasicValueEnum::IntValue(l), BasicValueEnum::IntValue(r)) => Ok(self
+                .program
+                .builder
+                .build_int_compare(IntPredicate::NE, l, r, "")
+                .into()),
+            (BasicValueEnum::FloatValue(_), BasicValueEnum::FloatValue(_)) => todo!(),
+            (BasicValueEnum::PointerValue(_), BasicValueEnum::PointerValue(_)) => todo!(),
+            _ => Err(TransformerError::Internal(
+                &LlvmBuilderError::InvalidArithmeticOperands,
+            )),
+        }
+    }
+
+    fn lt(
+        &self,
+        a: BasicValueEnum<'ctx>,
+        b: BasicValueEnum<'ctx>,
+    ) -> Result<BasicValueEnum<'ctx>, TransformerError> {
+        match (a, b) {
+            (BasicValueEnum::IntValue(l), BasicValueEnum::IntValue(r)) => Ok(self
+                .program
+                .builder
+                .build_int_compare(IntPredicate::SLT, l, r, "")
+                .into()),
+            (BasicValueEnum::FloatValue(_), BasicValueEnum::FloatValue(_)) => todo!(),
+            (BasicValueEnum::PointerValue(_), BasicValueEnum::PointerValue(_)) => todo!(),
+            _ => Err(TransformerError::Internal(
+                &LlvmBuilderError::InvalidArithmeticOperands,
+            )),
+        }
+    }
+
+    fn lte(
+        &self,
+        a: BasicValueEnum<'ctx>,
+        b: BasicValueEnum<'ctx>,
+    ) -> Result<BasicValueEnum<'ctx>, TransformerError> {
+        match (a, b) {
+            (BasicValueEnum::IntValue(l), BasicValueEnum::IntValue(r)) => Ok(self
+                .program
+                .builder
+                .build_int_compare(IntPredicate::SLE, l, r, "")
+                .into()),
+            (BasicValueEnum::FloatValue(_), BasicValueEnum::FloatValue(_)) => todo!(),
+            (BasicValueEnum::PointerValue(_), BasicValueEnum::PointerValue(_)) => todo!(),
+            _ => Err(TransformerError::Internal(
+                &LlvmBuilderError::InvalidArithmeticOperands,
+            )),
+        }
+    }
+
+    fn gt(
+        &self,
+        a: BasicValueEnum<'ctx>,
+        b: BasicValueEnum<'ctx>,
+    ) -> Result<BasicValueEnum<'ctx>, TransformerError> {
+        match (a, b) {
+            (BasicValueEnum::IntValue(l), BasicValueEnum::IntValue(r)) => Ok(self
+                .program
+                .builder
+                .build_int_compare(IntPredicate::SGT, l, r, "")
+                .into()),
+            (BasicValueEnum::FloatValue(_), BasicValueEnum::FloatValue(_)) => todo!(),
+            (BasicValueEnum::PointerValue(_), BasicValueEnum::PointerValue(_)) => todo!(),
+            _ => Err(TransformerError::Internal(
+                &LlvmBuilderError::InvalidArithmeticOperands,
+            )),
+        }
+    }
+
+    fn gte(
+        &self,
+        a: BasicValueEnum<'ctx>,
+        b: BasicValueEnum<'ctx>,
+    ) -> Result<BasicValueEnum<'ctx>, TransformerError> {
+        match (a, b) {
+            (BasicValueEnum::IntValue(l), BasicValueEnum::IntValue(r)) => Ok(self
+                .program
+                .builder
+                .build_int_compare(IntPredicate::SGE, l, r, "")
+                .into()),
+            (BasicValueEnum::FloatValue(_), BasicValueEnum::FloatValue(_)) => todo!(),
+            (BasicValueEnum::PointerValue(_), BasicValueEnum::PointerValue(_)) => todo!(),
+            _ => Err(TransformerError::Internal(
+                &LlvmBuilderError::InvalidArithmeticOperands,
+            )),
+        }
+    }
+
+    fn neg(
+        &self,
+        a: BasicValueEnum<'ctx>,
+    ) -> std::result::Result<BasicValueEnum<'ctx>, TransformerError> {
+        match a {
+            BasicValueEnum::IntValue(a) => Ok(self.program.builder.build_int_neg(a, "").into()),
+            BasicValueEnum::FloatValue(_) => todo!(),
+            BasicValueEnum::PointerValue(_) => todo!(),
+            _ => Err(TransformerError::Internal(
+                &LlvmBuilderError::InvalidArithmeticOperands,
+            )),
+        }
     }
 }

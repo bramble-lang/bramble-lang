@@ -154,10 +154,37 @@ pub trait FunctionBuilder<L, V> {
     fn const_f64(&self, f: f64) -> V;
 
     /// Add two values together
-    fn add(&self, a: V, b: V) -> V;
+    fn add(&self, a: V, b: V) -> Result<V, TransformerError>;
 
     /// Subtract two values
-    fn sub(&self, a: V, b: V) -> V;
+    fn sub(&self, a: V, b: V) -> Result<V, TransformerError>;
+
+    /// Multiply two values
+    fn mul(&self, a: V, b: V) -> Result<V, TransformerError>;
+
+    /// Divide two values
+    fn div(&self, a: V, b: V) -> Result<V, TransformerError>;
+
+    /// Equal
+    fn eq(&self, a: V, b: V) -> Result<V, TransformerError>;
+
+    /// Not equal
+    fn neq(&self, a: V, b: V) -> Result<V, TransformerError>;
+
+    /// Less than
+    fn lt(&self, a: V, b: V) -> Result<V, TransformerError>;
+
+    /// Less than or equal
+    fn lte(&self, a: V, b: V) -> Result<V, TransformerError>;
+
+    /// Greater than
+    fn gt(&self, a: V, b: V) -> Result<V, TransformerError>;
+
+    /// Greater than or equal
+    fn gte(&self, a: V, b: V) -> Result<V, TransformerError>;
+
+    /// Greater than or equal
+    fn neg(&self, a: V) -> Result<V, TransformerError>;
 }
 
 #[derive(Debug, Clone, Copy)]
