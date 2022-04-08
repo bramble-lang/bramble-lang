@@ -558,19 +558,31 @@ impl<'a> FuncTransformer<'a> {
                 }
             }
             BinaryOperator::LsEq => {
-                let left = self.expression(left);
-                let right = self.expression(right);
-                self.mir.le(left, right)
+                let l = self.expression(left);
+                let r = self.expression(right);
+                if left.context().ty().is_unsigned_int() {
+                    self.mir.ui_le(l, r)
+                } else {
+                    self.mir.le(l, r)
+                }
             }
             BinaryOperator::Gr => {
-                let left = self.expression(left);
-                let right = self.expression(right);
-                self.mir.gt(left, right)
+                let l = self.expression(left);
+                let r = self.expression(right);
+                if left.context().ty().is_unsigned_int() {
+                    self.mir.ui_gt(l, r)
+                } else {
+                    self.mir.gt(l, r)
+                }
             }
             BinaryOperator::GrEq => {
-                let left = self.expression(left);
-                let right = self.expression(right);
-                self.mir.ge(left, right)
+                let l = self.expression(left);
+                let r = self.expression(right);
+                if left.context().ty().is_unsigned_int() {
+                    self.mir.ui_ge(l, r)
+                } else {
+                    self.mir.ge(l, r)
+                }
             }
             BinaryOperator::RawPointerOffset => {
                 let left = self.expression(left);

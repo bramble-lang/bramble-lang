@@ -293,16 +293,34 @@ impl MirProcedureBuilder {
         RValue::BinOp(BinOp::SILe, left, right)
     }
 
+    /// Add a less than or equal to test operation to the current [`BasicBlock`].
+    pub fn ui_le(&self, left: Operand, right: Operand) -> RValue {
+        debug!("Unsigned Int Less or Equal: {:?}, {:?}", left, right);
+        RValue::BinOp(BinOp::UILe, left, right)
+    }
+
     /// Add a greater than test operation to the current [`BasicBlock`].
     pub fn gt(&self, left: Operand, right: Operand) -> RValue {
         debug!("Greater: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::SIGt, left, right)
     }
 
+    /// Add a greater than test operation to the current [`BasicBlock`].
+    pub fn ui_gt(&self, left: Operand, right: Operand) -> RValue {
+        debug!("UI Greater: {:?}, {:?}", left, right);
+        RValue::BinOp(BinOp::UIGt, left, right)
+    }
+
     /// Add a greater than or equal to test operation to the current [`BasicBlock`].
     pub fn ge(&self, left: Operand, right: Operand) -> RValue {
         debug!("Greater or Equal: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::SIGe, left, right)
+    }
+
+    /// Add a greater than or equal to test operation to the current [`BasicBlock`].
+    pub fn ui_ge(&self, left: Operand, right: Operand) -> RValue {
+        debug!("UI Greater or Equal: {:?}, {:?}", left, right);
+        RValue::BinOp(BinOp::UIGe, left, right)
     }
 
     /// Add a raw pointer offset operation to the current [`BasicBlock`].

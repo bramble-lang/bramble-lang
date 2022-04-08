@@ -603,15 +603,17 @@ pub mod tests {
                         BinOp::UIDiv => BinOp::UIDiv,
                         BinOp::Eq => BinOp::Eq,
                         BinOp::Ne => BinOp::Ne,
-                        BinOp::SILe => BinOp::SILe,
+                        BinOp::SILe => BinOp::UILe,
                         BinOp::SILt => BinOp::UILt,
                         BinOp::UILe => todo!(),
                         BinOp::UILt => todo!(),
-                        BinOp::SIGe => BinOp::SIGe,
-                        BinOp::SIGt => BinOp::SIGt,
+                        BinOp::SIGe => BinOp::UIGe,
+                        BinOp::SIGt => BinOp::UIGt,
                         BinOp::And => BinOp::And,
                         BinOp::Or => BinOp::Or,
                         BinOp::RawPointerOffset => todo!(),
+                        BinOp::UIGe => todo!(),
+                        BinOp::UIGt => todo!(),
                     }
                 };
                 let literal = to_code(v, &table);
