@@ -163,7 +163,7 @@ pub trait FunctionBuilder<L, V> {
     fn mul(&self, a: V, b: V) -> Result<V, TransformerError>;
 
     /// Divide two values
-    fn div(&self, a: V, b: V) -> Result<V, TransformerError>;
+    fn si_div(&self, a: V, b: V) -> Result<V, TransformerError>;
 
     /// Divide two unsigned integer values
     fn ui_div(&self, a: V, b: V) -> Result<V, TransformerError>;

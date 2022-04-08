@@ -988,7 +988,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         }
     }
 
-    fn div(
+    fn si_div(
         &self,
         a: BasicValueEnum<'ctx>,
         b: BasicValueEnum<'ctx>,

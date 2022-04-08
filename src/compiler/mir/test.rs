@@ -571,7 +571,7 @@ pub mod tests {
             (BinaryOperator::Add, BinOp::Add, None),
             (BinaryOperator::Sub, BinOp::Sub, None),
             (BinaryOperator::Mul, BinOp::Mul, None),
-            (BinaryOperator::Div, BinOp::Div, None),
+            (BinaryOperator::Div, BinOp::SIDiv, None),
             (BinaryOperator::Eq, BinOp::Eq, Some(Type::Bool)),
             (BinaryOperator::NEq, BinOp::Ne, Some(Type::Bool)),
             (BinaryOperator::Ls, BinOp::Lt, Some(Type::Bool)),
@@ -590,6 +590,28 @@ pub mod tests {
                 (Type::U64, Expression::U64((), 1), Constant::U64(1)),
                 (Type::F64, Expression::F64((), 5.0), Constant::F64(5.0)),
             ] {
+                // If the test input is an unsigned integer then swap the expected operator to the
+                // unsigned form
+                let exp_op = if literal_ty.is_signed() {
+                    exp_op
+                } else {
+                    match exp_op {
+                        BinOp::Add => BinOp::Add,
+                        BinOp::Sub => BinOp::Sub,
+                        BinOp::Mul => BinOp::Mul,
+                        BinOp::SIDiv => BinOp::UIDiv,
+                        BinOp::UIDiv => BinOp::UIDiv,
+                        BinOp::Eq => BinOp::Eq,
+                        BinOp::Ne => BinOp::Ne,
+                        BinOp::Le => BinOp::Le,
+                        BinOp::Lt => BinOp::Lt,
+                        BinOp::Ge => BinOp::Ge,
+                        BinOp::Gt => BinOp::Gt,
+                        BinOp::And => BinOp::And,
+                        BinOp::Or => BinOp::Or,
+                        BinOp::RawPointerOffset => todo!(),
+                    }
+                };
                 let literal = to_code(v, &table);
                 let ty = ty_override.as_ref().unwrap_or(literal_ty);
                 let text = format!(

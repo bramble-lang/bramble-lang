@@ -527,7 +527,7 @@ impl<'a> FuncTransformer<'a> {
                 } else if ctx.ty().is_signed_int() {
                     self.mir.div(left, right)
                 } else {
-                    todo!()
+                    self.mir.div(left, right)
                 }
             }
             BinaryOperator::BAnd => {

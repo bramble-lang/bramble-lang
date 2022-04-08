@@ -242,7 +242,7 @@ impl MirProcedureBuilder {
     /// Add a divide operation to the current [`BasicBlock`].
     pub fn div(&self, left: Operand, right: Operand) -> RValue {
         debug!("Div: {:?}, {:?}", left, right);
-        RValue::BinOp(BinOp::Div, left, right)
+        RValue::BinOp(BinOp::SIDiv, left, right)
     }
 
     /// Add a unsigned integer divide operation to the current [`BasicBlock`].
