@@ -175,7 +175,7 @@ pub trait FunctionBuilder<L, V> {
     fn neq(&self, a: V, b: V) -> Result<V, TransformerError>;
 
     /// Less than
-    fn lt(&self, a: V, b: V) -> Result<V, TransformerError>;
+    fn si_lt(&self, a: V, b: V) -> Result<V, TransformerError>;
 
     /// Less than
     fn ui_lt(&self, a: V, b: V) -> Result<V, TransformerError>;

@@ -214,7 +214,7 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
                     BinOp::Ne => self.xfmr.neq(lv, rv),
                     BinOp::Le => self.xfmr.lte(lv, rv),
                     BinOp::UILe => todo!(),
-                    BinOp::SILt => self.xfmr.lt(lv, rv),
+                    BinOp::SILt => self.xfmr.si_lt(lv, rv),
                     BinOp::UILt => self.xfmr.ui_lt(lv, rv),
                     BinOp::Ge => self.xfmr.gte(lv, rv),
                     BinOp::Gt => self.xfmr.gt(lv, rv),

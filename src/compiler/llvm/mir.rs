@@ -1070,7 +1070,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         }
     }
 
-    fn lt(
+    fn si_lt(
         &self,
         a: BasicValueEnum<'ctx>,
         b: BasicValueEnum<'ctx>,
