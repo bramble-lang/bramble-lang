@@ -154,13 +154,13 @@ pub trait FunctionBuilder<L, V> {
     fn const_f64(&self, f: f64) -> V;
 
     /// Add two values together
-    fn add(&self, a: V, b: V) -> Result<V, TransformerError>;
+    fn i_add(&self, a: V, b: V) -> Result<V, TransformerError>;
 
     /// Subtract two values
-    fn sub(&self, a: V, b: V) -> Result<V, TransformerError>;
+    fn i_sub(&self, a: V, b: V) -> Result<V, TransformerError>;
 
     /// Multiply two values
-    fn mul(&self, a: V, b: V) -> Result<V, TransformerError>;
+    fn i_mul(&self, a: V, b: V) -> Result<V, TransformerError>;
 
     /// Divide two values
     fn si_div(&self, a: V, b: V) -> Result<V, TransformerError>;
@@ -169,10 +169,10 @@ pub trait FunctionBuilder<L, V> {
     fn ui_div(&self, a: V, b: V) -> Result<V, TransformerError>;
 
     /// Equal
-    fn eq(&self, a: V, b: V) -> Result<V, TransformerError>;
+    fn i_eq(&self, a: V, b: V) -> Result<V, TransformerError>;
 
     /// Not equal
-    fn neq(&self, a: V, b: V) -> Result<V, TransformerError>;
+    fn i_neq(&self, a: V, b: V) -> Result<V, TransformerError>;
 
     /// Less than
     fn si_lt(&self, a: V, b: V) -> Result<V, TransformerError>;
@@ -199,7 +199,7 @@ pub trait FunctionBuilder<L, V> {
     fn ui_gte(&self, a: V, b: V) -> Result<V, TransformerError>;
 
     /// Negate an integer
-    fn neg(&self, a: V) -> Result<V, TransformerError>;
+    fn i_neg(&self, a: V) -> Result<V, TransformerError>;
 }
 
 #[derive(Debug, Clone, Copy)]

@@ -205,13 +205,13 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
                 let lv = self.operand(l);
                 let rv = self.operand(r);
                 match op {
-                    BinOp::Add => self.xfmr.add(lv, rv),
-                    BinOp::Sub => self.xfmr.sub(lv, rv),
-                    BinOp::Mul => self.xfmr.mul(lv, rv),
+                    BinOp::Add => self.xfmr.i_add(lv, rv),
+                    BinOp::Sub => self.xfmr.i_sub(lv, rv),
+                    BinOp::Mul => self.xfmr.i_mul(lv, rv),
                     BinOp::SIDiv => self.xfmr.si_div(lv, rv),
                     BinOp::UIDiv => self.xfmr.ui_div(lv, rv),
-                    BinOp::Eq => self.xfmr.eq(lv, rv),
-                    BinOp::Ne => self.xfmr.neq(lv, rv),
+                    BinOp::Eq => self.xfmr.i_eq(lv, rv),
+                    BinOp::Ne => self.xfmr.i_neq(lv, rv),
                     BinOp::SILe => self.xfmr.si_lte(lv, rv),
                     BinOp::UILe => self.xfmr.ui_lte(lv, rv),
                     BinOp::SILt => self.xfmr.si_lt(lv, rv),
@@ -229,7 +229,7 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
             RValue::UnOp(op, v) => {
                 let v = self.operand(v);
                 match op {
-                    UnOp::Negate => self.xfmr.neg(v),
+                    UnOp::Negate => self.xfmr.i_neg(v),
                     UnOp::Not => todo!(),
                 }
                 .unwrap()

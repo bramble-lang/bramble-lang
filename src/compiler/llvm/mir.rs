@@ -937,7 +937,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         self.program.context.f64_type().const_float(f).into()
     }
 
-    fn add(
+    fn i_add(
         &self,
         a: BasicValueEnum<'ctx>,
         b: BasicValueEnum<'ctx>,
@@ -954,7 +954,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         }
     }
 
-    fn sub(
+    fn i_sub(
         &self,
         a: BasicValueEnum<'ctx>,
         b: BasicValueEnum<'ctx>,
@@ -971,7 +971,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         }
     }
 
-    fn mul(
+    fn i_mul(
         &self,
         a: BasicValueEnum<'ctx>,
         b: BasicValueEnum<'ctx>,
@@ -1032,7 +1032,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         }
     }
 
-    fn eq(
+    fn i_eq(
         &self,
         a: BasicValueEnum<'ctx>,
         b: BasicValueEnum<'ctx>,
@@ -1051,7 +1051,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         }
     }
 
-    fn neq(
+    fn i_neq(
         &self,
         a: BasicValueEnum<'ctx>,
         b: BasicValueEnum<'ctx>,
@@ -1208,7 +1208,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         }
     }
 
-    fn neg(
+    fn i_neg(
         &self,
         a: BasicValueEnum<'ctx>,
     ) -> std::result::Result<BasicValueEnum<'ctx>, TransformerError> {
