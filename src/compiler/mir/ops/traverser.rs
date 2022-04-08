@@ -223,6 +223,10 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
                     BinOp::And => todo!(),
                     BinOp::Or => todo!(),
                     BinOp::RawPointerOffset => todo!(),
+                    BinOp::FAdd => todo!(),
+                    BinOp::FSub => todo!(),
+                    BinOp::FMul => todo!(),
+                    BinOp::FDiv => todo!(),
                 }
                 .unwrap()
             }

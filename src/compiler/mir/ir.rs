@@ -899,6 +899,14 @@ pub enum BinOp {
     SIDiv,
     /// '/' divide an unsigned integer primitive by another unsigned integer primitive
     UIDiv,
+    /// '+' add two primitive numbers together
+    FAdd,
+    /// '-' subtract one primitive from another
+    FSub,
+    /// '*' multiply two primitive numbers
+    FMul,
+    /// '/' divide a primitive by another primitive
+    FDiv,
     /// '==' compare two primitives and see if they are equal
     Eq,
     /// '!=' check if two primitives are not equal
@@ -948,6 +956,10 @@ impl Display for BinOp {
             BinOp::And => "BitwiseAnd",
             BinOp::Or => "BitwiseOr",
             BinOp::RawPointerOffset => "RawPointerOffset",
+            BinOp::FAdd => "FAdd",
+            BinOp::FSub => "FSub",
+            BinOp::FMul => "FMul",
+            BinOp::FDiv => "FDiv",
         };
         f.write_str(txt)
     }

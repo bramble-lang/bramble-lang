@@ -594,7 +594,7 @@ pub mod tests {
                 // unsigned form
                 let exp_op = if literal_ty.is_signed() {
                     exp_op
-                } else {
+                } else if literal_ty.is_integral() {
                     match exp_op {
                         BinOp::Add => BinOp::Add,
                         BinOp::Sub => BinOp::Sub,
@@ -614,6 +614,15 @@ pub mod tests {
                         BinOp::RawPointerOffset => todo!(),
                         BinOp::UIGe => todo!(),
                         BinOp::UIGt => todo!(),
+                        _ => todo!(),
+                    }
+                } else {
+                    match op {
+                        BinaryOperator::Add => BinOp::FAdd,
+                        BinaryOperator::Sub => BinOp::FSub,
+                        BinaryOperator::Mul => BinOp::FMul,
+                        BinaryOperator::Div => BinOp::FDiv,
+                        _ => exp_op,
                     }
                 };
                 let literal = to_code(v, &table);
