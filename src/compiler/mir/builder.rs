@@ -277,9 +277,14 @@ impl MirProcedureBuilder {
 
     /// Add a less than test operation to the current [`BasicBlock`].
     pub fn lt(&self, left: Operand, right: Operand) -> RValue {
-        debug!("Less Than");
-        debug!("Add: {:?}, {:?}", left, right);
+        debug!("Less Than: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Lt, left, right)
+    }
+
+    /// Add a less than test operation to the current [`BasicBlock`].
+    pub fn ui_lt(&self, left: Operand, right: Operand) -> RValue {
+        debug!("UI LT: {:?}, {:?}", left, right);
+        RValue::BinOp(BinOp::UILt, left, right)
     }
 
     /// Add a less than or equal to test operation to the current [`BasicBlock`].

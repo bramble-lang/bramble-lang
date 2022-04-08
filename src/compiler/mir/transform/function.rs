@@ -524,8 +524,6 @@ impl<'a> FuncTransformer<'a> {
                 let right = self.expression(right);
                 if ctx.ty().is_unsigned_int() {
                     self.mir.ui_div(left, right)
-                } else if ctx.ty().is_signed_int() {
-                    self.mir.div(left, right)
                 } else {
                     self.mir.div(left, right)
                 }
@@ -551,9 +549,13 @@ impl<'a> FuncTransformer<'a> {
                 self.mir.neq(left, right)
             }
             BinaryOperator::Ls => {
-                let left = self.expression(left);
-                let right = self.expression(right);
-                self.mir.lt(left, right)
+                let l = self.expression(left);
+                let r = self.expression(right);
+                if left.context().ty().is_unsigned_int() {
+                    self.mir.ui_lt(l, r)
+                } else {
+                    self.mir.lt(l, r)
+                }
             }
             BinaryOperator::LsEq => {
                 let left = self.expression(left);
