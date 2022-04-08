@@ -1011,6 +1011,27 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         }
     }
 
+    fn ui_div(
+        &self,
+        a: BasicValueEnum<'ctx>,
+        b: BasicValueEnum<'ctx>,
+    ) -> Result<BasicValueEnum<'ctx>, TransformerError> {
+        match (a, b) {
+            (BasicValueEnum::IntValue(l), BasicValueEnum::IntValue(r)) => {
+                // With the current design, the difference between signed and unsigned division is
+                // a hardware difference and falls squarely within the field of the LLVM generator
+                // module.  But this violates the precept that this module makes no decisions and only
+                // transcribes exactly what it is given.  Ultimately, I need to capture the notion
+                // of operators for each operand type in the language layer; especially when I get
+                // to implementing FP values and operations.
+                Ok(self.program.builder.build_int_unsigned_div(l, r, "").into())
+            }
+            _ => Err(TransformerError::Internal(
+                &LlvmBuilderError::InvalidArithmeticOperands,
+            )),
+        }
+    }
+
     fn eq(
         &self,
         a: BasicValueEnum<'ctx>,

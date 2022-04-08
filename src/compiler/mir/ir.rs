@@ -895,8 +895,10 @@ pub enum BinOp {
     Sub,
     /// '*' multiply two primitive numbers
     Mul,
-    /// '/' divive a primitive by another primitive
+    /// '/' divide a primitive by another primitive
     Div,
+    /// '/' divide an unsigned integer primitive by another unsigned integer primitive
+    UIDiv,
     /// '==' compare two primitives and see if they are equal
     Eq,
     /// '!=' check if two primitives are not equal
@@ -924,6 +926,7 @@ impl Display for BinOp {
             BinOp::Sub => "Sub",
             BinOp::Mul => "Mul",
             BinOp::Div => "Div",
+            BinOp::UIDiv => "UIDiv",
             BinOp::Eq => "Eq",
             BinOp::Ne => "Neq",
             BinOp::Le => "Le",

@@ -245,6 +245,12 @@ impl MirProcedureBuilder {
         RValue::BinOp(BinOp::Div, left, right)
     }
 
+    /// Add a unsigned integer divide operation to the current [`BasicBlock`].
+    pub fn ui_div(&self, left: Operand, right: Operand) -> RValue {
+        debug!("UIDiv: {:?}, {:?}", left, right);
+        RValue::BinOp(BinOp::UIDiv, left, right)
+    }
+
     /// Add a bitwise and operation to the current [`BasicBlock`].
     pub fn bitwise_and(&self, left: Operand, right: Operand) -> RValue {
         debug!("And: {:?}, {:?}", left, right);

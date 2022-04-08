@@ -131,7 +131,7 @@ impl<'a> FuncTransformer<'a> {
 
             // Operations
             Expression::BinaryOp(ctx, op, left, right) => {
-                let rv = self.binary_op(*op, left, right);
+                let rv = self.binary_op(ctx, *op, left, right);
                 let ty = self.find_type(ctx.ty());
                 self.mir.temp_store(rv, ty, ctx.span())
             }
@@ -498,6 +498,7 @@ impl<'a> FuncTransformer<'a> {
 
     fn binary_op(
         &mut self,
+        ctx: &SemanticContext,
         op: BinaryOperator,
         left: &Expression<SemanticContext>,
         right: &Expression<SemanticContext>,
@@ -521,7 +522,13 @@ impl<'a> FuncTransformer<'a> {
             BinaryOperator::Div => {
                 let left = self.expression(left);
                 let right = self.expression(right);
-                self.mir.div(left, right)
+                if ctx.ty().is_unsigned_int() {
+                    self.mir.ui_div(left, right)
+                } else if ctx.ty().is_signed_int() {
+                    self.mir.div(left, right)
+                } else {
+                    todo!()
+                }
             }
             BinaryOperator::BAnd => {
                 let left = self.expression(left);
