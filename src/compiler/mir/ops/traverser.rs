@@ -223,6 +223,16 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
                     BinOp::And => todo!(),
                     BinOp::Or => todo!(),
                     BinOp::RawPointerOffset => todo!(),
+                    BinOp::FAdd => self.xfmr.f_add(lv, rv),
+                    BinOp::FSub => self.xfmr.f_sub(lv, rv),
+                    BinOp::FMul => self.xfmr.f_mul(lv, rv),
+                    BinOp::FDiv => self.xfmr.f_div(lv, rv),
+                    BinOp::FEq => self.xfmr.f_eq(lv, rv),
+                    BinOp::FNe => self.xfmr.f_neq(lv, rv),
+                    BinOp::FLe => self.xfmr.f_lte(lv, rv),
+                    BinOp::FLt => self.xfmr.f_lt(lv, rv),
+                    BinOp::FGe => self.xfmr.f_gte(lv, rv),
+                    BinOp::FGt => self.xfmr.f_gt(lv, rv),
                 }
                 .unwrap()
             }
@@ -230,6 +240,7 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
                 let v = self.operand(v);
                 match op {
                     UnOp::Negate => self.xfmr.i_neg(v),
+                    UnOp::FNegate => self.xfmr.f_neg(v),
                     UnOp::Not => todo!(),
                 }
                 .unwrap()

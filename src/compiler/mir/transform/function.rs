@@ -463,10 +463,15 @@ impl<'a> FuncTransformer<'a> {
         op: UnaryOperator,
         right: &Expression<SemanticContext>,
     ) -> Operand {
+        let is_float = right.context().ty().is_float();
         let right = self.expression(right);
         match op {
             UnaryOperator::Negate => {
-                let rv = self.mir.negate(right);
+                let rv = if is_float {
+                    self.mir.fnegate(right)
+                } else {
+                    self.mir.negate(right)
+                };
                 let ty = self.find_type(ctx.ty());
                 self.mir.temp_store(rv, ty, ctx.span())
             }
@@ -503,26 +508,43 @@ impl<'a> FuncTransformer<'a> {
         left: &Expression<SemanticContext>,
         right: &Expression<SemanticContext>,
     ) -> RValue {
+        let is_float = left.context().ty().is_float();
+
         match op {
             BinaryOperator::Add => {
                 let left = self.expression(left);
                 let right = self.expression(right);
-                self.mir.add(left, right)
+                if is_float {
+                    self.mir.fadd(left, right)
+                } else {
+                    self.mir.add(left, right)
+                }
             }
             BinaryOperator::Sub => {
                 let left = self.expression(left);
                 let right = self.expression(right);
-                self.mir.sub(left, right)
+
+                if is_float {
+                    self.mir.fsub(left, right)
+                } else {
+                    self.mir.sub(left, right)
+                }
             }
             BinaryOperator::Mul => {
                 let left = self.expression(left);
                 let right = self.expression(right);
-                self.mir.mul(left, right)
+                if is_float {
+                    self.mir.fmul(left, right)
+                } else {
+                    self.mir.mul(left, right)
+                }
             }
             BinaryOperator::Div => {
                 let left = self.expression(left);
                 let right = self.expression(right);
-                if ctx.ty().is_unsigned_int() {
+                if is_float {
+                    self.mir.fdiv(left, right)
+                } else if ctx.ty().is_unsigned_int() {
                     self.mir.ui_div(left, right)
                 } else {
                     self.mir.div(left, right)
@@ -541,18 +563,28 @@ impl<'a> FuncTransformer<'a> {
             BinaryOperator::Eq => {
                 let left = self.expression(left);
                 let right = self.expression(right);
-                self.mir.eq(left, right)
+                if is_float {
+                    self.mir.f_eq(left, right)
+                } else {
+                    self.mir.eq(left, right)
+                }
             }
             BinaryOperator::NEq => {
                 let left = self.expression(left);
                 let right = self.expression(right);
-                self.mir.neq(left, right)
+                if is_float {
+                    self.mir.f_neq(left, right)
+                } else {
+                    self.mir.neq(left, right)
+                }
             }
             BinaryOperator::Ls => {
                 let l = self.expression(left);
                 let r = self.expression(right);
                 if left.context().ty().is_unsigned_int() {
                     self.mir.ui_lt(l, r)
+                } else if is_float {
+                    self.mir.f_lt(l, r)
                 } else {
                     self.mir.lt(l, r)
                 }
@@ -562,6 +594,8 @@ impl<'a> FuncTransformer<'a> {
                 let r = self.expression(right);
                 if left.context().ty().is_unsigned_int() {
                     self.mir.ui_le(l, r)
+                } else if is_float {
+                    self.mir.f_le(l, r)
                 } else {
                     self.mir.le(l, r)
                 }
@@ -571,6 +605,8 @@ impl<'a> FuncTransformer<'a> {
                 let r = self.expression(right);
                 if left.context().ty().is_unsigned_int() {
                     self.mir.ui_gt(l, r)
+                } else if is_float {
+                    self.mir.f_gt(l, r)
                 } else {
                     self.mir.gt(l, r)
                 }
@@ -580,6 +616,8 @@ impl<'a> FuncTransformer<'a> {
                 let r = self.expression(right);
                 if left.context().ty().is_unsigned_int() {
                     self.mir.ui_ge(l, r)
+                } else if is_float {
+                    self.mir.f_ge(l, r)
                 } else {
                     self.mir.ge(l, r)
                 }

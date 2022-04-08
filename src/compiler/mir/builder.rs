@@ -221,6 +221,12 @@ impl MirProcedureBuilder {
         RValue::UnOp(UnOp::Negate, right)
     }
 
+    /// Add a negate to the current [`BasicBlock`].
+    pub fn fnegate(&self, right: Operand) -> RValue {
+        debug!("FNegate: {:?}", right);
+        RValue::UnOp(UnOp::FNegate, right)
+    }
+
     /// Add an addition operation to the current [`BasicBlock`].
     pub fn add(&self, left: Operand, right: Operand) -> RValue {
         debug!("Add: {:?}, {:?}", left, right);
@@ -251,6 +257,30 @@ impl MirProcedureBuilder {
         RValue::BinOp(BinOp::UIDiv, left, right)
     }
 
+    /// Add an addition operation to the current [`BasicBlock`].
+    pub fn fadd(&self, left: Operand, right: Operand) -> RValue {
+        debug!("FAdd: {:?}, {:?}", left, right);
+        RValue::BinOp(BinOp::FAdd, left, right)
+    }
+
+    /// Add a subtraction operation to the current [`BasicBlock`].
+    pub fn fsub(&self, left: Operand, right: Operand) -> RValue {
+        debug!("FSub: {:?}, {:?}", left, right);
+        RValue::BinOp(BinOp::FSub, left, right)
+    }
+
+    /// Add a multiply operation to the current [`BasicBlock`].
+    pub fn fmul(&self, left: Operand, right: Operand) -> RValue {
+        debug!("FMul: {:?}, {:?}", left, right);
+        RValue::BinOp(BinOp::FMul, left, right)
+    }
+
+    /// Add a divide operation to the current [`BasicBlock`].
+    pub fn fdiv(&self, left: Operand, right: Operand) -> RValue {
+        debug!("FDiv: {:?}, {:?}", left, right);
+        RValue::BinOp(BinOp::FDiv, left, right)
+    }
+
     /// Add a bitwise and operation to the current [`BasicBlock`].
     pub fn bitwise_and(&self, left: Operand, right: Operand) -> RValue {
         debug!("And: {:?}, {:?}", left, right);
@@ -269,16 +299,34 @@ impl MirProcedureBuilder {
         RValue::BinOp(BinOp::Eq, left, right)
     }
 
+    /// Add an equality test operation to the current [`BasicBlock`].
+    pub fn f_eq(&self, left: Operand, right: Operand) -> RValue {
+        debug!("FEq: {:?}, {:?}", left, right);
+        RValue::BinOp(BinOp::FEq, left, right)
+    }
+
     /// Add a not equal test operation to the current [`BasicBlock`].
     pub fn neq(&self, left: Operand, right: Operand) -> RValue {
         debug!("Neq: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::Ne, left, right)
     }
 
+    /// Add a not equal test operation to the current [`BasicBlock`].
+    pub fn f_neq(&self, left: Operand, right: Operand) -> RValue {
+        debug!("FNeq: {:?}, {:?}", left, right);
+        RValue::BinOp(BinOp::FNe, left, right)
+    }
+
     /// Add a less than test operation to the current [`BasicBlock`].
     pub fn lt(&self, left: Operand, right: Operand) -> RValue {
         debug!("Less Than: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::SILt, left, right)
+    }
+
+    /// Add a less than test operation to the current [`BasicBlock`].
+    pub fn f_lt(&self, left: Operand, right: Operand) -> RValue {
+        debug!("FLess Than: {:?}, {:?}", left, right);
+        RValue::BinOp(BinOp::FLt, left, right)
     }
 
     /// Add a less than test operation to the current [`BasicBlock`].
@@ -294,6 +342,12 @@ impl MirProcedureBuilder {
     }
 
     /// Add a less than or equal to test operation to the current [`BasicBlock`].
+    pub fn f_le(&self, left: Operand, right: Operand) -> RValue {
+        debug!("FLess or Equal: {:?}, {:?}", left, right);
+        RValue::BinOp(BinOp::FLe, left, right)
+    }
+
+    /// Add a less than or equal to test operation to the current [`BasicBlock`].
     pub fn ui_le(&self, left: Operand, right: Operand) -> RValue {
         debug!("Unsigned Int Less or Equal: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::UILe, left, right)
@@ -306,6 +360,12 @@ impl MirProcedureBuilder {
     }
 
     /// Add a greater than test operation to the current [`BasicBlock`].
+    pub fn f_gt(&self, left: Operand, right: Operand) -> RValue {
+        debug!("FGreater: {:?}, {:?}", left, right);
+        RValue::BinOp(BinOp::FGt, left, right)
+    }
+
+    /// Add a greater than test operation to the current [`BasicBlock`].
     pub fn ui_gt(&self, left: Operand, right: Operand) -> RValue {
         debug!("UI Greater: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::UIGt, left, right)
@@ -315,6 +375,12 @@ impl MirProcedureBuilder {
     pub fn ge(&self, left: Operand, right: Operand) -> RValue {
         debug!("Greater or Equal: {:?}, {:?}", left, right);
         RValue::BinOp(BinOp::SIGe, left, right)
+    }
+
+    /// Add a greater than or equal to test operation to the current [`BasicBlock`].
+    pub fn f_ge(&self, left: Operand, right: Operand) -> RValue {
+        debug!("FGreater or Equal: {:?}, {:?}", left, right);
+        RValue::BinOp(BinOp::FGe, left, right)
     }
 
     /// Add a greater than or equal to test operation to the current [`BasicBlock`].

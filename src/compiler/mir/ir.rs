@@ -899,10 +899,22 @@ pub enum BinOp {
     SIDiv,
     /// '/' divide an unsigned integer primitive by another unsigned integer primitive
     UIDiv,
+    /// '+' add two primitive numbers together
+    FAdd,
+    /// '-' subtract one primitive from another
+    FSub,
+    /// '*' multiply two primitive numbers
+    FMul,
+    /// '/' divide a primitive by another primitive
+    FDiv,
     /// '==' compare two primitives and see if they are equal
     Eq,
     /// '!=' check if two primitives are not equal
     Ne,
+    /// '==' compare two primitives and see if they are equal
+    FEq,
+    /// '!=' check if two primitives are not equal
+    FNe,
     /// '<=' check if one primitive is less than or equal to another
     SILe,
     /// '<=' check if one primitive is less than or equal to another
@@ -919,6 +931,14 @@ pub enum BinOp {
     SIGt,
     /// '>' check if one primitive is greater than another
     UIGt,
+    /// '<=' check if one primitive is less than or equal to another
+    FLe,
+    /// '<' check if one primitive is less than another
+    FLt,
+    /// '>=' check if one primitive is greater than or equal to another
+    FGe,
+    /// '>' check if one primitive is greater than another
+    FGt,
     /// '&' bitwise and operation on two primitives
     And,
     /// '|' bitwise or operation on two primitives
@@ -948,6 +968,16 @@ impl Display for BinOp {
             BinOp::And => "BitwiseAnd",
             BinOp::Or => "BitwiseOr",
             BinOp::RawPointerOffset => "RawPointerOffset",
+            BinOp::FAdd => "FAdd",
+            BinOp::FSub => "FSub",
+            BinOp::FMul => "FMul",
+            BinOp::FDiv => "FDiv",
+            BinOp::FEq => "FEq",
+            BinOp::FNe => "FNe",
+            BinOp::FLe => "FLe",
+            BinOp::FLt => "FLt",
+            BinOp::FGe => "FGe",
+            BinOp::FGt => "FGt",
         };
         f.write_str(txt)
     }
@@ -958,6 +988,8 @@ impl Display for BinOp {
 pub enum UnOp {
     /// '-' negate a primitive value
     Negate,
+    /// '-' negate a primitive value
+    FNegate,
     /// '!' bitwise not a primitive value
     Not,
 }
@@ -966,6 +998,7 @@ impl Display for UnOp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let txt = match self {
             UnOp::Negate => "-",
+            UnOp::FNegate => "-",
             UnOp::Not => "!",
         };
         f.write_str(txt)

@@ -151,6 +151,88 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
+    fn fp_arithmetic() {
+        let text = "
+            fn test() {
+                let a: f64 := 1.0;
+                let b: f64 := 2.0;
+                let c: f64 := 3.0;
+                let d: f64 := 4.0;
+                let x: f64 := a + b + c + d + 5.0;
+
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
+    fn fp_subtraction() {
+        let text = "
+            fn test() {
+                let a: f64 := 1.0;
+                let b: f64 := 2.0;
+                let c: f64 := 3.0;
+                let d: f64 := 4.0;
+                let x: f64 := a - b - c - d - 5.0;
+
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
+    fn fp_multiplication() {
+        let text = "
+            fn test() {
+                let a: f64 := 1.0;
+                let b: f64 := 2.0;
+                let c: f64 := 3.0;
+                let d: f64 := 4.0;
+                let x: f64 := a * b * c * d * 5.0;
+
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
+    fn fp_division() {
+        let text = "
+            fn test() {
+                let a: f64 := 1.0;
+                let b: f64 := 2.0;
+                let c: f64 := 3.0;
+                let d: f64 := 4.0;
+                let x: f64 := a / b / c / d / 5.0;
+
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
+    fn fp_negate() {
+        let text = "
+            fn test() {
+                let a: f64 := 1.0;
+                let x: f64 := -a;
+
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
     fn signed_int_comparison() {
         let text = "
             fn test() {
@@ -177,6 +259,27 @@ mod mir2llvm_tests_visual {
             fn test() {
                 let a: u64 := 1u64;
                 let b: u64 := 2u64;
+
+                a == b;
+                a != b;
+                a < b;
+                a <= b;
+                a > b;
+                a >= b;
+
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
+    fn float_comparison() {
+        let text = "
+            fn test() {
+                let a: f64 := 1.0;
+                let b: f64 := 2.0;
 
                 a == b;
                 a != b;
