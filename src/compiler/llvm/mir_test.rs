@@ -275,6 +275,27 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
+    fn float_comparison() {
+        let text = "
+            fn test() {
+                let a: f64 := 1.0;
+                let b: f64 := 2.0;
+
+                a == b;
+                a != b;
+                a < b;
+                a <= b;
+                a > b;
+                a >= b;
+
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
     fn signed_int_negate() {
         let text = "
             fn test() {
