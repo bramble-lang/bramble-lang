@@ -908,7 +908,7 @@ pub enum BinOp {
     /// '<=' check if one primitive is less than or equal to another
     UILe,
     /// '<' check if one primitive is less than another
-    Lt,
+    SILt,
     /// '<' check if one primitive is less than another
     UILt,
     /// '>=' check if one primitive is greater than or equal to another
@@ -935,7 +935,7 @@ impl Display for BinOp {
             BinOp::Ne => "Neq",
             BinOp::Le => "Le",
             BinOp::UILe => "SILe",
-            BinOp::Lt => "Lt",
+            BinOp::SILt => "Lt",
             BinOp::UILt => "SILt",
             BinOp::Ge => "Ge",
             BinOp::Gt => "Gt",
