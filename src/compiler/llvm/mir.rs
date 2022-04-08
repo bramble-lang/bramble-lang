@@ -1125,6 +1125,14 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         }
     }
 
+    fn ui_lte(
+        &self,
+        a: BasicValueEnum<'ctx>,
+        b: BasicValueEnum<'ctx>,
+    ) -> Result<BasicValueEnum<'ctx>, TransformerError> {
+        todo!()
+    }
+
     fn gt(
         &self,
         a: BasicValueEnum<'ctx>,
@@ -1144,6 +1152,14 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         }
     }
 
+    fn ui_gt(
+        &self,
+        a: BasicValueEnum<'ctx>,
+        b: BasicValueEnum<'ctx>,
+    ) -> Result<BasicValueEnum<'ctx>, TransformerError> {
+        todo!()
+    }
+
     fn gte(
         &self,
         a: BasicValueEnum<'ctx>,
@@ -1161,6 +1177,14 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                 &LlvmBuilderError::InvalidArithmeticOperands,
             )),
         }
+    }
+
+    fn ui_gte(
+        &self,
+        a: BasicValueEnum<'ctx>,
+        b: BasicValueEnum<'ctx>,
+    ) -> Result<BasicValueEnum<'ctx>, TransformerError> {
+        todo!()
     }
 
     fn neg(

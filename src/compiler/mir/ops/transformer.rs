@@ -182,14 +182,17 @@ pub trait FunctionBuilder<L, V> {
 
     /// Less than or equal
     fn lte(&self, a: V, b: V) -> Result<V, TransformerError>;
+    fn ui_lte(&self, a: V, b: V) -> Result<V, TransformerError>;
 
     /// Greater than
     fn gt(&self, a: V, b: V) -> Result<V, TransformerError>;
+    fn ui_gt(&self, a: V, b: V) -> Result<V, TransformerError>;
 
     /// Greater than or equal
     fn gte(&self, a: V, b: V) -> Result<V, TransformerError>;
+    fn ui_gte(&self, a: V, b: V) -> Result<V, TransformerError>;
 
-    /// Greater than or equal
+    /// Negate an integer
     fn neg(&self, a: V) -> Result<V, TransformerError>;
 }
 
