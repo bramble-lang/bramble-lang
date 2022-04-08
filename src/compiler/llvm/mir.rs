@@ -41,18 +41,7 @@ const ADDRESS_SPACE: AddressSpace = AddressSpace::Generic;
 /// the compilation of a program.
 const OUT_PARAM_INDEX: u32 = 0;
 
-/// Represents an LLVM value which represents an address somewhere in memory. This
-/// includes [`pointers`](PointerValue) and [`function labels`](FunctionValue).
-#[derive(PartialEq, Clone, Copy)]
-pub enum Location<'ctx> {
-    Pointer(PointerValue<'ctx>),
-    Function(FunctionData<'ctx>),
-    Argument(BasicValueEnum<'ctx>),
-    Temp(TempId, Option<BasicValueEnum<'ctx>>),
-    ReturnPointer,
-    Void,
-}
-
+/// Errors that are specific to building LLVM IR from Bramble MIR.
 #[derive(Debug, Clone, Copy)]
 pub enum LlvmBuilderError {
     CoerceVoidLocationIntoPointer,
@@ -69,10 +58,16 @@ pub enum LlvmBuilderError {
 
 impl TransformerInternalError for LlvmBuilderError {}
 
-impl From<&'static LlvmBuilderError> for TransformerError {
-    fn from(e: &'static LlvmBuilderError) -> Self {
-        TransformerError::Internal(e)
-    }
+/// Represents an LLVM value which represents an address somewhere in memory. This
+/// includes [`pointers`](PointerValue) and [`function labels`](FunctionValue).
+#[derive(PartialEq, Clone, Copy)]
+pub enum Location<'ctx> {
+    Pointer(PointerValue<'ctx>),
+    Function(FunctionData<'ctx>),
+    Argument(BasicValueEnum<'ctx>),
+    Temp(TempId, Option<BasicValueEnum<'ctx>>),
+    ReturnPointer,
+    Void,
 }
 
 impl<'ctx> Location<'ctx> {
