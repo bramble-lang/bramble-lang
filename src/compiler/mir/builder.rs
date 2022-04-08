@@ -290,19 +290,19 @@ impl MirProcedureBuilder {
     /// Add a less than or equal to test operation to the current [`BasicBlock`].
     pub fn le(&self, left: Operand, right: Operand) -> RValue {
         debug!("Less or Equal: {:?}, {:?}", left, right);
-        RValue::BinOp(BinOp::Le, left, right)
+        RValue::BinOp(BinOp::SILe, left, right)
     }
 
     /// Add a greater than test operation to the current [`BasicBlock`].
     pub fn gt(&self, left: Operand, right: Operand) -> RValue {
         debug!("Greater: {:?}, {:?}", left, right);
-        RValue::BinOp(BinOp::Gt, left, right)
+        RValue::BinOp(BinOp::SIGt, left, right)
     }
 
     /// Add a greater than or equal to test operation to the current [`BasicBlock`].
     pub fn ge(&self, left: Operand, right: Operand) -> RValue {
         debug!("Greater or Equal: {:?}, {:?}", left, right);
-        RValue::BinOp(BinOp::Ge, left, right)
+        RValue::BinOp(BinOp::SIGe, left, right)
     }
 
     /// Add a raw pointer offset operation to the current [`BasicBlock`].

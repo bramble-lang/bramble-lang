@@ -904,7 +904,7 @@ pub enum BinOp {
     /// '!=' check if two primitives are not equal
     Ne,
     /// '<=' check if one primitive is less than or equal to another
-    Le,
+    SILe,
     /// '<=' check if one primitive is less than or equal to another
     UILe,
     /// '<' check if one primitive is less than another
@@ -912,9 +912,9 @@ pub enum BinOp {
     /// '<' check if one primitive is less than another
     UILt,
     /// '>=' check if one primitive is greater than or equal to another
-    Ge,
+    SIGe,
     /// '>' check if one primitive is greater than another
-    Gt,
+    SIGt,
     /// '&' bitwise and operation on two primitives
     And,
     /// '|' bitwise or operation on two primitives
@@ -933,12 +933,12 @@ impl Display for BinOp {
             BinOp::UIDiv => "UIDiv",
             BinOp::Eq => "Eq",
             BinOp::Ne => "Neq",
-            BinOp::Le => "Le",
+            BinOp::SILe => "Le",
             BinOp::UILe => "SILe",
             BinOp::SILt => "Lt",
             BinOp::UILt => "SILt",
-            BinOp::Ge => "Ge",
-            BinOp::Gt => "Gt",
+            BinOp::SIGe => "Ge",
+            BinOp::SIGt => "Gt",
             BinOp::And => "BitwiseAnd",
             BinOp::Or => "BitwiseOr",
             BinOp::RawPointerOffset => "RawPointerOffset",
