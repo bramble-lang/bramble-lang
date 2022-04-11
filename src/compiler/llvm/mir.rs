@@ -1477,4 +1477,15 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
             )),
         }
     }
+
+    fn address_of(&self, a: Location<'ctx>) -> Result<BasicValueEnum<'ctx>, TransformerError> {
+        match a {
+            Location::Pointer(ptr) => Ok(ptr.into()),
+            Location::Function(_) => todo!(),
+            Location::Argument(_) => todo!(),
+            Location::Temp(_, _) => todo!(),
+            Location::ReturnPointer => todo!(),
+            Location::Void => todo!(),
+        }
+    }
 }

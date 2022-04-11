@@ -247,7 +247,7 @@ pub trait FunctionBuilder<L, V> {
     fn i_or(&self, a: V, b: V) -> Result<V, TransformerError>;
 
     /// Address of a given Location value.
-    fn address_of(&self, a: L) -> Result<L, TransformerError>;
+    fn address_of(&self, a: L) -> Result<V, TransformerError>;
 }
 
 #[derive(Debug, Clone, Copy)]
