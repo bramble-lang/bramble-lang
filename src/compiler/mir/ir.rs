@@ -695,7 +695,7 @@ impl Display for Accessor {
         let text = match self {
             Accessor::Index(i) => format!("[{}]", i),
             Accessor::Field(f, _) => format!(".{}", f),
-            Accessor::Deref => "Deref()".into(),
+            Accessor::Deref => "(Deref)".into(),
         };
         f.write_str(&text)
     }
