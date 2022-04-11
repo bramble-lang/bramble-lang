@@ -434,7 +434,12 @@ impl MirTypeDef {
                 // add fields
                 let fields: Vec<_> = fields
                     .iter()
-                    .map(|f| p.get_type(f.ty).unwrap().into_basic_type().unwrap())
+                    .map(|f| {
+                        p.get_type(f.ty)
+                            .expect("Cannot find given Type ID")
+                            .into_basic_type()
+                            .expect("Cannot convert to a basic type")
+                    })
                     .collect();
 
                 struct_ty.set_body(&fields, false);
