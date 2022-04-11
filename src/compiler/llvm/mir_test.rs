@@ -418,8 +418,9 @@ mod mir2llvm_tests_visual {
     fn struct_def() {
         let text = "
             struct S {a: i64}
+            struct S2 {s: S}
 
-            fn test(a: S) {
+            fn test(a: S2) {
                 return;
             }
         ";
