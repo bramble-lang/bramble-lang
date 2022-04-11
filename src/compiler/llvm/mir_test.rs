@@ -443,6 +443,21 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
+    fn struct_expression_nested() {
+        let text = "
+            struct S {a: i64, b: f64}
+            struct S2 {x: i64, s: S}
+
+            fn test() {
+                let a: S2 := S2{ x: 3, s: S{a: 5, b: 3.0}};
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
     fn if_expr() {
         compile_and_print_llvm(
             "
