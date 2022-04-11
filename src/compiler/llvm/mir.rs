@@ -421,26 +421,27 @@ impl MirTypeDef {
                 Some(bt.array_type(len).into())
             }
             MirTypeDef::RawPointer { mutable, target } => todo!(),
-            MirTypeDef::Structure { path, def } => {
+            MirTypeDef::Structure {
+                path,
+                def: MirStructDef::Defined(fields),
+            } => {
                 // convert path into a label
                 let label = p.to_label(path);
                 // Check that structure is defined
-                match def {
-                    MirStructDef::Declared => todo!(),
-                    MirStructDef::Defined(fields) => {
-                        // Create custom type in LLVM
-                        let struct_ty = p.context.opaque_struct_type(&label);
+                // Create custom type in LLVM
+                let struct_ty = p.context.opaque_struct_type(&label);
 
-                        // add fields
-                        let fields: Vec<_> = fields
-                            .iter()
-                            .map(|f| p.get_type(f.ty).unwrap().into_basic_type().unwrap())
-                            .collect();
+                // add fields
+                let fields: Vec<_> = fields
+                    .iter()
+                    .map(|f| p.get_type(f.ty).unwrap().into_basic_type().unwrap())
+                    .collect();
 
-                        struct_ty.set_body(&fields, false);
-                        Some(struct_ty.into())
-                    }
-                }
+                struct_ty.set_body(&fields, false);
+                Some(struct_ty.into())
+            }
+            MirTypeDef::Structure { .. } => {
+                panic!("Attempting to add a structure which has not been defined")
             }
         }
     }
