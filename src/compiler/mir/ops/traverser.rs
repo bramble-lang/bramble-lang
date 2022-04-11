@@ -298,7 +298,10 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
                 let idx = self.operand(idx);
                 self.xfmr.array_access(loc, idx).unwrap()
             }
-            Accessor::Field(_, _) => todo!(),
+            Accessor::Field(field, _) => {
+                let loc = self.lvalue(loc);
+                self.xfmr.field_access(loc, *field).unwrap()
+            }
             Accessor::Deref => todo!(),
         }
     }

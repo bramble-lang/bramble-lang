@@ -20,7 +20,7 @@ use std::{collections::VecDeque, fmt::Debug};
 
 use crate::compiler::{
     ast::Path,
-    mir::{ir::*, project::DefId, MirTypeDef, TypeId},
+    mir::{ir::*, project::DefId, typetable::FieldId, MirTypeDef, TypeId},
     Span,
 };
 
@@ -116,6 +116,9 @@ pub trait FunctionBuilder<L, V> {
 
     /// Returns the location of the element at an index in an array.
     fn array_access(&self, l: L, idx: V) -> Result<L, TransformerError>;
+
+    /// Returns the location of the field of a structure.
+    fn field_access(&self, l: L, field: FieldId) -> Result<L, TransformerError>;
 
     /// Returns a location that manages passing the return value back
     /// to the calling function.

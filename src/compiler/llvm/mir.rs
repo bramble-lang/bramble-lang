@@ -17,8 +17,8 @@ use crate::{
     compiler::{
         ast::Path,
         mir::{
-            ir::*, DefId, FunctionBuilder, MirBaseType, MirStructDef, MirTypeDef, ProgramBuilder,
-            TransformerError, TransformerInternalError, TypeId,
+            ir::*, DefId, FieldId, FunctionBuilder, MirBaseType, MirStructDef, MirTypeDef,
+            ProgramBuilder, TransformerError, TransformerInternalError, TypeId,
         },
         CompilerDisplay, SourceMap, Span,
     },
@@ -878,6 +878,23 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         };
 
         Ok(Location::Pointer(el_ptr))
+    }
+
+    fn field_access(
+        &self,
+        l: Location<'ctx>,
+        field: FieldId,
+    ) -> Result<Location<'ctx>, TransformerError> {
+        // Convert l to a pointer
+        let ptr = l.into_pointer()?;
+
+        // Build GEP to field
+        let field_ptr = self
+            .program
+            .builder
+            .build_struct_gep(ptr, field.to_u32(), "")
+            .unwrap();
+        Ok(Location::Pointer(field_ptr))
     }
 
     fn return_ptr(&self) -> Result<Location<'ctx>, TransformerError> {
