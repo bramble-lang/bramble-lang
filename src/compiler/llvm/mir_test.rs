@@ -324,6 +324,36 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
+    fn bool_and() {
+        let text = "
+            fn test() {
+                let a: bool := true && true;
+                let b: bool := true && false;
+                let x: bool := a && b;
+
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
+    fn bool_or() {
+        let text = "
+            fn test() {
+                let a: bool := true || false;
+                let b: bool := false || false;
+                let x: bool := a || b;
+
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
     fn simple_array_expression() {
         let text = "
             fn test() {
