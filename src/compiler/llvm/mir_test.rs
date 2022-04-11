@@ -398,6 +398,20 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
+    fn raw_pointer_deref() {
+        let text = "
+            fn test() -> i64 {
+                let a: i64 :=  6;
+                let p: *const i64 := @const a;
+
+                return ^p;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
     fn simple_array_expression() {
         let text = "
             fn test() {

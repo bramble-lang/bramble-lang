@@ -1488,4 +1488,26 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
             Location::Void => todo!(),
         }
     }
+
+    fn deref(&self, a: Location<'ctx>) -> Result<Location<'ctx>, TransformerError> {
+        match a {
+            Location::Pointer(ptr) => {
+                if ptr.get_type().get_element_type().is_aggregate_type() {
+                    Ok(Location::Pointer(ptr))
+                } else {
+                    Ok(Location::Pointer(
+                        self.program
+                            .builder
+                            .build_load(ptr, "")
+                            .into_pointer_value(),
+                    ))
+                }
+            }
+            Location::Function(_) => todo!(),
+            Location::Argument(_) => todo!(),
+            Location::Temp(_, _) => todo!(),
+            Location::ReturnPointer => todo!(),
+            Location::Void => todo!(),
+        }
+    }
 }

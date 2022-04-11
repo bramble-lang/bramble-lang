@@ -305,7 +305,10 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
                 let loc = self.lvalue(loc);
                 self.xfmr.field_access(loc, *field).unwrap()
             }
-            Accessor::Deref => todo!(),
+            Accessor::Deref => {
+                let loc = self.lvalue(loc);
+                self.xfmr.deref(loc).unwrap()
+            }
         }
     }
 

@@ -248,6 +248,9 @@ pub trait FunctionBuilder<L, V> {
 
     /// Address of a given Location value.
     fn address_of(&self, a: L) -> Result<V, TransformerError>;
+
+    /// Use the location pointed to by an address to create an addressable expression.
+    fn deref(&self, a: L) -> Result<L, TransformerError>;
 }
 
 #[derive(Debug, Clone, Copy)]
