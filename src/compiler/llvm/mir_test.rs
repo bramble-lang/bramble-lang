@@ -412,6 +412,36 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
+    fn raw_pointer_deref_mutate() {
+        let text = "
+            fn test() {
+                let mut a: i64 :=  6;
+                let p: *mut i64 := @mut a;
+                mut ^p := 13;
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
+    fn raw_pointer_struct() {
+        let text = "
+            struct S{a: i64}
+
+            fn test() {
+                let mut a: S :=  S{a: 5};
+                let p: *mut S := @mut a;
+                mut (^p).a := 13;
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
     fn simple_array_expression() {
         let text = "
             fn test() {
