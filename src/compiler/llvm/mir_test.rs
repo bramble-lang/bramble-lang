@@ -310,6 +310,20 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
+    fn bool_not() {
+        let text = "
+            fn test() {
+                let a: bool := true;
+                let x: bool := !a;
+
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
     fn simple_array_expression() {
         let text = "
             fn test() {

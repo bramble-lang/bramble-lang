@@ -241,7 +241,7 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
                 match op {
                     UnOp::Negate => self.xfmr.i_neg(v),
                     UnOp::FNegate => self.xfmr.f_neg(v),
-                    UnOp::Not => todo!(),
+                    UnOp::Not => self.xfmr.i_not(v),
                 }
                 .unwrap()
             }

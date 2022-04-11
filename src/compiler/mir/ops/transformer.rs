@@ -233,6 +233,9 @@ pub trait FunctionBuilder<L, V> {
 
     /// Negate an integer
     fn f_neg(&self, a: V) -> Result<V, TransformerError>;
+
+    /// Bitwise not an integer value.
+    fn i_not(&self, a: V) -> Result<V, TransformerError>;
 }
 
 #[derive(Debug, Clone, Copy)]
