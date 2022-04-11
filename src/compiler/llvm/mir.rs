@@ -1268,27 +1268,6 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         }
     }
 
-    fn i_neg(
-        &self,
-        a: BasicValueEnum<'ctx>,
-    ) -> std::result::Result<BasicValueEnum<'ctx>, TransformerError> {
-        match a {
-            BasicValueEnum::IntValue(a) => Ok(self.program.builder.build_int_neg(a, "").into()),
-            _ => Err(TransformerError::Internal(
-                &LlvmBuilderError::InvalidArithmeticOperands,
-            )),
-        }
-    }
-
-    fn f_neg(&self, a: BasicValueEnum<'ctx>) -> Result<BasicValueEnum<'ctx>, TransformerError> {
-        match a {
-            BasicValueEnum::FloatValue(a) => Ok(self.program.builder.build_float_neg(a, "").into()),
-            _ => Err(TransformerError::Internal(
-                &LlvmBuilderError::InvalidArithmeticOperands,
-            )),
-        }
-    }
-
     fn f_eq(
         &self,
         a: BasicValueEnum<'ctx>,
@@ -1385,6 +1364,66 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                 .builder
                 .build_float_compare(inkwell::FloatPredicate::OGE, l, r, "")
                 .into()),
+            _ => Err(TransformerError::Internal(
+                &LlvmBuilderError::InvalidArithmeticOperands,
+            )),
+        }
+    }
+
+    fn i_neg(
+        &self,
+        a: BasicValueEnum<'ctx>,
+    ) -> std::result::Result<BasicValueEnum<'ctx>, TransformerError> {
+        match a {
+            BasicValueEnum::IntValue(a) => Ok(self.program.builder.build_int_neg(a, "").into()),
+            _ => Err(TransformerError::Internal(
+                &LlvmBuilderError::InvalidArithmeticOperands,
+            )),
+        }
+    }
+
+    fn f_neg(&self, a: BasicValueEnum<'ctx>) -> Result<BasicValueEnum<'ctx>, TransformerError> {
+        match a {
+            BasicValueEnum::FloatValue(a) => Ok(self.program.builder.build_float_neg(a, "").into()),
+            _ => Err(TransformerError::Internal(
+                &LlvmBuilderError::InvalidArithmeticOperands,
+            )),
+        }
+    }
+
+    fn i_not(&self, a: BasicValueEnum<'ctx>) -> Result<BasicValueEnum<'ctx>, TransformerError> {
+        match a {
+            BasicValueEnum::IntValue(a) => Ok(self.program.builder.build_not(a, "").into()),
+            _ => Err(TransformerError::Internal(
+                &LlvmBuilderError::InvalidArithmeticOperands,
+            )),
+        }
+    }
+
+    fn i_and(
+        &self,
+        a: BasicValueEnum<'ctx>,
+        b: BasicValueEnum<'ctx>,
+    ) -> Result<BasicValueEnum<'ctx>, TransformerError> {
+        match (a, b) {
+            (BasicValueEnum::IntValue(l), BasicValueEnum::IntValue(r)) => {
+                Ok(self.program.builder.build_and(l, r, "").into())
+            }
+            _ => Err(TransformerError::Internal(
+                &LlvmBuilderError::InvalidArithmeticOperands,
+            )),
+        }
+    }
+
+    fn i_or(
+        &self,
+        a: BasicValueEnum<'ctx>,
+        b: BasicValueEnum<'ctx>,
+    ) -> Result<BasicValueEnum<'ctx>, TransformerError> {
+        match (a, b) {
+            (BasicValueEnum::IntValue(l), BasicValueEnum::IntValue(r)) => {
+                Ok(self.program.builder.build_or(l, r, "").into())
+            }
             _ => Err(TransformerError::Internal(
                 &LlvmBuilderError::InvalidArithmeticOperands,
             )),
