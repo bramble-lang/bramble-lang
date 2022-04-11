@@ -901,7 +901,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
             .program
             .builder
             .build_struct_gep(ptr, field.to_u32(), "")
-            .unwrap();
+            .expect("Cannot construct GEP");
         Ok(Location::Pointer(field_ptr))
     }
 
