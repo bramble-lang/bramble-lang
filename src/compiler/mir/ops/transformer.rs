@@ -251,6 +251,9 @@ pub trait FunctionBuilder<L, V> {
 
     /// Use the location pointed to by an address to create an addressable expression.
     fn deref(&self, a: L) -> Result<L, TransformerError>;
+
+    /// Use the location pointed to by an address to create an addressable expression.
+    fn pointer_offset(&self, a: V, o: V) -> Result<V, TransformerError>;
 }
 
 #[derive(Debug, Clone, Copy)]

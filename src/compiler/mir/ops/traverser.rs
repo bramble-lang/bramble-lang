@@ -222,7 +222,7 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
                     BinOp::UIGt => self.xfmr.ui_gt(lv, rv),
                     BinOp::And => self.xfmr.i_and(lv, rv),
                     BinOp::Or => self.xfmr.i_or(lv, rv),
-                    BinOp::RawPointerOffset => todo!(),
+                    BinOp::RawPointerOffset => self.xfmr.pointer_offset(lv, rv),
                     BinOp::FAdd => self.xfmr.f_add(lv, rv),
                     BinOp::FSub => self.xfmr.f_sub(lv, rv),
                     BinOp::FMul => self.xfmr.f_mul(lv, rv),

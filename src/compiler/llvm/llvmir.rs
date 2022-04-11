@@ -1385,7 +1385,6 @@ impl ast::BinaryOperator {
             let lp = l.into_pointer_value();
             if self == &ast::BinaryOperator::RawPointerOffset {
                 let offset = r.into_int_value();
-                let outer_idx = llvm.context.i64_type().const_int(0, false);
                 unsafe { llvm.builder.build_gep(lp, &[offset], "").into() }
             } else {
                 let rp = r.into_pointer_value();

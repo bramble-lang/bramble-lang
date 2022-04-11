@@ -1510,4 +1510,16 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
             Location::Void => todo!(),
         }
     }
+
+    fn pointer_offset(
+        &self,
+        a: BasicValueEnum<'ctx>,
+        o: BasicValueEnum<'ctx>,
+    ) -> Result<BasicValueEnum<'ctx>, TransformerError> {
+        let ptr = a.into_pointer_value();
+        let offset = o.into_int_value();
+
+        let result = unsafe { self.program.builder.build_gep(ptr, &[offset], "").into() };
+        Ok(result)
+    }
 }

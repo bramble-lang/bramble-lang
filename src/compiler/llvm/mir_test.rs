@@ -426,6 +426,20 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
+    fn raw_pointer_arithmetic() {
+        let text = "
+            fn test() {
+                let mut a: i64 :=  6;
+                let p: *mut i64 := @mut a;
+                let p2: *mut i64 := p@1;
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
     fn raw_pointer_struct() {
         let text = "
             struct S{a: i64}
