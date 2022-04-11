@@ -17,7 +17,7 @@ use crate::{
     compiler::{
         ast::Path,
         mir::{
-            ir::*, DefId, FunctionBuilder, MirBaseType, MirTypeDef, ProgramBuilder,
+            ir::*, DefId, FunctionBuilder, MirBaseType, MirStructDef, MirTypeDef, ProgramBuilder,
             TransformerError, TransformerInternalError, TypeId,
         },
         CompilerDisplay, SourceMap, Span,
@@ -419,7 +419,27 @@ impl MirTypeDef {
                 Some(bt.array_type(len).into())
             }
             MirTypeDef::RawPointer { mutable, target } => todo!(),
-            MirTypeDef::Structure { path, def } => todo!(),
+            MirTypeDef::Structure { path, def } => {
+                // convert path into a label
+                let label = p.to_label(path);
+                // Check that structure is defined
+                match def {
+                    MirStructDef::Declared => todo!(),
+                    MirStructDef::Defined(fields) => {
+                        // Create custom type in LLVM
+                        let struct_ty = p.context.opaque_struct_type(&label);
+
+                        // add fields
+                        let fields: Vec<_> = fields
+                            .iter()
+                            .map(|f| p.get_type(f.ty).unwrap().into_basic_type().unwrap())
+                            .collect();
+
+                        struct_ty.set_body(&fields, false);
+                        Some(struct_ty.into())
+                    }
+                }
+            }
         }
     }
 }
