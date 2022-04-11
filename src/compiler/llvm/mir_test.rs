@@ -486,6 +486,20 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
+    fn struct_function_return() {
+        let text = "
+            struct S {a: i64, b: f64}
+
+            fn test() -> S {
+                let a: S := S{a: 5, b: 3.0};
+                return a;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
     fn if_expr() {
         compile_and_print_llvm(
             "

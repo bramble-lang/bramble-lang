@@ -261,7 +261,9 @@ impl<'module, 'ctx> LlvmProgramBuilder<'module, 'ctx> {
                 (ReturnMethod::OutParam, a_ty.ptr_type(ADDRESS_SPACE).into())
             }
             AnyTypeEnum::FunctionType(_) => todo!(),
-            AnyTypeEnum::StructType(_) => todo!(),
+            AnyTypeEnum::StructType(s_ty) => {
+                (ReturnMethod::OutParam, s_ty.ptr_type(ADDRESS_SPACE).into())
+            }
             AnyTypeEnum::VectorType(_) => todo!(),
             AnyTypeEnum::VoidType(_) => (ReturnMethod::Return, self.context.void_type().into()),
         };
