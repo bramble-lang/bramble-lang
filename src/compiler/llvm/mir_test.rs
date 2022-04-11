@@ -415,6 +415,107 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
+    fn struct_def() {
+        let text = "
+            struct S {a: i64}
+            struct S2 {s: S}
+
+            fn test(a: S2) {
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
+    fn struct_expression() {
+        let text = "
+            struct S {a: i64, b: f64}
+
+            fn test() {
+                let a: S := S{a: 5, b: 3.0};
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
+    fn struct_expression_nested() {
+        let text = "
+            struct S {a: i64, b: f64}
+            struct S2 {x: i64, s: S}
+
+            fn test() {
+                let a: S2 := S2{ x: 3, s: S{a: 5, b: 3.0}};
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
+    fn struct_member_access() {
+        let text = "
+            struct S {a: i64, b: f64}
+
+            fn test() -> i64 {
+                let a: S := S{a: 5, b: 3.0};
+                return a.a;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
+    fn struct_function_parameter() {
+        let text = "
+            struct S {a: i64, b: f64}
+
+            fn test(s: S) -> i64 {
+                let a: f64 := s.b;
+                return s.a;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
+    fn struct_function_return() {
+        let text = "
+            struct S {a: i64, b: f64}
+
+            fn test() -> S {
+                let a: S := S{a: 5, b: 3.0};
+                return a;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
+    fn struct_mutate_field() {
+        let text = "
+            struct S {a: i64, b: f64}
+
+            fn test() {
+                let mut a: S := S{a: 5, b: 3.0};
+                mut a.a := 27;
+                mut a.b := 19.0;
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
     fn if_expr() {
         compile_and_print_llvm(
             "

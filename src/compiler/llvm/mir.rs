@@ -17,8 +17,8 @@ use crate::{
     compiler::{
         ast::Path,
         mir::{
-            ir::*, DefId, FunctionBuilder, MirBaseType, MirTypeDef, ProgramBuilder,
-            TransformerError, TransformerInternalError, TypeId,
+            ir::*, DefId, FieldId, FunctionBuilder, MirBaseType, MirStructDef, MirTypeDef,
+            ProgramBuilder, TransformerError, TransformerInternalError, TypeId,
         },
         CompilerDisplay, SourceMap, Span,
     },
@@ -261,7 +261,9 @@ impl<'module, 'ctx> LlvmProgramBuilder<'module, 'ctx> {
                 (ReturnMethod::OutParam, a_ty.ptr_type(ADDRESS_SPACE).into())
             }
             AnyTypeEnum::FunctionType(_) => todo!(),
-            AnyTypeEnum::StructType(_) => todo!(),
+            AnyTypeEnum::StructType(s_ty) => {
+                (ReturnMethod::OutParam, s_ty.ptr_type(ADDRESS_SPACE).into())
+            }
             AnyTypeEnum::VectorType(_) => todo!(),
             AnyTypeEnum::VoidType(_) => (ReturnMethod::Return, self.context.void_type().into()),
         };
@@ -419,7 +421,33 @@ impl MirTypeDef {
                 Some(bt.array_type(len).into())
             }
             MirTypeDef::RawPointer { mutable, target } => todo!(),
-            MirTypeDef::Structure { path, def } => todo!(),
+            MirTypeDef::Structure {
+                path,
+                def: MirStructDef::Defined(fields),
+            } => {
+                // convert path into a label
+                let label = p.to_label(path);
+                // Check that structure is defined
+                // Create custom type in LLVM
+                let struct_ty = p.context.opaque_struct_type(&label);
+
+                // add fields
+                let fields: Vec<_> = fields
+                    .iter()
+                    .map(|f| {
+                        p.get_type(f.ty)
+                            .expect("Cannot find given Type ID")
+                            .into_basic_type()
+                            .expect("Cannot convert to a basic type")
+                    })
+                    .collect();
+
+                struct_ty.set_body(&fields, false);
+                Some(struct_ty.into())
+            }
+            MirTypeDef::Structure { .. } => {
+                panic!("Attempting to add a structure which has not been defined")
+            }
         }
     }
 }
@@ -858,6 +886,23 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         };
 
         Ok(Location::Pointer(el_ptr))
+    }
+
+    fn field_access(
+        &self,
+        l: Location<'ctx>,
+        field: FieldId,
+    ) -> Result<Location<'ctx>, TransformerError> {
+        // Convert l to a pointer
+        let ptr = l.into_pointer()?;
+
+        // Build GEP to field
+        let field_ptr = self
+            .program
+            .builder
+            .build_struct_gep(ptr, field.to_u32(), "")
+            .expect("Cannot construct GEP");
+        Ok(Location::Pointer(field_ptr))
     }
 
     fn return_ptr(&self) -> Result<Location<'ctx>, TransformerError> {

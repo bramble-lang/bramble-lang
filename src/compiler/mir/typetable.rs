@@ -456,6 +456,10 @@ impl FieldId {
     fn new(id: u32) -> FieldId {
         FieldId(id)
     }
+
+    pub fn to_u32(&self) -> u32 {
+        self.0
+    }
 }
 
 impl Display for FieldId {

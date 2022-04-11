@@ -809,8 +809,6 @@ impl<'ctx> ToLlvmIr<'ctx> for ast::Expression<SemanticContext> {
 
                 let field_idx = sdef.get_field_idx(*field).unwrap();
 
-                let field_idx_llvm = llvm.context.i64_type().const_int(field_idx as u64, true);
-
                 let val_llvm = val.to_llvm_ir(llvm).unwrap().into_pointer_value();
                 let field_ptr = llvm
                     .builder
