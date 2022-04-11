@@ -384,6 +384,92 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
+    fn raw_pointer() {
+        let text = "
+            fn test() {
+                let a: i64 :=  6;
+                let p: *const i64 := @const a;
+
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
+    fn raw_pointer_deref() {
+        let text = "
+            fn test() -> i64 {
+                let a: i64 :=  6;
+                let p: *const i64 := @const a;
+
+                return ^p;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
+    fn raw_pointer_deref_mutate() {
+        let text = "
+            fn test() {
+                let mut a: i64 :=  6;
+                let p: *mut i64 := @mut a;
+                mut ^p := 13;
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
+    fn raw_pointer_arithmetic() {
+        let text = "
+            fn test() {
+                let mut a: i64 :=  6;
+                let p: *mut i64 := @mut a;
+                let p2: *mut i64 := p@1;
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
+    fn raw_pointer_struct() {
+        let text = "
+            struct S{a: i64}
+
+            fn test() {
+                let mut a: S :=  S{a: 5};
+                let p: *mut S := @mut a;
+                mut (^p).a := 13;
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
+    fn raw_pointer_array() {
+        let text = "
+            fn test() {
+                let mut a: [i64; 2] :=  [1, 2];
+                let p: *mut [i64; 2] := @mut a;
+                mut (^p)[0] := 13;
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
     fn simple_array_expression() {
         let text = "
             fn test() {

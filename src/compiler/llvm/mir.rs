@@ -420,7 +420,10 @@ impl MirTypeDef {
                 let bt = el_llvm_ty.into_basic_type().unwrap().as_basic_type_enum(); // I don't know why as_basic_type_enum has to be called but without it the array_type method doesn't work!
                 Some(bt.array_type(len).into())
             }
-            MirTypeDef::RawPointer { mutable, target } => todo!(),
+            MirTypeDef::RawPointer { target, .. } => {
+                let ty = p.get_type(*target).unwrap().into_basic_type().unwrap();
+                Some(ty.ptr_type(ADDRESS_SPACE).into())
+            }
             MirTypeDef::Structure {
                 path,
                 def: MirStructDef::Defined(fields),
@@ -1473,5 +1476,50 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                 &LlvmBuilderError::InvalidArithmeticOperands,
             )),
         }
+    }
+
+    fn address_of(&self, a: Location<'ctx>) -> Result<BasicValueEnum<'ctx>, TransformerError> {
+        match a {
+            Location::Pointer(ptr) => Ok(ptr.into()),
+            Location::Function(_) => todo!(),
+            Location::Argument(_) => todo!(),
+            Location::Temp(_, _) => todo!(),
+            Location::ReturnPointer => todo!(),
+            Location::Void => todo!(),
+        }
+    }
+
+    fn deref(&self, a: Location<'ctx>) -> Result<Location<'ctx>, TransformerError> {
+        match a {
+            Location::Pointer(ptr) => {
+                if ptr.get_type().get_element_type().is_aggregate_type() {
+                    Ok(Location::Pointer(ptr))
+                } else {
+                    Ok(Location::Pointer(
+                        self.program
+                            .builder
+                            .build_load(ptr, "")
+                            .into_pointer_value(),
+                    ))
+                }
+            }
+            Location::Function(_) => todo!(),
+            Location::Argument(_) => todo!(),
+            Location::Temp(_, _) => todo!(),
+            Location::ReturnPointer => todo!(),
+            Location::Void => todo!(),
+        }
+    }
+
+    fn pointer_offset(
+        &self,
+        a: BasicValueEnum<'ctx>,
+        o: BasicValueEnum<'ctx>,
+    ) -> Result<BasicValueEnum<'ctx>, TransformerError> {
+        let ptr = a.into_pointer_value();
+        let offset = o.into_int_value();
+
+        let result = unsafe { self.program.builder.build_gep(ptr, &[offset], "").into() };
+        Ok(result)
     }
 }

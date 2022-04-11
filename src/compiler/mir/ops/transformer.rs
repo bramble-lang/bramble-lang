@@ -245,6 +245,15 @@ pub trait FunctionBuilder<L, V> {
 
     /// Bitwise or two integer values
     fn i_or(&self, a: V, b: V) -> Result<V, TransformerError>;
+
+    /// Address of a given Location value.
+    fn address_of(&self, a: L) -> Result<V, TransformerError>;
+
+    /// Use the location pointed to by an address to create an addressable expression.
+    fn deref(&self, a: L) -> Result<L, TransformerError>;
+
+    /// Use the location pointed to by an address to create an addressable expression.
+    fn pointer_offset(&self, a: V, o: V) -> Result<V, TransformerError>;
 }
 
 #[derive(Debug, Clone, Copy)]

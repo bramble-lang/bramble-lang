@@ -222,7 +222,7 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
                     BinOp::UIGt => self.xfmr.ui_gt(lv, rv),
                     BinOp::And => self.xfmr.i_and(lv, rv),
                     BinOp::Or => self.xfmr.i_or(lv, rv),
-                    BinOp::RawPointerOffset => todo!(),
+                    BinOp::RawPointerOffset => self.xfmr.pointer_offset(lv, rv),
                     BinOp::FAdd => self.xfmr.f_add(lv, rv),
                     BinOp::FSub => self.xfmr.f_sub(lv, rv),
                     BinOp::FMul => self.xfmr.f_mul(lv, rv),
@@ -246,7 +246,10 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
                 .unwrap()
             }
             RValue::Cast(_, _) => todo!(),
-            RValue::AddressOf(_) => todo!(),
+            RValue::AddressOf(t) => {
+                let l = self.lvalue(t);
+                self.xfmr.address_of(l).unwrap()
+            }
         }
     }
 
@@ -302,7 +305,10 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
                 let loc = self.lvalue(loc);
                 self.xfmr.field_access(loc, *field).unwrap()
             }
-            Accessor::Deref => todo!(),
+            Accessor::Deref => {
+                let loc = self.lvalue(loc);
+                self.xfmr.deref(loc).unwrap()
+            }
         }
     }
 
