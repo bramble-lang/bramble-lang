@@ -420,7 +420,10 @@ impl MirTypeDef {
                 let bt = el_llvm_ty.into_basic_type().unwrap().as_basic_type_enum(); // I don't know why as_basic_type_enum has to be called but without it the array_type method doesn't work!
                 Some(bt.array_type(len).into())
             }
-            MirTypeDef::RawPointer { mutable, target } => todo!(),
+            MirTypeDef::RawPointer { target, .. } => {
+                let ty = p.get_type(*target).unwrap().into_basic_type().unwrap();
+                Some(ty.ptr_type(ADDRESS_SPACE).into())
+            }
             MirTypeDef::Structure {
                 path,
                 def: MirStructDef::Defined(fields),
