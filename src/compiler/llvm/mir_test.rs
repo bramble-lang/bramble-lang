@@ -500,6 +500,22 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
+    fn struct_mutate_field() {
+        let text = "
+            struct S {a: i64, b: f64}
+
+            fn test() {
+                let mut a: S := S{a: 5, b: 3.0};
+                mut a.a := 27;
+                mut a.b := 19.0;
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
     fn if_expr() {
         compile_and_print_llvm(
             "
