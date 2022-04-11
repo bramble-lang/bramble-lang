@@ -442,6 +442,20 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
+    fn raw_pointer_array() {
+        let text = "
+            fn test() {
+                let mut a: [i64; 2] :=  [1, 2];
+                let p: *mut [i64; 2] := @mut a;
+                mut (^p)[0] := 13;
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text);
+    }
+
+    #[test]
     fn simple_array_expression() {
         let text = "
             fn test() {
