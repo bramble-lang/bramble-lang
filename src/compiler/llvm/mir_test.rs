@@ -13,7 +13,7 @@ mod mir2llvm_tests_visual {
     //! used correctly: if LLVM is incorrectly used then it will fault and the unit tests
     //! will fail.
 
-    use inkwell::context::Context;
+    use inkwell::{context::Context, execution_engine::JitFunction};
 
     use crate::{
         compiler::{
@@ -25,7 +25,7 @@ mod mir2llvm_tests_visual {
             semantics::semanticnode::SemanticContext,
             CompilerDisplay, CompilerError, Lexer, SourceMap,
         },
-        llvm::mir::LlvmProgramBuilder,
+        llvm::mir::{LlvmProgram, LlvmProgramBuilder},
         resolve_types, StringTable,
     };
 
@@ -719,7 +719,7 @@ mod mir2llvm_tests_visual {
 
     #[test]
     fn function_call_multi_args() {
-        compile_and_print_llvm(
+        let result: i64 = compile_and_run(
             "
             fn foo() -> i64 {
                 return bar(2, 1i32);
@@ -729,7 +729,10 @@ mod mir2llvm_tests_visual {
                 return i;
             }
         ",
+            "main_foo",
         );
+
+        assert_eq!(2, result);
     }
 
     #[test]
@@ -811,6 +814,34 @@ mod mir2llvm_tests_visual {
 
         println!("\n\n=== x86 ===");
         llvm.print_asm();
+    }
+
+    fn compile_and_run<R: std::fmt::Debug>(text: &str, func_name: &str) -> R {
+        let (sm, table, module) = compile(text);
+        let mut project = MirProject::new();
+        transform::transform(&module, &mut project).unwrap();
+
+        let context = Context::create();
+        let module = context.create_module("test");
+        let builder = context.create_builder();
+
+        let mut xfmr = LlvmProgramBuilder::new(&context, &module, &builder, &sm, &table);
+
+        let proj_traverser = ProgramTraverser::new(&project);
+
+        // Traverser is given a MirProject
+        // call traverser.map(llvm) this will use the llvm xfmr to map MirProject to LlvmProject
+        proj_traverser.map(&mut xfmr);
+
+        let engine = module
+            .create_jit_execution_engine(inkwell::OptimizationLevel::None)
+            .unwrap();
+
+        unsafe {
+            let fv: JitFunction<unsafe extern "C" fn() -> R> =
+                engine.get_function(func_name).unwrap();
+            fv.call()
+        }
     }
 
     fn compile(input: &str) -> (SourceMap, StringTable, Module<SemanticContext>) {
