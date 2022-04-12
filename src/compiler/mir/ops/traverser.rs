@@ -42,7 +42,7 @@ impl<'a> ProgramTraverser<'a> {
         }
 
         // Iterate over every function in MIR
-        for (id, f) in self.mir.function_iter() {
+        for (id, f) in self.mir.function_iter().filter(|(_, f)| !f.is_extern()) {
             debug!("Transforming: {:?}", f.path());
 
             // For each function, iterate over every BB

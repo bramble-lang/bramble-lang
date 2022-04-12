@@ -30,6 +30,8 @@ pub struct Procedure {
     args: Vec<ArgDecl>,
     /// Does the function have variadic arguments
     has_varargs: bool,
+    /// This function declares an external function and should only be added as a declaration
+    is_extern: bool,
     /// The set of all user declared variables from within this function
     vars: Vec<VarDecl>,
     /// The set of all temporary variables created by the MIR compiler
@@ -54,6 +56,7 @@ impl Procedure {
             blocks: vec![],
             ret_ty,
             args: vec![],
+            is_extern: false,
             has_varargs: false,
             vars: vec![],
             temps: vec![],
@@ -85,6 +88,7 @@ impl Procedure {
             blocks: vec![],
             ret_ty,
             args,
+            is_extern: true,
             has_varargs,
             vars: vec![],
             temps: vec![],
@@ -221,6 +225,11 @@ impl Procedure {
         self.temps.push(td);
         let id = self.temps.len() - 1;
         TempId::new(id)
+    }
+
+    /// Returns true if the definition for this function is external
+    pub fn is_extern(&self) -> bool {
+        self.is_extern
     }
 
     /// Returns `true` if this function has a variadic argument

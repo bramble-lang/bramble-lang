@@ -784,6 +784,38 @@ mod mir2llvm_tests_visual {
         );
     }
 
+    #[test]
+    fn extern_fn() {
+        let r: u64 = compile_and_run(
+            "
+            extern fn llabs(i: i64) -> u64;
+
+            fn foo() -> u64 {
+                return llabs(-2);
+            }
+        ",
+            "main_foo",
+        );
+
+        assert_eq!(2, r);
+    }
+
+    #[test]
+    fn extern_fn_complex() {
+        let r: f64 = compile_and_run(
+            "
+            extern fn fmod(a: f64, b: f64) -> f64;
+
+            fn foo() -> f64 {
+                return fmod(2.0, 3.5);
+            }
+        ",
+            "main_foo",
+        );
+
+        assert_eq!(2.0, r);
+    }
+
     type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
 
     fn compile_and_print_llvm(text: &str) {
@@ -820,6 +852,9 @@ mod mir2llvm_tests_visual {
         let (sm, table, module) = compile(text);
         let mut project = MirProject::new();
         transform::transform(&module, &mut project).unwrap();
+
+        println!("=== MIR ===:");
+        println!("{}\n\n", project);
 
         let context = Context::create();
         let module = context.create_module("test");
