@@ -5,9 +5,12 @@ in MIR form.
 
 use std::fmt::Display;
 
-use crate::compiler::{
-    ast::{Path, StructDef, Type},
-    semantics::semanticnode::SemanticContext,
+use crate::{
+    compiler::{
+        ast::{Path, StructDef, Type},
+        semantics::semanticnode::SemanticContext,
+    },
+    StringId,
 };
 
 use super::{
@@ -76,6 +79,14 @@ impl MirProject {
         self.static_defs.get(id)
     }
 
+    /// Get the definition of a specific static item.
+    pub fn get_def_fn(&self, id: DefId) -> Option<&Procedure> {
+        match self.static_defs.get(id) {
+            StaticItem::Function(p) => Some(p),
+            StaticItem::StringLiteral(_) => None,
+        }
+    }
+
     /// Search the set of static definitions for an item with a [path](Path) that is equal
     /// to the given path.
     pub fn find_def(&self, path: &Path) -> Option<DefId> {
@@ -99,7 +110,10 @@ impl Display for MirProject {
         for (idx, def) in self.static_defs.defs.iter().enumerate() {
             match def {
                 StaticItem::Function(func) => {
-                    f.write_fmt(format_args!("ID: {} ::: {}\n", idx, func))?
+                    f.write_fmt(format_args!("DefId: {} ::: {}\n", idx, func))?
+                }
+                StaticItem::StringLiteral(s) => {
+                    f.write_fmt(format_args!("DefId: {} ::: StringID: {}\n", idx, s))?
                 }
             }
         }
@@ -139,6 +153,7 @@ impl StaticDefinitions {
                     *def = func;
                     Ok(idx)
                 }
+                StaticItem::StringLiteral(_) => todo!(),
             }
         } else {
             // If _not_ found then add to defs and return the DefId
@@ -153,6 +168,7 @@ impl StaticDefinitions {
     fn find(&self, path: &Path) -> Option<DefId> {
         let pos = self.defs.iter().position(|i| match i {
             StaticItem::Function(f) => f.path() == path,
+            StaticItem::StringLiteral(_) => false,
         })?;
         Some(DefId::new(pos as u32))
     }
@@ -164,8 +180,16 @@ impl StaticDefinitions {
 
     /// Return an iterator over the functions that are defined in a  MIR Program.
     fn function_iter(&self) -> impl Iterator<Item = (DefId, &Procedure)> {
-        self.defs.iter().enumerate().map(|(id, i)| match i {
-            StaticItem::Function(f) => (DefId(id as u32), f),
+        self.defs.iter().enumerate().filter_map(|(id, i)| match i {
+            StaticItem::Function(f) => Some((DefId(id as u32), f)),
+            StaticItem::StringLiteral(_) => None,
+        })
+    }
+
+    fn string_literal_iter(&self) -> impl Iterator<Item = (DefId, &StringId)> {
+        self.defs.iter().enumerate().filter_map(|(id, i)| match i {
+            StaticItem::Function(_) => None,
+            StaticItem::StringLiteral(s) => Some((DefId(id as u32), s)),
         })
     }
 }
@@ -192,6 +216,7 @@ impl Display for DefId {
 #[derive(Debug, PartialEq)]
 pub enum StaticItem {
     Function(Procedure),
+    StringLiteral(StringId),
 }
 
 #[derive(Debug)]

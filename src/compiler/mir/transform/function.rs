@@ -262,7 +262,10 @@ impl<'a> FuncTransformer<'a> {
         let reentry_bb = self.mir.new_bb();
 
         // Look up the declaration of the target function
-        let StaticItem::Function(func) = self.project.get_def(fn_id);
+        let func = self
+            .project
+            .get_def_fn(fn_id)
+            .expect("No function bound to given DefId");
 
         // Create a temp location for the result value of the function call
         let result = self.mir.temp(func.ret_ty(), ctx.span());
