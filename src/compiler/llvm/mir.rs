@@ -249,7 +249,9 @@ impl<'module, 'ctx> LlvmProgramBuilder<'module, 'ctx> {
     /// Given a [`TypeId`] this will return its associated LLVM [`AnyTypeEnum`] variant.
     /// If the [`TypeId`] has no associated LLVM type then an error is returned.
     fn get_type(&self, id: TypeId) -> Result<&AnyTypeEnum<'ctx>, TransformerError> {
-        self.ty_table.get(&id).ok_or(TransformerError::TypeNotFound)
+        self.ty_table
+            .get(&id)
+            .ok_or_else(|| TransformerError::TypeNotFound(id))
     }
 
     /// Given a type, determine how a value of that type is returned from a function to
