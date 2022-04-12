@@ -25,7 +25,7 @@ mod mir2llvm_tests_visual {
             semantics::semanticnode::SemanticContext,
             CompilerDisplay, CompilerError, Lexer, SourceMap,
         },
-        llvm::mir::{LlvmProgram, LlvmProgramBuilder},
+        llvm::mir::LlvmProgramBuilder,
         resolve_types, StringTable,
     };
 
@@ -807,13 +807,13 @@ mod mir2llvm_tests_visual {
             extern fn fmod(a: f64, b: f64) -> f64;
 
             fn foo() -> f64 {
-                return fmod(2.0, 3.5);
+                return fmod(2.2, 3.5);
             }
         ",
             "main_foo",
         );
 
-        assert_eq!(2.0, r);
+        assert_eq!(2.2, r);
     }
 
     type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
