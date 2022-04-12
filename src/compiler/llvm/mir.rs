@@ -499,8 +499,6 @@ pub struct LlvmFunctionBuilder<'p, 'module, 'ctx> {
     /// variables after they have been allocated.
     temps: HashMap<TempId, Location<'ctx>>,
 
-    string_literals: HashMap<StringId, Location<'ctx>>,
-
     /// Table to manage looking up the LLVM BasicBlock via the [`BasicBlockId`].
     /// Some [`BasicBlockIds`](BasicBlockId) may map to the same
     /// [`inkwell::BasicBlock`](inkwell::basic_block::BasicBlock). This is because
@@ -546,7 +544,6 @@ impl<'p, 'module, 'ctx> LlvmFunctionBuilder<'p, 'module, 'ctx> {
             ret_ptr,
             vars: HashMap::default(),
             temps: HashMap::default(),
-            string_literals: HashMap::default(),
             blocks: HashMap::default(),
         }
     }
@@ -1011,29 +1008,27 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
     }
 
     fn string_literal(&mut self, id: StringId) -> BasicValueEnum<'ctx> {
-        if self.string_literals.contains_key(&id) {
-            match self.string_literals.get(&id) {
-                Some(l) => l.into_pointer().unwrap().into(),
-                None => todo!(),
+        let label = self.create_stringpool_label(id);
+        match self.program.module.get_global(&label) {
+            Some(g) => g.as_pointer_value().into(),
+            None => {
+                let s = self.program.str_table.get(id).unwrap();
+                let escaped_s = super::llvmir::convert_esc_seq_to_ascii(&s).unwrap();
+                let len_w_null = escaped_s.len() + 1;
+                let g = self.program.module.add_global(
+                    self.program.context.i8_type().array_type(len_w_null as u32),
+                    None,
+                    &self.create_stringpool_label(id),
+                );
+                g.set_initializer(
+                    &self
+                        .program
+                        .context
+                        .const_string(escaped_s.as_bytes(), true),
+                );
+                let ptr = g.as_pointer_value();
+                ptr.into()
             }
-        } else {
-            let s = self.program.str_table.get(id).unwrap();
-            let escaped_s = super::llvmir::convert_esc_seq_to_ascii(&s).unwrap();
-            let len_w_null = escaped_s.len() + 1;
-            let g = self.program.module.add_global(
-                self.program.context.i8_type().array_type(len_w_null as u32),
-                None,
-                &self.create_stringpool_label(id),
-            );
-            g.set_initializer(
-                &self
-                    .program
-                    .context
-                    .const_string(escaped_s.as_bytes(), true),
-            );
-            let ptr = g.as_pointer_value();
-            self.string_literals.insert(id, Location::Pointer(ptr));
-            ptr.into()
         }
     }
 
