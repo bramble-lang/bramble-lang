@@ -827,13 +827,14 @@ mod mir2llvm_tests_visual {
             extern fn strlen(s: string) -> u64;
 
             fn foo() -> u64 {
-                let s: string := strcat(\"hello\", \", world\");
+                let s: string := bar(\"hello\", \", world\");
                 printf(\"%s\\n\", s);
-                return bar(s);
+                return strlen(s);
             }
 
-            fn bar(s: string) -> u64 {
-                return strlen(s);
+            fn bar(a: string, b: string) -> string {
+                let s: string := strcat(a, b);
+                return s;
             }
         ",
             "main_foo",
