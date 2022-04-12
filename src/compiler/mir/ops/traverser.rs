@@ -277,7 +277,7 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
             Constant::U64(u) => self.xfmr.const_u64(u),
             Constant::F64(f) => self.xfmr.const_f64(f),
             Constant::Bool(b) => self.xfmr.const_bool(b),
-            Constant::StringLiteral(_) => todo!(),
+            Constant::StringLiteral(s) => self.xfmr.string_literal(s),
             Constant::Null => todo!(),
             Constant::SizeOf(_) => todo!(),
         }

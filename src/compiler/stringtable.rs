@@ -90,7 +90,7 @@ impl StringTable {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Debug, Default)]
+#[derive(Clone, Copy, PartialEq, Debug, Default, Hash, Eq)]
 pub struct StringId(u32);
 
 impl StringId {

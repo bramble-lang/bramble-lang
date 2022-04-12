@@ -816,6 +816,21 @@ mod mir2llvm_tests_visual {
         assert_eq!(2.2, r);
     }
 
+    #[test]
+    fn string_literal() {
+        let _: () = compile_and_run(
+            "
+            extern fn printf(s: string, ...);
+
+            fn foo() {
+                printf(\"hello\\n\");
+                return;
+            }
+        ",
+            "main_foo",
+        );
+    }
+
     type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
 
     fn compile_and_print_llvm(text: &str) {

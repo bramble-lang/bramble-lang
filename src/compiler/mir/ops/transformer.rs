@@ -18,10 +18,13 @@
 
 use std::{collections::VecDeque, fmt::Debug};
 
-use crate::compiler::{
-    ast::Path,
-    mir::{ir::*, project::DefId, typetable::FieldId, MirTypeDef, TypeId},
-    Span,
+use crate::{
+    compiler::{
+        ast::Path,
+        mir::{ir::*, project::DefId, typetable::FieldId, MirTypeDef, TypeId},
+        Span,
+    },
+    StringId,
 };
 
 /// Defines the interface used by the [`ProgramTraverser`](super::ProgramTraverser)
@@ -155,6 +158,9 @@ pub trait FunctionBuilder<L, V> {
 
     /// Create a const [`f64`].
     fn const_f64(&self, f: f64) -> V;
+
+    /// Returns a pointer to the given string literal
+    fn string_literal(&mut self, s: StringId) -> V;
 
     /// Add two values together
     fn i_add(&self, a: V, b: V) -> Result<V, TransformerError>;
