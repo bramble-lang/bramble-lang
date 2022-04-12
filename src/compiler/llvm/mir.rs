@@ -115,12 +115,6 @@ impl<'module, 'ctx> LlvmProgram<'module, 'ctx> {
         self.module.print_to_stderr()
     }
 
-    pub fn create_engine(
-        &self,
-    ) -> Result<inkwell::execution_engine::ExecutionEngine, inkwell::support::LLVMString> {
-        self.module.create_interpreter_execution_engine()
-    }
-
     /// Print the assembly representation of this Bramble program to `stdout`
     pub fn print_asm(&self) {
         // Get target for current machine
