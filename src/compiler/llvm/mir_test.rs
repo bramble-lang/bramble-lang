@@ -829,6 +829,10 @@ mod mir2llvm_tests_visual {
             fn foo() -> u64 {
                 let s: string := strcat(\"hello\", \", world\");
                 printf(\"%s\\n\", s);
+                return bar(s);
+            }
+
+            fn bar(s: string) -> u64 {
                 return strlen(s);
             }
         ",
