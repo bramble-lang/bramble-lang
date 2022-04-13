@@ -87,8 +87,18 @@ impl MirProject {
         }
     }
 
+    /// Adds a new [String Literal](StringId) to the static definition table of this project
     pub fn add_string_literal(&mut self, id: StringId) -> Result<DefId, StaticDefinitionError> {
         self.static_defs.add_string_literal(id)
+    }
+
+    /// Will return a [`StringId`] if the given [`DefId`] maps to a string literal, otherwise,
+    /// this will return [`None`].
+    pub fn get_def_string(&self, id: DefId) -> Option<StringId> {
+        match self.static_defs.get(id) {
+            StaticItem::Function(_) => None,
+            StaticItem::StringLiteral(s) => Some(*s),
+        }
     }
 
     /// Search the set of static definitions for an item with a [path](Path) that is equal
@@ -226,7 +236,7 @@ impl StaticDefinitions {
 pub struct DefId(u32);
 
 impl DefId {
-    fn new(id: u32) -> DefId {
+    pub fn new(id: u32) -> DefId {
         DefId(id)
     }
 }

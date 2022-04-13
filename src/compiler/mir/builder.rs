@@ -5,7 +5,7 @@ use crate::{
     StringId,
 };
 
-use super::{ir::*, typetable::*};
+use super::{ir::*, typetable::*, DefId};
 
 /// Provides a Builder interface for constructing the MIR CFG representation of a
 /// routine. This will keep track of the current [`BasicBlock`] and make sure that
@@ -125,7 +125,7 @@ impl MirProcedureBuilder {
     }
 
     /// Create a reference to a string literal
-    pub fn const_stringliteral(&self, s: StringId) -> Operand {
+    pub fn const_stringliteral(&self, s: DefId) -> Operand {
         Operand::Constant(Constant::StringLiteral(s))
     }
 

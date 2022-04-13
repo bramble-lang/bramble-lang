@@ -523,7 +523,7 @@ pub mod tests {
             (
                 Type::StringLiteral,
                 Expression::StringLiteral((), hello),
-                Constant::StringLiteral(hello),
+                Constant::StringLiteral(DefId::new(1)),
             ),
             (
                 Type::RawPointer(PointerMut::Const, Box::new(Type::I16)),
