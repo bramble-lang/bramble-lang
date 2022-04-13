@@ -13,8 +13,6 @@ mod mir2llvm_tests_visual {
     //! used correctly: if LLVM is incorrectly used then it will fault and the unit tests
     //! will fail.
 
-    use std::ffi::{CStr, CString};
-
     use inkwell::{context::Context, execution_engine::JitFunction};
 
     use crate::{
