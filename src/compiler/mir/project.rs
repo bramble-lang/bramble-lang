@@ -87,6 +87,10 @@ impl MirProject {
         }
     }
 
+    pub fn add_string_literal(&mut self, id: StringId) -> Result<DefId, StaticDefinitionError> {
+        self.static_defs.add_string_literal(id)
+    }
+
     /// Search the set of static definitions for an item with a [path](Path) that is equal
     /// to the given path.
     pub fn find_def(&self, path: &Path) -> Option<DefId> {
@@ -99,6 +103,7 @@ impl MirProject {
         self.static_defs.function_iter()
     }
 
+    /// Returns an [`Iterator`] over all the types defined within this project.
     pub fn type_iter(&self) -> impl Iterator<Item = (TypeId, &MirTypeDef)> {
         self.types.iter()
     }
@@ -157,10 +162,23 @@ impl StaticDefinitions {
             }
         } else {
             // If _not_ found then add to defs and return the DefId
-            self.defs.push(StaticItem::Function(func));
-            let idx = self.defs.len() - 1;
-            Ok(DefId::new(idx as u32))
+            Ok(self.add_item(StaticItem::Function(func)))
         }
+    }
+
+    /// Adds a [`String Literal`](StringId) to the static memory table of this project.
+    fn add_string_literal(&mut self, id: StringId) -> Result<DefId, StaticDefinitionError> {
+        if let Some(s) = self.find_string_literal(id) {
+            Ok(s)
+        } else {
+            Ok(self.add_item(StaticItem::StringLiteral(id)))
+        }
+    }
+
+    fn add_item(&mut self, item: StaticItem) -> DefId {
+        self.defs.push(item);
+        let idx = self.defs.len() - 1;
+        DefId::new(idx as u32)
     }
 
     /// Search this table for an item with the given [`Path`]. If one is found, then
@@ -169,6 +187,14 @@ impl StaticDefinitions {
         let pos = self.defs.iter().position(|i| match i {
             StaticItem::Function(f) => f.path() == path,
             StaticItem::StringLiteral(_) => false,
+        })?;
+        Some(DefId::new(pos as u32))
+    }
+
+    fn find_string_literal(&self, id: StringId) -> Option<DefId> {
+        let pos = self.defs.iter().position(|i| match i {
+            StaticItem::Function(_) => false,
+            StaticItem::StringLiteral(s) => *s == id,
         })?;
         Some(DefId::new(pos as u32))
     }
