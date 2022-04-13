@@ -275,6 +275,22 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
+    fn unsigned_comparisons_bounds() {
+        let r: bool = compile_and_run(
+            "
+            fn test() -> bool {
+                let x: u8 := 200u8;
+                let y: u8 := 212u8;
+
+                return x < y;
+            }
+        ",
+            "main_test",
+        );
+        assert_eq!(true, r);
+    }
+
+    #[test]
     fn float_comparison() {
         let text = "
             fn test() {
