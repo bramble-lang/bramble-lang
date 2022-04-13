@@ -265,6 +265,7 @@ mod mir2llvm_tests_visual {
             }
         ",
             "main_test",
+            &[],
         );
         assert_eq!(true, r);
     }
@@ -302,6 +303,7 @@ mod mir2llvm_tests_visual {
             }
         ",
             "main_test",
+            &[],
         );
         assert_eq!(true, r);
     }
@@ -637,9 +639,10 @@ mod mir2llvm_tests_visual {
     fn if_expr() {
         compile_and_print_llvm(
             "
-            fn test() {
-                let x: i64 := if (true) {2} else {3};
-                return;
+            fn test(b: bool) -> i64 {
+                let mut y: i64 := 2;
+                let x: i64 := if (b) {mut y := 3; y} else {mut y:= 4; y};
+                return x;
             }
         ",
         );
@@ -660,6 +663,7 @@ mod mir2llvm_tests_visual {
             }
         ",
             "main_test",
+            &[],
         );
         assert_eq!(5, r);
     }
@@ -781,6 +785,7 @@ mod mir2llvm_tests_visual {
             }
         ",
             "main_foo",
+            &[],
         );
 
         assert_eq!(2, result);
@@ -846,6 +851,7 @@ mod mir2llvm_tests_visual {
             }
         ",
             "main_foo",
+            &[],
         );
 
         assert_eq!(2, r);
@@ -862,6 +868,7 @@ mod mir2llvm_tests_visual {
             }
         ",
             "main_foo",
+            &[],
         );
 
         assert_eq!(2.2, r);
@@ -887,6 +894,7 @@ mod mir2llvm_tests_visual {
             }
         ",
             "main_foo",
+            &[],
         );
         assert_eq!("hello, world".len(), r as usize);
     }
@@ -923,7 +931,7 @@ mod mir2llvm_tests_visual {
         llvm.print_asm();
     }
 
-    fn compile_and_run<R: std::fmt::Debug>(text: &str, func_name: &str) -> R {
+    fn compile_and_run<R: std::fmt::Debug>(text: &str, func_name: &str, params: &[Value]) -> R {
         let (sm, table, module) = compile(text);
         let mut project = MirProject::new();
         transform::transform(&module, &mut project).unwrap();
@@ -991,5 +999,9 @@ mod mir2llvm_tests_visual {
                 panic!("{}", err.fmt(&sm, &table).unwrap());
             }
         }
+    }
+
+    pub enum Value {
+        Bool(bool),
     }
 }
