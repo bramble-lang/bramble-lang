@@ -614,6 +614,25 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
+    fn while_expr() {
+        let r: i64 = compile_and_run(
+            "
+            fn test() -> i64{
+                let mut x: i64 := 0;
+
+                while (x < 5) {
+                    mut x:= x + 1;
+                };
+
+                return x;
+            }
+        ",
+            "main_test",
+        );
+        assert_eq!(5, r);
+    }
+
+    #[test]
     fn var_scopes() {
         compile_and_print_llvm(
             "

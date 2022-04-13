@@ -9,7 +9,6 @@ use log::debug;
 use crate::{
     compiler::{
         ast::{self, *},
-        mir::project::StaticItem,
         semantics::semanticnode::SemanticContext,
         source::Offset,
         Span,
