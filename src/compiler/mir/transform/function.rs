@@ -127,7 +127,12 @@ impl<'a> FuncTransformer<'a> {
             Expression::F64(_, f) => self.mir.const_f64(*f),
             Expression::Null(_) => self.mir.const_null(),
             Expression::Boolean(_, b) => self.mir.const_bool(*b),
-            Expression::StringLiteral(_, sid) => self.mir.const_stringliteral(*sid),
+            Expression::StringLiteral(_, sid) => {
+                // If it exists Get static definition of the string literal
+                let def_id = self.project.add_string_literal(*sid).unwrap();
+                // Otherwise, add the string literal to hte static definition table
+                self.mir.const_stringliteral(def_id)
+            }
 
             // Operations
             Expression::BinaryOp(ctx, op, left, right) => {
@@ -262,7 +267,10 @@ impl<'a> FuncTransformer<'a> {
         let reentry_bb = self.mir.new_bb();
 
         // Look up the declaration of the target function
-        let StaticItem::Function(func) = self.project.get_def(fn_id);
+        let func = self
+            .project
+            .get_def_fn(fn_id)
+            .expect("No function bound to given DefId");
 
         // Create a temp location for the result value of the function call
         let result = self.mir.temp(func.ret_ty(), ctx.span());

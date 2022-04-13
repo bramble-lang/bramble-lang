@@ -294,7 +294,7 @@ pub mod tests {
 
         let path: Path = to_path(&["main", "test"], &table);
         let def_id = project.find_def(&path).unwrap();
-        let StaticItem::Function(mir) = project.get_def(def_id);
+        let mir = project.get_def_fn(def_id).unwrap();
 
         let bb = mir.get_bb(BasicBlockId::new(0));
         let first = bb.get_stm(0);
@@ -342,7 +342,7 @@ pub mod tests {
 
         let path: Path = to_path(&["main", "test"], &table);
         let def_id = project.find_def(&path).unwrap();
-        let StaticItem::Function(mir) = project.get_def(def_id);
+        let mir = project.get_def_fn(def_id).unwrap();
 
         let bb = mir.get_bb(BasicBlockId::new(0));
         let last = bb.get_stm(bb.len() - 1);
@@ -376,7 +376,7 @@ pub mod tests {
 
         let path: Path = to_path(&["main", "test"], &table);
         let def_id = project.find_def(&path).unwrap();
-        let StaticItem::Function(mir) = project.get_def(def_id);
+        let mir = project.get_def_fn(def_id).unwrap();
 
         let bb = mir.get_bb(BasicBlockId::new(0));
         let last = bb.get_stm(bb.len() - 1);
@@ -437,7 +437,7 @@ pub mod tests {
 
                 let path: Path = to_path(&["main", "test"], &table);
                 let def_id = project.find_def(&path).unwrap();
-                let StaticItem::Function(mir) = project.get_def(def_id);
+                let mir = project.get_def_fn(def_id).unwrap();
 
                 let bb = mir.get_bb(BasicBlockId::new(0));
                 let stm = bb.get_stm(3);
@@ -493,7 +493,7 @@ pub mod tests {
 
                 let path: Path = to_path(&["main", "test"], &table);
                 let def_id = project.find_def(&path).unwrap();
-                let StaticItem::Function(mir) = project.get_def(def_id);
+                let mir = project.get_def_fn(def_id).unwrap();
 
                 let bb = mir.get_bb(BasicBlockId::new(0));
                 let stm = bb.get_stm(1);
@@ -523,7 +523,7 @@ pub mod tests {
             (
                 Type::StringLiteral,
                 Expression::StringLiteral((), hello),
-                Constant::StringLiteral(hello),
+                Constant::StringLiteral(DefId::new(1)),
             ),
             (
                 Type::RawPointer(PointerMut::Const, Box::new(Type::I16)),
@@ -552,7 +552,7 @@ pub mod tests {
 
             let path: Path = to_path(&["main", "test"], &table);
             let def_id = project.find_def(&path).unwrap();
-            let StaticItem::Function(mir) = project.get_def(def_id);
+            let mir = project.get_def_fn(def_id).unwrap();
 
             let bb = mir.get_bb(BasicBlockId::new(0));
             let stm = bb.get_stm(0);
@@ -647,7 +647,7 @@ pub mod tests {
 
                 let path: Path = to_path(&["main", "test"], &table);
                 let def_id = project.find_def(&path).unwrap();
-                let StaticItem::Function(mir) = project.get_def(def_id);
+                let mir = project.get_def_fn(def_id).unwrap();
 
                 let bb = mir.get_bb(BasicBlockId::new(0));
                 let stm = bb.get_stm(0);
@@ -718,7 +718,7 @@ pub mod tests {
 
             let path: Path = to_path(&["main", "test"], &table);
             let def_id = project.find_def(&path).unwrap();
-            let StaticItem::Function(mir) = project.get_def(def_id);
+            let mir = project.get_def_fn(def_id).unwrap();
 
             let bb = mir.get_bb(BasicBlockId::new(0));
             let stm = bb.get_stm(0);
@@ -764,7 +764,7 @@ pub mod tests {
 
                 let path: Path = to_path(&["main", "test"], &table);
                 let def_id = project.find_def(&path).unwrap();
-                let StaticItem::Function(mir) = project.get_def(def_id);
+                let mir = project.get_def_fn(def_id).unwrap();
 
                 let bb = mir.get_bb(BasicBlockId::new(0));
                 let stm = bb.get_stm(0);
@@ -814,7 +814,7 @@ pub mod tests {
 
             let path: Path = to_path(&["main", "test"], &table);
             let def_id = project.find_def(&path).unwrap();
-            let StaticItem::Function(mir) = project.get_def(def_id);
+            let mir = project.get_def_fn(def_id).unwrap();
 
             let bb = mir.get_bb(BasicBlockId::new(0));
 
@@ -868,7 +868,7 @@ pub mod tests {
 
             let path: Path = to_path(&["main", "test"], &table);
             let def_id = project.find_def(&path).unwrap();
-            let StaticItem::Function(mir) = project.get_def(def_id);
+            let mir = project.get_def_fn(def_id).unwrap();
 
             let bb = mir.get_bb(BasicBlockId::new(0));
             let stm = bb.get_stm(0);
@@ -896,7 +896,7 @@ pub mod tests {
 
         let path: Path = to_path(&["main", "test"], &table);
         let def_id = project.find_def(&path).unwrap();
-        let StaticItem::Function(mir) = project.get_def(def_id);
+        let mir = project.get_def_fn(def_id).unwrap();
 
         // Check that the right number of BBs are created
         assert_eq!(mir.len(), 1);
@@ -940,7 +940,7 @@ pub mod tests {
 
         let path: Path = to_path(&["main", "test"], &table);
         let def_id = project.find_def(&path).unwrap();
-        let StaticItem::Function(mir) = project.get_def(def_id);
+        let mir = project.get_def_fn(def_id).unwrap();
 
         // Check that the right number of BBs are created
         assert_eq!(mir.len(), 1);
@@ -996,7 +996,7 @@ pub mod tests {
 
         let path: Path = to_path(&["main", "test"], &table);
         let def_id = project.find_def(&path).unwrap();
-        let StaticItem::Function(mir) = project.get_def(def_id);
+        let mir = project.get_def_fn(def_id).unwrap();
 
         // Check that the right number of BBs are created
         assert_eq!(mir.len(), 4);
@@ -1049,7 +1049,7 @@ pub mod tests {
 
         let path: Path = to_path(&["main", "test"], &table);
         let def_id = project.find_def(&path).unwrap();
-        let StaticItem::Function(mir) = project.get_def(def_id);
+        let mir = project.get_def_fn(def_id).unwrap();
 
         assert_eq!(mir.len(), 1);
         let bb = mir.get_bb(BasicBlockId::new(0));
@@ -1101,7 +1101,7 @@ pub mod tests {
 
         let path: Path = to_path(&["main", "test"], &table);
         let def_id = project.find_def(&path).unwrap();
-        let StaticItem::Function(mir) = project.get_def(def_id);
+        let mir = project.get_def_fn(def_id).unwrap();
 
         assert_eq!(mir.len(), 1);
         let bb = mir.get_bb(BasicBlockId::new(0));
@@ -1161,13 +1161,13 @@ pub mod tests {
 
         let path: Path = to_path(&["main", "test"], &table);
         let def_id = project.find_def(&path).unwrap();
-        let StaticItem::Function(mir) = project.get_def(def_id);
+        let mir = project.get_def_fn(def_id).unwrap();
         assert_eq!(mir.len(), 1);
         assert_eq!(mir.path(), &path);
 
         let path2: Path = to_path(&["main", "test2"], &table);
         let def2_id = project.find_def(&path2).unwrap();
-        let StaticItem::Function(mir2) = project.get_def(def2_id);
+        let mir2 = project.get_def_fn(def2_id).unwrap();
         assert_eq!(mir2.len(), 1);
         assert_eq!(mir2.path(), &path2);
 
@@ -1193,7 +1193,7 @@ pub mod tests {
 
         let path: Path = to_path(&["main", "test"], &table);
         let def_id = project.find_def(&path).unwrap();
-        let StaticItem::Function(mir) = project.get_def(def_id);
+        let mir = project.get_def_fn(def_id).unwrap();
         assert_eq!(mir.len(), 2); // There should be 2: the first BB calls the func and the second is the reentry BB
         assert_eq!(mir.path(), &path);
 
@@ -1245,7 +1245,7 @@ pub mod tests {
 
         let path: Path = to_path(&["main", "test"], &table);
         let def_id = project.find_def(&path).unwrap();
-        let StaticItem::Function(mir) = project.get_def(def_id);
+        let mir = project.get_def_fn(def_id).unwrap();
         assert_eq!(mir.len(), 2); // There should be 2: the first BB calls the func and the second is the reentry BB
         assert_eq!(mir.path(), &path);
 
@@ -1293,7 +1293,7 @@ pub mod tests {
 
         let path: Path = to_path(&["main", "test"], &table);
         let expected_target = project.find_def(&path).unwrap();
-        let StaticItem::Function(mir) = project.get_def(expected_target);
+        let mir = project.get_def_fn(expected_target).unwrap();
         assert_eq!(mir.len(), 2); // There should be 2: the first BB calls the func and the second is the reentry BB
         assert_eq!(mir.path(), &path);
 
@@ -1338,7 +1338,7 @@ pub mod tests {
 
         let path: Path = to_path(&["main", "test"], &table);
         let def_id = project.find_def(&path).unwrap();
-        let StaticItem::Function(mir) = project.get_def(def_id);
+        let mir = project.get_def_fn(def_id).unwrap();
         assert_eq!(mir.len(), 2); // There should be 2: the first BB calls the func and the second is the reentry BB
         assert_eq!(mir.path(), &path);
 
@@ -1387,7 +1387,7 @@ pub mod tests {
 
         let path: Path = to_path(&["main", "test"], &table);
         let def_id = project.find_def(&path).unwrap();
-        let StaticItem::Function(mir) = project.get_def(def_id);
+        let mir = project.get_def_fn(def_id).unwrap();
         assert_eq!(mir.len(), 2); // There should be 2: the first BB calls the func and the second is the reentry BB
         assert_eq!(mir.path(), &path);
 
@@ -1396,7 +1396,7 @@ pub mod tests {
         let expected_target = project.find_def(&path).unwrap();
 
         // check that the extern is variadic
-        let StaticItem::Function(target_def) = project.get_def(expected_target);
+        let target_def = project.get_def_fn(expected_target).unwrap();
         assert!(target_def.has_varargs());
 
         // Check the BB terminator
@@ -1439,7 +1439,7 @@ pub mod tests {
 
         let path: Path = to_path(&["main", "test"], &table);
         let def_id = project.find_def(&path).unwrap();
-        let StaticItem::Function(mir) = project.get_def(def_id);
+        let mir = project.get_def_fn(def_id).unwrap();
 
         // Check that the right number of BBs are created
         assert_eq!(mir.len(), 1);
@@ -1477,7 +1477,7 @@ pub mod tests {
 
         let path: Path = to_path(&["main", "test"], &table);
         let def_id = project.find_def(&path).unwrap();
-        let StaticItem::Function(mir) = project.get_def(def_id);
+        let mir = project.get_def_fn(def_id).unwrap();
 
         assert_eq!(mir.len(), 1);
         let bb = mir.get_bb(BasicBlockId::new(0));

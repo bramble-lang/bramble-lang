@@ -1602,7 +1602,7 @@ impl ast::Type {
 }
 
 /// Convert any escape senquences to their ascii codes
-fn convert_esc_seq_to_ascii(s: &str) -> Result<String> {
+pub fn convert_esc_seq_to_ascii(s: &str) -> Result<String> {
     let mut is_escape = false;
     let mut escaped_str = String::new();
     for c in s.chars() {

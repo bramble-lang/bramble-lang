@@ -22,7 +22,7 @@ use crate::{
         },
         CompilerDisplay, SourceMap, Span,
     },
-    StringTable,
+    StringId, StringTable,
 };
 
 use super::llvmir::{get_ptr_alignment, LlvmIsAggregateType, LlvmToBasicTypeEnum};
@@ -470,7 +470,13 @@ impl MirBaseType {
             MirBaseType::Unit => Some(context.void_type().into()),
             // TODO: Should Null this actually make it to MIR?
             MirBaseType::Null => None,
-            MirBaseType::StringLiteral => None,
+            MirBaseType::StringLiteral => Some(
+                context
+                    .i8_type()
+                    .array_type(0)
+                    .ptr_type(AddressSpace::Generic)
+                    .into(),
+            ),
         }
     }
 }
@@ -538,7 +544,7 @@ impl<'p, 'module, 'ctx> LlvmFunctionBuilder<'p, 'module, 'ctx> {
             ret_ptr,
             vars: HashMap::default(),
             temps: HashMap::default(),
-            blocks: HashMap::new(),
+            blocks: HashMap::default(),
         }
     }
 
@@ -582,6 +588,20 @@ impl<'p, 'module, 'ctx> LlvmFunctionBuilder<'p, 'module, 'ctx> {
 
     fn temp_label(&self, id: TempId) -> String {
         format!("_{}", id.index())
+    }
+
+    /// Convert the ID of a string to the name of the global variable that
+    /// references that string
+    fn create_stringpool_label(&self, id: StringId) -> String {
+        format!(
+            "str_{}_{}",
+            self.program
+                .module
+                .get_name()
+                .to_str()
+                .expect("Expected a valid UTF string for the Module name"),
+            id
+        )
     }
 
     fn build_memcpy(&mut self, dest: PointerValue<'ctx>, src: PointerValue<'ctx>, span: Span) {
@@ -985,6 +1005,31 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
 
     fn const_f64(&self, f: f64) -> BasicValueEnum<'ctx> {
         self.program.context.f64_type().const_float(f).into()
+    }
+
+    fn string_literal(&mut self, id: StringId) -> BasicValueEnum<'ctx> {
+        let label = self.create_stringpool_label(id);
+        match self.program.module.get_global(&label) {
+            Some(g) => g.as_pointer_value().into(),
+            None => {
+                let s = self.program.str_table.get(id).unwrap();
+                let escaped_s = super::llvmir::convert_esc_seq_to_ascii(&s).unwrap();
+                let len_w_null = escaped_s.len() + 1;
+                let g = self.program.module.add_global(
+                    self.program.context.i8_type().array_type(len_w_null as u32),
+                    None,
+                    &self.create_stringpool_label(id),
+                );
+                g.set_initializer(
+                    &self
+                        .program
+                        .context
+                        .const_string(escaped_s.as_bytes(), true),
+                );
+                let ptr = g.as_pointer_value();
+                ptr.into()
+            }
+        }
     }
 
     fn i_add(

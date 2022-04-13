@@ -13,6 +13,8 @@ mod mir2llvm_tests_visual {
     //! used correctly: if LLVM is incorrectly used then it will fault and the unit tests
     //! will fail.
 
+    use std::ffi::{CStr, CString};
+
     use inkwell::{context::Context, execution_engine::JitFunction};
 
     use crate::{
@@ -814,6 +816,30 @@ mod mir2llvm_tests_visual {
         );
 
         assert_eq!(2.2, r);
+    }
+
+    #[test]
+    fn string_literal() {
+        let r: u64 = compile_and_run(
+            "
+            extern fn printf(s: string, ...);
+            extern fn strcat(a: string, b: string) -> string;
+            extern fn strlen(s: string) -> u64;
+
+            fn foo() -> u64 {
+                let s: string := bar(\"hello\", \", world\");
+                printf(\"%s\\n\", s);
+                return strlen(s);
+            }
+
+            fn bar(a: string, b: string) -> string {
+                let s: string := strcat(a, b);
+                return s;
+            }
+        ",
+            "main_foo",
+        );
+        assert_eq!("hello, world".len(), r as usize);
     }
 
     type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
