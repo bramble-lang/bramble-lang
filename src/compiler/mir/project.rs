@@ -168,7 +168,7 @@ impl StaticDefinitions {
                     *def = func;
                     Ok(idx)
                 }
-                StaticItem::StringLiteral(_) => todo!(),
+                StaticItem::StringLiteral(_) => Err(StaticDefinitionError::NotFunction),
             }
         } else {
             // If _not_ found then add to defs and return the DefId
@@ -256,4 +256,6 @@ pub enum StaticItem {
 }
 
 #[derive(Debug)]
-pub enum StaticDefinitionError {}
+pub enum StaticDefinitionError {
+    NotFunction,
+}
