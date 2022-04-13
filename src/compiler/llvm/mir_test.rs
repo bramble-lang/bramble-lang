@@ -279,8 +279,8 @@ mod mir2llvm_tests_visual {
         let r: bool = compile_and_run(
             "
             fn test() -> bool {
-                let x: u8 := 200u8;
-                let y: u8 := 212u8;
+                let x: u8 := 5u8;
+                let y: u8 := 200u8;
 
                 return x < y;
             }
@@ -926,6 +926,12 @@ mod mir2llvm_tests_visual {
         // Traverser is given a MirProject
         // call traverser.map(llvm) this will use the llvm xfmr to map MirProject to LlvmProject
         proj_traverser.map(&mut xfmr);
+
+        let llvm = xfmr.complete();
+
+        // Print LLVM
+        println!("=== LLVM IR ===:");
+        llvm.print_to_stderr();
 
         let engine = module
             .create_jit_execution_engine(inkwell::OptimizationLevel::None)
