@@ -13,7 +13,12 @@ mod mir2llvm_tests_visual {
     //! used correctly: if LLVM is incorrectly used then it will fault and the unit tests
     //! will fail.
 
-    use inkwell::{context::Context, execution_engine::JitFunction};
+    use inkwell::{
+        context::Context,
+        execution_engine::JitFunction,
+        types::IntType,
+        values::{GenericValue, IntValue},
+    };
 
     use crate::{
         compiler::{
@@ -265,7 +270,6 @@ mod mir2llvm_tests_visual {
             }
         ",
             "main_test",
-            &[],
         );
         assert_eq!(true, r);
     }
@@ -303,7 +307,6 @@ mod mir2llvm_tests_visual {
             }
         ",
             "main_test",
-            &[],
         );
         assert_eq!(true, r);
     }
@@ -637,15 +640,24 @@ mod mir2llvm_tests_visual {
 
     #[test]
     fn if_expr() {
-        compile_and_print_llvm(
+        let r: i64 = compile_and_run(
             "
+            fn run() -> i64 {
+                let a: i64 := test(true);
+                let b: i64 := test(false);
+
+                return a + b;
+            }
+
             fn test(b: bool) -> i64 {
                 let mut y: i64 := 2;
                 let x: i64 := if (b) {mut y := 3; y} else {mut y:= 4; y};
                 return x;
             }
         ",
+            "main_run",
         );
+        assert_eq!(7, r);
     }
 
     #[test]
@@ -663,7 +675,6 @@ mod mir2llvm_tests_visual {
             }
         ",
             "main_test",
-            &[],
         );
         assert_eq!(5, r);
     }
@@ -785,7 +796,6 @@ mod mir2llvm_tests_visual {
             }
         ",
             "main_foo",
-            &[],
         );
 
         assert_eq!(2, result);
@@ -851,7 +861,6 @@ mod mir2llvm_tests_visual {
             }
         ",
             "main_foo",
-            &[],
         );
 
         assert_eq!(2, r);
@@ -868,7 +877,6 @@ mod mir2llvm_tests_visual {
             }
         ",
             "main_foo",
-            &[],
         );
 
         assert_eq!(2.2, r);
@@ -894,7 +902,6 @@ mod mir2llvm_tests_visual {
             }
         ",
             "main_foo",
-            &[],
         );
         assert_eq!("hello, world".len(), r as usize);
     }
@@ -931,7 +938,7 @@ mod mir2llvm_tests_visual {
         llvm.print_asm();
     }
 
-    fn compile_and_run<R: std::fmt::Debug>(text: &str, func_name: &str, params: &[Value]) -> R {
+    fn compile_and_run<R: std::fmt::Debug>(text: &str, func_name: &str) -> R {
         let (sm, table, module) = compile(text);
         let mut project = MirProject::new();
         transform::transform(&module, &mut project).unwrap();
@@ -1003,5 +1010,13 @@ mod mir2llvm_tests_visual {
 
     pub enum Value {
         Bool(bool),
+    }
+
+    impl Value {
+        fn into_llvm<'ctx>(&self, context: &'ctx Context) -> GenericValue<'ctx> {
+            match self {
+                Value::Bool(b) => context.bool_type().create_generic_value(*b as u64, false),
+            }
+        }
     }
 }
