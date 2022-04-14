@@ -828,7 +828,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                 None => {
                     match reentry.0 {
                         Location::Void => (),
-                        Location::Temp(id) => assert!(self.temps.get(&id) == Some(&TempValue::Void),  "If function called is void, then the call site value location must be Void"),
+                        Location::Temp(id) if self.temps.get(&id) == Some(&TempValue::Void) => (),
                         _ => panic!("If function called is void, then the call site value location must be Void"),
                     }
                 }
