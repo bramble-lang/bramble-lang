@@ -65,7 +65,6 @@ pub enum Location<'ctx> {
     Pointer(PointerValue<'ctx>),
     Function(FunctionData<'ctx>),
     Argument(BasicValueEnum<'ctx>),
-    Temp(TempId, Option<BasicValueEnum<'ctx>>),
     ReturnPointer,
     Void,
 }
@@ -1519,7 +1518,6 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
             Location::Pointer(ptr) => Ok(ptr.into()),
             Location::Function(_) => todo!(),
             Location::Argument(_) => todo!(),
-            Location::Temp(_, _) => todo!(),
             Location::ReturnPointer => todo!(),
             Location::Void => todo!(),
         }
@@ -1541,7 +1539,6 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
             }
             Location::Function(_) => todo!(),
             Location::Argument(_) => todo!(),
-            Location::Temp(_, _) => todo!(),
             Location::ReturnPointer => todo!(),
             Location::Void => todo!(),
         }
