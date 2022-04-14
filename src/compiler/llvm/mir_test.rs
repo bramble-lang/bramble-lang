@@ -657,18 +657,6 @@ mod mir2llvm_tests_visual {
 
     #[test]
     fn if_expr_nested() {
-        // This test is failing because of the ordering of the MIR BasicBlocks and the fact that the LLVM Builder
-        // follows the BB in the order of their IDs and not their partial order.  What this means is that, the
-        // BB where the temporary variable storing the result of hte inner expression is read is before any
-        // of the BBs where data is written to that temporary variable.  So the phi operation is not actually
-        // created.
-        //
-        // Why does this happen?  Can it be made so that the merge BB is always after the conditional BBs?
-        //
-        // One option might be to "linearize" the BB set while enforcing teh Partial Order. Then use _that_
-        // rather than whatever the constructed order is.  This will have the benefit of making the code less
-        // fragile: will not have to make sure that every where that BBs are created and added keeps the partial
-        // order.
         let r: i64 = compile_and_run(
             "
             fn run() -> i64 {
