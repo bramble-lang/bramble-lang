@@ -73,7 +73,10 @@ pub enum Location<'ctx> {
 impl<'ctx> Location<'ctx> {
     /// Will attempt to turn this value into a [`PointerValue`]. If this is a
     /// [`Location::Function`] variant then this will return an error.
-    fn into_pointer(&self) -> Result<PointerValue<'ctx>, TransformerError> {
+    fn into_pointer<'p, 'module>(
+        &self,
+        temps: &HashMap<TempId, TempValue<'ctx>>,
+    ) -> Result<PointerValue<'ctx>, TransformerError> {
         match self {
             Location::Pointer(p) => Ok(*p),
             Location::Function(_) => Err(&LlvmBuilderError::CoerceFnLocationIntoPointer),
@@ -83,7 +86,14 @@ impl<'ctx> Location<'ctx> {
                 BasicValueEnum::PointerValue(ptr) => Ok(*ptr),
                 _ => Err(&LlvmBuilderError::CoerceValueIntoPointer),
             },
-            Location::Temp(id) => todo!(),
+            Location::Temp(id) => match temps.get(id) {
+                Some(temp) => match temp {
+                    TempValue::Void => Err(&LlvmBuilderError::CoerceVoidLocationIntoPointer),
+                    TempValue::Pointer(ptr) => Ok(*ptr),
+                    TempValue::Value(_) => Err(&LlvmBuilderError::CoerceValueIntoPointer),
+                },
+                None => return Err(TransformerError::TempNotFound),
+            },
         }
         .map_err(|e| TransformerError::Internal(e))
     }
@@ -794,7 +804,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
             ReturnMethod::OutParam => {
                 // If the return method is to use an out parameter, then push the
                 // return value location to the front of the argument list for the functoin
-                let out = reentry.0.into_pointer()?.as_basic_value_enum();
+                let out = reentry.0.into_pointer(&self.temps)?.as_basic_value_enum();
                 args.push_front(out);
             }
             ReturnMethod::Return => (),
@@ -815,7 +825,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
             match result.try_as_basic_value().left() {
                 Some(r) => self.store(span, reentry.0, r),
                 None => {
-                    assert!(reentry.0 == Location::Void, "If function called is void, then the call site value location must be Void")
+                    //assert!(reentry.0 == Location::Void, "If function called is void, then the call site value location must be Void")
                 }
             }
         }
@@ -843,7 +853,10 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                 if ptr.get_type().get_element_type().is_aggregate_type() {
                     Ok(ptr.into())
                 } else {
-                    Ok(self.program.builder.build_load(lv.into_pointer()?, ""))
+                    Ok(self
+                        .program
+                        .builder
+                        .build_load(lv.into_pointer(&self.temps)?, ""))
                 }
             }
             Location::Argument(arg) => Ok(arg),
@@ -857,7 +870,10 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                         if ptr.get_type().get_element_type().is_aggregate_type() {
                             Ok((*ptr).into())
                         } else {
-                            Ok(self.program.builder.build_load(lv.into_pointer()?, ""))
+                            Ok(self
+                                .program
+                                .builder
+                                .build_load(lv.into_pointer(&self.temps)?, ""))
                         }
                     }
                     TempValue::Value(Some(val)) => Ok(*val),
@@ -883,7 +899,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                 ReturnPointer::Unit => panic!("Attempting to return a value on a Unit function"),
                 ReturnPointer::Value(val) => *val = Some(r),
                 ReturnPointer::OutParam(out_ptr) => {
-                    let dest = out_ptr.into_pointer().unwrap();
+                    let dest = out_ptr.into_pointer(&self.temps).unwrap();
                     self.program
                         .build_memcpy(dest, r.into_pointer_value(), span)
                 }
@@ -941,7 +957,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         l: Location<'ctx>,
         idx: BasicValueEnum<'ctx>,
     ) -> std::result::Result<Location<'ctx>, TransformerError> {
-        let ptr = l.into_pointer()?;
+        let ptr = l.into_pointer(&self.temps)?;
 
         // Convert the index into an IntValue.  This will panic if `idx` is not an integer but
         // the semantic analysis should prevent that from happening
@@ -964,7 +980,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         field: FieldId,
     ) -> Result<Location<'ctx>, TransformerError> {
         // Convert l to a pointer
-        let ptr = l.into_pointer()?;
+        let ptr = l.into_pointer(&self.temps)?;
 
         // Build GEP to field
         let field_ptr = self
