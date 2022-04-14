@@ -661,9 +661,11 @@ mod mir2llvm_tests_visual {
             "
             fn run() -> i64 {
                 let a: i64 := test(true, false);
-                let b: i64 := test(false, true);
+                let b: i64 := test(true, true);
+                let c: i64 := test(false, true);
+                let d: i64 := test(false, false);
 
-                return a + b;
+                return a + b + c + d;
             }
 
             fn test(b: bool, c: bool) -> i64 {
@@ -690,7 +692,7 @@ mod mir2llvm_tests_visual {
         ",
             "main_run",
         );
-        assert_eq!(9, r);
+        assert_eq!(18, r);
     }
 
     #[test]
