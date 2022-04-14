@@ -888,7 +888,14 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                             let ty = val[0].0.get_type();
                             let phi = self.program.builder.build_phi(ty, "phi");
                             // Then replace all the values in the vector with the result of the phi operation
-                            phi.add_incoming(&[(&val[0].0, val[0].1), (&val[1].0, val[1].1)]);
+                            let mut incoming: Vec<(
+                                &dyn BasicValue<'ctx>,
+                                inkwell::basic_block::BasicBlock<'ctx>,
+                            )> = vec![];
+                            for (v, bb) in val.iter() {
+                                incoming.push((v, *bb));
+                            }
+                            phi.add_incoming(&incoming);
 
                             val.clear();
                             let bb = self.program.builder.get_insert_block().unwrap();
