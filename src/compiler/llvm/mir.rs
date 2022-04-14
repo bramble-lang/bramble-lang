@@ -518,7 +518,7 @@ impl MirBaseType {
 enum TempValue<'ctx> {
     Void,
     Pointer(PointerValue<'ctx>),
-    Value(Option<BasicValueEnum<'ctx>>),
+    Value(Vec<(BasicValueEnum<'ctx>, inkwell::basic_block::BasicBlock<'ctx>)>),
 }
 
 pub struct LlvmFunctionBuilder<'p, 'module, 'ctx> {
@@ -747,7 +747,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                         let ptr = self.program.builder.build_alloca(ty, &name);
                         TempValue::Pointer(ptr)
                     } else {
-                        TempValue::Value(None)
+                        TempValue::Value(vec![])
                     }
                 } else {
                     TempValue::Void
@@ -881,8 +881,20 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                                 .build_load(lv.into_pointer(&self.temps)?, ""))
                         }
                     }
-                    TempValue::Value(Some(val)) => Ok(*val),
-                    TempValue::Value(None) => todo!(),
+                    TempValue::Value(val) => {
+                        if val.len() == 1 {
+                            Ok(val[0].0)
+                        } else if val.len() > 1 {
+                            // If there are multiple values for this temp then have LLVM merge them with a Phi operation
+                            let ty = val[0].0.get_type();
+                            let phi = self.program.builder.build_phi(ty, "phi");
+                            // Then replace all the values in the vector with the result of the phi operation
+                            phi.add_incoming(&[(&val[0].0, val[0].1), (&val[1].0, val[1].1)]);
+                            Ok(phi.as_basic_value())
+                        } else {
+                            todo!()
+                        }
+                    }
                 },
                 None => Err(TransformerError::TempNotFound),
             },
@@ -927,9 +939,12 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                             self.program.builder.build_store(*ptr, r);
                         }
                     }
-                    TempValue::Value(val) => *val = Some(r),
+                    TempValue::Value(val) => {
+                        // Get the current llvm basic block
+                        let bb = self.program.builder.get_insert_block().unwrap();
+                        val.push((r, bb))
+                    }
                 };
-                //self.temps.insert(id, TempValue::Value(Some(r)));
             }
         }
     }
