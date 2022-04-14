@@ -103,7 +103,7 @@ pub trait FunctionBuilder<L, V> {
     fn term_goto(&mut self, target_bb: BasicBlockId) -> Result<(), TransformerError>;
 
     /// Load a value from a memory location
-    fn load(&self, lv: L) -> Result<V, TransformerError>;
+    fn load(&mut self, lv: L) -> Result<V, TransformerError>;
 
     /// Store the given value to the given memory location
     fn store(&mut self, span: Span, l: L, r: V);

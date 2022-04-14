@@ -852,7 +852,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         Ok(())
     }
 
-    fn load(&self, lv: Location<'ctx>) -> Result<BasicValueEnum<'ctx>, TransformerError> {
+    fn load(&mut self, lv: Location<'ctx>) -> Result<BasicValueEnum<'ctx>, TransformerError> {
         match lv {
             Location::Pointer(ptr) => {
                 if ptr.get_type().get_element_type().is_aggregate_type() {
@@ -868,7 +868,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
             Location::Function(_) | Location::ReturnPointer | Location::Void => Err(
                 TransformerError::Internal(&LlvmBuilderError::ReadInvalidLocation),
             ),
-            Location::Temp(id) => match self.temps.get(&id) {
+            Location::Temp(id) => match self.temps.get_mut(&id) {
                 Some(entry) => match entry {
                     TempValue::Void => todo!(),
                     TempValue::Pointer(ptr) => {
@@ -883,17 +883,20 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                     }
                     TempValue::Value(val) => {
                         if val.len() == 1 {
-                            Ok(val[0].0)
                         } else if val.len() > 1 {
                             // If there are multiple values for this temp then have LLVM merge them with a Phi operation
                             let ty = val[0].0.get_type();
                             let phi = self.program.builder.build_phi(ty, "phi");
                             // Then replace all the values in the vector with the result of the phi operation
                             phi.add_incoming(&[(&val[0].0, val[0].1), (&val[1].0, val[1].1)]);
-                            Ok(phi.as_basic_value())
+
+                            val.clear();
+                            let bb = self.program.builder.get_insert_block().unwrap();
+                            val.push((phi.as_basic_value(), bb));
                         } else {
                             todo!()
                         }
+                        Ok(val[0].0)
                     }
                 },
                 None => Err(TransformerError::TempNotFound),
