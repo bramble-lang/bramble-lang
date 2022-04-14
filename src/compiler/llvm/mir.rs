@@ -514,6 +514,7 @@ impl MirBaseType {
     }
 }
 
+#[derive(PartialEq)]
 enum TempValue<'ctx> {
     Void,
     Pointer(PointerValue<'ctx>),
@@ -825,7 +826,11 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
             match result.try_as_basic_value().left() {
                 Some(r) => self.store(span, reentry.0, r),
                 None => {
-                    //assert!(reentry.0 == Location::Void, "If function called is void, then the call site value location must be Void")
+                    match reentry.0 {
+                        Location::Void => (),
+                        Location::Temp(id) => assert!(self.temps.get(&id) == Some(&TempValue::Void),  "If function called is void, then the call site value location must be Void"),
+                        _ => panic!("If function called is void, then the call site value location must be Void"),
+                    }
                 }
             }
         }
