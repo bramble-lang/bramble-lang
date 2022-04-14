@@ -481,6 +481,10 @@ impl MirBaseType {
     }
 }
 
+enum TempValue<'ctx> {
+    Location(Location<'ctx>),
+}
+
 pub struct LlvmFunctionBuilder<'p, 'module, 'ctx> {
     program: &'p LlvmProgramBuilder<'module, 'ctx>,
 
@@ -497,7 +501,7 @@ pub struct LlvmFunctionBuilder<'p, 'module, 'ctx> {
 
     /// Mapping of [`TempIds`](TempId) to their LLVM value, this is used to look up
     /// variables after they have been allocated.
-    temps: HashMap<TempId, Location<'ctx>>,
+    temps: HashMap<TempId, TempValue<'ctx>>,
 
     /// Table to manage looking up the LLVM BasicBlock via the [`BasicBlockId`].
     /// Some [`BasicBlockIds`](BasicBlockId) may map to the same
@@ -720,12 +724,12 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                 let loc = if let Ok(ty) = self.program.get_type(vd.ty())?.into_basic_type() {
                     if ty.is_aggregate_type() {
                         let ptr = self.program.builder.build_alloca(ty, &name);
-                        Location::Pointer(ptr)
+                        TempValue::Location(Location::Pointer(ptr))
                     } else {
-                        Location::Temp(id, None)
+                        TempValue::Location(Location::Temp(id, None))
                     }
                 } else {
-                    Location::Void
+                    TempValue::Location(Location::Void)
                 };
                 ve.insert(loc);
                 Ok(())
@@ -863,7 +867,8 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
             Location::Void => (),
             Location::Argument(_) => panic!("Cannot store to an argument"),
             Location::Temp(id, _) => {
-                self.temps.insert(id, Location::Temp(id, Some(r)));
+                self.temps
+                    .insert(id, TempValue::Location(Location::Temp(id, Some(r))));
             }
         }
     }
@@ -887,7 +892,9 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
     fn temp(&self, v: TempId) -> Result<Location<'ctx>, TransformerError> {
         self.temps
             .get(&v)
-            .copied()
+            .map(|t| match t {
+                TempValue::Location(l) => *l,
+            })
             .ok_or(TransformerError::TempNotFound)
     }
 
