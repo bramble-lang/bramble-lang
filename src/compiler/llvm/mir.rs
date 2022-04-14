@@ -65,7 +65,6 @@ pub enum Location<'ctx> {
     Pointer(PointerValue<'ctx>),
     Function(FunctionData<'ctx>),
     Argument(BasicValueEnum<'ctx>),
-    Temp(TempId, Option<BasicValueEnum<'ctx>>),
     ReturnPointer,
     Void,
 }
@@ -83,7 +82,6 @@ impl<'ctx> Location<'ctx> {
                 BasicValueEnum::PointerValue(ptr) => Ok(*ptr),
                 _ => Err(&LlvmBuilderError::CoerceValueIntoPointer),
             },
-            Location::Temp(_, _) => todo!(),
         }
         .map_err(|e| TransformerError::Internal(e))
     }
@@ -97,7 +95,6 @@ impl<'ctx> Location<'ctx> {
             Location::ReturnPointer => Err(&LlvmBuilderError::CoerceRetPtrIntoFn),
             Location::Void => Err(&LlvmBuilderError::CoerceVoidLocationIntoFunction),
             Location::Argument(_) => Err(&LlvmBuilderError::CoerceValueIntoFn),
-            Location::Temp(_, _) => todo!(),
         }
         .map_err(|e| TransformerError::Internal(e))
     }
@@ -718,12 +715,8 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
             Entry::Vacant(ve) => {
                 // and add a mapping from TempID to the pointer in the local var table
                 let loc = if let Ok(ty) = self.program.get_type(vd.ty())?.into_basic_type() {
-                    if ty.is_aggregate_type() {
-                        let ptr = self.program.builder.build_alloca(ty, &name);
-                        Location::Pointer(ptr)
-                    } else {
-                        Location::Temp(id, None)
-                    }
+                    let ptr = self.program.builder.build_alloca(ty, &name);
+                    Location::Pointer(ptr)
                 } else {
                     Location::Void
                 };
@@ -836,8 +829,6 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
             Location::Function(_) | Location::ReturnPointer | Location::Void => Err(
                 TransformerError::Internal(&LlvmBuilderError::ReadInvalidLocation),
             ),
-            Location::Temp(_, Some(val)) => Ok(val),
-            Location::Temp(_, None) => todo!(),
         }
     }
 
@@ -862,9 +853,6 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
             },
             Location::Void => (),
             Location::Argument(_) => panic!("Cannot store to an argument"),
-            Location::Temp(id, _) => {
-                self.temps.insert(id, Location::Temp(id, Some(r)));
-            }
         }
     }
 
@@ -1530,7 +1518,6 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
             Location::Pointer(ptr) => Ok(ptr.into()),
             Location::Function(_) => todo!(),
             Location::Argument(_) => todo!(),
-            Location::Temp(_, _) => todo!(),
             Location::ReturnPointer => todo!(),
             Location::Void => todo!(),
         }
@@ -1552,7 +1539,6 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
             }
             Location::Function(_) => todo!(),
             Location::Argument(_) => todo!(),
-            Location::Temp(_, _) => todo!(),
             Location::ReturnPointer => todo!(),
             Location::Void => todo!(),
         }

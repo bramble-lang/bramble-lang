@@ -635,14 +635,64 @@ mod mir2llvm_tests_visual {
 
     #[test]
     fn if_expr() {
-        compile_and_print_llvm(
+        let r: i64 = compile_and_run(
             "
-            fn test() {
-                let x: i64 := if (true) {2} else {3};
-                return;
+            fn run() -> i64 {
+                let a: i64 := test(true);
+                let b: i64 := test(false);
+
+                return a + b;
+            }
+
+            fn test(b: bool) -> i64 {
+                let mut y: i64 := 2;
+                let x: i64 := if (b) {mut y := 3; y} else {mut y:= 4; y};
+                return x;
             }
         ",
+            "main_run",
         );
+        assert_eq!(7, r);
+    }
+
+    #[test]
+    fn if_expr_nested() {
+        let r: i64 = compile_and_run(
+            "
+            fn run() -> i64 {
+                let a: i64 := test(true, false);
+                let b: i64 := test(true, true);
+                let c: i64 := test(false, true);
+                let d: i64 := test(false, false);
+
+                return a + b + c + d;
+            }
+
+            fn test(b: bool, c: bool) -> i64 {
+                let mut y: i64 := 2;
+                let x: i64 := if (b) {
+                    if (c) {
+                        mut y := 3; 
+                        y
+                    } else {
+                        mut y := 4;
+                        y
+                    }
+                } else {
+                    if (c) {
+                        mut y := 5; 
+                        y
+                    } else {
+                        mut y := 6;
+                        y
+                    }
+                };
+                return x;
+            }
+        ",
+            "main_run",
+        );
+        assert_eq!(18, r);
     }
 
     #[test]
