@@ -982,11 +982,12 @@ mod mir2llvm_tests_visual {
         compile_and_print_llvm(
             "
             fn baz() -> bool {
+                let d: project::import::Data := project::import::Data{x: 5.0, y: 3u64};
                 return true;
             }
         ",
             &[],
-            &[],
+            &[("$import::Data", &[("x", Type::F64), ("y", Type::U64)])],
         );
     }
 
