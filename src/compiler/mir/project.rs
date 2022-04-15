@@ -201,6 +201,8 @@ impl StaticDefinitions {
         Some(DefId::new(pos as u32))
     }
 
+    /// Given a [`StringId`] return its static memory [`DefId`], if the [`StringId`]
+    /// is not in the static memory abstraction then this will return [`None`].
     fn find_string_literal(&self, id: StringId) -> Option<DefId> {
         let pos = self.defs.iter().position(|i| match i {
             StaticItem::Function(_) => false,
