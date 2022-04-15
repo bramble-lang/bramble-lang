@@ -262,9 +262,13 @@ impl<'module, 'ctx> LlvmProgramBuilder<'module, 'ctx> {
     /// Transforms this into the final [`LlvmProgram`] result, which can be used to
     /// actually generate the object code necessary for linking and final compilation.
     pub fn complete(mut self) -> LlvmProgram<'module, 'ctx> {
-        let user_main = self.find_user_main().unwrap();
-        let fv = user_main.function;
-        self.construct_main(fv);
+        match self.find_user_main().unwrap() {
+            Some(user_main) => {
+                let fv = user_main.function;
+                self.construct_main(fv);
+            }
+            None => (),
+        }
 
         LlvmProgram {
             module: self.module,
@@ -287,7 +291,7 @@ impl<'module, 'ctx> LlvmProgramBuilder<'module, 'ctx> {
         self.builder.build_return(Some(&status));
     }
 
-    fn find_user_main(&self) -> Result<&FunctionData<'ctx>, ()> {
+    fn find_user_main(&self) -> Result<Option<&FunctionData<'ctx>>, ()> {
         let mut mains = self
             .fn_table
             .iter()
@@ -295,10 +299,10 @@ impl<'module, 'ctx> LlvmProgramBuilder<'module, 'ctx> {
             .map(|(_, f)| f);
         match mains.next() {
             Some(m) => match mains.next() {
-                None => Ok(m),
+                None => Ok(Some(m)),
                 Some(_) => Err(()),
             },
-            None => Err(()),
+            None => Ok(None),
         }
     }
 
