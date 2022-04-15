@@ -6,13 +6,16 @@ use std::path::Path;
 use std::time::Instant;
 
 use bramble_lang::compiler::diagnostics::Logger;
+use bramble_lang::compiler::import::Import;
+use bramble_lang::compiler::semantics::semanticnode::SemanticContext;
+use bramble_lang::compiler::{transform, MirProject};
 use bramble_lang::diagnostics::{write_source_map, ConsoleWriter, JsonWriter};
 use inkwell::context::Context;
 
 use bramble_lang::project::*;
 use bramble_lang::*;
 
-use bramble_lang::compiler::ast::MAIN_MODULE;
+use bramble_lang::compiler::ast::{Module, MAIN_MODULE};
 
 const BRAID_FILE_EXT: &str = "br";
 const USER_MAIN_FN: &str = "my_main";
@@ -180,4 +183,24 @@ fn main() -> Result<(), i32> {
     eprintln!("LLVM: {}", llvm_duration.as_secs_f32());
 
     Ok(())
+}
+
+fn gen_mir(module: &Module<SemanticContext>, imports: &[Import]) -> MirProject {
+    let mut project = MirProject::new();
+    transform::transform(module, imports, &mut project).unwrap();
+    project
+}
+
+fn gen_llvm(name: &str, mir: &MirProject, sm: &compiler::SourceMap, table: &StringTable) {
+    let context = Context::create();
+    let module = context.create_module(name);
+    let builder = context.create_builder();
+
+    let mut xfmr = llvm::LlvmProgramBuilder::new(&context, &module, &builder, sm, table);
+
+    let proj_traverser = compiler::ProgramTraverser::new(mir);
+
+    // Traverser is given a MirProject
+    // call traverser.map(llvm) this will use the llvm xfmr to map MirProject to LlvmProject
+    proj_traverser.map(&mut xfmr);
 }
