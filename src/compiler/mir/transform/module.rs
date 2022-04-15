@@ -12,7 +12,7 @@ use log::debug;
 use crate::{
     compiler::{
         ast::*,
-        import::Import,
+        import::{Import, ImportRoutineDef},
         mir::ir::{ArgDecl, Procedure},
         semantics::semanticnode::SemanticContext,
         Span,
@@ -146,32 +146,40 @@ fn add_import_declarations(
     debug!("Adding import declarations");
 
     for f in &imports.funcs {
-        // Create a list of ArgDecls for the external function
-        let args: Vec<_> = f
-            .params()
-            .iter()
-            .map(|p| {
-                //    iterate through each param and convert the type to a TypeId
-                let ty = project.find_type(p).ok_or(TransformError::TypeNotFound)?;
-
-                //    Create a name for the parameter (names are not included in the manifeset :O )
-                //    Generate an ArgDecl
-                Ok(ArgDecl::new(StringId::new(), ty, None, Span::zero()))
-            })
-            .collect::<Result<Vec<_>, TransformError>>()?;
-
-        // Conver the return type to a TypeId
-        let ret_ty = project
-            .find_type(&f.ty())
-            .ok_or(TransformError::TypeNotFound)?;
-
-        // Create a Procedure
-        let p = Procedure::new_extern(f.path(), args, false, ret_ty, Span::zero());
-
-        // Add procedure to project
-        project.add_func(p)?;
+        add_import_function(project, f)?;
     }
 
+    Ok(())
+}
+
+fn add_import_function(
+    project: &mut MirProject,
+    f: &ImportRoutineDef,
+) -> Result<(), TransformError> {
+    // Create a list of ArgDecls for the external function
+    let args: Vec<_> = f
+        .params()
+        .iter()
+        .map(|p| {
+            //    iterate through each param and convert the type to a TypeId
+            let ty = project.find_type(p).ok_or(TransformError::TypeNotFound)?;
+
+            //    Create a name for the parameter (names are not included in the manifeset :O )
+            //    Generate an ArgDecl
+            Ok(ArgDecl::new(StringId::new(), ty, None, Span::zero()))
+        })
+        .collect::<Result<Vec<_>, TransformError>>()?;
+
+    // Conver the return type to a TypeId
+    let ret_ty = project
+        .find_type(&f.ty())
+        .ok_or(TransformError::TypeNotFound)?;
+
+    // Create a Procedure
+    let p = Procedure::new_extern(f.path(), args, false, ret_ty, Span::zero());
+
+    // Add procedure to project
+    project.add_func(p)?;
     Ok(())
 }
 
