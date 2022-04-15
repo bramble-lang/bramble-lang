@@ -19,6 +19,7 @@ mod mir2llvm_tests_visual {
         compiler::{
             ast::{Module, MAIN_MODULE},
             diagnostics::Logger,
+            import::Import,
             lexer::{tokens::Token, LexerError},
             mir::{transform, MirProject, ProgramTraverser},
             parser::Parser,
@@ -39,7 +40,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -64,7 +65,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -81,7 +82,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -98,7 +99,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -115,7 +116,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -132,7 +133,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -147,7 +148,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -164,7 +165,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -181,7 +182,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -198,7 +199,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -215,7 +216,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -229,7 +230,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -250,7 +251,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -287,7 +288,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -324,7 +325,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -338,7 +339,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -352,7 +353,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -367,7 +368,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -382,7 +383,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -397,7 +398,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -412,7 +413,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -426,7 +427,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -440,7 +441,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -454,7 +455,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -468,7 +469,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -484,7 +485,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -498,7 +499,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -511,7 +512,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -529,7 +530,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -543,7 +544,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -557,7 +558,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -572,7 +573,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -586,7 +587,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -600,7 +601,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -614,7 +615,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -630,7 +631,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text);
+        compile_and_print_llvm(text, &[]);
     }
 
     #[test]
@@ -734,6 +735,7 @@ mod mir2llvm_tests_visual {
                 return x;
             }
         ",
+            &[],
         );
     }
 
@@ -754,6 +756,7 @@ mod mir2llvm_tests_visual {
                 }
             }
         ",
+            &[],
         );
     }
 
@@ -771,6 +774,7 @@ mod mir2llvm_tests_visual {
                 return;
             }
         ",
+            &[],
         );
     }
 
@@ -786,6 +790,7 @@ mod mir2llvm_tests_visual {
                 return 5.0;
             }
         ",
+            &[],
         );
     }
 
@@ -815,6 +820,7 @@ mod mir2llvm_tests_visual {
                 return 5;
             }
         ",
+            &[],
         );
     }
 
@@ -844,6 +850,7 @@ mod mir2llvm_tests_visual {
                 return arr[0];
             }
         ",
+            &[],
         );
     }
 
@@ -855,6 +862,7 @@ mod mir2llvm_tests_visual {
                 return [1, 2];
             }
         ",
+            &[],
         );
     }
 
@@ -866,6 +874,7 @@ mod mir2llvm_tests_visual {
                 return a;
             }
         ",
+            &[],
         );
     }
 
@@ -882,6 +891,7 @@ mod mir2llvm_tests_visual {
                 return [1, 2];
             }
         ",
+            &[],
         );
     }
 
@@ -943,10 +953,10 @@ mod mir2llvm_tests_visual {
 
     type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
 
-    fn compile_and_print_llvm(text: &str) {
+    fn compile_and_print_llvm(text: &str, imports: &[Import]) {
         let (sm, table, module) = compile(text);
         let mut project = MirProject::new();
-        transform::transform(&module, &[], &mut project).unwrap();
+        transform::transform(&module, imports, &mut project).unwrap();
 
         println!("=== MIR ===:");
         println!("{}\n\n", project);
