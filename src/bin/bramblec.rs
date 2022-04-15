@@ -139,48 +139,54 @@ fn main() -> Result<(), i32> {
     }
 
     // Configure the compiler
-    let llvm_time = Instant::now();
-    let output_target = config.value_of("output").unwrap_or("./target/output.asm");
+    if !enable_mir_beta(&config) {
+        let llvm_time = Instant::now();
+        let output_target = config.value_of("output").unwrap_or("./target/output.asm");
 
-    let context = Context::create();
-    let mut llvm = llvm::IrGen::new(
-        &context,
-        project_name,
-        &imports,
-        &source_map,
-        &string_table,
-        &tracer,
-    );
-    match llvm.ingest(&semantic_ast, main_fn_id) {
-        Ok(()) => (),
-        Err(msg) => {
-            println!("LLVM IR translation failed: {}", msg);
-            return Err(ERR_LLVM_IR_ERROR);
-        }
-    }
-
-    if emit_llvm_ir(&config) {
-        llvm.emit_llvm_ir(Path::new("./target/output.ll"));
-    }
-
-    llvm.emit_object_code(Path::new(output_target), emit_asm(&config))
-        .unwrap();
-
-    if config.is_present("manifest") {
-        let manifest = Manifest::extract(&semantic_ast, &source_map, &string_table).unwrap();
-        match std::fs::File::create(format!("./target/{}.manifest", project_name))
-            .map_err(|e| format!("{}", e))
-            .and_then(|mut f| manifest.write(&mut f).map_err(|e| format!("{}", e)))
-        {
+        let context = Context::create();
+        let mut llvm = llvm::IrGen::new(
+            &context,
+            project_name,
+            &imports,
+            &source_map,
+            &string_table,
+            &tracer,
+        );
+        match llvm.ingest(&semantic_ast, main_fn_id) {
             Ok(()) => (),
-            Err(e) => {
-                println!("Failed to write manifest file: {}", e);
-                return Err(ERR_MANIFEST_WRITE_ERROR);
+            Err(msg) => {
+                println!("LLVM IR translation failed: {}", msg);
+                return Err(ERR_LLVM_IR_ERROR);
             }
         }
+
+        if emit_llvm_ir(&config) {
+            llvm.emit_llvm_ir(Path::new("./target/output.ll"));
+        }
+
+        llvm.emit_object_code(Path::new(output_target), emit_asm(&config))
+            .unwrap();
+
+        if config.is_present("manifest") {
+            let manifest = Manifest::extract(&semantic_ast, &source_map, &string_table).unwrap();
+            match std::fs::File::create(format!("./target/{}.manifest", project_name))
+                .map_err(|e| format!("{}", e))
+                .and_then(|mut f| manifest.write(&mut f).map_err(|e| format!("{}", e)))
+            {
+                Ok(()) => (),
+                Err(e) => {
+                    println!("Failed to write manifest file: {}", e);
+                    return Err(ERR_MANIFEST_WRITE_ERROR);
+                }
+            }
+        }
+        let llvm_duration = llvm_time.elapsed();
+        eprintln!("LLVM: {}", llvm_duration.as_secs_f32());
+    } else {
+        eprintln!("MIR BETA!! :D");
+        let mir = gen_mir(&semantic_ast, &imports);
+        gen_llvm(project_name, &mir, &source_map, &string_table);
     }
-    let llvm_duration = llvm_time.elapsed();
-    eprintln!("LLVM: {}", llvm_duration.as_secs_f32());
 
     Ok(())
 }
