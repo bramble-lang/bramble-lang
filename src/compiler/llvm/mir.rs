@@ -263,7 +263,8 @@ impl<'module, 'ctx> LlvmProgramBuilder<'module, 'ctx> {
     /// actually generate the object code necessary for linking and final compilation.
     pub fn complete(mut self) -> LlvmProgram<'module, 'ctx> {
         let user_main = self.find_user_main().unwrap();
-        self.construct_main(user_main.function);
+        let fv = user_main.function;
+        self.construct_main(fv);
 
         LlvmProgram {
             module: self.module,
