@@ -144,31 +144,36 @@ fn add_fn_declarations(
 
     for f in funcs {
         // convert args into MIR args
-        let args: Vec<_> = f
-            .params
-            .iter()
-            .map(|p| {
-                let ty = project
-                    .find_type(p.context().ty())
-                    .expect("Cannot find type in Project");
-                ArgDecl::new(p.name, ty, None, p.context().span())
-            })
-            .collect();
-
-        let ret_ty = project
-            .find_type(f.context().ty())
-            .expect("Cannot find return type");
-
-        let p = Procedure::new(
-            f.context().canonical_path(),
-            args,
-            ret_ty,
-            f.context().span(),
-        );
-        project.add_func(p)?;
+        let decl = create_fn_declaration(f, project);
+        project.add_func(decl)?;
     }
 
     Ok(())
+}
+
+fn create_fn_declaration(f: &RoutineDef<SemanticContext>, project: &MirProject) -> Procedure {
+    // convert args into MIR args
+    let args: Vec<_> = f
+        .params
+        .iter()
+        .map(|p| {
+            let ty = project
+                .find_type(p.context().ty())
+                .expect("Cannot find type in Project");
+            ArgDecl::new(p.name, ty, None, p.context().span())
+        })
+        .collect();
+
+    let ret_ty = project
+        .find_type(f.context().ty())
+        .expect("Cannot find return type");
+
+    Procedure::new(
+        f.context().canonical_path(),
+        args,
+        ret_ty,
+        f.context().span(),
+    )
 }
 
 fn transform_fns(
