@@ -6,6 +6,7 @@ use crate::compiler::mir::{project::StaticDefinitionError, typetable::TypeTableE
 pub enum TransformError {
     TypeError(TypeTableError),
     StaticDefError(StaticDefinitionError),
+    TypeNotFound,
 }
 
 impl From<TypeTableError> for TransformError {

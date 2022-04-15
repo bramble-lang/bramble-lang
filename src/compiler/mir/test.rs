@@ -68,7 +68,7 @@ pub mod tests {
             let mut table = StringTable::new();
             let module = compile(text, &mut table);
             let mut project = MirProject::new();
-            transform::transform(&module, &mut project).unwrap();
+            transform::transform(&module, &[], &mut project).unwrap();
             println!("{}", project);
         }
 
@@ -89,7 +89,7 @@ pub mod tests {
             let mut table = StringTable::new();
             let module = compile(text, &mut table);
             let mut project = MirProject::new();
-            transform::transform(&module, &mut project).unwrap();
+            transform::transform(&module, &[], &mut project).unwrap();
             println!("{}", project);
         }
 
@@ -108,7 +108,7 @@ pub mod tests {
             let mut table = StringTable::new();
             let module = compile(text, &mut table);
             let mut project = MirProject::new();
-            transform::transform(&module, &mut project).unwrap();
+            transform::transform(&module, &[], &mut project).unwrap();
             println!("{}", project);
         }
 
@@ -127,7 +127,7 @@ pub mod tests {
             let mut table = StringTable::new();
             let module = compile(text, &mut table);
             let mut project = MirProject::new();
-            transform::transform(&module, &mut project).unwrap();
+            transform::transform(&module, &[], &mut project).unwrap();
             println!("{}", project);
         }
 
@@ -144,7 +144,7 @@ pub mod tests {
             let mut table = StringTable::new();
             let module = compile(text, &mut table);
             let mut project = MirProject::new();
-            transform::transform(&module, &mut project).unwrap();
+            transform::transform(&module, &[], &mut project).unwrap();
             println!("{}", project);
         }
 
@@ -161,7 +161,7 @@ pub mod tests {
             let mut table = StringTable::new();
             let module = compile(text, &mut table);
             let mut project = MirProject::new();
-            transform::transform(&module, &mut project).unwrap();
+            transform::transform(&module, &[], &mut project).unwrap();
             println!("{}", project);
         }
 
@@ -180,7 +180,7 @@ pub mod tests {
             let mut table = StringTable::new();
             let module = compile(text, &mut table);
             let mut project = MirProject::new();
-            transform::transform(&module, &mut project).unwrap();
+            transform::transform(&module, &[], &mut project).unwrap();
             println!("{}", project);
         }
 
@@ -195,7 +195,7 @@ pub mod tests {
             let mut table = StringTable::new();
             let module = compile(text, &mut table);
             let mut project = MirProject::new();
-            transform::transform(&module, &mut project).unwrap();
+            transform::transform(&module, &[], &mut project).unwrap();
             println!("{}", project);
         }
 
@@ -214,7 +214,7 @@ pub mod tests {
             let mut table = StringTable::new();
             let module = compile(text, &mut table);
             let mut project = MirProject::new();
-            transform::transform(&module, &mut project).unwrap();
+            transform::transform(&module, &[], &mut project).unwrap();
             println!("{}", project);
         }
 
@@ -237,7 +237,7 @@ pub mod tests {
             let mut table = StringTable::new();
             let module = compile(text, &mut table);
             let mut project = MirProject::new();
-            transform::transform(&module, &mut project).unwrap();
+            transform::transform(&module, &[], &mut project).unwrap();
             println!("{}", project);
         }
 
@@ -254,7 +254,7 @@ pub mod tests {
             let mut table = StringTable::new();
             let module = compile(text, &mut table);
             let mut project = MirProject::new();
-            transform::transform(&module, &mut project).unwrap();
+            transform::transform(&module, &[], &mut project).unwrap();
             println!("{}", project);
         }
 
@@ -274,7 +274,7 @@ pub mod tests {
             let mut table = StringTable::new();
             let module = compile(text, &mut table);
             let mut project = MirProject::new();
-            transform::transform(&module, &mut project).unwrap();
+            transform::transform(&module, &[], &mut project).unwrap();
             println!("{}", project);
         }
     }
@@ -290,7 +290,7 @@ pub mod tests {
         let mut table = StringTable::new();
         let module = compile(text, &mut table);
         let mut project = MirProject::new();
-        transform::transform(&module, &mut project).unwrap();
+        transform::transform(&module, &[], &mut project).unwrap();
 
         let path: Path = to_path(&["main", "test"], &table);
         let def_id = project.find_def(&path).unwrap();
@@ -338,7 +338,7 @@ pub mod tests {
         let mut table = StringTable::new();
         let module = compile(text, &mut table);
         let mut project = MirProject::new();
-        transform::transform(&module, &mut project).unwrap();
+        transform::transform(&module, &[], &mut project).unwrap();
 
         let path: Path = to_path(&["main", "test"], &table);
         let def_id = project.find_def(&path).unwrap();
@@ -372,7 +372,7 @@ pub mod tests {
         let mut table = StringTable::new();
         let module = compile(text, &mut table);
         let mut project = MirProject::new();
-        transform::transform(&module, &mut project).unwrap();
+        transform::transform(&module, &[], &mut project).unwrap();
 
         let path: Path = to_path(&["main", "test"], &table);
         let def_id = project.find_def(&path).unwrap();
@@ -433,7 +433,7 @@ pub mod tests {
                 );
                 let module = compile(&text, &mut table);
                 let mut project = MirProject::new();
-                transform::transform(&module, &mut project).unwrap();
+                transform::transform(&module, &[], &mut project).unwrap();
 
                 let path: Path = to_path(&["main", "test"], &table);
                 let def_id = project.find_def(&path).unwrap();
@@ -489,7 +489,7 @@ pub mod tests {
                 );
                 let module = compile(&text, &mut table);
                 let mut project = MirProject::new();
-                transform::transform(&module, &mut project).unwrap();
+                transform::transform(&module, &[], &mut project).unwrap();
 
                 let path: Path = to_path(&["main", "test"], &table);
                 let def_id = project.find_def(&path).unwrap();
@@ -548,7 +548,7 @@ pub mod tests {
             );
             let module = compile(&text, &mut table);
             let mut project = MirProject::new();
-            transform::transform(&module, &mut project).unwrap();
+            transform::transform(&module, &[], &mut project).unwrap();
 
             let path: Path = to_path(&["main", "test"], &table);
             let def_id = project.find_def(&path).unwrap();
@@ -643,7 +643,7 @@ pub mod tests {
                 );
                 let module = compile(&text, &mut table);
                 let mut project = MirProject::new();
-                transform::transform(&module, &mut project).unwrap();
+                transform::transform(&module, &[], &mut project).unwrap();
 
                 let path: Path = to_path(&["main", "test"], &table);
                 let def_id = project.find_def(&path).unwrap();
@@ -714,7 +714,7 @@ pub mod tests {
             );
             let module = compile(&text, &mut table);
             let mut project = MirProject::new();
-            transform::transform(&module, &mut project).unwrap();
+            transform::transform(&module, &[], &mut project).unwrap();
 
             let path: Path = to_path(&["main", "test"], &table);
             let def_id = project.find_def(&path).unwrap();
@@ -760,7 +760,7 @@ pub mod tests {
                 );
                 let module = compile(&text, &mut table);
                 let mut project = MirProject::new();
-                transform::transform(&module, &mut project).unwrap();
+                transform::transform(&module, &[], &mut project).unwrap();
 
                 let path: Path = to_path(&["main", "test"], &table);
                 let def_id = project.find_def(&path).unwrap();
@@ -810,7 +810,7 @@ pub mod tests {
             );
             let module = compile(&text, &mut table);
             let mut project = MirProject::new();
-            transform::transform(&module, &mut project).unwrap();
+            transform::transform(&module, &[], &mut project).unwrap();
 
             let path: Path = to_path(&["main", "test"], &table);
             let def_id = project.find_def(&path).unwrap();
@@ -864,7 +864,7 @@ pub mod tests {
             );
             let module = compile(&text, &mut table);
             let mut project = MirProject::new();
-            transform::transform(&module, &mut project).unwrap();
+            transform::transform(&module, &[], &mut project).unwrap();
 
             let path: Path = to_path(&["main", "test"], &table);
             let def_id = project.find_def(&path).unwrap();
@@ -892,7 +892,7 @@ pub mod tests {
         let mut table = StringTable::new();
         let module = compile(text, &mut table);
         let mut project = MirProject::new();
-        transform::transform(&module, &mut project).unwrap();
+        transform::transform(&module, &[], &mut project).unwrap();
 
         let path: Path = to_path(&["main", "test"], &table);
         let def_id = project.find_def(&path).unwrap();
@@ -936,7 +936,7 @@ pub mod tests {
         let mut table = StringTable::new();
         let module = compile(text, &mut table);
         let mut project = MirProject::new();
-        transform::transform(&module, &mut project).unwrap();
+        transform::transform(&module, &[], &mut project).unwrap();
 
         let path: Path = to_path(&["main", "test"], &table);
         let def_id = project.find_def(&path).unwrap();
@@ -992,7 +992,7 @@ pub mod tests {
         let mut table = StringTable::new();
         let module = compile(text, &mut table);
         let mut project = MirProject::new();
-        transform::transform(&module, &mut project).unwrap();
+        transform::transform(&module, &[], &mut project).unwrap();
 
         let path: Path = to_path(&["main", "test"], &table);
         let def_id = project.find_def(&path).unwrap();
@@ -1045,7 +1045,7 @@ pub mod tests {
         let module = compile(text, &mut table);
 
         let mut project = MirProject::new();
-        transform::transform(&module, &mut project).unwrap();
+        transform::transform(&module, &[], &mut project).unwrap();
 
         let path: Path = to_path(&["main", "test"], &table);
         let def_id = project.find_def(&path).unwrap();
@@ -1097,7 +1097,7 @@ pub mod tests {
         let module = compile(text, &mut table);
 
         let mut project = MirProject::new();
-        transform::transform(&module, &mut project).unwrap();
+        transform::transform(&module, &[], &mut project).unwrap();
 
         let path: Path = to_path(&["main", "test"], &table);
         let def_id = project.find_def(&path).unwrap();
@@ -1157,7 +1157,7 @@ pub mod tests {
         let module = compile(text, &mut table);
 
         let mut project = MirProject::new();
-        transform::transform(&module, &mut project).unwrap();
+        transform::transform(&module, &[], &mut project).unwrap();
 
         let path: Path = to_path(&["main", "test"], &table);
         let def_id = project.find_def(&path).unwrap();
@@ -1189,7 +1189,7 @@ pub mod tests {
         let module = compile(text, &mut table);
 
         let mut project = MirProject::new();
-        transform::transform(&module, &mut project).unwrap();
+        transform::transform(&module, &[], &mut project).unwrap();
 
         let path: Path = to_path(&["main", "test"], &table);
         let def_id = project.find_def(&path).unwrap();
@@ -1241,7 +1241,7 @@ pub mod tests {
         let module = compile(text, &mut table);
 
         let mut project = MirProject::new();
-        transform::transform(&module, &mut project).unwrap();
+        transform::transform(&module, &[], &mut project).unwrap();
 
         let path: Path = to_path(&["main", "test"], &table);
         let def_id = project.find_def(&path).unwrap();
@@ -1289,7 +1289,7 @@ pub mod tests {
         let module = compile(text, &mut table);
 
         let mut project = MirProject::new();
-        transform::transform(&module, &mut project).unwrap();
+        transform::transform(&module, &[], &mut project).unwrap();
 
         let path: Path = to_path(&["main", "test"], &table);
         let expected_target = project.find_def(&path).unwrap();
@@ -1334,7 +1334,7 @@ pub mod tests {
         let module = compile(text, &mut table);
 
         let mut project = MirProject::new();
-        transform::transform(&module, &mut project).unwrap();
+        transform::transform(&module, &[], &mut project).unwrap();
 
         let path: Path = to_path(&["main", "test"], &table);
         let def_id = project.find_def(&path).unwrap();
@@ -1383,7 +1383,7 @@ pub mod tests {
         let module = compile(text, &mut table);
 
         let mut project = MirProject::new();
-        transform::transform(&module, &mut project).unwrap();
+        transform::transform(&module, &[], &mut project).unwrap();
 
         let path: Path = to_path(&["main", "test"], &table);
         let def_id = project.find_def(&path).unwrap();
@@ -1435,7 +1435,7 @@ pub mod tests {
         let mut table = StringTable::new();
         let module = compile(text, &mut table);
         let mut project = MirProject::new();
-        transform::transform(&module, &mut project).unwrap();
+        transform::transform(&module, &[], &mut project).unwrap();
 
         let path: Path = to_path(&["main", "test"], &table);
         let def_id = project.find_def(&path).unwrap();
@@ -1473,7 +1473,7 @@ pub mod tests {
         let module = compile(text, &mut table);
 
         let mut project = MirProject::new();
-        transform::transform(&module, &mut project).unwrap();
+        transform::transform(&module, &[], &mut project).unwrap();
 
         let path: Path = to_path(&["main", "test"], &table);
         let def_id = project.find_def(&path).unwrap();

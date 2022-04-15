@@ -946,7 +946,7 @@ mod mir2llvm_tests_visual {
     fn compile_and_print_llvm(text: &str) {
         let (sm, table, module) = compile(text);
         let mut project = MirProject::new();
-        transform::transform(&module, &mut project).unwrap();
+        transform::transform(&module, &[], &mut project).unwrap();
 
         println!("=== MIR ===:");
         println!("{}\n\n", project);
@@ -976,7 +976,7 @@ mod mir2llvm_tests_visual {
     fn compile_and_run<R: std::fmt::Debug>(text: &str, func_name: &str) -> R {
         let (sm, table, module) = compile(text);
         let mut project = MirProject::new();
-        transform::transform(&module, &mut project).unwrap();
+        transform::transform(&module, &[], &mut project).unwrap();
 
         println!("=== MIR ===:");
         println!("{}\n\n", project);
