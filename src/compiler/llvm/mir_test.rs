@@ -959,13 +959,17 @@ mod mir2llvm_tests_visual {
                 return project::import::foobar(1u16, 5.0);
             }
         ",
-            &[("$import::foobar", &[Type::U16, Type::F64], Type::Bool)],
+            &[(
+                "$import::foobar",
+                &[("a", Type::U16), ("b", Type::F64)],
+                Type::Bool,
+            )],
         );
     }
 
     type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
 
-    fn compile_and_print_llvm(text: &str, import_funcs: &[(&str, &[Type], Type)]) {
+    fn compile_and_print_llvm(text: &str, import_funcs: &[(&str, &[(&str, Type)], Type)]) {
         let (sm, table, module, imports) = compile(text, import_funcs);
         let mut project = MirProject::new();
 
@@ -1035,7 +1039,7 @@ mod mir2llvm_tests_visual {
 
     fn compile(
         input: &str,
-        import_funcs: &[(&str, &[Type], Type)],
+        import_funcs: &[(&str, &[(&str, Type)], Type)],
     ) -> (SourceMap, StringTable, Module<SemanticContext>, Vec<Import>) {
         let table = StringTable::new();
 
@@ -1044,7 +1048,14 @@ mod mir2llvm_tests_visual {
             .into_iter()
             .map(|(p, args, ret)| {
                 let path = string_to_path(&table, p).unwrap();
-                ImportRoutineDef::new(path, (*args).into(), ret.clone())
+                let args = args
+                    .iter()
+                    .map(|(n, t)| {
+                        let sid = table.insert((*n).into());
+                        (sid, t.clone())
+                    })
+                    .collect();
+                ImportRoutineDef::new(path, args, ret.clone())
             })
             .collect();
         let import = Import {

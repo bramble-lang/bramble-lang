@@ -98,7 +98,7 @@ struct ManifestRoutineDef {
     name: String,
     canon_path: String,
     def: ManifestRoutineDefType,
-    params: Vec<ManifestType>,
+    params: Vec<(String, ManifestType)>,
     ret_ty: ManifestType,
 }
 
@@ -112,7 +112,12 @@ impl ManifestRoutineDef {
         let params = rd
             .params
             .iter()
-            .map(|p| ManifestType::from_ty(sm, st, &p.ty))
+            .map(|p| {
+                Ok((
+                    st.get(p.name().unwrap()).unwrap(),
+                    ManifestType::from_ty(sm, st, &p.ty)?,
+                ))
+            })
             .collect::<Result<_, ManifestError>>()?;
         let def = ManifestRoutineDefType::from_def(rd.def);
         let ret_ty = ManifestType::from_ty(sm, st, &rd.ret_ty)?;
@@ -132,7 +137,7 @@ impl ManifestRoutineDef {
         let params = self
             .params
             .iter()
-            .map(|p| p.to_ty(st))
+            .map(|p| Ok((st.insert(p.0.clone()), p.1.to_ty(st)?)))
             .collect::<Result<_, ManifestError>>()?;
         let ret_ty = self.ret_ty.to_ty(st)?;
 

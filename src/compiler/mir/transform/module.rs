@@ -162,11 +162,13 @@ fn add_import_function(
         .iter()
         .map(|p| {
             //    iterate through each param and convert the type to a TypeId
-            let ty = project.find_type(p).ok_or(TransformError::TypeNotFound)?;
+            let ty = project
+                .find_type(&p.1)
+                .ok_or(TransformError::TypeNotFound)?;
 
             //    Create a name for the parameter (names are not included in the manifeset :O )
             //    Generate an ArgDecl
-            Ok(ArgDecl::new(StringId::new(), ty, None, Span::zero()))
+            Ok(ArgDecl::new(p.0, ty, None, Span::zero()))
         })
         .collect::<Result<Vec<_>, TransformError>>()?;
 
