@@ -166,7 +166,7 @@ fn add_import_declarations(
             .ok_or(TransformError::TypeNotFound)?;
 
         // Create a Procedure
-        let p = Procedure::new(f.path(), args, ret_ty, Span::zero());
+        let p = Procedure::new_extern(f.path(), args, false, ret_ty, Span::zero());
 
         // Add procedure to project
         project.add_func(p)?;
