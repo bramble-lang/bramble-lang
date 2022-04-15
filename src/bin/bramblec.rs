@@ -6,13 +6,16 @@ use std::path::Path;
 use std::time::Instant;
 
 use bramble_lang::compiler::diagnostics::Logger;
+use bramble_lang::compiler::import::Import;
+use bramble_lang::compiler::semantics::semanticnode::SemanticContext;
+use bramble_lang::compiler::{transform, MirProject};
 use bramble_lang::diagnostics::{write_source_map, ConsoleWriter, JsonWriter};
 use inkwell::context::Context;
 
 use bramble_lang::project::*;
 use bramble_lang::*;
 
-use bramble_lang::compiler::ast::MAIN_MODULE;
+use bramble_lang::compiler::ast::{Module, MAIN_MODULE};
 
 const BRAID_FILE_EXT: &str = "br";
 const USER_MAIN_FN: &str = "my_main";
@@ -136,48 +139,95 @@ fn main() -> Result<(), i32> {
     }
 
     // Configure the compiler
-    let llvm_time = Instant::now();
     let output_target = config.value_of("output").unwrap_or("./target/output.asm");
-
-    let context = Context::create();
-    let mut llvm = llvm::IrGen::new(
-        &context,
-        project_name,
-        &imports,
-        &source_map,
-        &string_table,
-        &tracer,
-    );
-    match llvm.ingest(&semantic_ast, main_fn_id) {
-        Ok(()) => (),
-        Err(msg) => {
-            println!("LLVM IR translation failed: {}", msg);
-            return Err(ERR_LLVM_IR_ERROR);
-        }
-    }
-
-    if emit_llvm_ir(&config) {
-        llvm.emit_llvm_ir(Path::new("./target/output.ll"));
-    }
-
-    llvm.emit_object_code(Path::new(output_target), emit_asm(&config))
-        .unwrap();
-
-    if config.is_present("manifest") {
-        let manifest = Manifest::extract(&semantic_ast, &source_map, &string_table).unwrap();
-        match std::fs::File::create(format!("./target/{}.manifest", project_name))
-            .map_err(|e| format!("{}", e))
-            .and_then(|mut f| manifest.write(&mut f).map_err(|e| format!("{}", e)))
-        {
+    if !enable_mir_beta(&config) {
+        let llvm_time = Instant::now();
+        let context = Context::create();
+        let mut llvm = llvm::IrGen::new(
+            &context,
+            project_name,
+            &imports,
+            &source_map,
+            &string_table,
+            &tracer,
+        );
+        match llvm.ingest(&semantic_ast, main_fn_id) {
             Ok(()) => (),
-            Err(e) => {
-                println!("Failed to write manifest file: {}", e);
-                return Err(ERR_MANIFEST_WRITE_ERROR);
+            Err(msg) => {
+                println!("LLVM IR translation failed: {}", msg);
+                return Err(ERR_LLVM_IR_ERROR);
             }
         }
+
+        if emit_llvm_ir(&config) {
+            llvm.emit_llvm_ir(Path::new("./target/output.ll"));
+        }
+
+        llvm.emit_object_code(Path::new(output_target), emit_asm(&config))
+            .unwrap();
+
+        if config.is_present("manifest") {
+            let manifest = Manifest::extract(&semantic_ast, &source_map, &string_table).unwrap();
+            match std::fs::File::create(format!("./target/{}.manifest", project_name))
+                .map_err(|e| format!("{}", e))
+                .and_then(|mut f| manifest.write(&mut f).map_err(|e| format!("{}", e)))
+            {
+                Ok(()) => (),
+                Err(e) => {
+                    println!("Failed to write manifest file: {}", e);
+                    return Err(ERR_MANIFEST_WRITE_ERROR);
+                }
+            }
+        }
+        let llvm_duration = llvm_time.elapsed();
+        eprintln!("LLVM: {}", llvm_duration.as_secs_f32());
+    } else {
+        eprintln!("MIR BETA!! :D");
+        let mir = gen_mir(&semantic_ast, &imports);
+        let path = Path::new(output_target);
+        let llvm_time = Instant::now();
+        gen_llvm(
+            project_name,
+            &mir,
+            main_fn_id,
+            &source_map,
+            &string_table,
+            path,
+        );
+
+        let llvm_duration = llvm_time.elapsed();
+        eprintln!("MIR 2 LLVM: {}", llvm_duration.as_secs_f32());
     }
-    let llvm_duration = llvm_time.elapsed();
-    eprintln!("LLVM: {}", llvm_duration.as_secs_f32());
 
     Ok(())
+}
+
+fn gen_mir(module: &Module<SemanticContext>, imports: &[Import]) -> MirProject {
+    let mut project = MirProject::new();
+    transform::transform(module, imports, &mut project).unwrap();
+    project
+}
+
+fn gen_llvm(
+    name: &str,
+    mir: &MirProject,
+    main_name: StringId,
+    sm: &compiler::SourceMap,
+    table: &StringTable,
+    output: &Path,
+) {
+    let context = Context::create();
+    let module = context.create_module(name);
+    let builder = context.create_builder();
+
+    let mut xfmr = llvm::LlvmProgramBuilder::new(&context, &module, &builder, sm, table, main_name);
+
+    let proj_traverser = compiler::ProgramTraverser::new(mir);
+
+    // Traverser is given a MirProject
+    // call traverser.map(llvm) this will use the llvm xfmr to map MirProject to LlvmProject
+    proj_traverser.map(&mut xfmr);
+
+    let llvm = xfmr.complete();
+    llvm.emit_object_code(output)
 }

@@ -185,7 +185,7 @@ impl<'ctx> IrGen<'ctx> {
     ) -> Result<Option<Path>> {
         let mut matches = vec![];
         let base_path = Path::new();
-        let main_path = Self::find_user_main(m, user_main, base_path, &mut matches);
+        Self::find_user_main(m, user_main, base_path, &mut matches);
         if matches.len() == 1 {
             Ok(Some(matches[0].clone()))
         } else if matches.is_empty() {

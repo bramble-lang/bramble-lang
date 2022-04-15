@@ -1010,7 +1010,8 @@ mod mir2llvm_tests_visual {
         let module = context.create_module("test");
         let builder = context.create_builder();
 
-        let mut xfmr = LlvmProgramBuilder::new(&context, &module, &builder, &sm, &table);
+        let main_name = table.insert("my_main".into());
+        let mut xfmr = LlvmProgramBuilder::new(&context, &module, &builder, &sm, &table, main_name);
 
         let proj_traverser = ProgramTraverser::new(&project);
 
@@ -1040,7 +1041,9 @@ mod mir2llvm_tests_visual {
         let module = context.create_module("test");
         let builder = context.create_builder();
 
-        let mut xfmr = LlvmProgramBuilder::new(&context, &module, &builder, &sm, &table);
+        let main_name = table.insert("my_main".into());
+
+        let mut xfmr = LlvmProgramBuilder::new(&context, &module, &builder, &sm, &table, main_name);
 
         let proj_traverser = ProgramTraverser::new(&project);
 

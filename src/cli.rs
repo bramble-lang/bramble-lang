@@ -70,6 +70,12 @@ pub fn configure_cli() -> clap::App<'static, 'static> {
                 .help("Name the output file that the assembly will be written to"),
         )
         .arg(
+            Arg::with_name("mir-beta")
+                .long("mir-beta")
+                .takes_value(false)
+                .help("Uses the MIR system to compile the input Bramble source code")
+        )
+        .arg(
             Arg::with_name("llvm")
                 .long("llvm")
                 .help("When set, then compiler will emit LLVM IR rather than x86 IR")
@@ -143,6 +149,10 @@ pub fn get_log_level<'a>(args: &'a ArgMatches) -> Option<LevelFilter> {
             _ => None,
         },
     }
+}
+
+pub fn enable_mir_beta<'a>(args: &'a ArgMatches) -> bool {
+    args.is_present("mir-beta")
 }
 
 pub fn enable_tracing<'a>(args: &'a ArgMatches) -> bool {

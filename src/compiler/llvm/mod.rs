@@ -10,6 +10,7 @@ mod writable;
 
 use super::ast;
 pub use llvmir::IrGen;
+pub use mir::LlvmProgramBuilder;
 
 #[cfg(test)]
 mod mir_test;
