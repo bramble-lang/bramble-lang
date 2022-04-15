@@ -270,7 +270,10 @@ impl<'ctx> IrGen<'ctx> {
             for rd in &manifest.funcs {
                 self.add_fn_decl(
                     &rd.path().to_label(self.source_map, self.string_table),
-                    rd.params(),
+                    &rd.params()
+                        .iter()
+                        .map(|(_, ty)| ty.clone())
+                        .collect::<Vec<_>>(),
                     false,
                     rd.ty(),
                     Span::zero(),

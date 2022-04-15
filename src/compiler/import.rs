@@ -23,14 +23,14 @@ pub struct ImportRoutineDef {
     path: Path,
 
     /// The parameter list of this routine
-    params: Vec<Type>,
+    params: Vec<(StringId, Type)>,
 
     /// The type that this routine resolves to
     ty: Type,
 }
 
 impl ImportRoutineDef {
-    pub fn new(path: Path, params: Vec<Type>, ty: Type) -> ImportRoutineDef {
+    pub fn new(path: Path, params: Vec<(StringId, Type)>, ty: Type) -> ImportRoutineDef {
         ImportRoutineDef { path, params, ty }
     }
 
@@ -40,7 +40,7 @@ impl ImportRoutineDef {
     }
 
     /// The parameter list of this routine
-    pub fn params(&self) -> &[Type] {
+    pub fn params(&self) -> &[(StringId, Type)] {
         &self.params
     }
 

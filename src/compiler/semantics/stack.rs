@@ -73,7 +73,11 @@ impl<'a> SymbolTableScopeStack {
                 debug!("Import function {}", imp_routine.path());
                 self.import_function(
                     imp_routine.path().clone(),
-                    imp_routine.params().into(),
+                    imp_routine
+                        .params()
+                        .iter()
+                        .map(|(_, ty)| ty.clone())
+                        .collect(),
                     imp_routine.ty().clone(),
                 );
             }

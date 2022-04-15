@@ -9,10 +9,15 @@
 
 use log::debug;
 
-use crate::compiler::{
-    ast::*,
-    mir::ir::{ArgDecl, Procedure},
-    semantics::semanticnode::SemanticContext,
+use crate::{
+    compiler::{
+        ast::*,
+        import::{Import, ImportRoutineDef},
+        mir::ir::{ArgDecl, Procedure},
+        semantics::semanticnode::SemanticContext,
+        Span,
+    },
+    StringId,
 };
 
 use super::{super::project::MirProject, function::FuncTransformer, TransformError};
@@ -21,9 +26,15 @@ use super::{super::project::MirProject, function::FuncTransformer, TransformErro
 /// given [`MirProject`].
 pub fn transform(
     module: &Module<SemanticContext>,
+    imports: &[Import],
     project: &mut MirProject,
 ) -> Result<(), TransformError> {
     debug!("Transform module: {:?}", module.context().canonical_path());
+
+    // Add types and functions imported from other projects
+    for im in imports {
+        add_import_declarations(project, im)?;
+    }
 
     // Add all the types in this module
     add_module_items(project, module)?;
@@ -128,6 +139,52 @@ fn add_extern_declarations(
     Ok(())
 }
 
+fn add_import_declarations(
+    project: &mut MirProject,
+    imports: &Import,
+) -> Result<(), TransformError> {
+    debug!("Adding import declarations");
+
+    for f in &imports.funcs {
+        add_import_function(project, f)?;
+    }
+
+    Ok(())
+}
+
+fn add_import_function(
+    project: &mut MirProject,
+    f: &ImportRoutineDef,
+) -> Result<(), TransformError> {
+    // Create a list of ArgDecls for the external function
+    let args: Vec<_> = f
+        .params()
+        .iter()
+        .map(|p| {
+            //    iterate through each param and convert the type to a TypeId
+            let ty = project
+                .find_type(&p.1)
+                .ok_or(TransformError::TypeNotFound)?;
+
+            //    Create a name for the parameter (names are not included in the manifeset :O )
+            //    Generate an ArgDecl
+            Ok(ArgDecl::new(p.0, ty, None, Span::zero()))
+        })
+        .collect::<Result<Vec<_>, TransformError>>()?;
+
+    // Conver the return type to a TypeId
+    let ret_ty = project
+        .find_type(&f.ty())
+        .ok_or(TransformError::TypeNotFound)?;
+
+    // Create a Procedure
+    let p = Procedure::new_extern(f.path(), args, false, ret_ty, Span::zero());
+
+    // Add procedure to project
+    project.add_func(p)?;
+    Ok(())
+}
+
 fn add_fn_declarations(
     project: &mut MirProject,
     module: &Module<SemanticContext>,
@@ -144,31 +201,36 @@ fn add_fn_declarations(
 
     for f in funcs {
         // convert args into MIR args
-        let args: Vec<_> = f
-            .params
-            .iter()
-            .map(|p| {
-                let ty = project
-                    .find_type(p.context().ty())
-                    .expect("Cannot find type in Project");
-                ArgDecl::new(p.name, ty, None, p.context().span())
-            })
-            .collect();
-
-        let ret_ty = project
-            .find_type(f.context().ty())
-            .expect("Cannot find return type");
-
-        let p = Procedure::new(
-            f.context().canonical_path(),
-            args,
-            ret_ty,
-            f.context().span(),
-        );
-        project.add_func(p)?;
+        let decl = create_fn_declaration(f, project);
+        project.add_func(decl)?;
     }
 
     Ok(())
+}
+
+fn create_fn_declaration(f: &RoutineDef<SemanticContext>, project: &MirProject) -> Procedure {
+    // convert args into MIR args
+    let args: Vec<_> = f
+        .params
+        .iter()
+        .map(|p| {
+            let ty = project
+                .find_type(p.context().ty())
+                .expect("Cannot find type in Project");
+            ArgDecl::new(p.name, ty, None, p.context().span())
+        })
+        .collect();
+
+    let ret_ty = project
+        .find_type(f.context().ty())
+        .expect("Cannot find return type");
+
+    Procedure::new(
+        f.context().canonical_path(),
+        args,
+        ret_ty,
+        f.context().span(),
+    )
 }
 
 fn transform_fns(
