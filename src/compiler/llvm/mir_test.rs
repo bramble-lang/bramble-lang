@@ -17,7 +17,7 @@ mod mir2llvm_tests_visual {
 
     use crate::{
         compiler::{
-            ast::{Element, Module, Type, MAIN_MODULE},
+            ast::{Element, Module, Path, Type, MAIN_MODULE},
             diagnostics::Logger,
             import::{Import, ImportRoutineDef},
             lexer::{tokens::Token, LexerError},
@@ -27,7 +27,7 @@ mod mir2llvm_tests_visual {
             CompilerDisplay, CompilerError, Lexer, SourceMap,
         },
         llvm::mir::LlvmProgramBuilder,
-        resolve_types, StringTable,
+        resolve_types, resolve_types_with_imports, StringTable,
     };
 
     #[test]
@@ -955,32 +955,21 @@ mod mir2llvm_tests_visual {
     fn import_function() {
         compile_and_print_llvm(
             "
-            fn baz(a: [i64; 2]) -> [i64; 2] {
-                return a;
+            fn baz() -> bool {
+                return project::import::foobar(1u16, 5.0);
             }
         ",
-            &[],
+            &[("$import::foobar", &[Type::U16, Type::F64], Type::Bool)],
         );
     }
 
     type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
 
-    fn compile_and_print_llvm(text: &str, imports: &[Import]) {
-        let (sm, table, module) = compile(text);
+    fn compile_and_print_llvm(text: &str, import_funcs: &[(&str, &[Type], Type)]) {
+        let (sm, table, module, imports) = compile(text, import_funcs);
         let mut project = MirProject::new();
 
-        // Create an import
-        let import_fn = ImportRoutineDef::new(
-            vec![Element::Id(table.insert("imported_fn".into()))].into(),
-            vec![Type::I64, Type::StringLiteral],
-            Type::U32,
-        );
-        let import = Import {
-            structs: vec![],
-            funcs: vec![import_fn],
-        };
-
-        transform::transform(&module, &[import], &mut project).unwrap();
+        transform::transform(&module, &imports, &mut project).unwrap();
 
         println!("=== MIR ===:");
         println!("{}\n\n", project);
@@ -1008,7 +997,7 @@ mod mir2llvm_tests_visual {
     }
 
     fn compile_and_run<R: std::fmt::Debug>(text: &str, func_name: &str) -> R {
-        let (sm, table, module) = compile(text);
+        let (sm, table, module, _) = compile(text, &[]);
         let mut project = MirProject::new();
         transform::transform(&module, &[], &mut project).unwrap();
 
@@ -1044,8 +1033,26 @@ mod mir2llvm_tests_visual {
         }
     }
 
-    fn compile(input: &str) -> (SourceMap, StringTable, Module<SemanticContext>) {
+    fn compile(
+        input: &str,
+        import_funcs: &[(&str, &[Type], Type)],
+    ) -> (SourceMap, StringTable, Module<SemanticContext>, Vec<Import>) {
         let table = StringTable::new();
+
+        // Create an import
+        let import_funcs = import_funcs
+            .into_iter()
+            .map(|(p, args, ret)| {
+                let path = string_to_path(&table, p).unwrap();
+                ImportRoutineDef::new(path, (*args).into(), ret.clone())
+            })
+            .collect();
+        let import = Import {
+            structs: vec![],
+            funcs: import_funcs,
+        };
+        let imports = vec![import];
+
         let mut sm = SourceMap::new();
         sm.add_string(input, "/test".into()).unwrap();
         let src = sm.get(0).unwrap().read().unwrap();
@@ -1069,11 +1076,59 @@ mod mir2llvm_tests_visual {
                 panic!("{}", err.fmt(&sm, &table).unwrap());
             }
         };
-        match resolve_types(&ast, main_mod, main_fn, &logger) {
-            Ok(module) => (sm, table, module),
+        match resolve_types_with_imports(&ast, main_mod, main_fn, &imports, &logger) {
+            Ok(module) => (sm, table, module, imports),
             Err(err) => {
                 panic!("{}", err.fmt(&sm, &table).unwrap());
             }
         }
+    }
+
+    /// Convert a Manifest file Path string to a Compiler Path value.
+    fn string_to_path(st: &StringTable, p: &str) -> Option<Path> {
+        /// Tests that an element is a valid identifier
+        fn is_element_valid(el: &str) -> Option<()> {
+            let cs = el.chars().collect::<Vec<_>>();
+            if cs.is_empty() {
+                // Element must have at least one character
+                None
+            } else {
+                if !(cs[0].is_alphabetic() || cs[0] == '_') {
+                    // Element can only start with a letter or underscore
+                    None
+                } else {
+                    // Element can only contain alphanumerics and _
+                    match cs.iter().find(|&&c| !(c.is_alphanumeric() || c == '_')) {
+                        Some(c) => None,
+                        None => Some(()),
+                    }
+                }
+            }
+        }
+
+        // Check if this is a canonical path, and remove the $ if it is
+        let (p, is_canonical) = match p.strip_prefix('$') {
+            Some(stripped) => (stripped, true),
+            None => (p, false),
+        };
+        let elements = p.split("::");
+
+        let mut path = vec![];
+        if is_canonical {
+            path.push(Element::CanonicalRoot)
+        }
+
+        for el in elements {
+            is_element_valid(el)?;
+
+            match el {
+                "self" => path.push(Element::Selph),
+                "super" => path.push(Element::Super),
+                "root" => path.push(Element::FileRoot),
+                e => path.push(Element::Id(st.insert(e.into()))),
+            }
+        }
+
+        Some(path.into())
     }
 }
