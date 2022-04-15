@@ -17,9 +17,9 @@ mod mir2llvm_tests_visual {
 
     use crate::{
         compiler::{
-            ast::{Module, MAIN_MODULE},
+            ast::{Element, Module, Type, MAIN_MODULE},
             diagnostics::Logger,
-            import::Import,
+            import::{Import, ImportRoutineDef},
             lexer::{tokens::Token, LexerError},
             mir::{transform, MirProject, ProgramTraverser},
             parser::Parser,
@@ -951,12 +951,36 @@ mod mir2llvm_tests_visual {
         assert_eq!("hello, world".len(), r as usize);
     }
 
+    #[test]
+    fn import_function() {
+        compile_and_print_llvm(
+            "
+            fn baz(a: [i64; 2]) -> [i64; 2] {
+                return a;
+            }
+        ",
+            &[],
+        );
+    }
+
     type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
 
     fn compile_and_print_llvm(text: &str, imports: &[Import]) {
         let (sm, table, module) = compile(text);
         let mut project = MirProject::new();
-        transform::transform(&module, imports, &mut project).unwrap();
+
+        // Create an import
+        let import_fn = ImportRoutineDef::new(
+            vec![Element::Id(table.insert("imported_fn".into()))].into(),
+            vec![Type::I64, Type::StringLiteral],
+            Type::U32,
+        );
+        let import = Import {
+            structs: vec![],
+            funcs: vec![import_fn],
+        };
+
+        transform::transform(&module, &[import], &mut project).unwrap();
 
         println!("=== MIR ===:");
         println!("{}\n\n", project);
