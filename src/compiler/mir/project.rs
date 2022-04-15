@@ -8,6 +8,7 @@ use std::fmt::Display;
 use crate::{
     compiler::{
         ast::{Path, StructDef, Type},
+        import::ImportStructDef,
         semantics::semanticnode::SemanticContext,
     },
     StringId,
@@ -66,6 +67,14 @@ impl MirProject {
         sd: &StructDef<SemanticContext>,
     ) -> Result<TypeId, TypeTableError> {
         self.types.add_struct_def(sd)
+    }
+
+    /// Adds a new Imported Structure definition to the [`MirProject`].
+    pub fn add_import_struct_def(
+        &mut self,
+        sd: &ImportStructDef,
+    ) -> Result<TypeId, TypeTableError> {
+        self.types.add_import_struct_def(sd)
     }
 
     /// Add a function to the table of static definitions. The MIR associated with
