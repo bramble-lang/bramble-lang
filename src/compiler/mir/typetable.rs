@@ -5,6 +5,7 @@ use std::fmt::Display;
 use crate::{
     compiler::{
         ast::{Node, Parameter, Path, PointerMut, StructDef, Type},
+        import::ImportStructDef,
         semantics::semanticnode::SemanticContext,
     },
     StringId,
@@ -118,6 +119,48 @@ impl TypeTable {
             // If no match found, then create a new structure entry and add to the table
             self.table.push(MirTypeDef::Structure {
                 path: sd.context().canonical_path().clone(),
+                def: MirStructDef::Defined(fields),
+            });
+            Ok(TypeId(self.table.len() as u32 - 1))
+        }
+    }
+
+    pub fn add_import_struct_def(
+        &mut self,
+        sd: &ImportStructDef,
+    ) -> Result<TypeId, TypeTableError> {
+        // Convert the fields of the structure to MIR Fields
+        let fields = sd
+            .fields()
+            .iter()
+            .map(|(name, ty)| {
+                let ty_id = self.add(ty)?;
+                Ok(Field {
+                    name: *name,
+                    ty: ty_id,
+                })
+            })
+            .collect::<Result<_, _>>()?;
+
+        // Search the table for a structure with the same canonical path
+        if let Some(id) = self.find_by_path(sd.path())? {
+            if let MirTypeDef::Structure { def, .. } = self.get_mut(id) {
+                // If a match is found
+                // check if it is not defined
+                if *def == MirStructDef::Declared {
+                    *def = MirStructDef::Defined(fields);
+                    Ok(id)
+                } else {
+                    Err(TypeTableError::StrutureAlreadyDefined)
+                }
+            } else {
+                // If it is, then return an error
+                Err(TypeTableError::ExpectedStructure)
+            }
+        } else {
+            // If no match found, then create a new structure entry and add to the table
+            self.table.push(MirTypeDef::Structure {
+                path: sd.path().clone(),
                 def: MirStructDef::Defined(fields),
             });
             Ok(TypeId(self.table.len() as u32 - 1))

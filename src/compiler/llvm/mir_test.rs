@@ -19,7 +19,7 @@ mod mir2llvm_tests_visual {
         compiler::{
             ast::{Element, Module, Path, Type, MAIN_MODULE},
             diagnostics::Logger,
-            import::{Import, ImportRoutineDef},
+            import::{Import, ImportRoutineDef, ImportStructDef},
             lexer::{tokens::Token, LexerError},
             mir::{transform, MirProject, ProgramTraverser},
             parser::Parser,
@@ -40,7 +40,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -65,7 +65,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -82,7 +82,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -99,7 +99,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -116,7 +116,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -133,7 +133,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -148,7 +148,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -165,7 +165,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -182,7 +182,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -199,7 +199,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -216,7 +216,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -230,7 +230,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -251,7 +251,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -288,7 +288,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -325,7 +325,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -339,7 +339,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -353,7 +353,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -368,7 +368,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -383,7 +383,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -398,7 +398,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -413,7 +413,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -427,7 +427,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -441,7 +441,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -455,7 +455,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -469,7 +469,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -485,7 +485,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -499,7 +499,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -512,7 +512,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -530,7 +530,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -544,7 +544,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -558,7 +558,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -573,7 +573,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -587,7 +587,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -601,7 +601,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -615,7 +615,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -631,7 +631,7 @@ mod mir2llvm_tests_visual {
             }
         ";
 
-        compile_and_print_llvm(text, &[]);
+        compile_and_print_llvm(text, &[], &[]);
     }
 
     #[test]
@@ -736,6 +736,7 @@ mod mir2llvm_tests_visual {
             }
         ",
             &[],
+            &[],
         );
     }
 
@@ -757,6 +758,7 @@ mod mir2llvm_tests_visual {
             }
         ",
             &[],
+            &[],
         );
     }
 
@@ -775,6 +777,7 @@ mod mir2llvm_tests_visual {
             }
         ",
             &[],
+            &[],
         );
     }
 
@@ -790,6 +793,7 @@ mod mir2llvm_tests_visual {
                 return 5.0;
             }
         ",
+            &[],
             &[],
         );
     }
@@ -821,6 +825,7 @@ mod mir2llvm_tests_visual {
             }
         ",
             &[],
+            &[],
         );
     }
 
@@ -851,6 +856,7 @@ mod mir2llvm_tests_visual {
             }
         ",
             &[],
+            &[],
         );
     }
 
@@ -863,6 +869,7 @@ mod mir2llvm_tests_visual {
             }
         ",
             &[],
+            &[],
         );
     }
 
@@ -874,6 +881,7 @@ mod mir2llvm_tests_visual {
                 return a;
             }
         ",
+            &[],
             &[],
         );
     }
@@ -891,6 +899,7 @@ mod mir2llvm_tests_visual {
                 return [1, 2];
             }
         ",
+            &[],
             &[],
         );
     }
@@ -964,13 +973,32 @@ mod mir2llvm_tests_visual {
                 &[("a", Type::U16), ("b", Type::F64)],
                 Type::Bool,
             )],
+            &[],
+        );
+    }
+
+    #[test]
+    fn import_structure() {
+        compile_and_print_llvm(
+            "
+            fn baz() -> bool {
+                let d: project::import::Data := project::import::Data{x: 5.0, y: 3u64};
+                return true;
+            }
+        ",
+            &[],
+            &[("$import::Data", &[("x", Type::F64), ("y", Type::U64)])],
         );
     }
 
     type LResult = std::result::Result<Vec<Token>, CompilerError<LexerError>>;
 
-    fn compile_and_print_llvm(text: &str, import_funcs: &[(&str, &[(&str, Type)], Type)]) {
-        let (sm, table, module, imports) = compile(text, import_funcs);
+    fn compile_and_print_llvm(
+        text: &str,
+        import_funcs: &[(&str, &[(&str, Type)], Type)],
+        import_structs: &[(&str, &[(&str, Type)])],
+    ) {
+        let (sm, table, module, imports) = compile(text, import_funcs, import_structs);
         let mut project = MirProject::new();
 
         transform::transform(&module, &imports, &mut project).unwrap();
@@ -1001,7 +1029,7 @@ mod mir2llvm_tests_visual {
     }
 
     fn compile_and_run<R: std::fmt::Debug>(text: &str, func_name: &str) -> R {
-        let (sm, table, module, _) = compile(text, &[]);
+        let (sm, table, module, _) = compile(text, &[], &[]);
         let mut project = MirProject::new();
         transform::transform(&module, &[], &mut project).unwrap();
 
@@ -1040,6 +1068,7 @@ mod mir2llvm_tests_visual {
     fn compile(
         input: &str,
         import_funcs: &[(&str, &[(&str, Type)], Type)],
+        import_structs: &[(&str, &[(&str, Type)])],
     ) -> (SourceMap, StringTable, Module<SemanticContext>, Vec<Import>) {
         let table = StringTable::new();
 
@@ -1058,8 +1087,19 @@ mod mir2llvm_tests_visual {
                 ImportRoutineDef::new(path, args, ret.clone())
             })
             .collect();
+        let import_structs = import_structs
+            .into_iter()
+            .map(|(p, fields)| {
+                let path = string_to_path(&table, p).unwrap();
+                let fields = fields
+                    .iter()
+                    .map(|(name, ty)| (table.insert((*name).into()), ty.clone()))
+                    .collect();
+                ImportStructDef::new(path, fields)
+            })
+            .collect();
         let import = Import {
-            structs: vec![],
+            structs: import_structs,
             funcs: import_funcs,
         };
         let imports = vec![import];

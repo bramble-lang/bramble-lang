@@ -145,6 +145,10 @@ fn add_import_declarations(
 ) -> Result<(), TransformError> {
     debug!("Adding import declarations");
 
+    for s in &imports.structs {
+        project.add_import_struct_def(s)?;
+    }
+
     for f in &imports.funcs {
         add_import_function(project, f)?;
     }
