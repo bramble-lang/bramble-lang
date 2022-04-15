@@ -139,10 +139,9 @@ fn main() -> Result<(), i32> {
     }
 
     // Configure the compiler
+    let output_target = config.value_of("output").unwrap_or("./target/output.asm");
     if !enable_mir_beta(&config) {
         let llvm_time = Instant::now();
-        let output_target = config.value_of("output").unwrap_or("./target/output.asm");
-
         let context = Context::create();
         let mut llvm = llvm::IrGen::new(
             &context,
@@ -185,7 +184,19 @@ fn main() -> Result<(), i32> {
     } else {
         eprintln!("MIR BETA!! :D");
         let mir = gen_mir(&semantic_ast, &imports);
-        gen_llvm(project_name, &mir, &source_map, &string_table);
+        let path = Path::new(output_target);
+        let llvm_time = Instant::now();
+        gen_llvm(
+            project_name,
+            &mir,
+            main_fn_id,
+            &source_map,
+            &string_table,
+            path,
+        );
+
+        let llvm_duration = llvm_time.elapsed();
+        eprintln!("MIR 2 LLVM: {}", llvm_duration.as_secs_f32());
     }
 
     Ok(())
@@ -197,16 +208,26 @@ fn gen_mir(module: &Module<SemanticContext>, imports: &[Import]) -> MirProject {
     project
 }
 
-fn gen_llvm(name: &str, mir: &MirProject, sm: &compiler::SourceMap, table: &StringTable) {
+fn gen_llvm(
+    name: &str,
+    mir: &MirProject,
+    main_name: StringId,
+    sm: &compiler::SourceMap,
+    table: &StringTable,
+    output: &Path,
+) {
     let context = Context::create();
     let module = context.create_module(name);
     let builder = context.create_builder();
 
-    let mut xfmr = llvm::LlvmProgramBuilder::new(&context, &module, &builder, sm, table);
+    let mut xfmr = llvm::LlvmProgramBuilder::new(&context, &module, &builder, sm, table, main_name);
 
     let proj_traverser = compiler::ProgramTraverser::new(mir);
 
     // Traverser is given a MirProject
     // call traverser.map(llvm) this will use the llvm xfmr to map MirProject to LlvmProject
     proj_traverser.map(&mut xfmr);
+
+    let llvm = xfmr.complete();
+    llvm.emit_object_code(output)
 }

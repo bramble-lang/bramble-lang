@@ -147,6 +147,35 @@ impl<'module, 'ctx> LlvmProgram<'module, 'ctx> {
             std::fs::read_to_string(&path).expect("Something went wrong reading the file");
         println!("{contents}");
     }
+
+    pub fn emit_object_code(&self, file: &std::path::Path) {
+        // Get target for current machine
+        let triple = inkwell::targets::TargetMachine::get_default_triple();
+
+        let config = InitializationConfig::default();
+        inkwell::targets::Target::initialize_all(&config);
+        let target = inkwell::targets::Target::from_triple(&triple).unwrap();
+
+        let machine = target
+            .create_target_machine(
+                &triple,
+                "generic",
+                "",
+                OptimizationLevel::None,
+                RelocMode::Default,
+                CodeModel::Default,
+            )
+            .ok_or("Could not create a target machine for compilation")
+            .unwrap();
+        let data = machine.get_target_data();
+
+        // Configure the module
+        self.module.set_data_layout(&data.get_data_layout());
+        self.module.set_triple(&triple);
+        machine
+            .write_to_file(self.module, inkwell::targets::FileType::Object, file)
+            .unwrap();
+    }
 }
 
 /// Groups the data which describes an LLVM function together.
@@ -157,6 +186,9 @@ pub struct FunctionData<'ctx> {
 
     /// Describes how values are returned from the funciton to the caller.
     ret_method: ReturnMethod,
+
+    /// This is true if the function has the special main function name.
+    is_main: bool,
 }
 
 /// Specifies the method that will be used to pass the result of this
@@ -199,6 +231,9 @@ pub struct LlvmProgramBuilder<'module, 'ctx> {
 
     /// Table mapping [`TypeId`] to the LLVM IR associated type.
     ty_table: HashMap<TypeId, AnyTypeEnum<'ctx>>,
+
+    /// Defines the special name that is reserved for the main function
+    main_name: StringId,
 }
 
 impl<'module, 'ctx> LlvmProgramBuilder<'module, 'ctx> {
@@ -208,6 +243,7 @@ impl<'module, 'ctx> LlvmProgramBuilder<'module, 'ctx> {
         builder: &'module Builder<'ctx>,
         source_map: &'ctx SourceMap,
         table: &'ctx StringTable,
+        main_name: StringId,
     ) -> Self {
         debug!("Creating LLVM Program Transformer");
 
@@ -219,14 +255,49 @@ impl<'module, 'ctx> LlvmProgramBuilder<'module, 'ctx> {
             source_map,
             str_table: table,
             ty_table: HashMap::new(),
+            main_name,
         }
     }
 
     /// Transforms this into the final [`LlvmProgram`] result, which can be used to
     /// actually generate the object code necessary for linking and final compilation.
-    pub fn complete(self) -> LlvmProgram<'module, 'ctx> {
+    pub fn complete(mut self) -> LlvmProgram<'module, 'ctx> {
+        let user_main = self.find_user_main().unwrap();
+        self.construct_main(user_main.function);
+
         LlvmProgram {
             module: self.module,
+        }
+    }
+
+    /// Constructs the platform main function which will call the users defined `my_main`
+    pub fn construct_main(&mut self, user_main: FunctionValue<'ctx>) {
+        let main_type = self.context.i64_type().fn_type(&[], false);
+        let main = self.module.add_function("main", main_type, None);
+        let entry_bb = self.context.append_basic_block(main, "entry");
+        self.builder.position_at_end(entry_bb);
+
+        let status = self
+            .builder
+            .build_call(user_main, &[], "user_main")
+            .try_as_basic_value()
+            .left()
+            .unwrap();
+        self.builder.build_return(Some(&status));
+    }
+
+    fn find_user_main(&self) -> Result<&FunctionData<'ctx>, ()> {
+        let mut mains = self
+            .fn_table
+            .iter()
+            .filter(|(_, f)| f.is_main)
+            .map(|(_, f)| f);
+        match mains.next() {
+            Some(m) => match mains.next() {
+                None => Ok(m),
+                Some(_) => Err(()),
+            },
+            None => Err(()),
         }
     }
 
@@ -320,6 +391,11 @@ impl<'module, 'ctx> LlvmProgramBuilder<'module, 'ctx> {
 
         Ok((ft, ret_method))
     }
+
+    /// Returns true if this function has the name reserved for the user defined main function
+    fn is_main_function(&self, path: &Path) -> bool {
+        path.item().filter(|item| *item == self.main_name).is_some()
+    }
 }
 
 impl<'p, 'module, 'ctx>
@@ -347,6 +423,7 @@ impl<'p, 'module, 'ctx>
         let function = FunctionData {
             ret_method,
             function,
+            is_main: self.is_main_function(canonical_path),
         };
 
         match self.fn_table.insert(func_id, function) {
