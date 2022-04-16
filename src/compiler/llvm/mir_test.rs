@@ -548,6 +548,27 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
+    fn array_in_struct_expression() {
+        let text = "
+            fn test() -> i64 {
+                let s2: S2 := S2{x: [S{ x:[1, 2]}, S{x: [3, 4]}]};
+
+                return s2.x[0].x[0];
+            }
+
+            struct S {
+                x: [i64;2],
+            }
+
+            struct S2 {
+                x: [S; 2],
+            }
+        ";
+
+        compile_and_print_llvm(text, &[], &[]);
+    }
+
+    #[test]
     fn struct_expression() {
         let text = "
             struct S {a: i64, b: f64}
