@@ -520,7 +520,9 @@ impl MirTypeDef {
                     .iter()
                     .map(|f| {
                         p.get_type(f.ty)
-                            .expect("Cannot find given Type ID")
+                            .unwrap_or_else(|e| {
+                                panic!("Cannot find given Type ID {:?} in\n{:?}", e, p.ty_table)
+                            })
                             .into_basic_type()
                             .expect("Cannot convert to a basic type")
                     })
