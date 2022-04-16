@@ -31,7 +31,10 @@ impl<'a> ProgramTraverser<'a> {
         debug!("Applying given Transformer to MIR");
 
         // Add every type in the type table to the project
-        self.map_types(xfmr);
+        // Add every type in the type table to the project
+        for (id, ty) in self.mir.type_iter() {
+            self.map_type(id, ty, xfmr);
+        }
 
         // Declare every function in the ProgramTransformer
         for (id, f) in self.mir.function_iter() {
@@ -53,15 +56,33 @@ impl<'a> ProgramTraverser<'a> {
         }
     }
 
-    fn map_types<'p, L, V, F: FunctionBuilder<L, V>, P: ProgramBuilder<'p, L, V, F>>(
+    fn map_type<'p, L, V, F: FunctionBuilder<L, V>, P: ProgramBuilder<'p, L, V, F>>(
         &self,
+        id: crate::compiler::mir::TypeId,
+        ty: &crate::compiler::mir::MirTypeDef,
         xfmr: &mut P,
     ) {
         debug!("Traversing types");
 
-        // Add every type in the type table to the project
-        for (id, ty) in self.mir.type_iter() {
-            xfmr.add_type(id, ty).unwrap()
+        match ty {
+            crate::compiler::mir::MirTypeDef::Base(_) => (),
+            crate::compiler::mir::MirTypeDef::Array { ty, .. } => {
+                self.map_type(*ty, self.mir.get_type(*ty), xfmr)
+            }
+            crate::compiler::mir::MirTypeDef::RawPointer { target, .. } => {
+                self.map_type(*target, self.mir.get_type(*target), xfmr)
+            }
+            crate::compiler::mir::MirTypeDef::Structure { def, .. } => match def {
+                crate::compiler::mir::MirStructDef::Declared => todo!(),
+                crate::compiler::mir::MirStructDef::Defined(fields) => fields
+                    .iter()
+                    .for_each(|field| self.map_type(field.ty, self.mir.get_type(field.ty), xfmr)),
+            },
+        }
+
+        match xfmr.add_type(id, ty) {
+            Ok(_) => (),
+            Err(_) => (),
         }
     }
 }
