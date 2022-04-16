@@ -31,9 +31,7 @@ impl<'a> ProgramTraverser<'a> {
         debug!("Applying given Transformer to MIR");
 
         // Add every type in the type table to the project
-        for (id, ty) in self.mir.type_iter() {
-            xfmr.add_type(id, ty).unwrap()
-        }
+        self.map_types(xfmr);
 
         // Declare every function in the ProgramTransformer
         for (id, f) in self.mir.function_iter() {
@@ -52,6 +50,18 @@ impl<'a> ProgramTraverser<'a> {
             // Create function traverser and pass it the transformer
             let mut traverser = FunctionTraverser::new(self.mir, f, &mut fn_xfm);
             traverser.map();
+        }
+    }
+
+    fn map_types<'p, L, V, F: FunctionBuilder<L, V>, P: ProgramBuilder<'p, L, V, F>>(
+        &self,
+        xfmr: &mut P,
+    ) {
+        debug!("Traversing types");
+
+        // Add every type in the type table to the project
+        for (id, ty) in self.mir.type_iter() {
+            xfmr.add_type(id, ty).unwrap()
         }
     }
 }
