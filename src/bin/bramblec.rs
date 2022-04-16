@@ -184,6 +184,11 @@ fn main() -> Result<(), i32> {
     } else {
         eprintln!("MIR BETA!! :D");
         let mir = gen_mir(&semantic_ast, &imports);
+
+        if emit_mir(&config) {
+            println!("=== MIR ===\n\n{}", mir);
+        }
+
         let path = Path::new(output_target);
         let llvm_time = Instant::now();
         gen_llvm(
