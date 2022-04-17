@@ -440,15 +440,17 @@ impl<'p, 'module, 'ctx>
     fn add_type(&mut self, id: TypeId, ty: &MirTypeDef) -> Result<(), TransformerError> {
         debug!("Adding a type to the Module");
 
-        let previous_value = ty
-            .into_basic_type_enum(self)
-            .and_then(|llvm_ty| self.ty_table.insert(id, llvm_ty));
-
-        // If `insert` returns `None` then it means there was no previous value associated with `id`
-        // otherwise, `id` was already defined and this should thrown an error.
-        match previous_value {
-            None => Ok(()),
-            Some(_) => Err(TransformerError::TypeAlreadyDefined),
+        // If type is already in the table then skip
+        if self.ty_table.contains_key(&id) {
+            Ok(())
+        } else {
+            match ty.into_basic_type_enum(self) {
+                Some(llvm_ty) => {
+                    self.ty_table.insert(id, llvm_ty);
+                    Ok(())
+                }
+                None => Ok(()),
+            }
         }
     }
 
