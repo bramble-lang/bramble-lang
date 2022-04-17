@@ -503,6 +503,19 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
+    fn self_reference_struct() {
+        let text = "
+            struct S {ptr: *const S}
+
+            fn test(a: S) {
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text, &[], &[]);
+    }
+
+    #[test]
     fn simple_array_expression() {
         let text = "
             fn test() {
