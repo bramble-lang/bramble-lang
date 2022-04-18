@@ -478,7 +478,7 @@ impl<'p, 'module, 'ctx>
                     self.ty_table.insert(id, llvm_ty);
                     Ok(())
                 }
-                None => Ok(()),
+                None => panic!("Attempting to use Null as a type"),
             }
         }
     }
