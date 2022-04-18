@@ -516,6 +516,33 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
+    fn self_reference_struct_indirect() {
+        let text = "
+            struct S {s: S2, ptr: *mut S2}
+            struct S2 {ptr: *const S}
+
+            fn test(a: S) {
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text, &[], &[]);
+    }
+
+    #[test]
+    fn self_reference_struct_pointer_to_pointer() {
+        let text = "
+            struct S {ptr: *const *const S}
+
+            fn test(a: S) {
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text, &[], &[]);
+    }
+
+    #[test]
     fn simple_array_expression() {
         let text = "
             fn test() {

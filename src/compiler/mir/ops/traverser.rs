@@ -72,12 +72,19 @@ impl<'a> ProgramTraverser<'a> {
     ) {
         debug!("Traversing types");
 
+        // If this is a type that references other types, make sure those referenced types
+        // are defined before transforming this type.
         match ty {
             MirTypeDef::Base(_) => (),
             MirTypeDef::Array { ty, .. } => self.map_type(*ty, self.mir.get_type(*ty), xfmr),
             MirTypeDef::RawPointer { target, .. } => {
-                //self.map_type(*target, self.mir.get_type(*target), xfmr)
-                ()
+                let target_ty = self.mir.get_type(*target);
+                match target_ty {
+                    MirTypeDef::Structure { .. } => (),
+                    MirTypeDef::Array { .. }
+                    | MirTypeDef::Base(..)
+                    | MirTypeDef::RawPointer { .. } => self.map_type(*target, target_ty, xfmr),
+                }
             }
             MirTypeDef::Structure { def, .. } => match def {
                 MirStructDef::Declared => todo!(),
