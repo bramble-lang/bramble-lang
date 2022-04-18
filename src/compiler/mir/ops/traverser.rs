@@ -296,7 +296,7 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
             }
             RValue::Cast(o, target) => {
                 let l = self.operand(o);
-                self.xfmr.cast(l, false, target, false).unwrap()
+                self.xfmr.cast(l, false, *target, false).unwrap()
             }
             RValue::AddressOf(t) => {
                 let l = self.lvalue(t);
