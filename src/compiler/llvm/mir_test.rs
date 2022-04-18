@@ -1026,14 +1026,14 @@ mod mir2llvm_tests_visual {
         let r: u64 = compile_and_run(
             "
             fn test() -> u64 {
-                let mut x: i64 := 9;
+                let mut x: i64 := -9;
 
                 return x as u64;
             }
         ",
             "main_test",
         );
-        assert_eq!(9, r);
+        assert_eq!(18446744073709551607, r);
     }
 
     #[test]

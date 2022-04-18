@@ -396,9 +396,9 @@ impl MirProcedureBuilder {
     }
 
     /// Cast the given expression to the given primitive.
-    pub fn cast(&self, expr: Operand, target: TypeId) -> RValue {
+    pub fn cast(&self, expr: Operand, expr_ty: TypeId, target: TypeId) -> RValue {
         debug!("Cast: {:?}, {:?}", expr, target);
-        RValue::Cast(expr, target)
+        RValue::Cast(expr, expr_ty, target)
     }
 
     /// Terminates by returning to the caller function

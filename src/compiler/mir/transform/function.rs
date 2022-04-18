@@ -234,12 +234,16 @@ impl<'a> FuncTransformer<'a> {
         expr: &Expression<SemanticContext>,
         target: &Type,
     ) -> Operand {
+        let expr_ty = self
+            .project
+            .find_type(expr.context().ty())
+            .expect("Cannot find the given type");
         let expr = self.expression(expr);
         let target = self
             .project
             .find_type(target)
             .expect("Cannot find the given type");
-        let result = self.mir.cast(expr, target);
+        let result = self.mir.cast(expr, expr_ty, target);
         self.mir.temp_store(result, target, ctx.span())
     }
 

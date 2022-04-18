@@ -294,9 +294,13 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
                 }
                 .unwrap()
             }
-            RValue::Cast(o, target) => {
+            RValue::Cast(o, oty, target) => {
                 let l = self.operand(o);
-                self.xfmr.cast(l, false, *target, false).unwrap()
+                // is operand signed
+                let l_signed = self.mir.is_signed(*oty);
+                // is target type signed
+                let ty_signed = self.mir.is_signed(*target);
+                self.xfmr.cast(l, l_signed, *target, ty_signed).unwrap()
             }
             RValue::AddressOf(t) => {
                 let l = self.lvalue(t);

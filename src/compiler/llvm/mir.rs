@@ -1645,10 +1645,40 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         target: TypeId,
         target_signed: bool,
     ) -> Result<BasicValueEnum<'ctx>, TransformerError> {
-        let target_ty = self.program.get_type(target)?;
-        let l_ty = l.get_type();
+        let target_ty = self.program.get_type(target)?.into_basic_type().unwrap();
+        println!("target type: {:?}", target_ty);
+        let target_sz = target_ty.size_of().unwrap();
+        println!("sz: {:?}", target_sz);
+        let target_sz = 8;
 
-        todo!()
+        let l_ty = l.get_type();
+        let l_ty_sz = 8;
+
+        todo!("get the width of the source and target types");
+
+        let op = match (l, target_ty) {
+            (BasicValueEnum::IntValue(iv), BasicTypeEnum::IntType(tty)) => {
+                // if upcasting
+                if l_ty_sz < target_sz {
+                    match (l_signed, target_signed) {
+                        (false, false) | (false, true) => {
+                            self.program.builder.build_int_z_extend(iv, tty, "")
+                        }
+                        (true, false) | (true, true) => {
+                            self.program.builder.build_int_s_extend(iv, tty, "")
+                        }
+                    }
+                // else if downcasting
+                } else {
+                    // trancate
+                    self.program.builder.build_int_truncate(iv, tty, "")
+                }
+                .into()
+            }
+            _ => todo!(),
+        };
+
+        Ok(op)
     }
 
     fn address_of(&self, a: Location<'ctx>) -> Result<BasicValueEnum<'ctx>, TransformerError> {
