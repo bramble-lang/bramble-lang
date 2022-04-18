@@ -88,7 +88,7 @@ impl<'a> ProgramTraverser<'a> {
                 }
             }
             MirTypeDef::Structure { def, .. } => match def {
-                MirStructDef::Declared => todo!(),
+                MirStructDef::Declared => panic!("Attempting to convert Undefined structure"),
                 MirStructDef::Defined(fields) => {
                     for field in fields {
                         self.map_type(field.ty, self.mir.get_type(field.ty), xfmr)?
