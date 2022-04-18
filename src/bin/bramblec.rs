@@ -183,7 +183,11 @@ fn main() -> Result<(), i32> {
         eprintln!("LLVM: {}", llvm_duration.as_secs_f32());
     } else {
         eprintln!("MIR BETA!! :D");
+
+        let mir_time = Instant::now();
         let mir = gen_mir(&semantic_ast, &imports);
+        let mir_duration = mir_time.elapsed();
+        eprintln!("MIR Generation: {}", mir_duration.as_secs_f32());
 
         if emit_mir(&config) {
             println!("=== MIR ===\n\n{}", mir);
