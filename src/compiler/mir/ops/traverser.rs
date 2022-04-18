@@ -294,7 +294,10 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
                 }
                 .unwrap()
             }
-            RValue::Cast(_, _) => todo!(),
+            RValue::Cast(o, target) => {
+                let l = self.operand(o);
+                self.xfmr.cast(l, false, target, false).unwrap()
+            }
             RValue::AddressOf(t) => {
                 let l = self.lvalue(t);
                 self.xfmr.address_of(l).unwrap()

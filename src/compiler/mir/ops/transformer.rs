@@ -254,6 +254,15 @@ pub trait FunctionBuilder<L, V> {
     fn i_or(&self, a: V, b: V) -> Result<V, TransformerError>;
 
     /// Address of a given Location value.
+    fn cast(
+        &self,
+        l: V,
+        l_signed: bool,
+        target: TypeId,
+        target_signed: bool,
+    ) -> Result<V, TransformerError>;
+
+    /// Address of a given Location value.
     fn address_of(&self, a: L) -> Result<V, TransformerError>;
 
     /// Use the location pointed to by an address to create an addressable expression.

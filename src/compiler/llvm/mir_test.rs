@@ -1022,6 +1022,21 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
+    fn cast_int_to_uint() {
+        let r: u64 = compile_and_run(
+            "
+            fn test() -> u64 {
+                let mut x: i64 := 9;
+
+                return x as u64;
+            }
+        ",
+            "main_test",
+        );
+        assert_eq!(9, r);
+    }
+
+    #[test]
     fn import_function() {
         compile_and_print_llvm(
             "

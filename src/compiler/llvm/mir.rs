@@ -1638,6 +1638,19 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         }
     }
 
+    fn cast(
+        &self,
+        l: BasicValueEnum<'ctx>,
+        l_signed: bool,
+        target: TypeId,
+        target_signed: bool,
+    ) -> Result<BasicValueEnum<'ctx>, TransformerError> {
+        let target_ty = self.program.get_type(target)?;
+        let l_ty = l.get_type();
+
+        todo!()
+    }
+
     fn address_of(&self, a: Location<'ctx>) -> Result<BasicValueEnum<'ctx>, TransformerError> {
         match a {
             Location::Pointer(ptr) => Ok(ptr.into()),
