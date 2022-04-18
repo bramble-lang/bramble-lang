@@ -554,6 +554,9 @@ impl MirTypeDef {
                     .map(|f| {
                         p.get_type(f.ty)
                             .unwrap_or_else(|e| {
+                                // This panics because by this time, every type that is referenced in this structure
+                                // should already be added (or declared).  So, this means that a bug exists either in
+                                // this module or in the MIR Traverser
                                 panic!("Cannot find given Type ID {:?} in\n{:?}", e, p.ty_table)
                             })
                             .into_basic_type()
