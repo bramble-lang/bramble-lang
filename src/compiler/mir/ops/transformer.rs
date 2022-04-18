@@ -40,6 +40,7 @@ pub trait ProgramBuilder<'p, L, V, F: FunctionBuilder<L, V>> {
         ret_ty: TypeId,
     ) -> Result<(), TransformerError>;
 
+    fn declare_struct(&mut self, id: TypeId, path: &Path) -> Result<(), TransformerError>;
     fn add_type(&mut self, id: TypeId, ty: &MirTypeDef) -> Result<(), TransformerError>;
 
     /// Creates a new transformer for the given function
@@ -272,6 +273,7 @@ pub enum TransformerError {
     FunctionAlreadyDeclared,
     FunctionNotFound,
     TypeAlreadyDefined,
+    StructUndefined,
     TypeNotFound(TypeId),
     ArgNotFound,
     Internal(&'static dyn TransformerInternalError),
