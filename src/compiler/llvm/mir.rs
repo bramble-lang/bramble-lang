@@ -1693,6 +1693,16 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                 }
                 .into()
             }
+            (BasicValueEnum::FloatValue(fv), BasicTypeEnum::FloatType(tty)) => {
+                // if upcasting
+                if l_sz < target_sz {
+                    self.program.builder.build_float_ext(fv, tty, "")
+                // otherwise
+                } else {
+                    self.program.builder.build_float_trunc(fv, tty, "")
+                }
+                .into()
+            }
             _ => todo!(),
         };
 
