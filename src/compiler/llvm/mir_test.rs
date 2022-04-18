@@ -431,6 +431,34 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
+    fn raw_pointer_cast_from_int() {
+        let text = "
+            fn test() -> i64 {
+                let a: i64 :=  0;
+                let p: *const i64 := a as *const i64;
+
+                return ^p;
+            }
+        ";
+
+        compile_and_print_llvm(text, &[], &[]);
+    }
+
+    #[test]
+    fn raw_pointer_cast_to_int() {
+        let text = "
+            fn test() -> u64 {
+                let a: i64 :=  0;
+                let p: *const i64 := @const a;
+
+                return p as u64;
+            }
+        ";
+
+        compile_and_print_llvm(text, &[], &[]);
+    }
+
+    #[test]
     fn raw_pointer_deref() {
         let text = "
             fn test() -> i64 {

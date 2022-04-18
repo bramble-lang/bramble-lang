@@ -1703,6 +1703,18 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                 }
                 .into()
             }
+            // pointer to int
+            (BasicValueEnum::PointerValue(pv), BasicTypeEnum::IntType(tty)) => {
+                self.program.builder.build_ptr_to_int(pv, tty, "").into()
+            }
+            // int to pointer
+            (BasicValueEnum::IntValue(iv), BasicTypeEnum::PointerType(tty)) => {
+                self.program.builder.build_int_to_ptr(iv, tty, "").into()
+            }
+            // pointer to pointer
+            (BasicValueEnum::PointerValue(pv), BasicTypeEnum::PointerType(tty)) => {
+                self.program.builder.build_bitcast(pv, tty, "")
+            }
             _ => todo!(),
         };
 
