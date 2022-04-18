@@ -26,7 +26,7 @@ pub use ops::{
     FunctionBuilder, ProgramBuilder, ProgramTraverser, TransformerError, TransformerInternalError,
 };
 pub use project::{DefId, MirProject};
-pub use typetable::{FieldId, MirBaseType, MirStructDef, MirTypeDef, TypeId, TypeTable};
+pub use typetable::{FieldId, MirBaseType, MirStructDef, MirTypeDef, TypeId};
 
 // Unit test modules
 #[cfg(test)]

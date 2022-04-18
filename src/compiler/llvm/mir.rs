@@ -18,7 +18,7 @@ use crate::{
         ast::Path,
         mir::{
             ir::*, DefId, FieldId, FunctionBuilder, MirBaseType, MirStructDef, MirTypeDef,
-            ProgramBuilder, TransformerError, TransformerInternalError, TypeId, TypeTable,
+            ProgramBuilder, TransformerError, TransformerInternalError, TypeId,
         },
         CompilerDisplay, SourceMap, Span,
     },
