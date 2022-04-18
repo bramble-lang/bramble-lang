@@ -48,8 +48,6 @@ pub trait ProgramBuilder<'p, L, V, F: FunctionBuilder<L, V>> {
     fn declare_struct(&mut self, id: TypeId, path: &Path) -> Result<(), TransformerError>;
     fn add_type(&mut self, id: TypeId, ty: &MirTypeDef) -> Result<(), TransformerError>;
 
-    fn add_types(&mut self, types: &TypeTable) -> Result<(), TransformerError>;
-
     /// Creates a new transformer for the given function
     fn get_function_transformer(&'p self, func_id: DefId) -> Result<F, TransformerError>;
 }

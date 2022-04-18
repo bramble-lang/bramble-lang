@@ -482,13 +482,6 @@ impl<'p, 'module, 'ctx>
         }
     }
 
-    fn add_types(&mut self, types: &TypeTable) -> Result<(), TransformerError> {
-        // Add stubs for all structures
-        // Add all primitive types
-        //
-        todo!()
-    }
-
     fn get_function_transformer(
         &'p self,
         id: DefId,
