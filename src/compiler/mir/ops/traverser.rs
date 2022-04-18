@@ -5,7 +5,7 @@ use std::{collections::VecDeque, marker::PhantomData};
 
 use log::debug;
 
-use crate::compiler::mir::{ir::*, MirProject, MirTypeDef};
+use crate::compiler::mir::{ir::*, MirProject, MirStructDef, MirTypeDef};
 
 use super::{transformer::FunctionBuilder, ProgramBuilder};
 
@@ -71,8 +71,8 @@ impl<'a> ProgramTraverser<'a> {
                 self.map_type(*target, self.mir.get_type(*target), xfmr)
             }
             MirTypeDef::Structure { def, .. } => match def {
-                crate::compiler::mir::MirStructDef::Declared => todo!(),
-                crate::compiler::mir::MirStructDef::Defined(fields) => fields
+                MirStructDef::Declared => todo!(),
+                MirStructDef::Defined(fields) => fields
                     .iter()
                     .for_each(|field| self.map_type(field.ty, self.mir.get_type(field.ty), xfmr)),
             },
