@@ -21,7 +21,12 @@ use std::{collections::VecDeque, fmt::Debug};
 use crate::{
     compiler::{
         ast::Path,
-        mir::{ir::*, project::DefId, typetable::FieldId, MirTypeDef, TypeId},
+        mir::{
+            ir::*,
+            project::DefId,
+            typetable::{FieldId, TypeTable},
+            MirTypeDef, TypeId,
+        },
         Span,
     },
     StringId,
@@ -40,7 +45,10 @@ pub trait ProgramBuilder<'p, L, V, F: FunctionBuilder<L, V>> {
         ret_ty: TypeId,
     ) -> Result<(), TransformerError>;
 
+    fn declare_struct(&mut self, id: TypeId, path: &Path) -> Result<(), TransformerError>;
     fn add_type(&mut self, id: TypeId, ty: &MirTypeDef) -> Result<(), TransformerError>;
+
+    fn add_types(&mut self, types: &TypeTable) -> Result<(), TransformerError>;
 
     /// Creates a new transformer for the given function
     fn get_function_transformer(&'p self, func_id: DefId) -> Result<F, TransformerError>;

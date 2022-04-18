@@ -18,7 +18,7 @@ use crate::{
         ast::Path,
         mir::{
             ir::*, DefId, FieldId, FunctionBuilder, MirBaseType, MirStructDef, MirTypeDef,
-            ProgramBuilder, TransformerError, TransformerInternalError, TypeId,
+            ProgramBuilder, TransformerError, TransformerInternalError, TypeId, TypeTable,
         },
         CompilerDisplay, SourceMap, Span,
     },
@@ -437,11 +437,39 @@ impl<'p, 'module, 'ctx>
         }
     }
 
+    fn declare_struct(&mut self, id: TypeId, path: &Path) -> Result<(), TransformerError> {
+        let label = self.to_label(path);
+        let struct_decl = self.context.opaque_struct_type(&label);
+        match self.ty_table.insert(id, struct_decl.into()) {
+            Some(_) => Err(TransformerError::TypeAlreadyDefined),
+            None => Ok(()),
+        }
+    }
+
     fn add_type(&mut self, id: TypeId, ty: &MirTypeDef) -> Result<(), TransformerError> {
         debug!("Adding a type to the Module");
 
         // If type is already in the table then skip
         if self.ty_table.contains_key(&id) {
+            // If this is a structure, then turn the declaration into a definition
+            match ty {
+                MirTypeDef::Structure { def, .. } => match def {
+                    MirStructDef::Defined(fields) => {
+                        // Get the structure declaration
+                        let s = self.ty_table.get_mut(&id).unwrap().into_struct_type();
+                        // Add fields to structure definition
+                        let field_types: Vec<_> = fields
+                            .iter()
+                            .map(|f| self.get_type(f.ty).unwrap().into_basic_type().unwrap())
+                            .collect();
+                        s.set_body(&field_types, false);
+                    }
+                    MirStructDef::Declared => (),
+                },
+                MirTypeDef::Base(_) => (),
+                MirTypeDef::Array { ty, sz } => (),
+                MirTypeDef::RawPointer { mutable, target } => (),
+            }
             Err(TransformerError::TypeAlreadyDefined)
         } else {
             match ty.into_basic_type_enum(self) {
@@ -452,6 +480,13 @@ impl<'p, 'module, 'ctx>
                 None => Ok(()),
             }
         }
+    }
+
+    fn add_types(&mut self, types: &TypeTable) -> Result<(), TransformerError> {
+        // Add stubs for all structures
+        // Add all primitive types
+        //
+        todo!()
     }
 
     fn get_function_transformer(

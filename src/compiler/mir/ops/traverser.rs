@@ -30,7 +30,15 @@ impl<'a> ProgramTraverser<'a> {
     ) {
         debug!("Applying given Transformer to MIR");
 
-        // Add every type in the type table to the project
+        // Declare every structure, but do not define the structures yet.
+        // This solves the problem of structures with reference cycles
+        for (id, ty) in self.mir.type_iter() {
+            match ty {
+                MirTypeDef::Structure { path, .. } => xfmr.declare_struct(id, path).unwrap(),
+                _ => (),
+            }
+        }
+
         // Add every type in the type table to the project
         for (id, ty) in self.mir.type_iter() {
             self.map_type(id, ty, xfmr);
@@ -68,7 +76,8 @@ impl<'a> ProgramTraverser<'a> {
             MirTypeDef::Base(_) => (),
             MirTypeDef::Array { ty, .. } => self.map_type(*ty, self.mir.get_type(*ty), xfmr),
             MirTypeDef::RawPointer { target, .. } => {
-                self.map_type(*target, self.mir.get_type(*target), xfmr)
+                //self.map_type(*target, self.mir.get_type(*target), xfmr)
+                ()
             }
             MirTypeDef::Structure { def, .. } => match def {
                 MirStructDef::Declared => todo!(),
