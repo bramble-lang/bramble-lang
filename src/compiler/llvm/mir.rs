@@ -442,7 +442,7 @@ impl<'p, 'module, 'ctx>
 
         // If type is already in the table then skip
         if self.ty_table.contains_key(&id) {
-            Ok(())
+            Err(TransformerError::TypeAlreadyDefined)
         } else {
             match ty.into_basic_type_enum(self) {
                 Some(llvm_ty) => {
