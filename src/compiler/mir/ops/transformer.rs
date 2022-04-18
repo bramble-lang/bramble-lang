@@ -258,8 +258,10 @@ pub trait FunctionBuilder<L, V> {
         &self,
         l: V,
         l_signed: bool,
+        l_sz: u64,
         target: TypeId,
         target_signed: bool,
+        target_sz: u64,
     ) -> Result<V, TransformerError>;
 
     /// Address of a given Location value.

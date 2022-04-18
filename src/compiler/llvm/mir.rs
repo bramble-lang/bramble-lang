@@ -1642,24 +1642,18 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         &self,
         l: BasicValueEnum<'ctx>,
         l_signed: bool,
+        l_sz: u64,
         target: TypeId,
         target_signed: bool,
+        target_sz: u64,
     ) -> Result<BasicValueEnum<'ctx>, TransformerError> {
         let target_ty = self.program.get_type(target)?.into_basic_type().unwrap();
-        println!("target type: {:?}", target_ty);
-        let target_sz = target_ty.size_of().unwrap();
-        println!("sz: {:?}", target_sz);
-        let target_sz = 8;
-
         let l_ty = l.get_type();
-        let l_ty_sz = 8;
-
-        todo!("get the width of the source and target types");
 
         let op = match (l, target_ty) {
             (BasicValueEnum::IntValue(iv), BasicTypeEnum::IntType(tty)) => {
                 // if upcasting
-                if l_ty_sz < target_sz {
+                if l_sz < target_sz {
                     match (l_signed, target_signed) {
                         (false, false) | (false, true) => {
                             self.program.builder.build_int_z_extend(iv, tty, "")

@@ -298,9 +298,13 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
                 let l = self.operand(o);
                 // is operand signed
                 let l_signed = self.mir.is_signed(*oty);
+                let l_sz = self.mir.width(*oty).unwrap();
                 // is target type signed
                 let ty_signed = self.mir.is_signed(*target);
-                self.xfmr.cast(l, l_signed, *target, ty_signed).unwrap()
+                let ty_sz = self.mir.width(*target).unwrap();
+                self.xfmr
+                    .cast(l, l_signed, l_sz, *target, ty_signed, ty_sz)
+                    .unwrap()
             }
             RValue::AddressOf(t) => {
                 let l = self.lvalue(t);
