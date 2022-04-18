@@ -1654,7 +1654,6 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         target_sz: u64,
     ) -> Result<BasicValueEnum<'ctx>, TransformerError> {
         let target_ty = self.program.get_type(target)?.into_basic_type().unwrap();
-        let l_ty = l.get_type();
 
         let op = match (l, target_ty) {
             (BasicValueEnum::IntValue(iv), BasicTypeEnum::IntType(tty)) => {
