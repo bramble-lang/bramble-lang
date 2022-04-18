@@ -21,12 +21,7 @@ use std::{collections::VecDeque, fmt::Debug};
 use crate::{
     compiler::{
         ast::Path,
-        mir::{
-            ir::*,
-            project::DefId,
-            typetable::{FieldId, TypeTable},
-            MirTypeDef, TypeId,
-        },
+        mir::{ir::*, project::DefId, typetable::FieldId, MirTypeDef, TypeId},
         Span,
     },
     StringId,
