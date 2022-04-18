@@ -55,6 +55,7 @@ pub enum LlvmBuilderError {
     ReadInvalidLocation,
     InvalidArithmeticOperands,
     CannotConvertToBasicType,
+    InvalidCastingOperation,
 }
 
 impl TransformerInternalError for LlvmBuilderError {}
@@ -1116,6 +1117,11 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         bt.const_int(b as u64, true).into()
     }
 
+    fn const_null(&self) -> BasicValueEnum<'ctx> {
+        let zero = self.program.context.i64_type().const_zero();
+        zero.into()
+    }
+
     fn const_f64(&self, f: f64) -> BasicValueEnum<'ctx> {
         self.program.context.f64_type().const_float(f).into()
     }
@@ -1636,6 +1642,92 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                 &LlvmBuilderError::InvalidArithmeticOperands,
             )),
         }
+    }
+
+    fn cast(
+        &self,
+        l: BasicValueEnum<'ctx>,
+        l_signed: bool,
+        l_sz: u64,
+        target: TypeId,
+        target_signed: bool,
+        target_sz: u64,
+    ) -> Result<BasicValueEnum<'ctx>, TransformerError> {
+        let target_ty = self.program.get_type(target)?.into_basic_type().unwrap();
+
+        let op = match (l, target_ty) {
+            (BasicValueEnum::IntValue(iv), BasicTypeEnum::IntType(tty)) => {
+                // if upcasting
+                if l_sz < target_sz {
+                    match (l_signed, target_signed) {
+                        (false, false) | (false, true) => {
+                            self.program.builder.build_int_z_extend(iv, tty, "")
+                        }
+                        (true, false) | (true, true) => {
+                            self.program.builder.build_int_s_extend(iv, tty, "")
+                        }
+                    }
+                // else if downcasting
+                } else {
+                    // trancate
+                    self.program.builder.build_int_truncate(iv, tty, "")
+                }
+                .into()
+            }
+            (BasicValueEnum::IntValue(iv), BasicTypeEnum::FloatType(tty)) => {
+                // if source is signed
+                if l_signed {
+                    self.program.builder.build_signed_int_to_float(iv, tty, "")
+                // otherwise
+                } else {
+                    self.program
+                        .builder
+                        .build_unsigned_int_to_float(iv, tty, "")
+                }
+                .into()
+            }
+            // float to int
+            (BasicValueEnum::FloatValue(fv), BasicTypeEnum::IntType(tty)) => {
+                // if target is signed
+                if target_signed {
+                    self.program.builder.build_float_to_signed_int(fv, tty, "")
+                } else {
+                    self.program
+                        .builder
+                        .build_float_to_unsigned_int(fv, tty, "")
+                }
+                .into()
+            }
+            (BasicValueEnum::FloatValue(fv), BasicTypeEnum::FloatType(tty)) => {
+                // if upcasting
+                if l_sz < target_sz {
+                    self.program.builder.build_float_ext(fv, tty, "")
+                // otherwise
+                } else {
+                    self.program.builder.build_float_trunc(fv, tty, "")
+                }
+                .into()
+            }
+            // pointer to int
+            (BasicValueEnum::PointerValue(pv), BasicTypeEnum::IntType(tty)) => {
+                self.program.builder.build_ptr_to_int(pv, tty, "").into()
+            }
+            // int to pointer
+            (BasicValueEnum::IntValue(iv), BasicTypeEnum::PointerType(tty)) => {
+                self.program.builder.build_int_to_ptr(iv, tty, "").into()
+            }
+            // pointer to pointer
+            (BasicValueEnum::PointerValue(pv), BasicTypeEnum::PointerType(tty)) => {
+                self.program.builder.build_bitcast(pv, tty, "")
+            }
+            _ => {
+                return Err(TransformerError::Internal(
+                    &LlvmBuilderError::InvalidCastingOperation,
+                ))
+            }
+        };
+
+        Ok(op)
     }
 
     fn address_of(&self, a: Location<'ctx>) -> Result<BasicValueEnum<'ctx>, TransformerError> {

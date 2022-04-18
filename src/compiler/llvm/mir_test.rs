@@ -431,6 +431,48 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
+    fn raw_pointer_cast_from_int() {
+        let text = "
+            fn test() -> i64 {
+                let a: i64 :=  0;
+                let p: *const i64 := a as *const i64;
+
+                return ^p;
+            }
+        ";
+
+        compile_and_print_llvm(text, &[], &[]);
+    }
+
+    #[test]
+    fn raw_pointer_cast_to_int() {
+        let text = "
+            fn test() -> u64 {
+                let a: i64 :=  0;
+                let p: *const i64 := @const a;
+
+                return p as u64;
+            }
+        ";
+
+        compile_and_print_llvm(text, &[], &[]);
+    }
+
+    #[test]
+    fn raw_pointer_cast_to_pointer() {
+        let text = "
+            fn test() -> *const u64 {
+                let a: i64 :=  0;
+                let p: *const i64 := @const a;
+
+                return p as *const u64;
+            }
+        ";
+
+        compile_and_print_llvm(text, &[], &[]);
+    }
+
+    #[test]
     fn raw_pointer_deref() {
         let text = "
             fn test() -> i64 {
@@ -1019,6 +1061,81 @@ mod mir2llvm_tests_visual {
             "main_foo",
         );
         assert_eq!("hello, world".len(), r as usize);
+    }
+
+    #[test]
+    fn cast_int_to_uint() {
+        let r: u64 = compile_and_run(
+            "
+            fn test() -> u64 {
+                let mut x: i64 := -9;
+
+                return x as u64;
+            }
+        ",
+            "main_test",
+        );
+        assert_eq!(18446744073709551607, r);
+    }
+
+    #[test]
+    fn cast_int_to_float() {
+        let r: f64 = compile_and_run(
+            "
+            fn test() -> f64 {
+                let mut x: i64 := -9;
+
+                return x as f64;
+            }
+        ",
+            "main_test",
+        );
+        assert_eq!(-9.0, r);
+    }
+
+    #[test]
+    fn cast_float_to_int() {
+        let r: i64 = compile_and_run(
+            "
+            fn test() -> i64 {
+                let mut x: f64 := -9.0;
+
+                return x as i64;
+            }
+        ",
+            "main_test",
+        );
+        assert_eq!(-9, r);
+    }
+
+    #[test]
+    fn cast_float_to_uint() {
+        let r: u64 = compile_and_run(
+            "
+            fn test() -> u64 {
+                let mut x: f64 := -9.0;
+
+                return x as u64;
+            }
+        ",
+            "main_test",
+        );
+        assert_eq!(18446744073709551607, r);
+    }
+
+    #[test]
+    fn cast_float_to_float() {
+        let r: f64 = compile_and_run(
+            "
+            fn test() -> f64 {
+                let mut x: f64 := -9.0;
+
+                return x as f64;
+            }
+        ",
+            "main_test",
+        );
+        assert_eq!(-9.0, r);
     }
 
     #[test]

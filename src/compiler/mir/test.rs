@@ -1450,6 +1450,7 @@ pub mod tests {
         let cast = bb.get_stm(1); // x as i32;
         let expected_cast = RValue::Cast(
             Operand::LValue(LValue::Var(VarId::new(0))),
+            project.find_type(&Type::I64).unwrap(),
             project.find_type(&Type::I32).unwrap(),
         );
         let StatementKind::Assign(_, rhs) = cast.kind();

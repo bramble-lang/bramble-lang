@@ -157,6 +157,9 @@ pub trait FunctionBuilder<L, V> {
     /// Create a const [`bool`].
     fn const_bool(&self, b: bool) -> V;
 
+    /// Create a const null pointer value.
+    fn const_null(&self) -> V;
+
     /// Create a const [`f64`].
     fn const_f64(&self, f: f64) -> V;
 
@@ -252,6 +255,17 @@ pub trait FunctionBuilder<L, V> {
 
     /// Bitwise or two integer values
     fn i_or(&self, a: V, b: V) -> Result<V, TransformerError>;
+
+    /// Address of a given Location value.
+    fn cast(
+        &self,
+        l: V,
+        l_signed: bool,
+        l_sz: u64,
+        target: TypeId,
+        target_signed: bool,
+        target_sz: u64,
+    ) -> Result<V, TransformerError>;
 
     /// Address of a given Location value.
     fn address_of(&self, a: L) -> Result<V, TransformerError>;
