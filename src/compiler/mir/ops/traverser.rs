@@ -5,7 +5,7 @@ use std::{collections::VecDeque, marker::PhantomData};
 
 use log::debug;
 
-use crate::compiler::mir::{ir::*, MirProject};
+use crate::compiler::mir::{ir::*, MirProject, MirTypeDef};
 
 use super::{transformer::FunctionBuilder, ProgramBuilder};
 
@@ -59,20 +59,18 @@ impl<'a> ProgramTraverser<'a> {
     fn map_type<'p, L, V, F: FunctionBuilder<L, V>, P: ProgramBuilder<'p, L, V, F>>(
         &self,
         id: crate::compiler::mir::TypeId,
-        ty: &crate::compiler::mir::MirTypeDef,
+        ty: &MirTypeDef,
         xfmr: &mut P,
     ) {
         debug!("Traversing types");
 
         match ty {
-            crate::compiler::mir::MirTypeDef::Base(_) => (),
-            crate::compiler::mir::MirTypeDef::Array { ty, .. } => {
-                self.map_type(*ty, self.mir.get_type(*ty), xfmr)
-            }
-            crate::compiler::mir::MirTypeDef::RawPointer { target, .. } => {
+            MirTypeDef::Base(_) => (),
+            MirTypeDef::Array { ty, .. } => self.map_type(*ty, self.mir.get_type(*ty), xfmr),
+            MirTypeDef::RawPointer { target, .. } => {
                 self.map_type(*target, self.mir.get_type(*target), xfmr)
             }
-            crate::compiler::mir::MirTypeDef::Structure { def, .. } => match def {
+            MirTypeDef::Structure { def, .. } => match def {
                 crate::compiler::mir::MirStructDef::Declared => todo!(),
                 crate::compiler::mir::MirStructDef::Defined(fields) => fields
                     .iter()
