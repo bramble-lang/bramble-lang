@@ -54,6 +54,7 @@ pub enum LlvmBuilderError {
     CoerceValueIntoFn,
     ReadInvalidLocation,
     InvalidArithmeticOperands,
+    CannotConvertToBasicType,
 }
 
 impl TransformerInternalError for LlvmBuilderError {}
@@ -467,8 +468,14 @@ impl<'p, 'module, 'ctx>
                         // Add fields to structure definition
                         let field_types: Vec<_> = fields
                             .iter()
-                            .map(|f| self.get_type(f.ty).unwrap().into_basic_type().unwrap())
-                            .collect();
+                            .map(|f| {
+                                self.get_type(f.ty)?.into_basic_type().map_err(|_| {
+                                    TransformerError::Internal(
+                                        &LlvmBuilderError::CannotConvertToBasicType,
+                                    )
+                                })
+                            })
+                            .collect::<Result<_, _>>()?;
                         s.set_body(&field_types, false);
                         Ok(())
                     }
