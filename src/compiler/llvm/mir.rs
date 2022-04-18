@@ -1763,4 +1763,9 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         let result = unsafe { self.program.builder.build_gep(ptr, &[offset], "").into() };
         Ok(result)
     }
+
+    fn const_null(&self) -> BasicValueEnum<'ctx> {
+        let zero = self.program.context.i64_type().const_zero();
+        zero.into()
+    }
 }

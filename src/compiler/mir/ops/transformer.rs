@@ -157,6 +157,9 @@ pub trait FunctionBuilder<L, V> {
     /// Create a const [`bool`].
     fn const_bool(&self, b: bool) -> V;
 
+    /// Create a const null pointer value.
+    fn const_null(&self) -> V;
+
     /// Create a const [`f64`].
     fn const_f64(&self, f: f64) -> V;
 
