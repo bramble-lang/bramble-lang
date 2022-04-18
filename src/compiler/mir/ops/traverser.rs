@@ -294,7 +294,18 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
                 }
                 .unwrap()
             }
-            RValue::Cast(_, _) => todo!(),
+            RValue::Cast(o, oty, target) => {
+                let l = self.operand(o);
+                // is operand signed
+                let l_signed = self.mir.is_signed(*oty);
+                let l_sz = self.mir.width(*oty).unwrap();
+                // is target type signed
+                let ty_signed = self.mir.is_signed(*target);
+                let ty_sz = self.mir.width(*target).unwrap();
+                self.xfmr
+                    .cast(l, l_signed, l_sz, *target, ty_signed, ty_sz)
+                    .unwrap()
+            }
             RValue::AddressOf(t) => {
                 let l = self.lvalue(t);
                 self.xfmr.address_of(l).unwrap()
@@ -331,7 +342,7 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
                     .get_def_string(s)
                     .expect("DefId must refer to a static string literal"),
             ),
-            Constant::Null => todo!(),
+            Constant::Null => self.xfmr.const_null(),
             Constant::SizeOf(_) => todo!(),
         }
     }

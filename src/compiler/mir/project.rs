@@ -61,6 +61,51 @@ impl MirProject {
         self.types.add(ty)
     }
 
+    /// Returns true if the given type is signed, false otherwise.
+    pub fn is_signed(&self, ty: TypeId) -> bool {
+        match self.get_type(ty) {
+            MirTypeDef::Base(base) => match base {
+                super::MirBaseType::I8
+                | super::MirBaseType::I16
+                | super::MirBaseType::I32
+                | super::MirBaseType::I64
+                | super::MirBaseType::F64 => true,
+                super::MirBaseType::Bool
+                | super::MirBaseType::StringLiteral
+                | super::MirBaseType::Unit
+                | super::MirBaseType::Null
+                | super::MirBaseType::U8
+                | super::MirBaseType::U16
+                | super::MirBaseType::U32
+                | super::MirBaseType::U64 => false,
+            },
+            MirTypeDef::Array { .. } => false,
+            MirTypeDef::RawPointer { .. } => false,
+            MirTypeDef::Structure { .. } => false,
+        }
+    }
+
+    /// Will return the width of the given type, if it is a base type or a pointer
+    pub fn width(&self, ty: TypeId) -> Option<u64> {
+        match self.get_type(ty) {
+            MirTypeDef::Base(base) => match base {
+                super::MirBaseType::Bool | super::MirBaseType::I8 | super::MirBaseType::U8 => {
+                    Some(8)
+                }
+                super::MirBaseType::I16 | super::MirBaseType::U16 => Some(16),
+                super::MirBaseType::I32 | super::MirBaseType::U32 => Some(32),
+                super::MirBaseType::I64 | super::MirBaseType::F64 | super::MirBaseType::U64 => {
+                    Some(64)
+                }
+                super::MirBaseType::Null | super::MirBaseType::StringLiteral => Some(64),
+                super::MirBaseType::Unit => None,
+            },
+            MirTypeDef::Array { .. } => None,
+            MirTypeDef::RawPointer { .. } => Some(64),
+            MirTypeDef::Structure { .. } => None,
+        }
+    }
+
     /// Adds a new Structure definition to the [`MirProject`].
     pub fn add_struct_def(
         &mut self,
