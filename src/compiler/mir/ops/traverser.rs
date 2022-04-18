@@ -5,7 +5,7 @@ use std::{collections::VecDeque, marker::PhantomData};
 
 use log::debug;
 
-use crate::compiler::mir::{ir::*, MirProject, MirStructDef, MirTypeDef};
+use crate::compiler::mir::{ir::*, MirProject, MirStructDef, MirTypeDef, TypeId};
 
 use super::{transformer::FunctionBuilder, ProgramBuilder};
 
@@ -32,6 +32,7 @@ impl<'a> ProgramTraverser<'a> {
 
         // Declare every structure, but do not define the structures yet.
         // This solves the problem of structures with reference cycles
+        debug!("Declare any structures");
         for (id, ty) in self.mir.type_iter() {
             match ty {
                 MirTypeDef::Structure { path, .. } => xfmr.declare_struct(id, path).unwrap(),
@@ -66,11 +67,11 @@ impl<'a> ProgramTraverser<'a> {
 
     fn map_type<'p, L, V, F: FunctionBuilder<L, V>, P: ProgramBuilder<'p, L, V, F>>(
         &self,
-        id: crate::compiler::mir::TypeId,
+        id: TypeId,
         ty: &MirTypeDef,
         xfmr: &mut P,
     ) {
-        debug!("Traversing types");
+        debug!("Traversing type {:?}", id);
 
         // If this is a type that references other types, make sure those referenced types
         // are defined before transforming this type.
