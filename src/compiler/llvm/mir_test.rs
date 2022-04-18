@@ -503,6 +503,46 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
+    fn self_reference_struct() {
+        let text = "
+            struct S {ptr: *const S}
+
+            fn test(a: S) {
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text, &[], &[]);
+    }
+
+    #[test]
+    fn self_reference_struct_indirect() {
+        let text = "
+            struct S {s: S2, ptr: *mut S2}
+            struct S2 {ptr: *const S}
+
+            fn test(a: S) {
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text, &[], &[]);
+    }
+
+    #[test]
+    fn self_reference_struct_pointer_to_pointer() {
+        let text = "
+            struct S {ptr: *const *const S}
+
+            fn test(a: S) {
+                return;
+            }
+        ";
+
+        compile_and_print_llvm(text, &[], &[]);
+    }
+
+    #[test]
     fn simple_array_expression() {
         let text = "
             fn test() {
@@ -541,6 +581,27 @@ mod mir2llvm_tests_visual {
 
             fn test(a: S2) {
                 return;
+            }
+        ";
+
+        compile_and_print_llvm(text, &[], &[]);
+    }
+
+    #[test]
+    fn array_in_struct_expression() {
+        let text = "
+            fn test() -> i64 {
+                let s2: S2 := S2{x: [S{ x:[1, 2]}, S{x: [3, 4]}]};
+
+                return s2.x[0].x[0];
+            }
+
+            struct S {
+                x: [i64;2],
+            }
+
+            struct S2 {
+                x: [S; 2],
             }
         ";
 

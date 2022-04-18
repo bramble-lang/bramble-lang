@@ -54,6 +54,7 @@ pub enum LlvmBuilderError {
     CoerceValueIntoFn,
     ReadInvalidLocation,
     InvalidArithmeticOperands,
+    CannotConvertToBasicType,
 }
 
 impl TransformerInternalError for LlvmBuilderError {}
@@ -437,18 +438,57 @@ impl<'p, 'module, 'ctx>
         }
     }
 
+    fn declare_struct(&mut self, id: TypeId, path: &Path) -> Result<(), TransformerError> {
+        let label = self.to_label(path);
+        let struct_decl = self.context.opaque_struct_type(&label);
+        match self.ty_table.insert(id, struct_decl.into()) {
+            Some(_) => Err(TransformerError::TypeAlreadyDefined),
+            None => Ok(()),
+        }
+    }
+
     fn add_type(&mut self, id: TypeId, ty: &MirTypeDef) -> Result<(), TransformerError> {
         debug!("Adding a type to the Module");
 
-        let previous_value = ty
-            .into_basic_type_enum(self)
-            .and_then(|llvm_ty| self.ty_table.insert(id, llvm_ty));
+        // Do not attempt to add the Null type to the LLVM IR table
+        match ty {
+            MirTypeDef::Base(MirBaseType::Null) => return Ok(()),
+            _ => (),
+        }
 
-        // If `insert` returns `None` then it means there was no previous value associated with `id`
-        // otherwise, `id` was already defined and this should thrown an error.
-        match previous_value {
-            None => Ok(()),
-            Some(_) => Err(TransformerError::TypeAlreadyDefined),
+        // If type is already in the table then skip
+        if self.ty_table.contains_key(&id) {
+            // If this is a structure, then turn the declaration into a definition
+            match ty {
+                MirTypeDef::Structure { def, .. } => match def {
+                    MirStructDef::Defined(fields) => {
+                        // Get the structure declaration
+                        let s = self.ty_table.get_mut(&id).unwrap().into_struct_type();
+
+                        // Add fields to structure definition
+                        let field_types: Vec<_> = fields
+                            .iter()
+                            .map(|f| {
+                                self.get_type(f.ty)?.into_basic_type().map_err(|_| {
+                                    TransformerError::Internal(
+                                        &LlvmBuilderError::CannotConvertToBasicType,
+                                    )
+                                })
+                            })
+                            .collect::<Result<_, _>>()?;
+                        s.set_body(&field_types, false);
+                        Ok(())
+                    }
+                    MirStructDef::Declared => Err(TransformerError::StructUndefined),
+                },
+                MirTypeDef::Base(_) | MirTypeDef::Array { .. } | MirTypeDef::RawPointer { .. } => {
+                    Err(TransformerError::TypeAlreadyDefined)
+                }
+            }
+        } else {
+            let llvm_ty = ty.into_basic_type_enum(self);
+            self.ty_table.insert(id, llvm_ty);
+            Ok(())
         }
     }
 
@@ -492,18 +532,18 @@ impl MirTypeDef {
     fn into_basic_type_enum<'module, 'ctx>(
         &self,
         p: &LlvmProgramBuilder<'module, 'ctx>,
-    ) -> Option<AnyTypeEnum<'ctx>> {
+    ) -> AnyTypeEnum<'ctx> {
         match self {
             MirTypeDef::Base(base) => base.into_basic_type_enum(p.context),
             MirTypeDef::Array { ty, sz } => {
                 let el_llvm_ty = p.get_type(*ty).unwrap();
                 let len = *sz as u32;
                 let bt = el_llvm_ty.into_basic_type().unwrap().as_basic_type_enum(); // I don't know why as_basic_type_enum has to be called but without it the array_type method doesn't work!
-                Some(bt.array_type(len).into())
+                bt.array_type(len).into()
             }
             MirTypeDef::RawPointer { target, .. } => {
                 let ty = p.get_type(*target).unwrap().into_basic_type().unwrap();
-                Some(ty.ptr_type(ADDRESS_SPACE).into())
+                ty.ptr_type(ADDRESS_SPACE).into()
             }
             MirTypeDef::Structure {
                 path,
@@ -520,14 +560,19 @@ impl MirTypeDef {
                     .iter()
                     .map(|f| {
                         p.get_type(f.ty)
-                            .expect("Cannot find given Type ID")
+                            .unwrap_or_else(|e| {
+                                // This panics because by this time, every type that is referenced in this structure
+                                // should already be added (or declared).  So, this means that a bug exists either in
+                                // this module or in the MIR Traverser
+                                panic!("Cannot find given Type ID {:?} in\n{:?}", e, p.ty_table)
+                            })
                             .into_basic_type()
                             .expect("Cannot convert to a basic type")
                     })
                     .collect();
 
                 struct_ty.set_body(&fields, false);
-                Some(struct_ty.into())
+                struct_ty.into()
             }
             MirTypeDef::Structure { .. } => {
                 panic!("Attempting to add a structure which has not been defined")
@@ -538,24 +583,22 @@ impl MirTypeDef {
 
 impl MirBaseType {
     /// Convert into the corresponding LLVM type and then wrap that in an [`AnyTypeEnum`] variant.
-    fn into_basic_type_enum<'ctx>(&self, context: &'ctx Context) -> Option<AnyTypeEnum<'ctx>> {
+    fn into_basic_type_enum<'ctx>(&self, context: &'ctx Context) -> AnyTypeEnum<'ctx> {
         match self {
-            MirBaseType::U8 | MirBaseType::I8 => Some(context.i8_type().into()),
-            MirBaseType::U16 | MirBaseType::I16 => Some(context.i16_type().into()),
-            MirBaseType::U32 | MirBaseType::I32 => Some(context.i32_type().into()),
-            MirBaseType::U64 | MirBaseType::I64 => Some(context.i64_type().into()),
-            MirBaseType::F64 => Some(context.f64_type().into()),
-            MirBaseType::Bool => Some(context.bool_type().into()),
-            MirBaseType::Unit => Some(context.void_type().into()),
+            MirBaseType::U8 | MirBaseType::I8 => context.i8_type().into(),
+            MirBaseType::U16 | MirBaseType::I16 => context.i16_type().into(),
+            MirBaseType::U32 | MirBaseType::I32 => context.i32_type().into(),
+            MirBaseType::U64 | MirBaseType::I64 => context.i64_type().into(),
+            MirBaseType::F64 => context.f64_type().into(),
+            MirBaseType::Bool => context.bool_type().into(),
+            MirBaseType::Unit => context.void_type().into(),
+            MirBaseType::StringLiteral => context
+                .i8_type()
+                .array_type(0)
+                .ptr_type(AddressSpace::Generic)
+                .into(),
             // TODO: Should Null this actually make it to MIR?
-            MirBaseType::Null => None,
-            MirBaseType::StringLiteral => Some(
-                context
-                    .i8_type()
-                    .array_type(0)
-                    .ptr_type(AddressSpace::Generic)
-                    .into(),
-            ),
+            MirBaseType::Null => panic!("Attempting to use Null as a type"),
         }
     }
 }

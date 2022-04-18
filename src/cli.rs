@@ -84,7 +84,7 @@ pub fn configure_cli() -> clap::App<'static, 'static> {
             Arg::with_name("emit")
                 .long("emit")
                 .takes_value(true)
-                .possible_values(&["llvm-ir", "asm"])
+                .possible_values(&["llvm-ir", "asm", "mir"])
                 .max_values(2)
                 .help("When set, this will output different types of IR (LLVM, assembly, etc.)")
         )
@@ -189,6 +189,15 @@ pub fn emit_llvm_ir<'a>(args: &'a ArgMatches) -> bool {
 pub fn emit_asm<'a>(args: &'a ArgMatches) -> bool {
     if let Some(mut values) = args.values_of("emit") {
         values.any(|v| v == "asm")
+    } else {
+        false
+    }
+}
+
+/// Returns true if the configuration says to emit mir
+pub fn emit_mir<'a>(args: &'a ArgMatches) -> bool {
+    if let Some(mut values) = args.values_of("emit") {
+        values.any(|v| v == "mir")
     } else {
         false
     }
