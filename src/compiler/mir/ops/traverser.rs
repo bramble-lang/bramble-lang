@@ -5,7 +5,7 @@ use std::{collections::VecDeque, marker::PhantomData};
 
 use log::debug;
 
-use crate::compiler::mir::{ir::*, MirProject, MirStructDef, MirTypeDef, TypeId};
+use crate::compiler::mir::{ir::*, MirProject, MirStructDef, MirTypeDef, TransformerError, TypeId};
 
 use super::{transformer::FunctionBuilder, ProgramBuilder};
 
@@ -42,7 +42,7 @@ impl<'a> ProgramTraverser<'a> {
 
         // Add every type in the type table to the project
         for (id, ty) in self.mir.type_iter() {
-            self.map_type(id, ty, xfmr);
+            self.map_type(id, ty, xfmr).unwrap();
         }
 
         // Declare every function in the ProgramTransformer
@@ -70,34 +70,37 @@ impl<'a> ProgramTraverser<'a> {
         id: TypeId,
         ty: &MirTypeDef,
         xfmr: &mut P,
-    ) {
+    ) -> Result<(), TransformerError> {
         debug!("Traversing type {:?}", id);
 
         // If this is a type that references other types, make sure those referenced types
         // are defined before transforming this type.
         match ty {
             MirTypeDef::Base(_) => (),
-            MirTypeDef::Array { ty, .. } => self.map_type(*ty, self.mir.get_type(*ty), xfmr),
+            MirTypeDef::Array { ty, .. } => self.map_type(*ty, self.mir.get_type(*ty), xfmr)?,
             MirTypeDef::RawPointer { target, .. } => {
                 let target_ty = self.mir.get_type(*target);
                 match target_ty {
                     MirTypeDef::Structure { .. } => (),
                     MirTypeDef::Array { .. }
                     | MirTypeDef::Base(..)
-                    | MirTypeDef::RawPointer { .. } => self.map_type(*target, target_ty, xfmr),
+                    | MirTypeDef::RawPointer { .. } => self.map_type(*target, target_ty, xfmr)?,
                 }
             }
             MirTypeDef::Structure { def, .. } => match def {
                 MirStructDef::Declared => todo!(),
-                MirStructDef::Defined(fields) => fields
-                    .iter()
-                    .for_each(|field| self.map_type(field.ty, self.mir.get_type(field.ty), xfmr)),
+                MirStructDef::Defined(fields) => {
+                    for field in fields {
+                        self.map_type(field.ty, self.mir.get_type(field.ty), xfmr)?
+                    }
+                }
             },
         }
 
         match xfmr.add_type(id, ty) {
-            Ok(_) => (),
-            Err(_) => (),
+            Ok(_) => Ok(()),
+            Err(TransformerError::TypeAlreadyDefined) => Ok(()),
+            Err(e) => Err(e),
         }
     }
 }

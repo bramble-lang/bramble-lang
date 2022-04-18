@@ -457,20 +457,21 @@ impl<'p, 'module, 'ctx>
                     MirStructDef::Defined(fields) => {
                         // Get the structure declaration
                         let s = self.ty_table.get_mut(&id).unwrap().into_struct_type();
+
                         // Add fields to structure definition
                         let field_types: Vec<_> = fields
                             .iter()
                             .map(|f| self.get_type(f.ty).unwrap().into_basic_type().unwrap())
                             .collect();
                         s.set_body(&field_types, false);
+                        Ok(())
                     }
-                    MirStructDef::Declared => (),
+                    MirStructDef::Declared => Err(TransformerError::StructUndefined),
                 },
-                MirTypeDef::Base(_) => (),
-                MirTypeDef::Array { ty, sz } => (),
-                MirTypeDef::RawPointer { mutable, target } => (),
+                MirTypeDef::Base(_) | MirTypeDef::Array { .. } | MirTypeDef::RawPointer { .. } => {
+                    Err(TransformerError::TypeAlreadyDefined)
+                }
             }
-            Err(TransformerError::TypeAlreadyDefined)
         } else {
             match ty.into_basic_type_enum(self) {
                 Some(llvm_ty) => {

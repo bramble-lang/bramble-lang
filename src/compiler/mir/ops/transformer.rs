@@ -273,6 +273,7 @@ pub enum TransformerError {
     FunctionAlreadyDeclared,
     FunctionNotFound,
     TypeAlreadyDefined,
+    StructUndefined,
     TypeNotFound(TypeId),
     ArgNotFound,
     Internal(&'static dyn TransformerInternalError),
