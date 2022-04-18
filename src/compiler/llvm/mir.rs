@@ -449,6 +449,7 @@ impl<'p, 'module, 'ctx>
     fn add_type(&mut self, id: TypeId, ty: &MirTypeDef) -> Result<(), TransformerError> {
         debug!("Adding a type to the Module");
 
+        // Do not attempt to add the Null type to the LLVM IR table
         match ty {
             MirTypeDef::Base(MirBaseType::Null) => return Ok(()),
             _ => (),
