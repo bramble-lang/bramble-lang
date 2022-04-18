@@ -1037,6 +1037,21 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
+    fn cast_int_to_float() {
+        let r: f64 = compile_and_run(
+            "
+            fn test() -> f64 {
+                let mut x: i64 := -9;
+
+                return x as f64;
+            }
+        ",
+            "main_test",
+        );
+        assert_eq!(-9.0, r);
+    }
+
+    #[test]
     fn import_function() {
         compile_and_print_llvm(
             "

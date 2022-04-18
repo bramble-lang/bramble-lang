@@ -1669,6 +1669,18 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                 }
                 .into()
             }
+            (BasicValueEnum::IntValue(iv), BasicTypeEnum::FloatType(tty)) => {
+                // if source is signed
+                if l_signed {
+                    self.program.builder.build_signed_int_to_float(iv, tty, "")
+                // otherwise
+                } else {
+                    self.program
+                        .builder
+                        .build_unsigned_int_to_float(iv, tty, "")
+                }
+                .into()
+            }
             _ => todo!(),
         };
 
