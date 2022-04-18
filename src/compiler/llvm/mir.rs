@@ -55,6 +55,7 @@ pub enum LlvmBuilderError {
     ReadInvalidLocation,
     InvalidArithmeticOperands,
     CannotConvertToBasicType,
+    InvalidCastingOperation,
 }
 
 impl TransformerInternalError for LlvmBuilderError {}
@@ -1116,6 +1117,11 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         bt.const_int(b as u64, true).into()
     }
 
+    fn const_null(&self) -> BasicValueEnum<'ctx> {
+        let zero = self.program.context.i64_type().const_zero();
+        zero.into()
+    }
+
     fn const_f64(&self, f: f64) -> BasicValueEnum<'ctx> {
         self.program.context.f64_type().const_float(f).into()
     }
@@ -1715,7 +1721,11 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
             (BasicValueEnum::PointerValue(pv), BasicTypeEnum::PointerType(tty)) => {
                 self.program.builder.build_bitcast(pv, tty, "")
             }
-            _ => todo!(),
+            _ => {
+                return Err(TransformerError::Internal(
+                    &LlvmBuilderError::InvalidCastingOperation,
+                ))
+            }
         };
 
         Ok(op)
@@ -1762,10 +1772,5 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
 
         let result = unsafe { self.program.builder.build_gep(ptr, &[offset], "").into() };
         Ok(result)
-    }
-
-    fn const_null(&self) -> BasicValueEnum<'ctx> {
-        let zero = self.program.context.i64_type().const_zero();
-        zero.into()
     }
 }
