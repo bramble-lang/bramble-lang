@@ -267,6 +267,8 @@ pub trait FunctionBuilder<L, V> {
         target_sz: u64,
     ) -> Result<V, TransformerError>;
 
+    fn size_of(&self, ty: TypeId) -> V;
+
     /// Address of a given Location value.
     fn address_of(&self, a: L) -> Result<V, TransformerError>;
 
