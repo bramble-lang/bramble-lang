@@ -69,7 +69,7 @@ impl<'a> FuncTransformer<'a> {
                 self.expression(expr);
             }
             ast::Statement::Mutate(mutate) => self.mutate(mutate),
-            ast::Statement::YieldReturn(_) => todo!(),
+            ast::Statement::YieldReturn(_) => panic!("Coroutines are deprecated"),
             ast::Statement::Return(ret) => self.ret(ret),
         }
     }
@@ -158,9 +158,9 @@ impl<'a> FuncTransformer<'a> {
                 // Return a LValue::Var(VarId) as the result of this expression
                 Operand::LValue(LValue::Var(vid))
             }
-            Expression::CustomType(_, _) => todo!(),
-            Expression::Path(_, _) => todo!(),
-            Expression::IdentifierDeclare(_, _, _) => todo!(),
+            Expression::CustomType(_, _) => panic!("Cannot be an expression"),
+            Expression::Path(_, _) => panic!("Cannot be an expression"),
+            Expression::IdentifierDeclare(_, _, _) => panic!("Cannot be an expression"),
             Expression::RoutineCall(ctx, call, target, args) => {
                 self.fn_call(ctx, *call, target, args)
             }
@@ -189,7 +189,7 @@ impl<'a> FuncTransformer<'a> {
                 self.mir.close_scope();
                 result
             }
-            Expression::Yield(_, _) => todo!(),
+            Expression::Yield(_, _) => panic!("Coroutines are deprecated"),
         }
     }
 
