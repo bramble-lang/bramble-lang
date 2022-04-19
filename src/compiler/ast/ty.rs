@@ -251,7 +251,7 @@ impl Type {
 
     pub fn is_unsigned_int(&self) -> bool {
         match self {
-            Type::U8 | Type::U16 | Type::U32 | Type::U64 => true,
+            Type::RawPointer(..) | Type::U8 | Type::U16 | Type::U32 | Type::U64 => true,
             Type::Null
             | Type::I8
             | Type::I16
@@ -268,7 +268,6 @@ impl Type {
             | Type::CoroutineDef(_, _)
             | Type::Coroutine(_)
             | Type::ExternDecl(..)
-            | Type::RawPointer(..)
             | Type::Unknown => false,
         }
     }

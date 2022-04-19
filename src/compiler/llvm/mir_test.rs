@@ -473,6 +473,54 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
+    fn raw_pointer_equal() {
+        let text = "
+            fn test() -> bool {
+                let a: i64 :=  6;
+                let p: *const i64 := @const a;
+                let p2: *const i64 := @const a;
+
+                return p == p2;
+            }
+        ";
+
+        let r: bool = compile_and_run(text, "main_test");
+        assert!(r);
+    }
+
+    #[test]
+    fn raw_pointer_not_equal() {
+        let text = "
+            fn test() -> bool {
+                let a: i64 :=  6;
+                let p: *const i64 := @const a;
+                let p2: *const i64 := @const a;
+
+                return p != p2;
+            }
+        ";
+
+        let r: bool = compile_and_run(text, "main_test");
+        assert_eq!(false, r);
+    }
+
+    #[test]
+    fn raw_pointer_lt() {
+        let text = "
+            fn test() -> bool {
+                let a: i64 :=  6;
+                let p: *const i64 := @const a;
+                let p2: *const i64 := @const a;
+
+                return p < p2;
+            }
+        ";
+
+        let r: bool = compile_and_run(text, "main_test");
+        assert_eq!(false, r);
+    }
+
+    #[test]
     fn raw_pointer_deref() {
         let text = "
             fn test() -> i64 {
