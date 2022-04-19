@@ -1817,10 +1817,10 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                     ))
                 }
             }
-            Location::Function(_) => todo!(),
             Location::Argument(ptr) => Ok(Location::Pointer(ptr.into_pointer_value())),
-            Location::ReturnPointer => todo!(),
-            Location::Void => todo!(),
+            Location::Function(_) | Location::ReturnPointer | Location::Void => Err(
+                TransformerError::Internal(&LlvmBuilderError::InvalidOperand),
+            ),
         }
     }
 
