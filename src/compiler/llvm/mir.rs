@@ -56,6 +56,7 @@ pub enum LlvmBuilderError {
     InvalidArithmeticOperands,
     CannotConvertToBasicType,
     InvalidCastingOperation,
+    InvalidOperand,
 }
 
 impl TransformerInternalError for LlvmBuilderError {}
@@ -346,11 +347,11 @@ impl<'module, 'ctx> LlvmProgramBuilder<'module, 'ctx> {
             AnyTypeEnum::ArrayType(a_ty) => {
                 (ReturnMethod::OutParam, a_ty.ptr_type(ADDRESS_SPACE).into())
             }
-            AnyTypeEnum::FunctionType(_) => todo!(),
+            AnyTypeEnum::FunctionType(_) => panic!("Cannot return a FunctionType"),
             AnyTypeEnum::StructType(s_ty) => {
                 (ReturnMethod::OutParam, s_ty.ptr_type(ADDRESS_SPACE).into())
             }
-            AnyTypeEnum::VectorType(_) => todo!(),
+            AnyTypeEnum::VectorType(_) => panic!("Cannot return a Vector Type"),
             AnyTypeEnum::VoidType(_) => (ReturnMethod::Return, self.context.void_type().into()),
         };
         Ok(method)
@@ -394,8 +395,8 @@ impl<'module, 'ctx> LlvmProgramBuilder<'module, 'ctx> {
                     AnyTypeEnum::VoidType(vt) => vt.fn_type(&llvm_args, is_variadic),
                     AnyTypeEnum::FloatType(ft) => ft.fn_type(&llvm_args, is_variadic),
                     AnyTypeEnum::PointerType(pt) => pt.fn_type(&llvm_args, is_variadic),
-                    AnyTypeEnum::FunctionType(_) => todo!(),
-                    AnyTypeEnum::VectorType(_) => todo!(),
+                    AnyTypeEnum::FunctionType(_) => panic!("Cannot return a FunctionType"),
+                    AnyTypeEnum::VectorType(_) => panic!("Cannot return a VectorType"),
                     AnyTypeEnum::ArrayType(_) => {
                         panic!("Returning array values need to use the out parameter method.")
                     }
@@ -1202,8 +1203,6 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
             (BasicValueEnum::IntValue(l), BasicValueEnum::IntValue(r)) => {
                 Ok(self.program.builder.build_int_add(l, r, "").into())
             }
-            (BasicValueEnum::FloatValue(_), BasicValueEnum::FloatValue(_)) => todo!(),
-            (BasicValueEnum::PointerValue(_), BasicValueEnum::PointerValue(_)) => todo!(),
             _ => Err(TransformerError::Internal(
                 &LlvmBuilderError::InvalidArithmeticOperands,
             )),
@@ -1219,8 +1218,6 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
             (BasicValueEnum::IntValue(l), BasicValueEnum::IntValue(r)) => {
                 Ok(self.program.builder.build_int_sub(l, r, "").into())
             }
-            (BasicValueEnum::FloatValue(_), BasicValueEnum::FloatValue(_)) => todo!(),
-            (BasicValueEnum::PointerValue(_), BasicValueEnum::PointerValue(_)) => todo!(),
             _ => Err(TransformerError::Internal(
                 &LlvmBuilderError::InvalidArithmeticOperands,
             )),
@@ -1236,8 +1233,6 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
             (BasicValueEnum::IntValue(l), BasicValueEnum::IntValue(r)) => {
                 Ok(self.program.builder.build_int_mul(l, r, "").into())
             }
-            (BasicValueEnum::FloatValue(_), BasicValueEnum::FloatValue(_)) => todo!(),
-            (BasicValueEnum::PointerValue(_), BasicValueEnum::PointerValue(_)) => todo!(),
             _ => Err(TransformerError::Internal(
                 &LlvmBuilderError::InvalidArithmeticOperands,
             )),
@@ -1259,8 +1254,6 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                 // to implementing FP values and operations.
                 Ok(self.program.builder.build_int_signed_div(l, r, "").into())
             }
-            (BasicValueEnum::FloatValue(_), BasicValueEnum::FloatValue(_)) => todo!(),
-            (BasicValueEnum::PointerValue(_), BasicValueEnum::PointerValue(_)) => todo!(),
             _ => Err(TransformerError::Internal(
                 &LlvmBuilderError::InvalidArithmeticOperands,
             )),
@@ -1801,10 +1794,12 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
     fn address_of(&self, a: Location<'ctx>) -> Result<BasicValueEnum<'ctx>, TransformerError> {
         match a {
             Location::Pointer(ptr) => Ok(ptr.into()),
-            Location::Function(_) => todo!(),
-            Location::Argument(_) => todo!(),
-            Location::ReturnPointer => todo!(),
-            Location::Void => todo!(),
+            Location::Argument(_)
+            | Location::ReturnPointer
+            | Location::Void
+            | Location::Function(_) => Err(TransformerError::Internal(
+                &LlvmBuilderError::InvalidOperand,
+            )),
         }
     }
 
@@ -1822,10 +1817,10 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                     ))
                 }
             }
-            Location::Function(_) => todo!(),
             Location::Argument(ptr) => Ok(Location::Pointer(ptr.into_pointer_value())),
-            Location::ReturnPointer => todo!(),
-            Location::Void => todo!(),
+            Location::Function(_) | Location::ReturnPointer | Location::Void => Err(
+                TransformerError::Internal(&LlvmBuilderError::InvalidOperand),
+            ),
         }
     }
 

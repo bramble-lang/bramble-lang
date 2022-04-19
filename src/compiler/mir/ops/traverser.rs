@@ -350,7 +350,7 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
 
     fn constant(&mut self, c: Constant) -> V {
         match c {
-            Constant::Unit => todo!(),
+            Constant::Unit => panic!("Cannot create a Unit constant"),
             Constant::I8(i) => self.xfmr.const_i8(i),
             Constant::I16(i) => self.xfmr.const_i16(i),
             Constant::I32(i) => self.xfmr.const_i32(i),
