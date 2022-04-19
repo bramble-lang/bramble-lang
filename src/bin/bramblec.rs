@@ -2,7 +2,8 @@ extern crate log;
 extern crate simplelog;
 
 use std::fs::File;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::str::FromStr;
 use std::time::Instant;
 
 use bramble_lang::compiler::diagnostics::Logger;
@@ -160,30 +161,21 @@ fn main() -> Result<(), i32> {
         }
 
         if emit_llvm_ir(&config) {
-            llvm.emit_llvm_ir(Path::new("./target/output.ll"));
+            llvm.emit_llvm_ir(Path::new(&format!("./target/{}.ll", project_name)));
         }
 
         llvm.emit_object_code(Path::new(output_target), emit_asm(&config))
             .unwrap();
 
-        if config.is_present("manifest") {
-            let manifest = Manifest::extract(&semantic_ast, &source_map, &string_table).unwrap();
-            match std::fs::File::create(format!("./target/{}.manifest", project_name))
-                .map_err(|e| format!("{}", e))
-                .and_then(|mut f| manifest.write(&mut f).map_err(|e| format!("{}", e)))
-            {
-                Ok(()) => (),
-                Err(e) => {
-                    println!("Failed to write manifest file: {}", e);
-                    return Err(ERR_MANIFEST_WRITE_ERROR);
-                }
-            }
-        }
         let llvm_duration = llvm_time.elapsed();
         eprintln!("LLVM: {}", llvm_duration.as_secs_f32());
     } else {
         eprintln!("MIR BETA!! :D");
+
+        let mir_time = Instant::now();
         let mir = gen_mir(&semantic_ast, &imports);
+        let mir_duration = mir_time.elapsed();
+        eprintln!("MIR Generation: {}", mir_duration.as_secs_f32());
 
         if emit_mir(&config) {
             println!("=== MIR ===\n\n{}", mir);
@@ -198,10 +190,26 @@ fn main() -> Result<(), i32> {
             &source_map,
             &string_table,
             path,
+            emit_llvm_ir(&config),
+            emit_asm(&config),
         );
 
         let llvm_duration = llvm_time.elapsed();
         eprintln!("MIR 2 LLVM: {}", llvm_duration.as_secs_f32());
+    }
+
+    if config.is_present("manifest") {
+        let manifest = Manifest::extract(&semantic_ast, &source_map, &string_table).unwrap();
+        match std::fs::File::create(format!("./target/{}.manifest", project_name))
+            .map_err(|e| format!("{}", e))
+            .and_then(|mut f| manifest.write(&mut f).map_err(|e| format!("{}", e)))
+        {
+            Ok(()) => (),
+            Err(e) => {
+                println!("Failed to write manifest file: {}", e);
+                return Err(ERR_MANIFEST_WRITE_ERROR);
+            }
+        }
     }
 
     Ok(())
@@ -220,6 +228,8 @@ fn gen_llvm(
     sm: &compiler::SourceMap,
     table: &StringTable,
     output: &Path,
+    emit_ir: bool,
+    emit_asm: bool,
 ) {
     let context = Context::create();
     let module = context.create_module(name);
@@ -227,12 +237,21 @@ fn gen_llvm(
 
     let mut xfmr = llvm::LlvmProgramBuilder::new(&context, &module, &builder, sm, table, main_name);
 
-    let proj_traverser = compiler::ProgramTraverser::new(mir);
+    let proj_traverser = compiler::ProgramTraverser::new(mir, sm, table);
 
     // Traverser is given a MirProject
     // call traverser.map(llvm) this will use the llvm xfmr to map MirProject to LlvmProject
     proj_traverser.map(&mut xfmr);
 
     let llvm = xfmr.complete();
-    llvm.emit_object_code(output)
+
+    if emit_ir {
+        llvm.emit_llvm_ir(Path::new(&format!("./target/{}.ll", name)))
+            .unwrap();
+    }
+
+    let p = PathBuf::from_str(&format!("./target/{}.s", name)).unwrap();
+    let asm_file = if emit_asm { Some(p.as_path()) } else { None };
+
+    llvm.emit_object_code(asm_file, output)
 }

@@ -150,7 +150,7 @@ impl<'module, 'ctx> LlvmProgram<'module, 'ctx> {
         println!("{contents}");
     }
 
-    pub fn emit_object_code(&self, file: &std::path::Path) {
+    pub fn emit_object_code(&self, emit_asm: Option<&std::path::Path>, file: &std::path::Path) {
         // Get target for current machine
         let triple = inkwell::targets::TargetMachine::get_default_triple();
 
@@ -174,9 +174,18 @@ impl<'module, 'ctx> LlvmProgram<'module, 'ctx> {
         // Configure the module
         self.module.set_data_layout(&data.get_data_layout());
         self.module.set_triple(&triple);
+        if let Some(asm_file) = emit_asm {
+            machine
+                .write_to_file(self.module, inkwell::targets::FileType::Assembly, asm_file)
+                .unwrap();
+        }
         machine
             .write_to_file(self.module, inkwell::targets::FileType::Object, file)
             .unwrap();
+    }
+
+    pub fn emit_llvm_ir(&self, file: &std::path::Path) -> Result<(), inkwell::support::LLVMString> {
+        self.module.print_to_file(file)
     }
 }
 
@@ -350,6 +359,7 @@ impl<'module, 'ctx> LlvmProgramBuilder<'module, 'ctx> {
     fn fn_type(
         &self,
         args: &[ArgDecl],
+        is_variadic: bool,
         ret_ty: TypeId,
     ) -> Result<(FunctionType<'ctx>, ReturnMethod), TransformerError> {
         // Determine the channel for the return value
@@ -370,7 +380,7 @@ impl<'module, 'ctx> LlvmProgramBuilder<'module, 'ctx> {
                     llvm_args.push(llvm_ty);
                 }
 
-                self.context.void_type().fn_type(&llvm_args, false)
+                self.context.void_type().fn_type(&llvm_args, is_variadic)
             }
             ReturnMethod::Return => {
                 // Convert list of arguments into a list of LLVM types
@@ -380,10 +390,10 @@ impl<'module, 'ctx> LlvmProgramBuilder<'module, 'ctx> {
                     .collect::<Result<Vec<_>, _>>()?;
 
                 match llvm_ret_ty {
-                    AnyTypeEnum::IntType(it) => it.fn_type(&llvm_args, false),
-                    AnyTypeEnum::VoidType(vt) => vt.fn_type(&llvm_args, false),
-                    AnyTypeEnum::FloatType(ft) => ft.fn_type(&llvm_args, false),
-                    AnyTypeEnum::PointerType(pt) => pt.fn_type(&llvm_args, false),
+                    AnyTypeEnum::IntType(it) => it.fn_type(&llvm_args, is_variadic),
+                    AnyTypeEnum::VoidType(vt) => vt.fn_type(&llvm_args, is_variadic),
+                    AnyTypeEnum::FloatType(ft) => ft.fn_type(&llvm_args, is_variadic),
+                    AnyTypeEnum::PointerType(pt) => pt.fn_type(&llvm_args, is_variadic),
                     AnyTypeEnum::FunctionType(_) => todo!(),
                     AnyTypeEnum::VectorType(_) => todo!(),
                     AnyTypeEnum::ArrayType(_) => {
@@ -414,15 +424,19 @@ impl<'p, 'module, 'ctx>
         func_id: DefId,
         canonical_path: &Path,
         args: &[ArgDecl],
+        is_variadic: bool,
         ret_ty: TypeId,
     ) -> Result<(), TransformerError> {
         let name = self.to_label(canonical_path);
 
-        debug!("Adding function to Module: {}", name);
+        debug!(
+            "Adding function to Module: {} (var_args: {})",
+            name, is_variadic
+        );
 
         // Determine the channel for the return value
         // Set the return channel property for the function
-        let (fn_type, ret_method) = self.fn_type(args, ret_ty)?;
+        let (fn_type, ret_method) = self.fn_type(args, is_variadic, ret_ty)?;
 
         let function = self.module.add_function(&name, fn_type, None);
 
@@ -1809,7 +1823,7 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                 }
             }
             Location::Function(_) => todo!(),
-            Location::Argument(_) => todo!(),
+            Location::Argument(ptr) => Ok(Location::Pointer(ptr.into_pointer_value())),
             Location::ReturnPointer => todo!(),
             Location::Void => todo!(),
         }

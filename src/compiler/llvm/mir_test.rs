@@ -1200,6 +1200,19 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
+    fn size_of_array() {
+        let r: u64 = compile_and_run(
+            "
+            fn test() -> u64 {
+                return size_of([i64;2]);
+            }
+        ",
+            "main_test",
+        );
+        assert_eq!(16, r);
+    }
+
+    #[test]
     fn import_function() {
         compile_and_print_llvm(
             "
@@ -1252,7 +1265,7 @@ mod mir2llvm_tests_visual {
         let main_name = table.insert("my_main".into());
         let mut xfmr = LlvmProgramBuilder::new(&context, &module, &builder, &sm, &table, main_name);
 
-        let proj_traverser = ProgramTraverser::new(&project);
+        let proj_traverser = ProgramTraverser::new(&project, &sm, &table);
 
         // Traverser is given a MirProject
         // call traverser.map(llvm) this will use the llvm xfmr to map MirProject to LlvmProject
@@ -1284,7 +1297,7 @@ mod mir2llvm_tests_visual {
 
         let mut xfmr = LlvmProgramBuilder::new(&context, &module, &builder, &sm, &table, main_name);
 
-        let proj_traverser = ProgramTraverser::new(&project);
+        let proj_traverser = ProgramTraverser::new(&project, &sm, &table);
 
         // Traverser is given a MirProject
         // call traverser.map(llvm) this will use the llvm xfmr to map MirProject to LlvmProject

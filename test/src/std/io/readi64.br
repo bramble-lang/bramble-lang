@@ -1,13 +1,11 @@
-extern fn std_io_readi64() -> i64;
-
 fn my_main() -> i64 {
-    let x: i64 := std_io_readi64();
+    let x: i64 := project::std::io::readi64();
     project::std::io::writei64ln(x);
 
-    let y: i64 := std_io_readi64();
+    let y: i64 := project::std::io::readi64();
     project::std::io::writei64ln(y);
 
-    let z: i64 := std_io_readi64();
+    let z: i64 := project::std::io::readi64();
     project::std::io::writei64ln(z);
     return 0;
 }
