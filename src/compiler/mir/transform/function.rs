@@ -194,10 +194,13 @@ impl<'a> FuncTransformer<'a> {
     }
 
     fn size_of(&mut self, ctx: &SemanticContext, ty: &Type) -> Operand {
+        // the PostOrderIterator does not iterate on the operand of size_of, because
+        // the Type is _not_ an expression. Therefore, the type operand may not get
+        // added to the TypeTable.  So, add it here
         let ty = self
             .project
-            .find_type(ty)
-            .unwrap_or_else(|| panic!("Could not find type: {:?}", ty));
+            .add_type(ty)
+            .unwrap_or_else(|e| panic!("Could not find or add type {:?}: {:?}", ty, e));
         self.mir.size_of(ty)
     }
 

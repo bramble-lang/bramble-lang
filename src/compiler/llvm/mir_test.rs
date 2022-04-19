@@ -1200,6 +1200,19 @@ mod mir2llvm_tests_visual {
     }
 
     #[test]
+    fn size_of_array() {
+        let r: u64 = compile_and_run(
+            "
+            fn test() -> u64 {
+                return size_of([i64;2]);
+            }
+        ",
+            "main_test",
+        );
+        assert_eq!(16, r);
+    }
+
+    #[test]
     fn import_function() {
         compile_and_print_llvm(
             "
