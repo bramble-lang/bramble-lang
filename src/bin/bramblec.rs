@@ -243,7 +243,8 @@ fn gen_llvm(
     let llvm = xfmr.complete();
 
     if emit_ir {
-        llvm.emit_llvm_ir(Path::new("./target/output.ll")).unwrap();
+        llvm.emit_llvm_ir(Path::new(&format!("./target/{}.ll", name)))
+            .unwrap();
     }
 
     llvm.emit_object_code(output)
