@@ -194,7 +194,10 @@ impl<'a> FuncTransformer<'a> {
     }
 
     fn size_of(&mut self, ctx: &SemanticContext, ty: &Type) -> Operand {
-        let ty = self.project.find_type(ty).expect("Could not find type");
+        let ty = self
+            .project
+            .find_type(ty)
+            .unwrap_or_else(|| panic!("Could not find type: {:?}", ty));
         self.mir.size_of(ty)
     }
 
