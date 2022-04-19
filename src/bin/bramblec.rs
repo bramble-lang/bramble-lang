@@ -160,7 +160,7 @@ fn main() -> Result<(), i32> {
         }
 
         if emit_llvm_ir(&config) {
-            llvm.emit_llvm_ir(Path::new("./target/output.ll"));
+            llvm.emit_llvm_ir(Path::new(&format!("./target/{}.ll", project_name)));
         }
 
         llvm.emit_object_code(Path::new(output_target), emit_asm(&config))
