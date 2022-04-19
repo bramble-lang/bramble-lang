@@ -25,7 +25,7 @@ build_std() {
 	mkdir -p ${std_dir}
 
 	if [[ $OSTYPE == "linux-gnu"* ]]; then
-		../target/${target}/bramblec --llvm -p linux -i ../bramble/std -o ${std_dir}/std.obj --manifest >${std_dir}/stdout 2>/dev/null
+		../target/${target}/bramblec --mir-beta --llvm -p linux -i ../bramble/std -o ${std_dir}/std.obj --manifest >${std_dir}/stdout 2>/dev/null
 	elif [[ $OSTYPE == "darwin"* ]]; then
 		../target/${target}/bramblec --llvm -p machos -i ../bramble/std -o ${std_dir}/std.obj --manifest >${std_dir}/stdout 2>/dev/null
 	fi

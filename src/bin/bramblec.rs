@@ -166,19 +166,6 @@ fn main() -> Result<(), i32> {
         llvm.emit_object_code(Path::new(output_target), emit_asm(&config))
             .unwrap();
 
-        if config.is_present("manifest") {
-            let manifest = Manifest::extract(&semantic_ast, &source_map, &string_table).unwrap();
-            match std::fs::File::create(format!("./target/{}.manifest", project_name))
-                .map_err(|e| format!("{}", e))
-                .and_then(|mut f| manifest.write(&mut f).map_err(|e| format!("{}", e)))
-            {
-                Ok(()) => (),
-                Err(e) => {
-                    println!("Failed to write manifest file: {}", e);
-                    return Err(ERR_MANIFEST_WRITE_ERROR);
-                }
-            }
-        }
         let llvm_duration = llvm_time.elapsed();
         eprintln!("LLVM: {}", llvm_duration.as_secs_f32());
     } else {
@@ -207,6 +194,20 @@ fn main() -> Result<(), i32> {
 
         let llvm_duration = llvm_time.elapsed();
         eprintln!("MIR 2 LLVM: {}", llvm_duration.as_secs_f32());
+    }
+
+    if config.is_present("manifest") {
+        let manifest = Manifest::extract(&semantic_ast, &source_map, &string_table).unwrap();
+        match std::fs::File::create(format!("./target/{}.manifest", project_name))
+            .map_err(|e| format!("{}", e))
+            .and_then(|mut f| manifest.write(&mut f).map_err(|e| format!("{}", e)))
+        {
+            Ok(()) => (),
+            Err(e) => {
+                println!("Failed to write manifest file: {}", e);
+                return Err(ERR_MANIFEST_WRITE_ERROR);
+            }
+        }
     }
 
     Ok(())
