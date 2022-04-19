@@ -202,6 +202,7 @@ fn main() -> Result<(), i32> {
             &source_map,
             &string_table,
             path,
+            emit_llvm_ir(&config),
         );
 
         let llvm_duration = llvm_time.elapsed();
@@ -224,6 +225,7 @@ fn gen_llvm(
     sm: &compiler::SourceMap,
     table: &StringTable,
     output: &Path,
+    emit_ir: bool,
 ) {
     let context = Context::create();
     let module = context.create_module(name);
@@ -238,5 +240,10 @@ fn gen_llvm(
     proj_traverser.map(&mut xfmr);
 
     let llvm = xfmr.complete();
+
+    if emit_ir {
+        llvm.emit_llvm_ir(Path::new("./target/output.ll")).unwrap();
+    }
+
     llvm.emit_object_code(output)
 }

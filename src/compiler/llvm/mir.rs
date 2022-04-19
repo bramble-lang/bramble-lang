@@ -178,6 +178,10 @@ impl<'module, 'ctx> LlvmProgram<'module, 'ctx> {
             .write_to_file(self.module, inkwell::targets::FileType::Object, file)
             .unwrap();
     }
+
+    pub fn emit_llvm_ir(&self, file: &std::path::Path) -> Result<(), inkwell::support::LLVMString> {
+        self.module.print_to_file(file)
+    }
 }
 
 /// Groups the data which describes an LLVM function together.
