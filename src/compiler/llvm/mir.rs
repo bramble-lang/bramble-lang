@@ -390,10 +390,10 @@ impl<'module, 'ctx> LlvmProgramBuilder<'module, 'ctx> {
                     .collect::<Result<Vec<_>, _>>()?;
 
                 match llvm_ret_ty {
-                    AnyTypeEnum::IntType(it) => it.fn_type(&llvm_args, false),
-                    AnyTypeEnum::VoidType(vt) => vt.fn_type(&llvm_args, false),
-                    AnyTypeEnum::FloatType(ft) => ft.fn_type(&llvm_args, false),
-                    AnyTypeEnum::PointerType(pt) => pt.fn_type(&llvm_args, false),
+                    AnyTypeEnum::IntType(it) => it.fn_type(&llvm_args, is_variadic),
+                    AnyTypeEnum::VoidType(vt) => vt.fn_type(&llvm_args, is_variadic),
+                    AnyTypeEnum::FloatType(ft) => ft.fn_type(&llvm_args, is_variadic),
+                    AnyTypeEnum::PointerType(pt) => pt.fn_type(&llvm_args, is_variadic),
                     AnyTypeEnum::FunctionType(_) => todo!(),
                     AnyTypeEnum::VectorType(_) => todo!(),
                     AnyTypeEnum::ArrayType(_) => {
@@ -429,7 +429,10 @@ impl<'p, 'module, 'ctx>
     ) -> Result<(), TransformerError> {
         let name = self.to_label(canonical_path);
 
-        debug!("Adding function to Module: {}", name);
+        debug!(
+            "Adding function to Module: {} (var_args: {})",
+            name, is_variadic
+        );
 
         // Determine the channel for the return value
         // Set the return channel property for the function
