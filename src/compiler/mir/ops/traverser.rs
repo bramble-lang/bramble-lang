@@ -74,7 +74,10 @@ impl<'a> ProgramTraverser<'a> {
 
         // Iterate over every function in MIR
         for (id, f) in self.mir.function_iter().filter(|(_, f)| !f.is_extern()) {
-            debug!("Transforming: {:?}", f.path());
+            debug!(
+                "Transforming: {:?}",
+                f.path().to_label(self.source_map, self.string_table)
+            );
 
             // For each function, iterate over every BB
             //self.function = Some(f);
@@ -92,7 +95,7 @@ impl<'a> ProgramTraverser<'a> {
         ty: &MirTypeDef,
         xfmr: &mut P,
     ) -> Result<(), TransformerError> {
-        debug!("Traversing type {:?}", id);
+        debug!("Traversing type {:?}", ty);
 
         // If this is a type that references other types, make sure those referenced types
         // are defined before transforming this type.
