@@ -343,7 +343,7 @@ impl<'a, L, V, T: FunctionBuilder<L, V>> FunctionTraverser<'a, L, V, T> {
                     .expect("DefId must refer to a static string literal"),
             ),
             Constant::Null => self.xfmr.const_null(),
-            Constant::SizeOf(_) => todo!(),
+            Constant::SizeOf(ty) => self.xfmr.size_of(ty),
         }
     }
 
