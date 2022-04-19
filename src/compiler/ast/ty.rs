@@ -374,16 +374,21 @@ impl PartialEq<&Type> for Type {
 }
 
 impl CompilerDisplay for Type {
-    fn fmt(&self, sm: &SourceMap, st: &StringTable) -> Result<String, CompilerDisplayError> {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        sm: &SourceMap,
+        st: &StringTable,
+    ) -> Result<String, CompilerDisplayError> {
         match self {
-            Type::Custom(path) => path.fmt(sm, st),
-            Type::Coroutine(ty) => Ok(format!("co<{}>", ty.fmt(sm, st)?)),
-            Type::Array(ty, sz) => Ok(format!("[{}; {}]", ty.fmt(sm, st)?, sz)),
-            Type::RawPointer(m, ty) => Ok(format!("*{} {}", m, ty.fmt(sm, st)?)),
+            Type::Custom(path) => path.fmt(f, sm, st),
+            Type::Coroutine(ty) => Ok(format!("co<{}>", ty.fmt(f, sm, st)?)),
+            Type::Array(ty, sz) => Ok(format!("[{}; {}]", ty.fmt(f, sm, st)?, sz)),
+            Type::RawPointer(m, ty) => Ok(format!("*{} {}", m, ty.fmt(f, sm, st)?)),
             Type::ExternDecl(params, has_varargs, ret_ty) => {
                 let mut params = params
                     .iter()
-                    .map(|p| p.fmt(sm, st))
+                    .map(|p| p.fmt(f, sm, st))
                     .collect::<Result<Vec<String>, _>>()?
                     .join(",");
                 if *has_varargs {
@@ -394,10 +399,10 @@ impl CompilerDisplay for Type {
             Type::StructDef(fields) => {
                 let fields = fields
                     .iter()
-                    .map(|(sid, f)| {
-                        st.get(*sid)
-                            .map_err(|e| e.into())
-                            .and_then(|fname| f.fmt(sm, st).map(|fs| format!("{}: {}", fname, fs)))
+                    .map(|(sid, fty)| {
+                        st.get(*sid).map_err(|e| e.into()).and_then(|fname| {
+                            fty.fmt(f, sm, st).map(|fs| format!("{}: {}", fname, fs))
+                        })
                     })
                     .collect::<Result<Vec<_>, _>>()?
                     .join(",");
@@ -406,7 +411,7 @@ impl CompilerDisplay for Type {
             Type::FunctionDef(params, ret_ty) => {
                 let params = params
                     .iter()
-                    .map(|p| p.fmt(sm, st))
+                    .map(|p| p.fmt(f, sm, st))
                     .collect::<Result<Vec<String>, _>>()?
                     .join(",");
 
@@ -415,7 +420,7 @@ impl CompilerDisplay for Type {
             Type::CoroutineDef(params, ret_ty) => {
                 let params = params
                     .iter()
-                    .map(|p| p.fmt(sm, st))
+                    .map(|p| p.fmt(f, sm, st))
                     .collect::<Result<Vec<String>, _>>()?
                     .join(",");
 

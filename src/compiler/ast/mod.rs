@@ -32,7 +32,12 @@ pub enum AstError {
 }
 
 impl CompilerDisplay for AstError {
-    fn fmt(&self, _: &SourceMap, st: &crate::StringTable) -> Result<String, CompilerDisplayError> {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        _: &SourceMap,
+        st: &crate::StringTable,
+    ) -> Result<String, CompilerDisplayError> {
         match self {
             AstError::ModuleAlreadyContains(sid) => {
                 let s = st.get(*sid)?;
@@ -51,7 +56,12 @@ pub enum PathCanonizationError {
 }
 
 impl CompilerDisplay for PathCanonizationError {
-    fn fmt(&self, _: &SourceMap, _st: &crate::StringTable) -> Result<String, CompilerDisplayError> {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        _: &SourceMap,
+        _st: &crate::StringTable,
+    ) -> Result<String, CompilerDisplayError> {
         match self {
             PathCanonizationError::SubceedingRoot => Ok(format!(
                 "Use of super would exceed the current depth of the path"

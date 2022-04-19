@@ -33,7 +33,12 @@ string value.
 pub trait CompilerDisplay {
     /// Uses the given [`StringTable`] to render the associated Compiler type into a
     /// human readable format.
-    fn fmt(&self, sm: &SourceMap, st: &StringTable) -> Result<String, CompilerDisplayError>;
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        sm: &SourceMap,
+        st: &StringTable,
+    ) -> Result<String, CompilerDisplayError>;
 }
 
 /// Error that gets thrown if formatting a Compiler value for human readability

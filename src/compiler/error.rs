@@ -83,8 +83,13 @@ where
     ///
     /// If the span covers only one file, then format as "{Lines}"
     /// If the span covers multiple files, format as "{File}:{Lines}"
-    fn fmt(&self, sm: &SourceMap, st: &StringTable) -> Result<String, CompilerDisplayError> {
-        let inner = self.inner.fmt(sm, st)?;
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        sm: &SourceMap,
+        st: &StringTable,
+    ) -> Result<String, CompilerDisplayError> {
+        let inner = self.inner.fmt(f, sm, st)?;
 
         let lines_by_file = sm.lines_in_span(self.span).into_iter().map(|(f, lines)| {
             let line = format_line_set(&lines).expect("Span covers no indexed source code");

@@ -22,7 +22,12 @@ pub enum LexerError {
 }
 
 impl CompilerDisplay for LexerError {
-    fn fmt(&self, sm: &SourceMap, st: &crate::StringTable) -> Result<String, CompilerDisplayError> {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        sm: &SourceMap,
+        st: &crate::StringTable,
+    ) -> Result<String, CompilerDisplayError> {
         use LexerError::*;
         let msg = match self {
             Locked(None) => "Lexer locked on EOF".into(),
@@ -30,7 +35,9 @@ impl CompilerDisplay for LexerError {
             InvalidEscapeSequence(c) => format!("Invalid escape sequence \\{}", c),
             ExpectedEscapeCharacter => "Expected an escape character after \\".into(),
             InvalidNumber => "Invalid number".into(),
-            UnexpectedSuffixType(ref prim) => format!("Invalid type suffix: {}", prim.fmt(sm, st)?),
+            UnexpectedSuffixType(ref prim) => {
+                format!("Invalid type suffix: {}", prim.fmt(f, sm, st)?)
+            }
             SourceError => "Error reading characters from source code".into(),
             UnexpectedEof => "Unexpected EOF".into(),
             InvalidSuffixOnFloat => "Invalid suffix after float literal.".into(),

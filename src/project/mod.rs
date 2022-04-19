@@ -29,13 +29,18 @@ pub enum ManifestError {
 }
 
 impl CompilerDisplay for ManifestError {
-    fn fmt(&self, sm: &SourceMap, st: &crate::StringTable) -> Result<String, CompilerDisplayError> {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        sm: &SourceMap,
+        st: &crate::StringTable,
+    ) -> Result<String, CompilerDisplayError> {
         Ok(match self {
             ManifestError::StringIdNotFound => {
                 "Could not write Manifest file: StringId was not found in StringTable".into()
             }
             ManifestError::CannotConvertType(ty) => {
-                format!("Cannot convert type: {}", ty.fmt(sm, st)?)
+                format!("Cannot convert type: {}", ty.fmt(f, sm, st)?)
             }
             ManifestError::PathElementIsEmpty => "Path element is empty".into(),
             ManifestError::PathElementStartsWithInvalidChar(c) => {

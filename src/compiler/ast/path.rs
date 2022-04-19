@@ -19,7 +19,12 @@ pub enum Element {
 }
 
 impl CompilerDisplay for Element {
-    fn fmt(&self, _: &SourceMap, st: &StringTable) -> Result<String, CompilerDisplayError> {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        _: &SourceMap,
+        st: &StringTable,
+    ) -> Result<String, CompilerDisplayError> {
         Ok(match self {
             Element::FileRoot => ROOT_PATH.into(),
             Element::CanonicalRoot => CANONICAL_ROOT.into(),
@@ -209,7 +214,12 @@ impl<I: std::slice::SliceIndex<[Element]>> std::ops::Index<I> for Path {
 }
 
 impl CompilerDisplay for Path {
-    fn fmt(&self, sm: &SourceMap, st: &StringTable) -> Result<String, CompilerDisplayError> {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        sm: &SourceMap,
+        st: &StringTable,
+    ) -> Result<String, CompilerDisplayError> {
         let mut ps: Vec<String> = vec![];
 
         for e in self.iter() {

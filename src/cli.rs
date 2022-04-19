@@ -215,7 +215,12 @@ pub fn configure_logging(level: LevelFilter) -> Result<(), log::SetLoggerError> 
 impl CompilerDisplay for String {
     /// Allow for errors from the Lexer (which do not include StringIds since the lexer generates the
     /// [StringTable]) to be printed using the same error printing functions as all other errors
-    fn fmt(&self, _: &SourceMap, _: &StringTable) -> Result<String, CompilerDisplayError> {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        _: &SourceMap,
+        _: &StringTable,
+    ) -> Result<String, CompilerDisplayError> {
         Ok(format!("{}", self))
     }
 }

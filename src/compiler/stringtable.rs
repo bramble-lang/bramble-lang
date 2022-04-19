@@ -108,7 +108,12 @@ impl StringId {
 }
 
 impl crate::compiler::CompilerDisplay for StringId {
-    fn fmt(&self, _: &SourceMap, st: &StringTable) -> Result<String, CompilerDisplayError> {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        _: &SourceMap,
+        st: &StringTable,
+    ) -> Result<String, CompilerDisplayError> {
         st.get(*self).map_err(|e| e.into())
     }
 }

@@ -60,7 +60,12 @@ pub enum ParserError {
 impl CompilerDisplay for ParserError {
     /// Format a ParserError into a human readable message and replace any [`StringId`]s
     /// with their respective string values.
-    fn fmt(&self, sm: &SourceMap, st: &crate::StringTable) -> Result<String, CompilerDisplayError> {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        sm: &SourceMap,
+        st: &crate::StringTable,
+    ) -> Result<String, CompilerDisplayError> {
         let msg = match self {
             ParserError::Locked(token) => {
                 let ts = token_to_string(sm, st, token)?;
@@ -68,7 +73,7 @@ impl CompilerDisplay for ParserError {
             }
             ParserError::ModExpectedName => "Identifier expected after mod keyword".into(),
             ParserError::ModAlreadyContains(sid) => {
-                format!("Module already contains {}", sid.fmt(sm, st)?)
+                format!("Module already contains {}", sid.fmt(f, sm, st)?)
             }
             ParserError::ExternInvalidVarArgs => "An extern declaration must have at least one \
                     parameter before a VarArgs (...) parameter"
@@ -140,7 +145,7 @@ impl CompilerDisplay for ParserError {
             ParserError::YieldExpectedIdentifier => "Expected identifier after yield".into(),
             ParserError::StructExpectedFieldExpr(sid) => format!(
                 "Expected an expression to be assigned to field {}",
-                sid.fmt(sm, st)?
+                sid.fmt(f, sm, st)?
             ),
             ParserError::ExpectedExprAfter(lex) => {
                 format!(
