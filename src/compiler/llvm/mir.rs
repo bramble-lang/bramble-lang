@@ -1730,6 +1730,14 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
         Ok(op)
     }
 
+    fn size_of(&self, ty: TypeId) -> BasicValueEnum<'ctx> {
+        let llvm_ty = self.program.get_type(ty).unwrap();
+        llvm_ty
+            .size_of()
+            .expect("Could not compute size from given type")
+            .into()
+    }
+
     fn address_of(&self, a: Location<'ctx>) -> Result<BasicValueEnum<'ctx>, TransformerError> {
         match a {
             Location::Pointer(ptr) => Ok(ptr.into()),
