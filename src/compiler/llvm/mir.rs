@@ -741,6 +741,24 @@ impl<'p, 'module, 'ctx> LlvmFunctionBuilder<'p, 'module, 'ctx> {
             )
             .unwrap();
     }
+
+    fn build_ptr_compare(
+        &self,
+        op: IntPredicate,
+        l: PointerValue<'ctx>,
+        r: PointerValue<'ctx>,
+    ) -> BasicValueEnum<'ctx> {
+        let i64ty = self.program.context.i64_type();
+        let li = self.program.builder.build_ptr_to_int(l, i64ty, "");
+        let ri = self.program.builder.build_ptr_to_int(r, i64ty, "");
+
+        let op = self
+            .program
+            .builder
+            .build_int_compare(op, li, ri, "")
+            .into();
+        op
+    }
 }
 
 impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
@@ -1119,7 +1137,17 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
 
     fn const_null(&self) -> BasicValueEnum<'ctx> {
         let zero = self.program.context.i64_type().const_zero();
-        zero.into()
+        self.program
+            .builder
+            .build_int_to_ptr(
+                zero,
+                self.program
+                    .context
+                    .i64_type()
+                    .ptr_type(AddressSpace::Generic),
+                "",
+            )
+            .into()
     }
 
     fn const_f64(&self, f: f64) -> BasicValueEnum<'ctx> {
@@ -1317,8 +1345,10 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                 .builder
                 .build_int_compare(IntPredicate::EQ, l, r, "")
                 .into()),
-            (BasicValueEnum::FloatValue(_), BasicValueEnum::FloatValue(_)) => todo!(),
-            (BasicValueEnum::PointerValue(_), BasicValueEnum::PointerValue(_)) => todo!(),
+            (BasicValueEnum::PointerValue(l), BasicValueEnum::PointerValue(r)) => {
+                let result = self.build_ptr_compare(IntPredicate::EQ, l, r).into();
+                Ok(result)
+            }
             _ => Err(TransformerError::Internal(
                 &LlvmBuilderError::InvalidArithmeticOperands,
             )),
@@ -1336,8 +1366,10 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                 .builder
                 .build_int_compare(IntPredicate::NE, l, r, "")
                 .into()),
-            (BasicValueEnum::FloatValue(_), BasicValueEnum::FloatValue(_)) => todo!(),
-            (BasicValueEnum::PointerValue(_), BasicValueEnum::PointerValue(_)) => todo!(),
+            (BasicValueEnum::PointerValue(l), BasicValueEnum::PointerValue(r)) => {
+                let result = self.build_ptr_compare(IntPredicate::NE, l, r).into();
+                Ok(result)
+            }
             _ => Err(TransformerError::Internal(
                 &LlvmBuilderError::InvalidArithmeticOperands,
             )),
@@ -1355,8 +1387,6 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                 .builder
                 .build_int_compare(IntPredicate::SLT, l, r, "")
                 .into()),
-            (BasicValueEnum::FloatValue(_), BasicValueEnum::FloatValue(_)) => todo!(),
-            (BasicValueEnum::PointerValue(_), BasicValueEnum::PointerValue(_)) => todo!(),
             _ => Err(TransformerError::Internal(
                 &LlvmBuilderError::InvalidArithmeticOperands,
             )),
@@ -1374,6 +1404,10 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                 .builder
                 .build_int_compare(IntPredicate::ULT, l, r, "")
                 .into()),
+            (BasicValueEnum::PointerValue(l), BasicValueEnum::PointerValue(r)) => {
+                let result = self.build_ptr_compare(IntPredicate::ULT, l, r).into();
+                Ok(result)
+            }
             _ => Err(TransformerError::Internal(
                 &LlvmBuilderError::InvalidArithmeticOperands,
             )),
@@ -1408,6 +1442,10 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                 .builder
                 .build_int_compare(IntPredicate::ULE, l, r, "")
                 .into()),
+            (BasicValueEnum::PointerValue(l), BasicValueEnum::PointerValue(r)) => {
+                let result = self.build_ptr_compare(IntPredicate::ULE, l, r).into();
+                Ok(result)
+            }
             _ => Err(TransformerError::Internal(
                 &LlvmBuilderError::InvalidArithmeticOperands,
             )),
@@ -1442,6 +1480,10 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                 .builder
                 .build_int_compare(IntPredicate::UGT, l, r, "")
                 .into()),
+            (BasicValueEnum::PointerValue(l), BasicValueEnum::PointerValue(r)) => {
+                let result = self.build_ptr_compare(IntPredicate::UGT, l, r).into();
+                Ok(result)
+            }
             _ => Err(TransformerError::Internal(
                 &LlvmBuilderError::InvalidArithmeticOperands,
             )),
@@ -1476,6 +1518,10 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                 .builder
                 .build_int_compare(IntPredicate::UGE, l, r, "")
                 .into()),
+            (BasicValueEnum::PointerValue(l), BasicValueEnum::PointerValue(r)) => {
+                let result = self.build_ptr_compare(IntPredicate::UGE, l, r).into();
+                Ok(result)
+            }
             _ => Err(TransformerError::Internal(
                 &LlvmBuilderError::InvalidArithmeticOperands,
             )),
