@@ -359,6 +359,7 @@ impl<'module, 'ctx> LlvmProgramBuilder<'module, 'ctx> {
     fn fn_type(
         &self,
         args: &[ArgDecl],
+        is_variadic: bool,
         ret_ty: TypeId,
     ) -> Result<(FunctionType<'ctx>, ReturnMethod), TransformerError> {
         // Determine the channel for the return value
@@ -379,7 +380,7 @@ impl<'module, 'ctx> LlvmProgramBuilder<'module, 'ctx> {
                     llvm_args.push(llvm_ty);
                 }
 
-                self.context.void_type().fn_type(&llvm_args, false)
+                self.context.void_type().fn_type(&llvm_args, is_variadic)
             }
             ReturnMethod::Return => {
                 // Convert list of arguments into a list of LLVM types
@@ -423,6 +424,7 @@ impl<'p, 'module, 'ctx>
         func_id: DefId,
         canonical_path: &Path,
         args: &[ArgDecl],
+        is_variadic: bool,
         ret_ty: TypeId,
     ) -> Result<(), TransformerError> {
         let name = self.to_label(canonical_path);
@@ -431,7 +433,7 @@ impl<'p, 'module, 'ctx>
 
         // Determine the channel for the return value
         // Set the return channel property for the function
-        let (fn_type, ret_method) = self.fn_type(args, ret_ty)?;
+        let (fn_type, ret_method) = self.fn_type(args, is_variadic, ret_ty)?;
 
         let function = self.module.add_function(&name, fn_type, None);
 

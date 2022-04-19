@@ -37,6 +37,7 @@ pub trait ProgramBuilder<'p, L, V, F: FunctionBuilder<L, V>> {
         func_id: DefId,
         canonical_path: &Path,
         args: &[ArgDecl],
+        is_variadic: bool,
         ret_ty: TypeId,
     ) -> Result<(), TransformerError>;
 

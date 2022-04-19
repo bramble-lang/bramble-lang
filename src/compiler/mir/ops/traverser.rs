@@ -47,7 +47,8 @@ impl<'a> ProgramTraverser<'a> {
 
         // Declare every function in the ProgramTransformer
         for (id, f) in self.mir.function_iter() {
-            xfmr.add_function(id, f.path(), f.get_args(), f.ret_ty())
+            debug!("{}: var_args: {}", f.path(), f.has_varargs());
+            xfmr.add_function(id, f.path(), f.get_args(), f.has_varargs(), f.ret_ty())
                 .unwrap();
         }
 
