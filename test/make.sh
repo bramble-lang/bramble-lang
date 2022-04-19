@@ -18,7 +18,7 @@ run() {
 
 	if [[ $OSTYPE == "linux-gnu"* ]]; then
 		echo "Compiling"
-		cargo run $target --bin bramblec -- --mir-beta --llvm --emit llvm-ir -p linux --input "../bramble/std" -o ./target/std.obj --manifest
+		cargo run $target --bin bramblec -- --mir-beta --log debug --llvm --emit llvm-ir -p linux --input "../bramble/std" -o ./target/std.obj --manifest
 		cargo run $target --bin bramblec -- --llvm -p linux --import ./target/std.manifest "$@" -o ./target/output.obj
 		echo ""
 		echo "Assembling"

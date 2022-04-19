@@ -5,7 +5,13 @@ use std::{collections::VecDeque, marker::PhantomData};
 
 use log::debug;
 
-use crate::compiler::mir::{ir::*, MirProject, MirStructDef, MirTypeDef, TransformerError, TypeId};
+use crate::{
+    compiler::{
+        mir::{ir::*, MirProject, MirStructDef, MirTypeDef, TransformerError, TypeId},
+        SourceMap,
+    },
+    StringTable,
+};
 
 use super::{transformer::FunctionBuilder, ProgramBuilder};
 
@@ -15,11 +21,21 @@ use super::{transformer::FunctionBuilder, ProgramBuilder};
 pub struct ProgramTraverser<'a> {
     /// Reference to the [`MirProject`] being transformed.
     mir: &'a MirProject,
+    source_map: &'a SourceMap,
+    string_table: &'a StringTable,
 }
 
 impl<'a> ProgramTraverser<'a> {
-    pub fn new(mir: &'a MirProject) -> Self {
-        Self { mir }
+    pub fn new(
+        mir: &'a MirProject,
+        source_map: &'a SourceMap,
+        string_table: &'a StringTable,
+    ) -> Self {
+        Self {
+            mir,
+            source_map,
+            string_table,
+        }
     }
 
     /// This function takes an implementation of [`ProgramTransformer`] and uses it to
@@ -47,7 +63,11 @@ impl<'a> ProgramTraverser<'a> {
 
         // Declare every function in the ProgramTransformer
         for (id, f) in self.mir.function_iter() {
-            debug!("{}: var_args: {}", f.path(), f.has_varargs());
+            debug!(
+                "{}: var_args: {}",
+                f.path().to_label(self.source_map, self.string_table),
+                f.has_varargs()
+            );
             xfmr.add_function(id, f.path(), f.get_args(), f.has_varargs(), f.ret_ty())
                 .unwrap();
         }

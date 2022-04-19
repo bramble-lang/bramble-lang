@@ -237,7 +237,7 @@ fn gen_llvm(
 
     let mut xfmr = llvm::LlvmProgramBuilder::new(&context, &module, &builder, sm, table, main_name);
 
-    let proj_traverser = compiler::ProgramTraverser::new(mir);
+    let proj_traverser = compiler::ProgramTraverser::new(mir, sm, table);
 
     // Traverser is given a MirProject
     // call traverser.map(llvm) this will use the llvm xfmr to map MirProject to LlvmProject
