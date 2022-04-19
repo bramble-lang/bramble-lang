@@ -1318,7 +1318,18 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                 .build_int_compare(IntPredicate::EQ, l, r, "")
                 .into()),
             (BasicValueEnum::FloatValue(_), BasicValueEnum::FloatValue(_)) => todo!(),
-            (BasicValueEnum::PointerValue(_), BasicValueEnum::PointerValue(_)) => todo!(),
+            (BasicValueEnum::PointerValue(l), BasicValueEnum::PointerValue(r)) => {
+                let i64ty = self.program.context.i64_type();
+                let li = self.program.builder.build_ptr_to_int(l, i64ty, "");
+                let ri = self.program.builder.build_ptr_to_int(r, i64ty, "");
+
+                let op = self
+                    .program
+                    .builder
+                    .build_int_compare(IntPredicate::EQ, li, ri, "")
+                    .into();
+                Ok(op)
+            }
             _ => Err(TransformerError::Internal(
                 &LlvmBuilderError::InvalidArithmeticOperands,
             )),
@@ -1337,7 +1348,18 @@ impl<'p, 'module, 'ctx> FunctionBuilder<Location<'ctx>, BasicValueEnum<'ctx>>
                 .build_int_compare(IntPredicate::NE, l, r, "")
                 .into()),
             (BasicValueEnum::FloatValue(_), BasicValueEnum::FloatValue(_)) => todo!(),
-            (BasicValueEnum::PointerValue(_), BasicValueEnum::PointerValue(_)) => todo!(),
+            (BasicValueEnum::PointerValue(_), BasicValueEnum::PointerValue(_)) => {
+                let i64ty = self.program.context.i64_type();
+                let li = self.program.builder.build_ptr_to_int(l, i64ty, "");
+                let ri = self.program.builder.build_ptr_to_int(r, i64ty, "");
+
+                let op = self
+                    .program
+                    .builder
+                    .build_int_compare(IntPredicate::NE, li, ri, "")
+                    .into();
+                Ok(op)
+            }
             _ => Err(TransformerError::Internal(
                 &LlvmBuilderError::InvalidArithmeticOperands,
             )),
