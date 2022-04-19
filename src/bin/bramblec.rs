@@ -2,7 +2,8 @@ extern crate log;
 extern crate simplelog;
 
 use std::fs::File;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::str::FromStr;
 use std::time::Instant;
 
 use bramble_lang::compiler::diagnostics::Logger;
@@ -190,6 +191,7 @@ fn main() -> Result<(), i32> {
             &string_table,
             path,
             emit_llvm_ir(&config),
+            emit_asm(&config),
         );
 
         let llvm_duration = llvm_time.elapsed();
@@ -227,6 +229,7 @@ fn gen_llvm(
     table: &StringTable,
     output: &Path,
     emit_ir: bool,
+    emit_asm: bool,
 ) {
     let context = Context::create();
     let module = context.create_module(name);
@@ -247,5 +250,8 @@ fn gen_llvm(
             .unwrap();
     }
 
-    llvm.emit_object_code(output)
+    let p = PathBuf::from_str(&format!("./target/{}.s", name)).unwrap();
+    let asm_file = if emit_asm { Some(p.as_path()) } else { None };
+
+    llvm.emit_object_code(asm_file, output)
 }

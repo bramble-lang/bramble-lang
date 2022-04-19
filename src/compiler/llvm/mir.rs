@@ -150,7 +150,7 @@ impl<'module, 'ctx> LlvmProgram<'module, 'ctx> {
         println!("{contents}");
     }
 
-    pub fn emit_object_code(&self, file: &std::path::Path) {
+    pub fn emit_object_code(&self, emit_asm: Option<&std::path::Path>, file: &std::path::Path) {
         // Get target for current machine
         let triple = inkwell::targets::TargetMachine::get_default_triple();
 
@@ -174,6 +174,11 @@ impl<'module, 'ctx> LlvmProgram<'module, 'ctx> {
         // Configure the module
         self.module.set_data_layout(&data.get_data_layout());
         self.module.set_triple(&triple);
+        if let Some(asm_file) = emit_asm {
+            machine
+                .write_to_file(self.module, inkwell::targets::FileType::Assembly, asm_file)
+                .unwrap();
+        }
         machine
             .write_to_file(self.module, inkwell::targets::FileType::Object, file)
             .unwrap();
