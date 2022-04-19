@@ -27,7 +27,7 @@ build_std() {
 	if [[ $OSTYPE == "linux-gnu"* ]]; then
 		../target/${target}/bramblec --mir-beta --llvm -p linux -i ../bramble/std -o ${std_dir}/std.obj --manifest >${std_dir}/stdout 2>/dev/null
 	elif [[ $OSTYPE == "darwin"* ]]; then
-		../target/${target}/bramblec --llvm -p machos -i ../bramble/std -o ${std_dir}/std.obj --manifest >${std_dir}/stdout 2>/dev/null
+		../target/${target}/bramblec --mir-beta --llvm -p machos -i ../bramble/std -o ${std_dir}/std.obj --manifest >${std_dir}/stdout 2>/dev/null
 	fi
 	mv ./target/std.manifest ./target/std/.
 }
@@ -42,7 +42,7 @@ run_test() {
 	if [[ $OSTYPE == "linux-gnu"* ]]; then
 		../target/${target}/bramblec --mir-beta --llvm -p linux --emit=llvm-ir --import ${std_dir}/std.manifest --json-trace -i ./src/${test} -o ${build_dir}/output.obj >${build_dir}/stdout 2>/dev/null
 	elif [[ $OSTYPE == "darwin"* ]]; then
-		../target/${target}/bramblec --llvm -p machos --import ${std_dir}/std.manifest --json-trace -i ./src/${test} -o ${build_dir}/output.obj >${build_dir}/stdout 2>/dev/null
+		../target/${target}/bramblec --mir-beta --llvm -p machos --import ${std_dir}/std.manifest --json-trace -i ./src/${test} -o ${build_dir}/output.obj >${build_dir}/stdout 2>/dev/null
 	fi
 
 	# If there were no compilation errors then run the assembler and linker
