@@ -98,87 +98,27 @@ impl Expression<ParserContext> {
         op: &Lex,
         left: Box<Self>,
         right: Box<Self>,
-    ) -> ParserResult<Expression<ParserContext>> {
+    ) -> Result<Expression<ParserContext>, CompilerError<ParserError>> {
         let ctx = left.context().join(*right.context());
         match op {
-            Lex::Eq => Ok(Some(Expression::BinaryOp(
-                ctx,
-                BinaryOperator::Eq,
-                left,
-                right,
-            ))),
-            Lex::NEq => Ok(Some(Expression::BinaryOp(
-                ctx,
-                BinaryOperator::NEq,
-                left,
-                right,
-            ))),
-            Lex::Ls => Ok(Some(Expression::BinaryOp(
-                ctx,
-                BinaryOperator::Ls,
-                left,
-                right,
-            ))),
-            Lex::LsEq => Ok(Some(Expression::BinaryOp(
-                ctx,
-                BinaryOperator::LsEq,
-                left,
-                right,
-            ))),
-            Lex::Gr => Ok(Some(Expression::BinaryOp(
-                ctx,
-                BinaryOperator::Gr,
-                left,
-                right,
-            ))),
-            Lex::GrEq => Ok(Some(Expression::BinaryOp(
-                ctx,
-                BinaryOperator::GrEq,
-                left,
-                right,
-            ))),
-            Lex::BAnd => Ok(Some(Expression::BinaryOp(
-                ctx,
-                BinaryOperator::BAnd,
-                left,
-                right,
-            ))),
-            Lex::BOr => Ok(Some(Expression::BinaryOp(
-                ctx,
-                BinaryOperator::BOr,
-                left,
-                right,
-            ))),
-            Lex::Add => Ok(Some(Expression::BinaryOp(
-                ctx,
-                BinaryOperator::Add,
-                left,
-                right,
-            ))),
-            Lex::Minus => Ok(Some(Expression::BinaryOp(
-                ctx,
-                BinaryOperator::Sub,
-                left,
-                right,
-            ))),
-            Lex::Mul => Ok(Some(Expression::BinaryOp(
-                ctx,
-                BinaryOperator::Mul,
-                left,
-                right,
-            ))),
-            Lex::Div => Ok(Some(Expression::BinaryOp(
-                ctx,
-                BinaryOperator::Div,
-                left,
-                right,
-            ))),
-            Lex::At => Ok(Some(Expression::BinaryOp(
+            Lex::Eq => Ok(Expression::BinaryOp(ctx, BinaryOperator::Eq, left, right)),
+            Lex::NEq => Ok(Expression::BinaryOp(ctx, BinaryOperator::NEq, left, right)),
+            Lex::Ls => Ok(Expression::BinaryOp(ctx, BinaryOperator::Ls, left, right)),
+            Lex::LsEq => Ok(Expression::BinaryOp(ctx, BinaryOperator::LsEq, left, right)),
+            Lex::Gr => Ok(Expression::BinaryOp(ctx, BinaryOperator::Gr, left, right)),
+            Lex::GrEq => Ok(Expression::BinaryOp(ctx, BinaryOperator::GrEq, left, right)),
+            Lex::BAnd => Ok(Expression::BinaryOp(ctx, BinaryOperator::BAnd, left, right)),
+            Lex::BOr => Ok(Expression::BinaryOp(ctx, BinaryOperator::BOr, left, right)),
+            Lex::Add => Ok(Expression::BinaryOp(ctx, BinaryOperator::Add, left, right)),
+            Lex::Minus => Ok(Expression::BinaryOp(ctx, BinaryOperator::Sub, left, right)),
+            Lex::Mul => Ok(Expression::BinaryOp(ctx, BinaryOperator::Mul, left, right)),
+            Lex::Div => Ok(Expression::BinaryOp(ctx, BinaryOperator::Div, left, right)),
+            Lex::At => Ok(Expression::BinaryOp(
                 ctx,
                 BinaryOperator::RawPointerOffset,
                 left,
                 right,
-            ))),
+            )),
             _ => {
                 err!(ctx.span(), ParserError::NotABinaryOp(*op))
             }
@@ -277,8 +217,7 @@ impl<'a> Parser<'a> {
                         let right = left_pattern(self, stream)?.ok_or_else(|| {
                             CompilerError::new(op.span(), ParserError::ExpectedExprAfter(op.sym))
                         })?;
-                        left = Expression::binary_op(&op.sym, Box::new(left), Box::new(right))?
-                            .expect("Failed to create syntactically valid binary op expression");
+                        left = Expression::binary_op(&op.sym, Box::new(left), Box::new(right))?;
                     }
                     Ok(Some(left))
                 }
