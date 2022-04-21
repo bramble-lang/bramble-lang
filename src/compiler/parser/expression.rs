@@ -270,9 +270,8 @@ impl<'a> Parser<'a> {
         let (event, result) = self.new_event(Span::zero()).and_then(|| {
             match left_pattern(self, stream)? {
                 Some(mut left) => {
-                    // Loop while `test` is matched
-                    // Read the "right" operand
-                    // left = OP(left, right)
+                    // Use iteration rather than recursion so that the AST correctly reflects the left to right order of
+                    // operations
                     while let Some(op) = stream.next_if_one_of(test) {
                         msg = Some(op.sym.to_string());
                         let right = left_pattern(self, stream)?.ok_or_else(|| {
