@@ -200,6 +200,8 @@ impl<'a> Parser<'a> {
         self.binary_op(stream, Self::cast, &[Lex::Mul, Lex::Div])
     }
 
+    /// This will parse a sequence of equal precedence operators and their operands until a token is reached
+    /// which is not in `operators`.
     pub(super) fn binary_op(
         &self,
         stream: &mut TokenStream,
