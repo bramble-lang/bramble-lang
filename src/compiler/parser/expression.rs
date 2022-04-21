@@ -231,14 +231,14 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        self.binary_op(stream, &[Lex::BOr], Self::logical_and)
+        self.binary_op(stream, Self::logical_and, &[Lex::BOr])
     }
 
     pub(super) fn logical_and(
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        self.binary_op(stream, &[Lex::BAnd], Self::comparison)
+        self.binary_op(stream, Self::comparison, &[Lex::BAnd])
     }
 
     pub(super) fn comparison(
@@ -247,24 +247,24 @@ impl<'a> Parser<'a> {
     ) -> ParserResult<Expression<ParserContext>> {
         self.binary_op(
             stream,
-            &[Lex::Eq, Lex::NEq, Lex::Ls, Lex::LsEq, Lex::Gr, Lex::GrEq],
             Self::sum,
+            &[Lex::Eq, Lex::NEq, Lex::Ls, Lex::LsEq, Lex::Gr, Lex::GrEq],
         )
     }
 
     pub(super) fn sum(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
-        self.binary_op(stream, &[Lex::Add, Lex::Minus, Lex::At], Self::term)
+        self.binary_op(stream, Self::term, &[Lex::Add, Lex::Minus, Lex::At])
     }
 
     pub(super) fn term(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
-        self.binary_op(stream, &[Lex::Mul, Lex::Div], Self::cast)
+        self.binary_op(stream, Self::cast, &[Lex::Mul, Lex::Div])
     }
 
     pub(super) fn binary_op(
         &self,
         stream: &mut TokenStream,
-        test: &[Lex],
         left_pattern: fn(&Self, &mut TokenStream) -> ParserResult<Expression<ParserContext>>,
+        test: &[Lex],
     ) -> ParserResult<Expression<ParserContext>> {
         let mut msg = None;
         let (event, result) =
@@ -273,7 +273,7 @@ impl<'a> Parser<'a> {
                     Some(left) => match stream.next_if_one_of(test) {
                         Some(op) => {
                             msg = Some(op.sym.to_string());
-                            self.binary_op(stream, test, left_pattern)?
+                            self.binary_op(stream, left_pattern, test)?
                                 .ok_or_else(|| {
                                     CompilerError::new(
                                         op.span(),
