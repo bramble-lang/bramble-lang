@@ -1,0 +1,11 @@
+
+fn my_main() -> i64 {
+    let mut x: i64 := 1;
+
+    let r: i64 := x + 2 + 3 + {
+        mut x := 500;
+        4
+    };
+    project::std::io::writei64ln(r);
+    return 0;
+}
