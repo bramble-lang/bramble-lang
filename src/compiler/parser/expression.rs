@@ -279,7 +279,7 @@ impl<'a> Parser<'a> {
                             CompilerError::new(op.span(), ParserError::ExpectedExprAfter(op.sym))
                         })?;
                         left = Expression::binary_op(&op.sym, Box::new(left), Box::new(right))?
-                            .unwrap();
+                            .expect("Failed to create syntactically valid binary op expression");
                     }
                     Ok(Some(left))
                 }
