@@ -98,87 +98,27 @@ impl Expression<ParserContext> {
         op: &Lex,
         left: Box<Self>,
         right: Box<Self>,
-    ) -> ParserResult<Expression<ParserContext>> {
+    ) -> Result<Expression<ParserContext>, CompilerError<ParserError>> {
         let ctx = left.context().join(*right.context());
         match op {
-            Lex::Eq => Ok(Some(Expression::BinaryOp(
-                ctx,
-                BinaryOperator::Eq,
-                left,
-                right,
-            ))),
-            Lex::NEq => Ok(Some(Expression::BinaryOp(
-                ctx,
-                BinaryOperator::NEq,
-                left,
-                right,
-            ))),
-            Lex::Ls => Ok(Some(Expression::BinaryOp(
-                ctx,
-                BinaryOperator::Ls,
-                left,
-                right,
-            ))),
-            Lex::LsEq => Ok(Some(Expression::BinaryOp(
-                ctx,
-                BinaryOperator::LsEq,
-                left,
-                right,
-            ))),
-            Lex::Gr => Ok(Some(Expression::BinaryOp(
-                ctx,
-                BinaryOperator::Gr,
-                left,
-                right,
-            ))),
-            Lex::GrEq => Ok(Some(Expression::BinaryOp(
-                ctx,
-                BinaryOperator::GrEq,
-                left,
-                right,
-            ))),
-            Lex::BAnd => Ok(Some(Expression::BinaryOp(
-                ctx,
-                BinaryOperator::BAnd,
-                left,
-                right,
-            ))),
-            Lex::BOr => Ok(Some(Expression::BinaryOp(
-                ctx,
-                BinaryOperator::BOr,
-                left,
-                right,
-            ))),
-            Lex::Add => Ok(Some(Expression::BinaryOp(
-                ctx,
-                BinaryOperator::Add,
-                left,
-                right,
-            ))),
-            Lex::Minus => Ok(Some(Expression::BinaryOp(
-                ctx,
-                BinaryOperator::Sub,
-                left,
-                right,
-            ))),
-            Lex::Mul => Ok(Some(Expression::BinaryOp(
-                ctx,
-                BinaryOperator::Mul,
-                left,
-                right,
-            ))),
-            Lex::Div => Ok(Some(Expression::BinaryOp(
-                ctx,
-                BinaryOperator::Div,
-                left,
-                right,
-            ))),
-            Lex::At => Ok(Some(Expression::BinaryOp(
+            Lex::Eq => Ok(Expression::BinaryOp(ctx, BinaryOperator::Eq, left, right)),
+            Lex::NEq => Ok(Expression::BinaryOp(ctx, BinaryOperator::NEq, left, right)),
+            Lex::Ls => Ok(Expression::BinaryOp(ctx, BinaryOperator::Ls, left, right)),
+            Lex::LsEq => Ok(Expression::BinaryOp(ctx, BinaryOperator::LsEq, left, right)),
+            Lex::Gr => Ok(Expression::BinaryOp(ctx, BinaryOperator::Gr, left, right)),
+            Lex::GrEq => Ok(Expression::BinaryOp(ctx, BinaryOperator::GrEq, left, right)),
+            Lex::BAnd => Ok(Expression::BinaryOp(ctx, BinaryOperator::BAnd, left, right)),
+            Lex::BOr => Ok(Expression::BinaryOp(ctx, BinaryOperator::BOr, left, right)),
+            Lex::Add => Ok(Expression::BinaryOp(ctx, BinaryOperator::Add, left, right)),
+            Lex::Minus => Ok(Expression::BinaryOp(ctx, BinaryOperator::Sub, left, right)),
+            Lex::Mul => Ok(Expression::BinaryOp(ctx, BinaryOperator::Mul, left, right)),
+            Lex::Div => Ok(Expression::BinaryOp(ctx, BinaryOperator::Div, left, right)),
+            Lex::At => Ok(Expression::BinaryOp(
                 ctx,
                 BinaryOperator::RawPointerOffset,
                 left,
                 right,
-            ))),
+            )),
             _ => {
                 err!(ctx.span(), ParserError::NotABinaryOp(*op))
             }
@@ -231,14 +171,14 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        self.binary_op(stream, &[Lex::BOr], Self::logical_and)
+        self.binary_op(stream, Self::logical_and, &[Lex::BOr])
     }
 
     pub(super) fn logical_and(
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        self.binary_op(stream, &[Lex::BAnd], Self::comparison)
+        self.binary_op(stream, Self::comparison, &[Lex::BAnd])
     }
 
     pub(super) fn comparison(
@@ -247,47 +187,45 @@ impl<'a> Parser<'a> {
     ) -> ParserResult<Expression<ParserContext>> {
         self.binary_op(
             stream,
-            &[Lex::Eq, Lex::NEq, Lex::Ls, Lex::LsEq, Lex::Gr, Lex::GrEq],
             Self::sum,
+            &[Lex::Eq, Lex::NEq, Lex::Ls, Lex::LsEq, Lex::Gr, Lex::GrEq],
         )
     }
 
     pub(super) fn sum(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
-        self.binary_op(stream, &[Lex::Add, Lex::Minus, Lex::At], Self::term)
+        self.binary_op(stream, Self::term, &[Lex::Add, Lex::Minus, Lex::At])
     }
 
     pub(super) fn term(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
-        self.binary_op(stream, &[Lex::Mul, Lex::Div], Self::cast)
+        self.binary_op(stream, Self::cast, &[Lex::Mul, Lex::Div])
     }
 
+    /// This will parse a sequence of equal precedence operators and their operands until a token is reached
+    /// which is not in `operators`.
     pub(super) fn binary_op(
         &self,
         stream: &mut TokenStream,
-        test: &[Lex],
-        left_pattern: fn(&Self, &mut TokenStream) -> ParserResult<Expression<ParserContext>>,
+        operand_pattern: fn(&Self, &mut TokenStream) -> ParserResult<Expression<ParserContext>>,
+        operators: &[Lex],
     ) -> ParserResult<Expression<ParserContext>> {
         let mut msg = None;
-        let (event, result) =
-            self.new_event(Span::zero())
-                .and_then(|| match left_pattern(self, stream)? {
-                    Some(left) => match stream.next_if_one_of(test) {
-                        Some(op) => {
-                            msg = Some(op.sym.to_string());
-                            self.binary_op(stream, test, left_pattern)?
-                                .ok_or_else(|| {
-                                    CompilerError::new(
-                                        op.span(),
-                                        ParserError::ExpectedExprAfter(op.sym),
-                                    )
-                                })
-                                .and_then(|right| {
-                                    Expression::binary_op(&op.sym, Box::new(left), Box::new(right))
-                                })
-                        }
-                        None => Ok(Some(left)),
-                    },
-                    None => Ok(None),
-                });
+        let (event, result) = self.new_event(Span::zero()).and_then(|| {
+            match operand_pattern(self, stream)? {
+                Some(mut left) => {
+                    // Use iteration rather than recursion so that the AST correctly reflects the left to right order of
+                    // operations
+                    while let Some(op) = stream.next_if_one_of(operators) {
+                        msg = Some(op.sym.to_string());
+                        let right = operand_pattern(self, stream)?.ok_or_else(|| {
+                            CompilerError::new(op.span(), ParserError::ExpectedExprAfter(op.sym))
+                        })?;
+                        left = Expression::binary_op(&op.sym, Box::new(left), Box::new(right))?;
+                    }
+                    Ok(Some(left))
+                }
+                None => Ok(None),
+            }
+        });
 
         result.view(|v| match msg {
             Some(msg) => self.record(event.with_span(v.span()), Ok(&msg)),
