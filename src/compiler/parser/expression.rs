@@ -231,21 +231,21 @@ impl<'a> Parser<'a> {
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        self.binary_op2(stream, Self::logical_and, &[Lex::BOr])
+        self.binary_op(stream, Self::logical_and, &[Lex::BOr])
     }
 
     pub(super) fn logical_and(
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        self.binary_op2(stream, Self::comparison, &[Lex::BAnd])
+        self.binary_op(stream, Self::comparison, &[Lex::BAnd])
     }
 
     pub(super) fn comparison(
         &self,
         stream: &mut TokenStream,
     ) -> ParserResult<Expression<ParserContext>> {
-        self.binary_op2(
+        self.binary_op(
             stream,
             Self::sum,
             &[Lex::Eq, Lex::NEq, Lex::Ls, Lex::LsEq, Lex::Gr, Lex::GrEq],
@@ -253,49 +253,14 @@ impl<'a> Parser<'a> {
     }
 
     pub(super) fn sum(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
-        self.binary_op2(stream, Self::term, &[Lex::Add, Lex::Minus, Lex::At])
+        self.binary_op(stream, Self::term, &[Lex::Add, Lex::Minus, Lex::At])
     }
 
     pub(super) fn term(&self, stream: &mut TokenStream) -> ParserResult<Expression<ParserContext>> {
-        self.binary_op2(stream, Self::cast, &[Lex::Mul, Lex::Div])
+        self.binary_op(stream, Self::cast, &[Lex::Mul, Lex::Div])
     }
 
     pub(super) fn binary_op(
-        &self,
-        stream: &mut TokenStream,
-        left_pattern: fn(&Self, &mut TokenStream) -> ParserResult<Expression<ParserContext>>,
-        test: &[Lex],
-    ) -> ParserResult<Expression<ParserContext>> {
-        let mut msg = None;
-        let (event, result) =
-            self.new_event(Span::zero())
-                .and_then(|| match left_pattern(self, stream)? {
-                    Some(left) => match stream.next_if_one_of(test) {
-                        Some(op) => {
-                            msg = Some(op.sym.to_string());
-                            self.binary_op(stream, left_pattern, test)?
-                                .ok_or_else(|| {
-                                    CompilerError::new(
-                                        op.span(),
-                                        ParserError::ExpectedExprAfter(op.sym),
-                                    )
-                                })
-                                .and_then(|right| {
-                                    Expression::binary_op(&op.sym, Box::new(left), Box::new(right))
-                                })
-                        }
-                        None => Ok(Some(left)),
-                    },
-                    None => Ok(None),
-                });
-
-        result.view(|v| match msg {
-            Some(msg) => self.record(event.with_span(v.span()), Ok(&msg)),
-            None => self.record_noop(event.with_span(v.span())),
-        })
-    }
-
-    pub(super) fn binary_op2(
         &self,
         stream: &mut TokenStream,
         left_pattern: fn(&Self, &mut TokenStream) -> ParserResult<Expression<ParserContext>>,
