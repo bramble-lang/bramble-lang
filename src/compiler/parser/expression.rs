@@ -203,18 +203,18 @@ impl<'a> Parser<'a> {
     pub(super) fn binary_op(
         &self,
         stream: &mut TokenStream,
-        left_pattern: fn(&Self, &mut TokenStream) -> ParserResult<Expression<ParserContext>>,
-        test: &[Lex],
+        operand_pattern: fn(&Self, &mut TokenStream) -> ParserResult<Expression<ParserContext>>,
+        operators: &[Lex],
     ) -> ParserResult<Expression<ParserContext>> {
         let mut msg = None;
         let (event, result) = self.new_event(Span::zero()).and_then(|| {
-            match left_pattern(self, stream)? {
+            match operand_pattern(self, stream)? {
                 Some(mut left) => {
                     // Use iteration rather than recursion so that the AST correctly reflects the left to right order of
                     // operations
-                    while let Some(op) = stream.next_if_one_of(test) {
+                    while let Some(op) = stream.next_if_one_of(operators) {
                         msg = Some(op.sym.to_string());
-                        let right = left_pattern(self, stream)?.ok_or_else(|| {
+                        let right = operand_pattern(self, stream)?.ok_or_else(|| {
                             CompilerError::new(op.span(), ParserError::ExpectedExprAfter(op.sym))
                         })?;
                         left = Expression::binary_op(&op.sym, Box::new(left), Box::new(right))?;
